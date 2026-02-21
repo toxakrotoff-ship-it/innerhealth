@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
 import { HeroBlock } from '@/components/site/hero-block'
@@ -11,7 +12,7 @@ import {
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 async function getHomeData() {
   try {
@@ -34,13 +35,13 @@ async function getHomeData() {
         },
       }),
       prisma.post.findMany({
-        where: { published: true },
+        where: { published: true, type: 'news' } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
         select: { id: true, title: true, slug: true },
       }),
       prisma.post.findMany({
-        where: { published: true },
+        where: { published: true, type: 'article' } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
         select: { id: true, title: true, slug: true },

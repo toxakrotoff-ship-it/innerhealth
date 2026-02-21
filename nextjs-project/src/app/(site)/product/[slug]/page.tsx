@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 const DEFAULT_TAB_TITLES = ['Преимущества', 'Состав', 'Способ применения и дозировка', 'Характеристики'] as const
 

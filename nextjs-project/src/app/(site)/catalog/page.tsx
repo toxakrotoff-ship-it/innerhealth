@@ -7,16 +7,28 @@ import {
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
-export default async function CatalogPage() {
-  const [categories, products] = await Promise.all([
+const PRODUCTS_PER_PAGE = 24
+
+interface CatalogPageProps {
+  searchParams: Promise<{ page?: string }>
+}
+
+export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(String(pageParam), 10) || 1)
+  const skip = (page - 1) * PRODUCTS_PER_PAGE
+
+  const [categories, productsResult] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { products: true } } },
     }),
     prisma.product.findMany({
       orderBy: { createdAt: 'desc' },
+      take: PRODUCTS_PER_PAGE + 1,
+      skip,
       select: {
         id: true,
         title: true,
@@ -29,6 +41,8 @@ export default async function CatalogPage() {
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories)
+  const hasNextPage = productsResult.length > PRODUCTS_PER_PAGE
+  const products = productsResult.slice(0, PRODUCTS_PER_PAGE)
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
@@ -75,19 +89,47 @@ export default async function CatalogPage() {
       {products.length === 0 ? (
         <p className="text-gray-500">Товары появятся после добавления в админке.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.map((p) => (
-            <ProductCard
-              key={p.id}
-              id={p.id}
-              title={p.title}
-              price={p.price}
-              priceOld={p.priceOld}
-              photo={p.photo}
-              slug={p.slug}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {products.map((p) => (
+              <ProductCard
+                key={p.id}
+                id={p.id}
+                title={p.title}
+                price={p.price}
+                priceOld={p.priceOld}
+                photo={p.photo}
+                slug={p.slug}
+              />
+            ))}
+          </div>
+          {(page > 1 || hasNextPage) && (
+            <nav
+              className="mt-8 flex flex-wrap items-center justify-center gap-2"
+              aria-label="Пагинация каталога"
+            >
+              {page > 1 && (
+                <Link
+                  href={page === 2 ? '/catalog' : `/catalog?page=${page - 1}`}
+                  className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
+                >
+                  ← Назад
+                </Link>
+              )}
+              <span className="px-4 py-2 text-gray-600 text-sm">
+                Страница {page}
+              </span>
+              {hasNextPage && (
+                <Link
+                  href={`/catalog?page=${page + 1}`}
+                  className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
+                >
+                  Вперёд →
+                </Link>
+              )}
+            </nav>
+          )}
+        </>
       )}
     </div>
   )

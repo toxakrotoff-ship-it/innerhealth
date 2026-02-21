@@ -1,16 +1,14 @@
 import dotenv from 'dotenv'
 
-// Загружаем .env.local для prisma generate / migrate (DATABASE_URL)
-dotenv.config({ path: '.env.local' })
+// Для CLI (migrate, generate): загружаем .env из корня проекта
 dotenv.config({ path: '.env' })
+dotenv.config({ path: '.env.local' })
 
 import { defineConfig, env } from 'prisma/config'
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
-    url:
-      process.env.DATABASE_URL ||
-      'postgresql://localhost:5432/dummy?schema=public',
+    url: env('DATABASE_URL'),
   },
 })

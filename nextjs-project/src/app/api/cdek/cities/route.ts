@@ -39,7 +39,8 @@ export async function GET(request: Request) {
       })
       const qLower = q.toLowerCase().trim()
       raw = all.filter((c) => {
-        const name = (c.city ?? (c as Record<string, unknown>).cityName ?? (c as Record<string, unknown>).name ?? '').toString().toLowerCase()
+        const r = c as unknown as Record<string, unknown>
+        const name = (c.city ?? r.cityName ?? r.name ?? '').toString().toLowerCase()
         return name.includes(qLower) || name.startsWith(qLower)
       })
     }
@@ -47,18 +48,18 @@ export async function GET(request: Request) {
     /** Нормализуем code: СДЭК может вернуть code или city_code */
     const cities = raw
       .map((c) => {
-        const row = c as Record<string, unknown>
+        const row = c as unknown as Record<string, unknown>
         const code = row.code ?? row.city_code
         return { ...c, code: code != null ? Number(code) : undefined }
       })
       .filter((c) => {
-        const code = (c as { code?: number }).code
+        const code = (c as unknown as { code?: number }).code
         return code != null && code !== 0
       })
       .slice(0, requestedSize)
 
     if (raw.length > 0 && cities.length === 0) {
-      console.warn('CDEK cities: raw count=%d but all filtered out. First raw keys:', raw.length, Object.keys((raw[0] as Record<string, unknown>) ?? {}))
+      console.warn('CDEK cities: raw count=%d but all filtered out. First raw keys:', raw.length, Object.keys((raw[0] as unknown as Record<string, unknown>) ?? {}))
     } else if (cities.length > 0) {
       console.info('CDEK cities: q=%s, returning %d cities', q ?? '(all)', cities.length)
     }

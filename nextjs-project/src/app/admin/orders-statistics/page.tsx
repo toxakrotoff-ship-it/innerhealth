@@ -86,7 +86,7 @@ export default function OrdersStatisticsPage() {
       setOrders(data);
       // #region agent log
       const withPromo = (data as Order[]).filter((o) => o.promoCode != null);
-      const codesFromOrders = [...new Set(withPromo.map((o) => (o.promoCode as { code: string }).code))];
+      const codesFromOrders = Array.from(new Set(withPromo.map((o) => (o.promoCode as { code: string }).code)));
       fetch('http://127.0.0.1:7242/ingest/4e38a816-a87e-4282-8acb-6d0b40fcac08', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'orders-statistics/page.tsx:fetchOrders', message: 'orders loaded', data: { ordersCount: data.length, ordersWithPromoCount: withPromo.length, promoCodesFromOrders: codesFromOrders }, timestamp: Date.now(), hypothesisId: 'H1-H2' }) }).catch(() => {});
       // #endregion
     } catch (err) {

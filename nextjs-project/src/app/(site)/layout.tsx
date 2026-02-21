@@ -3,7 +3,7 @@ import { SiteFooter } from '@/components/site/site-footer'
 import { CartDrawer } from '@/components/site/cart-drawer'
 import { CookieConsent } from '@/components/site/cookie-consent'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export default function SiteLayout({
   children,

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
     const { items, toLocation, deliveryKind } = parsed.data
 
-    const productIds = [...new Set(items.map((i) => i.productId))]
+    const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: {

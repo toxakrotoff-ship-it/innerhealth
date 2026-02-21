@@ -5,22 +5,10 @@ import { useEffect, useRef } from 'react'
 const MAP_CENTER: [number, number] = [55.78284, 37.45149]
 const MAP_ZOOM = 16
 
+/** Тип экземпляра карты (совместим с объявлением в yandex-map-pvz.tsx) */
 interface YandexMapInstance {
   geoObjects: { add: (obj: unknown) => void }
   destroy: () => void
-}
-
-declare global {
-  interface Window {
-    ymaps?: {
-      ready: (cb: () => void) => void
-      Map: new (
-        element: string | HTMLElement,
-        state: { center: [number, number]; zoom: number }
-      ) => YandexMapInstance
-      Placemark: new (coords: [number, number]) => unknown
-    }
-  }
 }
 
 interface YandexMapProps {

@@ -94,9 +94,8 @@ export const CustomOrderedList = Node.create<CustomOrderedListOptions>({
         },
       updateOrderedListMarker:
         (marker: OrderedMarkerType) =>
-        () =>
-        ({ commands }) => {
-          return commands.updateAttributes(this.name, { markerStyle: marker });
+        ({ commands }: { commands: { updateAttributes: (name: string, attrs: { markerStyle: string }) => unknown } }) => {
+          return Boolean(commands.updateAttributes(this.name, { markerStyle: marker }));
         },
     };
   },

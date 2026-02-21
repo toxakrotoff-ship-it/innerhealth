@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
 
@@ -28,19 +29,19 @@ export async function SiteHeader() {
           {/* Бургер слева (до lg); лого только при полном меню (lg+) и внутри сайдбара */}
           <HeaderNavMobile variant="dark" />
 
-          <div className="hidden lg:block shrink-0">
+          <div className="hidden lg:block shrink-0 relative h-8 w-[120px]">
             <Link
               href="/"
               className="flex items-center gap-2 font-semibold text-white hover:opacity-90 transition-opacity"
               aria-label="Inner Health — на главную"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/logo.png"
                 alt="Inner Health"
-                className="h-8 w-auto object-contain"
-                width={120}
-                height={40}
+                fill
+                className="object-contain object-left"
+                sizes="120px"
+                priority
               />
             </Link>
           </div>

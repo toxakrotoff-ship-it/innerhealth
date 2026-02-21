@@ -14,7 +14,7 @@ function getKey(identifier: string, prefix: string): string {
 
 function cleanup(): void {
   const now = Date.now()
-  for (const [key, data] of store.entries()) {
+  for (const [key, data] of Array.from(store.entries())) {
     if (data.resetAt < now) store.delete(key)
   }
 }

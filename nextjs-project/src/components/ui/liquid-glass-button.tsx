@@ -95,6 +95,7 @@ const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProps>(
       const child = children as React.ReactElement<{
         className?: string
         ref?: React.Ref<unknown>
+        children?: React.ReactNode
       }>
       return (
         <>
@@ -110,7 +111,7 @@ const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProps>(
                 </span>
               </>
             ),
-          })}
+          } as React.Attributes & { className?: string; ref?: React.Ref<unknown>; children?: React.ReactNode })}
         </>
       )
     }

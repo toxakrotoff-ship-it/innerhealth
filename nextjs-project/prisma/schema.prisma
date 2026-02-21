@@ -205,6 +205,12 @@ model PartnershipLead {
   createdAt     DateTime @default(now())
 }
 
+/// Настройки сайта (ключ-значение): СДЭК, ЮKassa, контакты и т.д.
+model SiteSetting {
+  key   String @id
+  value String
+}
+
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.
 model TildaLead {
   id             String    @id @default(cuid())

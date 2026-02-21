@@ -5,7 +5,7 @@ import { ProductCard } from '@/components/site/product-card'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 interface PageProps {
   params: Promise<{ categorySlug: string }>

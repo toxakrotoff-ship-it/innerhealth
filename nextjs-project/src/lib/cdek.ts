@@ -425,7 +425,7 @@ function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
   const city = row.city ?? row.cityName ?? row.name
   const region = row.region ?? row.region_name
   return {
-    ...(row as CdekCity),
+    ...(row as unknown as CdekCity),
     code: code != null ? Number(code) : 0,
     city: city != null ? String(city) : undefined,
     region: region != null ? String(region) : undefined,

@@ -82,9 +82,8 @@ export const CustomBulletList = Node.create<CustomBulletListOptions>({
         },
       updateBulletListMarker:
         (marker: BulletMarkerType) =>
-        () =>
-        ({ commands }) => {
-          return commands.updateAttributes(this.name, { listStyleType: marker });
+        ({ commands }: { commands: { updateAttributes: (name: string, attrs: { listStyleType: string }) => unknown } }) => {
+          return Boolean(commands.updateAttributes(this.name, { listStyleType: marker }));
         },
     };
   },
