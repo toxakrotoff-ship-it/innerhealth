@@ -16,6 +16,12 @@
 3. **Delivery point** ([search](https://apidoc.cdek.ru/#tag/delivery_point/operation/search)) — поиск ПВЗ: `searchCdekDeliveryPoints()` в lib, **GET /api/cdek/deliverypoints** (query: `cityCode`, `postalCode`, `type=PVZ|POSTAMAT|ALL`, `size`, `page`, `lang`).
 4. **Calculator** ([#tag/calculator](https://apidoc.cdek.ru/#tag/calculator)) — расчёт тарифов: `calculateCdekTariffList()`, **POST /api/cdek/calculator** (body: `deliveryKind`, `items`, `toLocation`); блок «Доставка СДЭК» на странице корзины (До ПВЗ / До адреса).
 
+### Габариты товара для расчёта доставки
+Для калькулятора СДЭК **нужны габариты посылки**: вес (граммы) и размеры (мм) — длина, ширина, высота. В API это массив `packages` с полями `weight`, `length`, `width`, `height`. В проекте:
+- У товара в БД могут быть поля `weight`, `length`, `width`, `height` (при импорте/редактировании).
+- Если у товара габариты не заданы — подставляются **дефолты**: вес 500 г, размеры 200×200×200 мм (`src/lib/cdek.ts`: `getDefaultCdekPackage`, `productToCdekPackage`).
+- Итог: для отправки расчёта в СДЭК габариты **обязательны на уровне API**, но в карточке товара их можно не указывать — тогда используются указанные дефолты. Для более точной стоимости и корректных ограничений СДЭК лучше заполнять реальные вес и размеры у товаров.
+
 Дальше:
 - Виджет или список выбора ПВЗ на корзине (подключить GET /api/cdek/deliverypoints после выбора города).
 - Авто-создание заказа в ЛК СДЭК при переходе статуса в PAID.

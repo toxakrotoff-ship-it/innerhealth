@@ -94,6 +94,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     discountPrice: null as number | null,
     isPromoEligible: false,
     categories: [] as string[],
+    weight: null as number | null,
+    length: null as number | null,
+    width: null as number | null,
+    height: null as number | null,
   });
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
@@ -153,6 +157,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         discountPrice: data.discountPrice || null,
         isPromoEligible: data.isPromoEligible || false,
         categories: data.categories?.map((cat: { categoryId: string }) => cat.categoryId) || [],
+        weight: data.weight ?? null,
+        length: data.length ?? null,
+        width: data.width ?? null,
+        height: data.height ?? null,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
@@ -219,6 +227,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           tab4Title: formData.tab4Title || null,
           photo: formData.photo,
           priceOld: formData.priceOld,
+          weight: formData.weight ?? null,
+          length: formData.length ?? null,
+          width: formData.width ?? null,
+          height: formData.height ?? null,
           id,
           categoryIds: formData.categories,
         }),
@@ -335,9 +347,63 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 step="0.01"
               />
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Категории</label>
+
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Габариты и вес (для доставки СДЭК)</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Вес (г)</label>
+                <input
+                  type="number"
+                  name="weight"
+                  value={formData.weight ?? ''}
+                  onChange={handleNumberChange}
+                  className="form-input w-full"
+                  min="0"
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Длина (мм)</label>
+                <input
+                  type="number"
+                  name="length"
+                  value={formData.length ?? ''}
+                  onChange={handleNumberChange}
+                  className="form-input w-full"
+                  min="0"
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Ширина (мм)</label>
+                <input
+                  type="number"
+                  name="width"
+                  value={formData.width ?? ''}
+                  onChange={handleNumberChange}
+                  className="form-input w-full"
+                  min="0"
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Высота (мм)</label>
+                <input
+                  type="number"
+                  name="height"
+                  value={formData.height ?? ''}
+                  onChange={handleNumberChange}
+                  className="form-input w-full"
+                  min="0"
+                  placeholder="—"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Категории</label>
               <CategoryMultiSelect
                 selectedCategoryIds={formData.categories}
                 onCategoryChange={handleCategoryChange}

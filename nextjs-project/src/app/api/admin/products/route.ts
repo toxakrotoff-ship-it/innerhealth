@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { slugify, slugifyUnique } from '@/lib/slugify';
+import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 
 export async function GET(request: Request) {
   // Проверяем аутентификацию на сервере
@@ -48,7 +49,11 @@ export async function GET(request: Request) {
           createdAt: 'desc'
         },
         include: {
-          categories: { select: { categoryId: true } }
+          categories: {
+            include: {
+              category: { select: { id: true, title: true } }
+            }
+          }
         }
       });
       
@@ -117,6 +122,7 @@ export async function PUT(request: Request) {
     for (const key of allFields) {
       if (key in data && data[key] !== undefined) sanitizedData[key] = data[key];
     }
+    Object.assign(sanitizedData, sanitizeProductTextFields(sanitizedData));
 
     if (categoryIds !== undefined) {
       await prisma.productCategory.deleteMany({ where: { productId: id } });
@@ -178,6 +184,7 @@ export async function POST(request: Request) {
     for (const key of allFields) {
       if (key in data && data[key] !== undefined) sanitizedCreate[key] = data[key];
     }
+    Object.assign(sanitizedCreate, sanitizeProductTextFields(sanitizedCreate));
     if (!sanitizedCreate.tildaUid && data.title) {
       sanitizedCreate.tildaUid = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     }

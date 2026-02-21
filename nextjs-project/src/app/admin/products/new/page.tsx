@@ -285,6 +285,52 @@ export default function NewProductPage() {
             />
           </div>
 
+          <div className="md:col-span-2">
+            <p className="text-sm font-medium text-gray-700 mb-2">Габариты и вес (для доставки СДЭК)</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Вес (г)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={product.weight ?? ''}
+                  onChange={(e) => handleChange('weight', e.target.value ? parseInt(e.target.value, 10) : null)}
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Длина (мм)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={product.length ?? ''}
+                  onChange={(e) => handleChange('length', e.target.value ? parseInt(e.target.value, 10) : null)}
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Ширина (мм)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={product.width ?? ''}
+                  onChange={(e) => handleChange('width', e.target.value ? parseInt(e.target.value, 10) : null)}
+                  placeholder="—"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Высота (мм)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={product.height ?? ''}
+                  onChange={(e) => handleChange('height', e.target.value ? parseInt(e.target.value, 10) : null)}
+                  placeholder="—"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
             <Input

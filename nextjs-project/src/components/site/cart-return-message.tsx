@@ -1,18 +1,15 @@
 'use client'
 
-import { use } from 'react'
-
-interface CartReturnMessageProps {
-  searchParams: Promise<{ payment?: string }>
-}
+import { useSearchParams } from 'next/navigation'
 
 /**
  * Показывает сообщение при возврате с страницы оплаты ЮKassa
  * (return_url: /cart?payment=success или /cart?payment=cancel).
+ * Читает query на клиенте, чтобы не передавать searchParams (Promise) в пропсы страницы и не вызывать предупреждение sync-dynamic-apis в dev tools.
  */
-export function CartReturnMessage({ searchParams }: CartReturnMessageProps) {
-  const params = use(searchParams)
-  const payment = params.payment
+export function CartReturnMessage() {
+  const searchParams = useSearchParams()
+  const payment = searchParams.get('payment') ?? undefined
 
   if (payment === 'success') {
     return (

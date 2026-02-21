@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import { sanitizeProductText } from '@/lib/sanitize-text';
 
 // Функция для скачивания изображения и сохранения на сервере
 async function downloadImage(imageUrl: string, filename: string, productFolder: string): Promise<string> {
@@ -77,11 +78,10 @@ function parseCSVLine(line: string): string[] {
   return fields;
 }
 
-// Функция для нормализации текста (удаление HTML тегов и лишних пробелов)
+// Нормализация текста: очистка от разметки Тильды и HTML (используется для заголовков/коротких полей)
 function normalizeText(text: string): string {
   if (!text) return '';
-  // Удаляем HTML теги
-  return text.replace(/<[^>]*>/g, '').trim();
+  return sanitizeProductText(text);
 }
 
 // Функция для извлечения цены из строки
@@ -110,6 +110,13 @@ function extractId(idString: string): string {
     console.error('Ошибка при извлечении ID:', error);
     return '0';
   }
+}
+
+/** Парсит целое число из строки; для веса и габаритов (СДЭК). Возвращает null если не число или ≤ 0. */
+function parseOptionalInt(value: string | undefined): number | null {
+  if (value == null || String(value).trim() === '') return null;
+  const n = parseInt(String(value).replace(/\s/g, ''), 10);
+  return Number.isNaN(n) || n < 0 ? null : n;
 }
 
 // Функция для обработки категорий
@@ -304,6 +311,12 @@ export async function importProductsFromCSV(csvContent: string) {
         const imageLinks = extractImages(photo);
         const primaryImageLink = imageLinks.length > 0 ? imageLinks[0].trim() : null;
 
+        // Колонки 32–35 в CSV (индексы 31–34): Weight (г), Length (мм), Width (мм), Height (мм) — для СДЭК
+        const weightG = parseOptionalInt(fields[31]);
+        const lengthMm = parseOptionalInt(fields[32]);
+        const widthMm = parseOptionalInt(fields[33]);
+        const heightMm = parseOptionalInt(fields[34]);
+
         // Данные в формате текущей Prisma-схемы Product
         const productData = {
           tildaUid: String(tildaUid).trim(),
@@ -318,15 +331,19 @@ export async function importProductsFromCSV(csvContent: string) {
           brand: brand?.trim() || null,
           sku: sku?.trim() || null,
           mark: mark?.trim() || null,
+          weight: weightG,
+          length: lengthMm,
+          width: widthMm,
+          height: heightMm,
           seoTitle: seoTitle?.trim() || null,
           seoDescr: seoDescr?.trim() || null,
           seoKeywords: seoKeywords?.trim() || null,
           fbTitle: fbTitle?.trim() || null,
           fbDescr: fbDescr?.trim() || null,
-          tab1: tab1?.trim() || null,
-          tab2: tab2?.trim() || null,
-          tab3: tab3?.trim() || null,
-          tab4: tab4?.trim() || null,
+          tab1: tab1 ? sanitizeProductText(tab1) || null : null,
+          tab2: tab2 ? sanitizeProductText(tab2) || null : null,
+          tab3: tab3 ? sanitizeProductText(tab3) || null : null,
+          tab4: tab4 ? sanitizeProductText(tab4) || null : null,
           characteristicsNutrition100g: characteristics1?.trim() || null,
           characteristicsKkal: characteristics2?.trim() || null,
           characteristicsContraindications: characteristics3?.trim() || null,

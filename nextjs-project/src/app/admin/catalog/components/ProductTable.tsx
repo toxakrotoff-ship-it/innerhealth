@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Button from '@/components/ui/button'
 import { Product } from '@prisma/client'
+import { NO_CATEGORY_ID } from '../constants'
 
 type ProductWithCategories = Product & {
-  categories?: { categoryId: string }[]
+  categories?: { categoryId: string; category?: { id: string; title: string } }[]
 }
 
 interface ProductTableProps {
@@ -26,11 +27,12 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   }, [products])
 
   useEffect(() => {
-    if (selectedCategory) {
-      const filtered = products.filter((p) =>
-        p.categories?.some((c) => c.categoryId === selectedCategory)
+    if (selectedCategory === NO_CATEGORY_ID) {
+      setFilteredProducts(products.filter((p) => !p.categories?.length))
+    } else if (selectedCategory) {
+      setFilteredProducts(
+        products.filter((p) => p.categories?.some((c) => c.categoryId === selectedCategory))
       )
-      setFilteredProducts(filtered)
     } else {
       setFilteredProducts(products)
     }
@@ -109,6 +111,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
           <thead>
             <tr>
               <th>Товар</th>
+              <th className="min-w-[140px]">Раздел</th>
               <th
                 className="cursor-pointer select-none hover:bg-gray-100"
                 onClick={() => handleSort('price')}
@@ -133,7 +136,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
           <tbody>
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={4} className="p-12 text-center">
+                <td colSpan={5} className="p-12 text-center">
                   <div className="inline-flex flex-col items-center gap-3 text-gray-500">
                     <span className="text-4xl opacity-50">📦</span>
                     <p className="text-sm font-medium">Нет товаров</p>
@@ -169,6 +172,14 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                         <p className="text-xs text-gray-500">SKU: {product.sku || '—'}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="text-gray-600 text-sm">
+                    {product.categories?.length
+                      ? product.categories
+                          .map((pc) => pc.category?.title)
+                          .filter(Boolean)
+                          .join(', ') || '—'
+                      : '—'}
                   </td>
                   <td className="font-medium text-gray-900" suppressHydrationWarning>{Number(product.price).toLocaleString('ru-RU')} ₽</td>
                   <td className="text-gray-600" suppressHydrationWarning>

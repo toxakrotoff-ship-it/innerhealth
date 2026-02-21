@@ -103,7 +103,11 @@ export default function AdminCatalogPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <CategorySidebar selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+          <CategorySidebar
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+            products={products}
+          />
         </div>
         <div className="lg:col-span-3">
           <ProductTable
