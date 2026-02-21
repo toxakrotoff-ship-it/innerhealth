@@ -1,0 +1,11 @@
+# Migration lock file.
+# This file is used to track which migrations have been applied to the database.
+# Do not modify this file manually.
+
+provider = "postgresql"
+
+# Migration 202602191103_add_promo_code_model
+202602191103_add_promo_code_model = "202602191103_add_promo_code_model"
+
+# Migration 202602191106_add_promo_code_to_order
+202602191106_add_promo_code_to_order = "202602191106_add_promo_code_to_order"

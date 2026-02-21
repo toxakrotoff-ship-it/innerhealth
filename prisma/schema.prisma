@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  WRITER
+  ADMIN
+}
+model Product {
+  id              String    @id @default(cuid())
+  tildaUid        String    @unique
+  slug            String?   @unique
+  brand           String?
+  sku             String?
+  mark            String?
+  category        String?
+  title           String
+  description     String?
+  text            String?
+  photo           String?
+  price           Float
+  quantity        Int?
+  priceOld        Float?
+  editions        String?
+  modifications   String?
+  externalId      String?
+  parentUid       String?
+  characteristicsNutrition100g String?
+  characteristicsKkal String?
+  characteristicsContraindications String?
+  characteristicsShelfLife String?
+  characteristicsShelfLife2 String?
+  characteristicsNutrition100gProduct String?
+  characteristicsEnergyValue100g String?
+  characteristicsNutrition100g2 String?
+  characteristicsNutritionPerPortion5g String?
+  characteristicsComposition String?
+  characteristicsKkal100gDailyDose String?
+  characteristicsFormulation String?
+  characteristicsCalorie String?
+  characteristicsFlacon200ml String?
+  characteristicsStorage String?
+  weight          Int?
+  length          Int?
+  width           Int?
+  height          Int?
+  seoTitle        String?
+  seoDescr        String?
+  seoKeywords     String?
+  fbTitle         String?
+  fbDescr         String?
+  tab1            String?
+  tab2            String?
+  tab3            String?
+  tab4            String?
+  tab1Title       String?
+  tab2Title       String?
+  tab3Title       String?
+  tab4Title       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  categories      ProductCategory[]
+}
+
+model Category {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  image           String?
+  sortOrder       Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  products        ProductCategory[]
+}
+
+model ProductCategory {
+  productId String
+  categoryId String
+  product    Product    @relation(fields: [productId], references: [id])
+  category   Category   @relation(fields: [categoryId], references: [id])
+  @@id([productId, categoryId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  userId    String?
+  items     OrderItem[]
+  total     Float
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shippingInfo ShippingInfo?
+  promoCodeId String?  // Добавляем ссылку на промокод
+  promoCode PromoCode? @relation(fields: [promoCodeId], references: [id])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShippingInfo {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  fullName  String
+  phone     String
+  email     String
+  address   String
+  city      String
+  zipCode   String
+  country   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  content      Json     // TipTap / JSON format
+  previewImage String?
+  published    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model PromoCode {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  discountType String   // 'percentage' or 'fixed'
+  discountValue Float
+  isActive     Boolean  @default(true)
+  usageLimit   Int?     // Максимальное количество использований (null = без ограничений)
+  usedCount    Int      @default(0)
+  validFrom    DateTime?
+  validTo      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

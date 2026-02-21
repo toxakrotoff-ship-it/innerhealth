@@ -1,0 +1,6 @@
+-- AlterTable: slug и названия табов для Product
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "slug" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "tab1Title" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "tab2Title" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "tab3Title" TEXT;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "tab4Title" TEXT;
