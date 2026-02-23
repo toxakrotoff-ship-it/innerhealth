@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { Category, getProductCategories } from '@/app/admin/catalog/actions';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 interface Product {
   id: string;
@@ -63,6 +64,7 @@ interface ViewProductPageClientProps {
 
 export function ViewProductPageClient({ productId }: ViewProductPageClientProps) {
   const router = useRouter();
+  const base = useAdminBasePath();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,11 +107,11 @@ export function ViewProductPageClient({ productId }: ViewProductPageClientProps)
   }, [productId]);
 
   const handleEdit = () => {
-    router.push(`/admin/products/${productId}/edit`);
+    router.push(`/${base}/products/${productId}/edit`);
   };
 
   const handleBack = () => {
-    router.push('/admin/catalog');
+    router.push(`/${base}/catalog`);
   };
 
   if (loading) {

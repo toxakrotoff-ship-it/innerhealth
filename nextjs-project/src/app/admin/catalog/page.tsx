@@ -6,12 +6,14 @@ import Button from '@/components/ui/button'
 import { ProductTable } from './components/ProductTable'
 import { Product } from '@prisma/client'
 import { CategorySidebar } from './components/CategorySidebar'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 interface ProductWithCategories extends Product {
   categories?: { categoryId: string }[]
 }
 
 export default function AdminCatalogPage() {
+  const base = useAdminBasePath()
   const [products, setProducts] = useState<ProductWithCategories[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -93,7 +95,7 @@ export default function AdminCatalogPage() {
           <h1>Каталог товаров</h1>
           <p>Управление товарами магазина</p>
         </div>
-        <Link href="/admin/products/new" className="admin-btn-add">
+        <Link href={`/${base}/products/new`} className="admin-btn-add">
           <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>

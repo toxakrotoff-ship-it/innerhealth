@@ -7,6 +7,7 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { CoverImageDropzone } from '../components/CoverImageDropzone';
 import type { UploadedImage } from '../components/EditorMediaPanel';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import type { JSONContent } from '@tiptap/core';
 
 type PostType = 'news' | 'article';
@@ -24,6 +25,7 @@ function hasContent(content: JSONContent | null): boolean {
 
 export default function NewNewsPage() {
   const router = useRouter();
+  const base = useAdminBasePath();
   const searchParams = useSearchParams();
   const typeFromUrl = searchParams.get('type');
   const initialType: PostType = typeFromUrl === 'article' ? 'article' : 'news';
@@ -90,7 +92,7 @@ export default function NewNewsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Ошибка создания');
-      router.push('/admin/news');
+      router.push(`/${base}/news`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
     } finally {
@@ -107,7 +109,7 @@ export default function NewNewsPage() {
           <h1 className="text-3xl font-bold text-text">
             {isArticle ? 'Создание статьи' : 'Создание новости'}
           </h1>
-          <Button type="button" variant="secondary" onClick={() => router.push('/admin/news')}>
+          <Button type="button" variant="secondary" onClick={() => router.push(`/${base}/news`)}>
             Назад к списку
           </Button>
         </div>
@@ -231,7 +233,7 @@ export default function NewNewsPage() {
             <Button type="submit" disabled={loading}>
               {loading ? 'Создание...' : isArticle ? 'Создать статью' : 'Создать новость'}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => router.push('/admin/news')}>
+            <Button type="button" variant="secondary" onClick={() => router.push(`/${base}/news`)}>
               Отмена
             </Button>
           </div>

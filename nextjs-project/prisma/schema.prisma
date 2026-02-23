@@ -23,6 +23,8 @@ model Product {
   description     String?
   text            String?
   photo           String?
+  /// Упорядоченный список URL изображений галереи (первое = основное)
+  photos          Json?
   price           Float
   quantity        Int?
   priceOld        Float?

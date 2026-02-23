@@ -43,6 +43,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 export default withAuth(
   function middleware(request) {
+    const pathname = new URL(request.url).pathname
+    if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
+      const rest = pathname.slice(adminSecretPath.length) || ''
+      const rewritePath = `/admin${rest}`
+      const res = NextResponse.rewrite(new URL(rewritePath, request.url))
+      return addSecurityHeaders(res)
+    }
     const res = NextResponse.next()
     return addSecurityHeaders(res)
   },
@@ -68,5 +75,6 @@ export const config = {
     '/api/promo/:path*',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
+    '/:segment/:path*', // catches custom ADMIN_SECRET_PATH (e.g. /secret-panel/catalog)
   ],
 }

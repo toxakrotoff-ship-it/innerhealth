@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Button from '@/components/ui/button'
 import { Product } from '@prisma/client'
 import { NO_CATEGORY_ID } from '../constants'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 type ProductWithCategories = Product & {
   categories?: { categoryId: string; category?: { id: string; title: string } }[]
@@ -17,10 +18,36 @@ interface ProductTableProps {
 }
 
 export function ProductTable({ products, onRefresh, selectedCategory }: ProductTableProps) {
+  const base = useAdminBasePath()
   const [filteredProducts, setFilteredProducts] = useState<ProductWithCategories[]>(products)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' } | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ productId: string; field: 'price' | 'quantity'; value: string } | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+
+  const saveInline = async (productId: string, field: 'price' | 'quantity', value: string) => {
+    const num = field === 'price' ? parseFloat(value) : (value === '' ? 0 : parseInt(value, 10))
+    if (field === 'price' && (Number.isNaN(num) || num < 0)) return
+    if (field === 'quantity' && (Number.isNaN(num) || num < 0)) return
+    setEditing(null)
+    setSavingId(productId)
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: productId, [field]: field === 'quantity' ? num : num }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      onRefresh()
+    } catch (e) {
+      console.error(e)
+      alert('Не удалось сохранить')
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   useEffect(() => {
     setFilteredProducts(products)
@@ -121,6 +148,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                   <span className="ml-1 text-xs">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
                 )}
               </th>
+              <th className="min-w-[80px]">Остаток</th>
               <th
                 className="cursor-pointer select-none hover:bg-gray-100"
                 onClick={() => handleSort('createdAt')}
@@ -136,7 +164,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
           <tbody>
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-12 text-center">
+                <td colSpan={6} className="p-12 text-center">
                   <div className="inline-flex flex-col items-center gap-3 text-gray-500">
                     <span className="text-4xl opacity-50">📦</span>
                     <p className="text-sm font-medium">Нет товаров</p>
@@ -181,7 +209,61 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                           .join(', ') || '—'
                       : '—'}
                   </td>
-                  <td className="font-medium text-gray-900" suppressHydrationWarning>{Number(product.price).toLocaleString('ru-RU')} ₽</td>
+                  <td
+                    className="font-medium text-gray-900 align-top"
+                    onDoubleClick={() => setEditing({ productId: product.id, field: 'price', value: String(product.price) })}
+                    title="Двойной клик — изменить"
+                  >
+                    {editing?.productId === product.id && editing?.field === 'price' ? (
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={editing.value}
+                        onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                        onBlur={() => editing && saveInline(product.id, 'price', editing.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            editing && saveInline(product.id, 'price', editing.value)
+                          }
+                          if (e.key === 'Escape') setEditing(null)
+                        }}
+                        className="form-input w-24 py-1 text-sm"
+                        autoFocus
+                      />
+                    ) : savingId === product.id ? (
+                      <span className="text-gray-400">…</span>
+                    ) : (
+                      <span suppressHydrationWarning>{Number(product.price).toLocaleString('ru-RU')} ₽</span>
+                    )}
+                  </td>
+                  <td
+                    className="text-gray-600 align-top"
+                    onDoubleClick={() => setEditing({ productId: product.id, field: 'quantity', value: String(product.quantity ?? '') })}
+                    title="Двойной клик — изменить"
+                  >
+                    {editing?.productId === product.id && editing?.field === 'quantity' ? (
+                      <input
+                        type="number"
+                        min={0}
+                        value={editing.value}
+                        onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                        onBlur={() => editing && saveInline(product.id, 'quantity', editing.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            editing && saveInline(product.id, 'quantity', editing.value)
+                          }
+                          if (e.key === 'Escape') setEditing(null)
+                        }}
+                        className="form-input w-20 py-1 text-sm"
+                        autoFocus
+                      />
+                    ) : savingId === product.id ? (
+                      <span className="text-gray-400">…</span>
+                    ) : (
+                      <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
+                    )}
+                  </td>
                   <td className="text-gray-600" suppressHydrationWarning>
                     {new Date(product.createdAt).toLocaleDateString('ru-RU', {
                       day: 'numeric',
@@ -192,7 +274,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                   <td>
                     <div className="flex items-center gap-3">
                       <Link
-                        href={`/admin/products/${product.id}/edit`}
+                        href={`/${base}/products/${product.id}/edit`}
                         className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium bg-[var(--color-highlight-blue)] text-[var(--color-text)] hover:opacity-90 transition-opacity min-h-[32px]"
                       >
                         Ред.

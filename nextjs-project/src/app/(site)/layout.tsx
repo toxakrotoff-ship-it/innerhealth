@@ -1,12 +1,12 @@
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 
-const CartDrawer = dynamic(
+const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
 )
 
-const CookieConsent = dynamic(
+const CookieConsent = nextDynamic(
   () => import('@/components/site/cookie-consent').then((m) => ({ default: m.CookieConsent }))
 )
 

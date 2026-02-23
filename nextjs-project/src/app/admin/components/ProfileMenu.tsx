@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 interface ProfileMenuProps {
   userName: string | undefined;
@@ -14,6 +15,7 @@ interface ProfileMenuProps {
 }
 
 export default function ProfileMenu({ userName, userEmail, userRole, triggerLabel }: ProfileMenuProps) {
+  const base = useAdminBasePath();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +70,7 @@ export default function ProfileMenu({ userName, userEmail, userRole, triggerLabe
 
           <div className="profile-menu-section">
             <div className="profile-menu-section-title">Профиль</div>
-            <Link href="/admin/profile" className="profile-menu-item" role="menuitem" onClick={() => setIsOpen(false)}>
+            <Link href={`/${base}/profile`} className="profile-menu-item" role="menuitem" onClick={() => setIsOpen(false)}>
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>

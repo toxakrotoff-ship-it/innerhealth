@@ -7,9 +7,11 @@ import Input from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CategoryMultiSelect } from '../components/CategoryMultiSelect';
 import { ImageDropzone } from '../components/ImageDropzone';
+import { ProductGalleryEditor } from '../components/ProductGalleryEditor';
 import { getCategoriesWithCounts } from '@/app/admin/catalog/actions';
 import { slugify } from '@/lib/slugify';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 interface Product {
   id: string;
@@ -63,10 +65,12 @@ interface Product {
   createdAt: string;
   updatedAt: string;
   categoryIds?: string[];
+  photos?: string[] | null;
 }
 
 export default function NewProductPage() {
   const router = useRouter();
+  const base = useAdminBasePath();
   const [product, setProduct] = useState<Omit<Product, 'id' | 'tildaUid' | 'createdAt' | 'updatedAt'>>({
     slug: null,
     brand: null,
@@ -114,7 +118,8 @@ export default function NewProductPage() {
     tab3: null,
     tab4: null,
     isPromoEligible: false,
-    categoryIds: []
+    categoryIds: [],
+    photos: []
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,7 +204,7 @@ export default function NewProductPage() {
 
       const newProduct = await response.json();
       alert('Продукт успешно создан!');
-      router.push('/admin/catalog');
+      router.push(`/${base}/catalog`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       console.error('Create product error:', err);
@@ -209,7 +214,7 @@ export default function NewProductPage() {
   };
 
   const handleCancel = () => {
-    router.push('/admin/catalog');
+    router.push(`/${base}/catalog`);
   };
 
   return (
@@ -365,8 +370,44 @@ export default function NewProductPage() {
             <p className="mt-1 text-sm text-gray-500">Выберите одну или несколько категорий для товара</p>
           </div>
 
+          <div className="md:col-span-2 rounded-lg border border-gray-200 p-4 dark:border-gray-700 space-y-3">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">SEO</p>
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO заголовок</label>
+              <Input
+                value={product.seoTitle || ''}
+                onChange={(e) => handleChange('seoTitle', e.target.value || null)}
+                placeholder="title для поисковиков"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO описание</label>
+              <Textarea
+                value={product.seoDescr || ''}
+                onChange={(e) => handleChange('seoDescr', e.target.value || null)}
+                rows={2}
+                placeholder="meta description"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO ключевые слова</label>
+              <Input
+                value={product.seoKeywords || ''}
+                onChange={(e) => handleChange('seoKeywords', e.target.value || null)}
+                placeholder="keywords через запятую"
+              />
+            </div>
+          </div>
+
+          <div className="md:col-span-2 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Галерея (первое фото — основное)</label>
+            <ProductGalleryEditor
+              photos={product.photos ?? []}
+              onChange={(photos) => handleChange('photos', photos)}
+            />
+          </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Фото</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Фото (основное, если не задано в галерее)</label>
             <ImageDropzone
               value={product.photo}
               onChange={(url) => handleChange('photo', url)}

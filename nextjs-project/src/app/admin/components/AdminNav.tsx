@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 const iconClass = 'admin-nav-icon'
 
@@ -65,40 +66,44 @@ const icons = {
   ),
 }
 
-const navItems = [
-  { href: '/admin/profile', label: 'Профиль', icon: icons.profile },
-  { href: '/admin/catalog', label: 'Каталог товаров', icon: icons.catalog },
-  { href: '/admin/catalog/categories', label: 'Категории', icon: icons.categories },
-  { href: '/admin/news', label: 'Новости', icon: icons.news },
-  { href: '/admin/news?type=article', label: 'Статьи', icon: icons.news },
-  { href: '/admin/promo-codes', label: 'Промокоды', icon: icons.promo },
-  { href: '/admin/orders', label: 'Заказы (CRM)', icon: icons.orders },
-  { href: '/admin/tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
-  { href: '/admin/partnership', label: 'Сотрудничество', icon: icons.partnership },
-  { href: '/admin/orders-statistics', label: 'Статистика заказов', icon: icons.stats },
-  { href: '/admin/users', label: 'Пользователи', icon: icons.users },
-  { href: '/admin/settings', label: 'Настройки сайта', icon: icons.settings },
+const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
+  { path: 'profile', label: 'Профиль', icon: icons.profile },
+  { path: 'catalog', label: 'Каталог товаров', icon: icons.catalog },
+  { path: 'catalog/categories', label: 'Категории', icon: icons.categories },
+  { path: 'news', label: 'Новости', icon: icons.news },
+  { path: 'news?type=article', label: 'Статьи', icon: icons.news },
+  { path: 'promo-codes', label: 'Промокоды', icon: icons.promo },
+  { path: 'orders', label: 'Заказы (CRM)', icon: icons.orders },
+  { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
+  { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
+  { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
+  { path: 'users', label: 'Пользователи', icon: icons.users },
+  { path: 'settings', label: 'Настройки сайта', icon: icons.settings },
 ]
 
 export default function AdminNav() {
+  const base = useAdminBasePath()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   return (
     <ul className="admin-nav-list">
       {navItems.map((item) => {
+        const href = `/${base}/${item.path}`
         let isActive: boolean
-        if (item.href === '/admin/news?type=article') {
+        if (item.path === 'news?type=article') {
           isActive = pathname === '/admin/news' && searchParams.get('type') === 'article'
-        } else if (item.href === '/admin/news') {
+        } else if (item.path === 'news') {
           isActive = pathname === '/admin/news' && searchParams.get('type') !== 'article'
+        } else if (item.path === 'catalog') {
+          isActive = pathname === '/admin/catalog' || pathname.startsWith('/admin/catalog/')
         } else {
-          isActive = pathname === item.href || (item.href !== '/admin/catalog' && pathname.startsWith(item.href))
+          isActive = pathname === `/admin/${item.path}`
         }
         return (
-          <li key={item.href}>
+          <li key={href}>
             <Link
-              href={item.href}
+              href={href}
               className={`admin-nav-item ${isActive ? 'admin-nav-item-active' : ''}`}
             >
               {item.icon}

@@ -2,14 +2,15 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 export default function AdminPage() {
   const router = useRouter()
+  const base = useAdminBasePath()
 
   useEffect(() => {
-    // Перенаправляем на страницу каталога при заходе на /admin
-    router.push('/admin/catalog')
-  }, [router])
+    router.push(`/${base}/catalog`)
+  }, [router, base])
 
   return null
 }

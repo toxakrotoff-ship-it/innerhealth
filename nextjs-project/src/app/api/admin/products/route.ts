@@ -115,12 +115,15 @@ export async function PUT(request: Request) {
     }
     
     // Поля модели Product (без id, createdAt, updatedAt, связей)
-    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'price', 'quantity', 'priceOld', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
+    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
     const sanitizedData: Record<string, unknown> = {};
     for (const key of allFields) {
       if (key in data && data[key] !== undefined) sanitizedData[key] = data[key];
+    }
+    if (Array.isArray(sanitizedData.photos) && sanitizedData.photos.length > 0) {
+      sanitizedData.photo = typeof sanitizedData.photos[0] === 'string' ? sanitizedData.photos[0] : null;
     }
     Object.assign(sanitizedData, sanitizeProductTextFields(sanitizedData));
 
@@ -155,6 +158,47 @@ export async function PUT(request: Request) {
   }
 }
 
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { id, price, quantity } = body as { id?: string; price?: number; quantity?: number };
+
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
+    if (price !== undefined && (typeof price !== 'number' || price < 0)) {
+      return NextResponse.json({ error: 'Invalid price' }, { status: 400 });
+    }
+    if (quantity !== undefined && (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity))) {
+      return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 });
+    }
+
+    const data: { price?: number; quantity?: number } = {};
+    if (price !== undefined) data.price = price;
+    if (quantity !== undefined) data.quantity = quantity;
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: 'Provide at least one of price, quantity' }, { status: 400 });
+    }
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data,
+    });
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('PATCH product error:', error);
+    return NextResponse.json(
+      { error: error && typeof (error as { code?: string }).code === 'string' && (error as { code: string }).code === 'P2025' ? 'Product not found' : 'Failed to update product' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   // Проверяем аутентификацию на сервере
   const session = await getServerSession(authOptions);
@@ -177,12 +221,15 @@ export async function POST(request: Request) {
       const existingSlugs = existing.map((p) => p.slug).filter(Boolean) as string[];
       slug = slugifyUnique(baseSlug, existingSlugs);
     }
-    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'price', 'quantity', 'priceOld', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
+    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
     const sanitizedCreate: Record<string, unknown> = { slug: slug || undefined };
     for (const key of allFields) {
       if (key in data && data[key] !== undefined) sanitizedCreate[key] = data[key];
+    }
+    if (Array.isArray(sanitizedCreate.photos) && sanitizedCreate.photos.length > 0) {
+      sanitizedCreate.photo = typeof sanitizedCreate.photos[0] === 'string' ? sanitizedCreate.photos[0] : null;
     }
     Object.assign(sanitizedCreate, sanitizeProductTextFields(sanitizedCreate));
     if (!sanitizedCreate.tildaUid && data.title) {

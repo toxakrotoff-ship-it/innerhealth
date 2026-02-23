@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/button';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 type PostType = 'news' | 'article';
 
@@ -19,6 +20,7 @@ interface Post {
 }
 
 export default function NewsPage() {
+  const base = useAdminBasePath();
   const searchParams = useSearchParams();
   const typeFromUrl = searchParams.get('type');
   const initialTab: PostType = typeFromUrl === 'article' ? 'article' : 'news';
@@ -72,10 +74,10 @@ export default function NewsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Новости и статьи</h1>
           <div className="flex items-center gap-2">
-            <Link href="/admin/news/new?type=news">
+            <Link href={`/${base}/news/new?type=news`}>
               <Button variant="primary">Создать новость</Button>
             </Link>
-            <Link href="/admin/news/new?type=article">
+            <Link href={`/${base}/news/new?type=article`}>
               <Button variant="secondary">Создать статью</Button>
             </Link>
           </div>
@@ -153,7 +155,7 @@ export default function NewsPage() {
                       </td>
                       <td>
                         <div className="flex gap-2">
-                          <Link href={`/admin/news/edit/${post.id}`}>
+                          <Link href={`/${base}/news/edit/${post.id}`}>
                             <Button variant="secondary" size="sm">
                               Редактировать
                             </Button>

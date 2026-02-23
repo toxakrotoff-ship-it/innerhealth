@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Category, getCategoriesWithCounts } from '../actions'
 import { NO_CATEGORY_ID } from '../constants'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 type ProductWithCategories = {
   id: string
@@ -20,6 +21,7 @@ interface CategorySidebarProps {
 }
 
 export function CategorySidebar({ selectedCategory, onCategorySelect, products = [] }: CategorySidebarProps) {
+  const base = useAdminBasePath()
   const [categories, setCategories] = useState<(Category & { productCount: number })[]>([])
   const [loading, setLoading] = useState(true)
   const [totalProducts, setTotalProducts] = useState(0)
@@ -105,7 +107,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
                     .map((p) => (
                       <li key={p.id}>
                         <Link
-                          href={`/admin/products/${p.id}/edit`}
+                          href={`/${base}/products/${p.id}/edit`}
                           className="truncate block hover:text-gray-800 hover:underline"
                           title={p.title}
                         >
@@ -173,7 +175,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
                       {productsInCategory.slice(0, 8).map((p) => (
                         <li key={p.id} className="truncate">
                           <Link
-                            href={`/admin/products/${p.id}/edit`}
+                            href={`/${base}/products/${p.id}/edit`}
                             className="block truncate hover:text-gray-800 hover:underline"
                             title={p.title}
                           >

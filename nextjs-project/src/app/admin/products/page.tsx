@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 export default function ProductsPage() {
+  const router = useRouter();
+  const base = useAdminBasePath();
   const [products] = useState([
     { id: 1, name: 'Товар 1', price: 1000, inStock: true },
     { id: 2, name: 'Товар 2', price: 2000, inStock: false },
@@ -16,7 +20,7 @@ export default function ProductsPage() {
         <h1 className="text-3xl font-bold text-text">Управление товарами</h1>
         <div className="flex space-x-3">
           <Button
-            onClick={() => window.location.href = '/admin/products/new'}
+            onClick={() => router.push(`/${base}/products/new`)}
           >
             Добавить новый
           </Button>

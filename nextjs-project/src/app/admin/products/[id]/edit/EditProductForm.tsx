@@ -6,6 +6,8 @@ import Button from '@/components/ui/button';
 import { CategoryMultiSelect } from '../../components/CategoryMultiSelect';
 import { Category, getCategories } from '@/app/admin/catalog/actions';
 import { sanitizeProductText } from '@/lib/sanitize-text';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
+import { ProductGalleryEditor } from '../../components/ProductGalleryEditor';
 
 interface Product {
   id: string;
@@ -69,6 +71,7 @@ interface EditProductFormProps {
 
 export function EditProductForm({ productId }: EditProductFormProps) {
   const router = useRouter();
+  const base = useAdminBasePath();
   const id = productId;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -98,6 +101,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     length: null as number | null,
     width: null as number | null,
     height: null as number | null,
+    seoTitle: '',
+    seoDescr: '',
+    seoKeywords: '',
+    photos: [] as string[],
   });
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
@@ -161,6 +168,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         length: data.length ?? null,
         width: data.width ?? null,
         height: data.height ?? null,
+        seoTitle: data.seoTitle ?? '',
+        seoDescr: data.seoDescr ?? '',
+        seoKeywords: data.seoKeywords ?? '',
+        photos: Array.isArray(data.photos) ? data.photos.filter((u): u is string => typeof u === 'string') : (data.photo ? [data.photo] : []),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
@@ -225,12 +236,16 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           tab2Title: formData.tab2Title || null,
           tab3Title: formData.tab3Title || null,
           tab4Title: formData.tab4Title || null,
-          photo: formData.photo,
           priceOld: formData.priceOld,
           weight: formData.weight ?? null,
           length: formData.length ?? null,
           width: formData.width ?? null,
           height: formData.height ?? null,
+          seoTitle: formData.seoTitle || null,
+          seoDescr: formData.seoDescr || null,
+          seoKeywords: formData.seoKeywords || null,
+          photo: formData.photos.filter(Boolean).length > 0 ? formData.photos[0] : null,
+          photos: formData.photos.filter(Boolean).length > 0 ? formData.photos.filter(Boolean) : null,
           id,
           categoryIds: formData.categories,
         }),
@@ -243,7 +258,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         throw new Error(detail ? `${msg}. ${detail}` : msg);
       }
       
-      router.push('/admin/catalog');
+      router.push(`/${base}/catalog`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     }
@@ -262,7 +277,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           <Button
             className="mt-3"
             variant="secondary"
-            onClick={() => router.push('/admin/catalog')}
+            onClick={() => router.push(`/${base}/catalog`)}
           >
             Вернуться в каталог
           </Button>
@@ -276,7 +291,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       <div className="admin-content">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-text">Редактирование товара</h1>
-          <Button onClick={() => router.push('/admin/catalog')}>
+          <Button onClick={() => router.push(`/${base}/catalog`)}>
             Назад к каталогу
           </Button>
         </div>
@@ -516,15 +531,48 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 />
               </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Фото (URL)</label>
-              <input
-                type="text"
-                name="photo"
-                value={formData.photo}
-                onChange={handleChange}
-                className="form-input w-full"
+
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700 space-y-3">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">SEO</p>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO заголовок</label>
+                <input
+                  type="text"
+                  name="seoTitle"
+                  value={formData.seoTitle}
+                  onChange={handleChange}
+                  className="form-input w-full"
+                  placeholder="title для поисковиков"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO описание</label>
+                <textarea
+                  name="seoDescr"
+                  value={formData.seoDescr}
+                  onChange={handleChange}
+                  className="form-input w-full"
+                  rows={2}
+                  placeholder="meta description"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">SEO ключевые слова</label>
+                <input
+                  type="text"
+                  name="seoKeywords"
+                  value={formData.seoKeywords}
+                  onChange={handleChange}
+                  className="form-input w-full"
+                  placeholder="keywords через запятую"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <ProductGalleryEditor
+                photos={formData.photos}
+                onChange={(photos) => setFormData((prev) => ({ ...prev, photos }))}
               />
             </div>
             
@@ -532,7 +580,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
               <Button type="submit">
                 Сохранить изменения
               </Button>
-              <Button variant="secondary" onClick={() => router.push('/admin/catalog')}>
+              <Button variant="secondary" onClick={() => router.push(`/${base}/catalog`)}>
                 Отмена
               </Button>
             </div>

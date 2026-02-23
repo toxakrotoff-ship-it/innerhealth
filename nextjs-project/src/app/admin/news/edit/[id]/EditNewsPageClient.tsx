@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { CoverImageDropzone } from '../../components/CoverImageDropzone';
 import type { UploadedImage } from '../../components/EditorMediaPanel';
@@ -38,6 +39,7 @@ interface EditNewsPageClientProps {
 
 export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
   const router = useRouter();
+  const base = useAdminBasePath();
   const id = postId;
 
   const [post, setPost] = useState<Post | null>(null);
@@ -104,7 +106,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка сохранения');
-      router.push('/admin/news');
+      router.push(`/${base}/news`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
     }
@@ -129,7 +131,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
           <h1 className="text-3xl font-bold text-text">
             {isArticle ? 'Редактирование статьи' : 'Редактирование новости'}
           </h1>
-          <Button type="button" variant="secondary" onClick={() => router.push('/admin/news')}>
+          <Button type="button" variant="secondary" onClick={() => router.push(`/${base}/news`)}>
             Назад к списку
           </Button>
         </div>
@@ -249,7 +251,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
 
           <div className="flex gap-3">
             <Button type="submit">Сохранить изменения</Button>
-            <Button type="button" variant="secondary" onClick={() => router.push('/admin/news')}>
+            <Button type="button" variant="secondary" onClick={() => router.push(`/${base}/news`)}>
               Отмена
             </Button>
           </div>

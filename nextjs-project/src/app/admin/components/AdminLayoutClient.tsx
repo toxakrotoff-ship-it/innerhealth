@@ -4,13 +4,16 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import ProfileMenu from './ProfileMenu';
 import AdminNav from './AdminNav';
+import { AdminBasePathProvider } from '@/app/admin/context/admin-base-path';
 import type { Session } from 'next-auth';
 
 export default function AdminLayoutClient({
   session,
+  adminBasePath,
   children,
 }: {
   session: Session;
+  adminBasePath: string;
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -30,6 +33,7 @@ export default function AdminLayoutClient({
   }, [isSidebarOpen]);
 
   return (
+    <AdminBasePathProvider value={adminBasePath}>
     <div
       className={`admin-layout${isSidebarOpen ? ' admin-sidebar-open' : ''}`}
       data-sidebar-open={isSidebarOpen}
@@ -106,5 +110,6 @@ export default function AdminLayoutClient({
         </main>
       </div>
     </div>
+    </AdminBasePathProvider>
   );
 }
