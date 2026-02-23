@@ -79,10 +79,18 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
     case 'image': {
       const src = node.attrs?.src
       if (!src) return null
+      const isLocal = typeof src === 'string' && src.startsWith('/')
       return (
         <figure key={key} className="my-6">
           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
-            <Image src={src} alt={node.attrs?.alt ?? ''} fill className="object-cover" sizes="(max-width: 768px) 100vw, 672px" />
+            <Image
+              src={src}
+              alt={node.attrs?.alt ?? ''}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 672px"
+              unoptimized={isLocal}
+            />
           </div>
         </figure>
       )
@@ -141,7 +149,14 @@ export default async function NewsPostPage({ params }: PageProps) {
         )}
         {post.previewImage && (
           <div className="aspect-video rounded-lg bg-gray-100 mb-6 overflow-hidden relative">
-            <Image src={post.previewImage} alt="" fill className="object-cover" sizes="(max-width: 768px) 100vw, 672px" />
+            <Image
+              src={post.previewImage}
+              alt=""
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 672px"
+              unoptimized={post.previewImage.startsWith('/')}
+            />
           </div>
         )}
         <div className="prose prose-gray max-w-none">

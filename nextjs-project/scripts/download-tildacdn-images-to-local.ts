@@ -8,6 +8,7 @@
  * Запуск из корня nextjs-project:
  *   npx ts-node scripts/download-tildacdn-images-to-local.ts
  *   npx ts-node scripts/download-tildacdn-images-to-local.ts --dry-run  # только показать, не скачивать и не обновлять БД
+ *   npx ts-node scripts/download-tildacdn-images-to-local.ts --debug    # вывести примеры полей из БД (формат URL)
  */
 
 import fs from 'fs';
@@ -182,6 +183,24 @@ async function main(): Promise<void> {
   const contentUrls = new Set<string>();
   for (const post of posts) {
     if (post.content != null) collectTildacdnUrlsFromJson(post.content, contentUrls);
+  }
+
+  if (debug) {
+    console.log('[DEBUG] Примеры данных из БД:\n');
+    const sampleProduct = productPhotos.find((p) => p.photo);
+    if (sampleProduct) console.log('  Product.photo (пример):', sampleProduct.photo?.slice(0, 100));
+    const sampleCategory = categories.find((c) => c.image);
+    if (sampleCategory) console.log('  Category.image (пример):', sampleCategory.image?.slice(0, 100));
+    const samplePost = posts.find((p) => p.previewImage || p.content);
+    if (samplePost) {
+      console.log('  Post.previewImage (пример):', samplePost.previewImage?.slice(0, 100));
+      if (samplePost.content) {
+        const contentStr = JSON.stringify(samplePost.content);
+        console.log('  Post.content (первые 300 символов):', contentStr.slice(0, 300));
+        console.log('  Есть "tildacdn" в content?', contentStr.includes('tildacdn'));
+      }
+    }
+    console.log('');
   }
 
   const uniqueUrls = new Set<string>();

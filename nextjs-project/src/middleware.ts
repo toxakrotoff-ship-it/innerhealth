@@ -3,6 +3,18 @@ import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
 const adminSecretPath = process.env.ADMIN_SECRET_PATH || 'admin'
+const SERVICE_HEADER = 'x-service-key'
+const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
+
+/** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats). */
+function isTelegramServiceRequest(request: Request): boolean {
+  const pathname = request.nextUrl.pathname
+  if (!pathname.startsWith('/api/admin/telegram/')) return false
+  const secret = process.env[SERVICE_SECRET_ENV]
+  if (!secret || typeof secret !== 'string') return false
+  const key = request.headers.get(SERVICE_HEADER)
+  return key === secret
+}
 
 /** Security headers for all responses (payment-ready, PCI-aware). */
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -37,6 +49,7 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
+        if (isTelegramServiceRequest(req)) return true
         const pathname = req.nextUrl.pathname
         const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
         const isAdminApi = pathname.startsWith('/api/admin')

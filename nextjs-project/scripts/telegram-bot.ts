@@ -64,11 +64,18 @@ async function getWhitelistIds(): Promise<Set<string>> {
     const res = await fetchWithTimeout(`${base}/api/admin/telegram/whitelist`, {
       headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
     });
+    const raw = await res.text();
     if (!res.ok) {
-      console.error('[bot] whitelist API not ok:', res.status);
+      console.error('[bot] whitelist API not ok:', res.status, raw.slice(0, 200));
       return new Set();
     }
-    const data = (await res.json()) as { telegramUserIds?: string[] };
+    let data: { telegramUserIds?: string[] };
+    try {
+      data = JSON.parse(raw) as { telegramUserIds?: string[] };
+    } catch (parseErr) {
+      console.error('[bot] whitelist API invalid JSON:', raw.slice(0, 300));
+      return new Set();
+    }
     const ids = Array.isArray(data.telegramUserIds) ? data.telegramUserIds : [];
     return new Set(ids.slice(0, 1000).map((id) => String(id)));
   } catch (e) {

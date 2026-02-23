@@ -9,8 +9,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { JSONContent } from '@tiptap/core';
 import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
-
-const ACCEPTED_IMAGE_TYPES = 'image/jpeg,image/png,image/gif,image/webp';
+import { EditorMediaPanel } from './EditorMediaPanel';
 
 interface RichTextEditorProps {
   value: JSONContent | null;
@@ -23,33 +22,30 @@ interface RichTextEditorProps {
 function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const [bulletOpen, setBulletOpen] = useState(false);
   const [orderedOpen, setOrderedOpen] = useState(false);
+  const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
   const bulletRef = useRef<HTMLDivElement>(null);
   const orderedRef = useRef<HTMLDivElement>(null);
+  const mediaPanelRef = useRef<HTMLDivElement>(null);
 
-  const addImage = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = ACCEPTED_IMAGE_TYPES;
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const formData = new FormData();
-      formData.set('file', file);
-      formData.set('folder', 'posts');
-      try {
-        const res = await fetch('/api/admin/upload', {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        });
-        const data = await res.json();
-        if (data?.url) editor?.chain().focus().setImage({ src: data.url }).run();
-      } catch {
-        // ignore
+  const insertImage = useCallback(
+    (url: string) => {
+      if (!url) return;
+      editor?.chain().focus().setImage({ src: url }).run();
+      setMediaPanelOpen(false);
+    },
+    [editor]
+  );
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (mediaPanelRef.current && !mediaPanelRef.current.contains(target)) {
+        setMediaPanelOpen(false);
       }
-    };
-    input.click();
-  }, [editor]);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -67,6 +63,7 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const currentOrderedStyle = editor.getAttributes('orderedList').markerStyle || 'decimal';
 
   return (
+    <>
     <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
       <button
         type="button"
@@ -237,12 +234,22 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <span className="w-px h-5 bg-gray-300 mx-1" />
       <button
         type="button"
-        onClick={addImage}
-        className="px-2 py-1 rounded text-sm hover:bg-gray-200"
+        onClick={() => setMediaPanelOpen((o) => !o)}
+        className={`px-2 py-1 rounded text-sm ${mediaPanelOpen ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+        title="Вставить изображение"
       >
         🖼 Фото
       </button>
     </div>
+    {mediaPanelOpen && (
+      <div ref={mediaPanelRef}>
+        <EditorMediaPanel
+          onInsertImage={insertImage}
+          onClose={() => setMediaPanelOpen(false)}
+        />
+      </div>
+    )}
+    </>
   );
 }
 
