@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://localhost}
+      RUN_MIGRATE: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    # No ports to host — only nginx talks to app
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-innerhealth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-innerhealth_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-innerhealth}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  certbot_www:
