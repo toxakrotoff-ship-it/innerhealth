@@ -15,6 +15,9 @@ node_modules/
 .env*.local
 !.env.example
 
+# Uploads (server-generated, do not commit)
+nextjs-project/public/uploads/
+
 # Build and output
 .next/
 out/

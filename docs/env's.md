@@ -16,7 +16,10 @@ CDEK_CLIENT_SECRET="your_password"
 # --- TELEGRAM BOT (уведомления о заказах и заявках) ---
 TELEGRAM_BOT_TOKEN="your_bot_token_from_BotFather"
 TELEGRAM_SERVICE_SECRET="random_secret_for_bot_to_call_api"
-# URL сайта для вызовов API с бота (локально: http://localhost:3000, прод: https://your-domain.com)
+# URL сайта для вызовов API с бота:
+#   - Локально (бот и сайт на одной машине): http://localhost:3000
+#   - Docker (app и telegram-bot в разных контейнерах): http://app:3000 (уже задано в docker-compose для сервиса telegram-bot, в .env можно не переопределять)
+#   - Прод без Docker: https://your-domain.com
 TELEGRAM_SITE_URL="https://innerhealth.ru"
 
 # --- DELIVERY & MAIL ---
