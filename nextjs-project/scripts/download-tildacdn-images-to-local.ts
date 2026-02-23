@@ -28,34 +28,54 @@ function isTildacdnUrl(value: string | null): value is string {
   return typeof value === 'string' && value.startsWith(TILDA_PHOTO_PREFIX);
 }
 
-/** TipTap node (content может быть вложенным) */
-interface TipTapNode {
-  type?: string;
-  content?: TipTapNode[];
-  attrs?: { src?: string; [key: string]: unknown };
-  [key: string]: unknown;
+const TILDA_URL_REGEX = /https:\/\/static\.tildacdn\.com\/[^\s"'<>]+/g;
+
+/** Собирает все URL static.tildacdn из строки (целиком или по regex для HTML/текста) */
+function collectTildacdnUrlsFromString(s: string, out: Set<string>): void {
+  if (s.startsWith(TILDA_PHOTO_PREFIX)) {
+    out.add(s);
+    return;
+  }
+  const matches: RegExpMatchArray | null = s.match(TILDA_URL_REGEX);
+  if (matches) for (const u of matches) out.add(u);
 }
 
-/** Собирает все URL static.tildacdn из узла и вложенных */
-function collectTildacdnUrlsFromNode(node: TipTapNode, out: Set<string>): void {
-  if (node.type === 'image' && node.attrs?.src && isTildacdnUrl(node.attrs.src)) {
-    out.add(node.attrs.src);
+/** Рекурсивно собирает все URL static.tildacdn из любого JSON (объект/массив/строка) */
+function collectTildacdnUrlsFromJson(val: unknown, out: Set<string>): void {
+  if (typeof val === 'string') {
+    collectTildacdnUrlsFromString(val, out);
+    return;
   }
-  if (Array.isArray(node.content)) {
-    for (const child of node.content) collectTildacdnUrlsFromNode(child, out);
+  if (Array.isArray(val)) {
+    for (const item of val) collectTildacdnUrlsFromJson(item, out);
+    return;
+  }
+  if (val !== null && typeof val === 'object') {
+    for (const v of Object.values(val)) collectTildacdnUrlsFromJson(v, out);
   }
 }
 
-/** Заменяет в копии узла все tildacdn URL на локальные пути */
-function replaceTildacdnInNode(node: TipTapNode, urlToLocal: Map<string, string>): TipTapNode {
-  const next: TipTapNode = { ...node };
-  if (next.attrs?.src && urlToLocal.has(next.attrs.src)) {
-    next.attrs = { ...next.attrs, src: urlToLocal.get(next.attrs.src)! };
+/** Рекурсивно заменяет в копии JSON все tildacdn URL на локальные пути */
+function replaceTildacdnInJson(val: unknown, urlToLocal: Map<string, string>): unknown {
+  if (typeof val === 'string') {
+    if (urlToLocal.has(val)) return urlToLocal.get(val)!;
+    let s = val;
+    urlToLocal.forEach((local, url) => {
+      s = s.split(url).join(local);
+    });
+    return s;
   }
-  if (Array.isArray(next.content)) {
-    next.content = next.content.map((c) => replaceTildacdnInNode(c, urlToLocal));
+  if (Array.isArray(val)) {
+    return val.map((item) => replaceTildacdnInJson(item, urlToLocal));
   }
-  return next;
+  if (val !== null && typeof val === 'object') {
+    const next: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val)) {
+      next[k] = replaceTildacdnInJson(v, urlToLocal);
+    }
+    return next;
+  }
+  return val;
 }
 
 /** Генерирует безопасное имя файла из URL (уникальное по хешу) */
@@ -160,10 +180,7 @@ async function main(): Promise<void> {
 
   const contentUrls = new Set<string>();
   for (const post of posts) {
-    const raw = post.content as TipTapNode | null;
-    if (raw && typeof raw === 'object' && raw.type === 'doc' && Array.isArray(raw.content)) {
-      for (const node of raw.content) collectTildacdnUrlsFromNode(node, contentUrls);
-    }
+    if (post.content != null) collectTildacdnUrlsFromJson(post.content, contentUrls);
   }
 
   const uniqueUrls = new Set<string>();
@@ -219,10 +236,9 @@ async function main(): Promise<void> {
       if (post.previewImage && urlToLocal.has(post.previewImage)) {
         updates.previewImage = urlToLocal.get(post.previewImage)!;
       }
-      const raw = post.content as TipTapNode | null;
-      if (raw && typeof raw === 'object' && raw.type === 'doc' && Array.isArray(raw.content)) {
-        const newContent = replaceTildacdnInNode(raw, urlToLocal);
-        if (JSON.stringify(newContent) !== JSON.stringify(raw)) {
+      if (post.content != null) {
+        const newContent = replaceTildacdnInJson(post.content, urlToLocal);
+        if (JSON.stringify(newContent) !== JSON.stringify(post.content)) {
           updates.content = newContent as object;
         }
       }
@@ -240,13 +256,9 @@ async function main(): Promise<void> {
     let wouldUpdatePosts = 0;
     for (const post of posts) {
       const hasPreview = post.previewImage && isTildacdnUrl(post.previewImage);
-      let hasContent = false;
-      const raw = post.content as TipTapNode | null;
-      if (raw?.type === 'doc' && Array.isArray(raw.content)) {
-        const urlsInPost = new Set<string>();
-        for (const node of raw.content) collectTildacdnUrlsFromNode(node, urlsInPost);
-        hasContent = urlsInPost.size > 0;
-      }
+      const urlsInPost = new Set<string>();
+      if (post.content != null) collectTildacdnUrlsFromJson(post.content, urlsInPost);
+      const hasContent = urlsInPost.size > 0;
       if (hasPreview || hasContent) wouldUpdatePosts++;
     }
     postsUpdated = wouldUpdatePosts;
