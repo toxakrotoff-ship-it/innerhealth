@@ -1,7 +1,14 @@
+import dynamic from 'next/dynamic'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
-import { CartDrawer } from '@/components/site/cart-drawer'
-import { CookieConsent } from '@/components/site/cookie-consent'
+
+const CartDrawer = dynamic(
+  () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
+)
+
+const CookieConsent = dynamic(
+  () => import('@/components/site/cookie-consent').then((m) => ({ default: m.CookieConsent }))
+)
 
 export const revalidate = 60
 

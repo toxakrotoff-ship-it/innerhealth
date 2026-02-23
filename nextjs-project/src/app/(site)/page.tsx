@@ -1,3 +1,4 @@
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Prisma } from '@prisma/client'
@@ -5,13 +6,22 @@ import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
 import { HeroBlock } from '@/components/site/hero-block'
 import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
-import { SprintPowerBlock } from '@/components/site/sprint-power-block'
-import { PartnersBlock } from '@/components/site/partners-block'
+import { PostCard } from '@/components/site/post-card'
 import {
   filterCatalogBlockCategories,
   getCategoryBackgroundImage,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
+
+const SprintPowerBlock = dynamic(
+  () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
+  { ssr: true }
+)
+
+const PartnersBlock = dynamic(
+  () => import('@/components/site/partners-block').then((m) => ({ default: m.PartnersBlock })),
+  { ssr: true }
+)
 
 export const revalidate = 60
 
@@ -110,31 +120,14 @@ export default async function HomePage() {
           {newsPosts.length > 0 ? (
             <ul className="space-y-4">
               {newsPosts.map((post) => (
-                <li key={post.id}>
-                  <Link
-                    href={`/news/${post.slug}`}
-                    className="flex flex-col sm:flex-row overflow-hidden bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
-                  >
-                    <div className="relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square bg-gray-100 shrink-0">
-                      {post.previewImage ? (
-                        <Image
-                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, 10rem"
-                        />
-                      ) : (
-                        <span className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                          Новость
-                        </span>
-                      )}
-                    </div>
-                    <span className="flex flex-1 items-center p-4 font-medium text-text hover:text-action-blue transition-colors">
-                      {post.title}
-                    </span>
-                  </Link>
-                </li>
+                <PostCard
+                  key={post.id}
+                  id={post.id}
+                  title={post.title}
+                  slug={post.slug}
+                  previewImage={post.previewImage}
+                  typeLabel="Новость"
+                />
               ))}
             </ul>
           ) : (
@@ -158,23 +151,30 @@ export default async function HomePage() {
                   >
                     <TiltCard>
                       <div
-                        className="relative flex min-h-[120px] flex-col justify-end p-6 text-center bg-cover bg-center rounded-2xl"
-                        style={{
-                          backgroundImage: bgImage
-                            ? `linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.5) 100%), url(${bgImage})`
-                            : undefined,
-                          backgroundColor: bgImage
-                            ? undefined
-                            : 'var(--soft-background)',
-                        }}
+                        className={`relative flex min-h-[120px] flex-col justify-end p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
                       >
+                        {bgImage && (
+                          <>
+                            <Image
+                              src={bgImage}
+                              alt=""
+                              fill
+                              className="object-cover object-center"
+                              sizes="(max-width: 768px) 50vw, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
+                              aria-hidden
+                            />
+                          </>
+                        )}
                         <span
-                          className={`relative font-medium drop-shadow-md block ${bgImage ? 'text-white' : 'text-text'}`}
+                          className={`relative z-10 font-medium drop-shadow-md block ${bgImage ? 'text-white' : 'text-text'}`}
                         >
                           {cat.title}
                         </span>
                         <span
-                          className={`relative text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                          className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
                         >
                           {cat._count.products} товаров
                         </span>
@@ -207,31 +207,14 @@ export default async function HomePage() {
           {articlePosts.length > 0 ? (
             <ul className="space-y-4">
               {articlePosts.map((post) => (
-                <li key={post.id}>
-                  <Link
-                    href={`/news/${post.slug}`}
-                    className="flex flex-col sm:flex-row overflow-hidden bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
-                  >
-                    <div className="relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square bg-gray-100 shrink-0">
-                      {post.previewImage ? (
-                        <Image
-                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 100vw, 10rem"
-                        />
-                      ) : (
-                        <span className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                          Статья
-                        </span>
-                      )}
-                    </div>
-                    <span className="flex flex-1 items-center p-4 font-medium text-text hover:text-action-blue transition-colors">
-                      {post.title}
-                    </span>
-                  </Link>
-                </li>
+                <PostCard
+                  key={post.id}
+                  id={post.id}
+                  title={post.title}
+                  slug={post.slug}
+                  previewImage={post.previewImage}
+                  typeLabel="Статья"
+                />
               ))}
             </ul>
           ) : (

@@ -147,6 +147,12 @@
     overflow-x: auto;
   }
 
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
   .table {
     width: 100%;
     border-collapse: collapse;
@@ -271,8 +277,16 @@
     }
   }
 
-  /* Бегущая строка */
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-loader {
+      animation: none;
+      background-color: var(--color-gray-200);
+    }
+  }
+
+  /* Бегущая строка — containment для перерисовки только блока */
   .animate-marquee {
+    contain: layout style paint;
     animation: marquee 25s linear infinite;
   }
   @keyframes marquee {
@@ -283,8 +297,13 @@
       transform: translateX(-33.333%);
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee {
+      animation-duration: 45s;
+    }
+  }
 
-  /* Aurora (для hero) */
+  /* Aurora (для hero) — will-change только при hover для экономии памяти */
   .animate-aurora {
     animation: aurora 60s linear infinite;
   }
@@ -294,6 +313,12 @@
     }
     to {
       background-position: 350% 50%, 350% 50%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-aurora {
+      animation: none;
+      background-position: 50% 50%;
     }
   }
 
@@ -335,6 +360,14 @@
     50% {
       transform: rotate(-45deg) translate(-175%, -72%);
       opacity: 0.85;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-login-gradient-1,
+    .animate-login-gradient-2,
+    .animate-login-gradient-3 {
+      animation: none;
     }
   }
 

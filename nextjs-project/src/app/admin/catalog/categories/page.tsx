@@ -264,9 +264,9 @@ export default function AdminCategoriesPage() {
         )}
 
         {/* Список категорий */}
-        <div className="card">
+        <div className="card min-w-0">
           <div className="table-responsive">
-            <table className="table table-horizontal">
+            <table className="table table-horizontal min-w-[640px]">
               <thead>
                 <tr>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

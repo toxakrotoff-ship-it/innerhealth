@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const PARTNERS = [
   {
@@ -39,12 +40,13 @@ export function PartnersBlock() {
               rel="noopener noreferrer"
               className="group flex flex-col sm:flex-row gap-4 p-6 rounded-2xl border border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
-              <div className="shrink-0 w-full sm:w-40 h-32 bg-white rounded-xl border border-gray-200 overflow-hidden flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div className="relative shrink-0 w-full sm:w-40 h-32 bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <Image
                   src={partner.imageUrl}
                   alt={partner.name}
-                  className="max-w-full max-h-full object-contain"
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 640px) 100vw, 10rem"
                 />
               </div>
               <div className="min-w-0 flex-1">

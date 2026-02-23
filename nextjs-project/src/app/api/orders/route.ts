@@ -10,6 +10,7 @@ import {
   getBaseUrl,
 } from '@/lib/yookassa'
 import { notifyTelegramOrder } from '@/lib/telegram-notify'
+import { sendNewOrderNotification } from '@/lib/email'
 import { randomUUID } from 'crypto'
 
 /** Скидка по промокоду применяется только к сумме товаров без акционной цены. */
@@ -162,6 +163,38 @@ export async function POST(request: Request) {
       },
       promoCode: promoCodeStr,
     })
+
+    const orderNotificationPayload = {
+      orderId: order.id,
+      total: order.total,
+      items: order.items.map((oi) => ({
+        title: oi.product.title,
+        quantity: oi.quantity,
+        price: oi.price,
+      })),
+      shipping: {
+        fullName: shipping.fullName.trim(),
+        phone: shipping.phone.trim(),
+        email: shipping.email.trim(),
+        address: shipping.address.trim(),
+        city: shipping.city.trim(),
+        zipCode: (shipping.zipCode ?? '').toString().trim(),
+        country: (shipping.country ?? 'Россия').trim(),
+      },
+      promoCode: promoCodeStr,
+    }
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { email: true, notificationEmail: true },
+    })
+    const adminEmails = admins.map(
+      (a) => (a.notificationEmail?.trim() || a.email).trim()
+    ).filter(Boolean)
+    if (adminEmails.length > 0) {
+      void sendNewOrderNotification(adminEmails, orderNotificationPayload).catch((e) =>
+        console.error('[orders] New order email notification error:', e)
+      )
+    }
 
     const hasYookassa =
       typeof process.env.YOOKASSA_SHOP_ID === 'string' &&

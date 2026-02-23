@@ -138,6 +138,8 @@ model User {
   lastName             String?
   /// Телефон (для связи и отображения в профиле)
   phone                String?
+  /// Ящик для уведомлений о заказах (если задан — письма идут сюда, иначе на email)
+  notificationEmail    String?
   role                 Role     @default(USER)
   mustChangePassword   Boolean  @default(false)
   createdAt            DateTime @default(now())
@@ -239,6 +241,16 @@ model PartnershipLead {
 model SiteSetting {
   key   String @id
   value String
+}
+
+/// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото.
+model Review {
+  id          String   @id @default(cuid())
+  authorName  String
+  socialLink  String?  // ссылка на профиль автора в соцсети
+  text        String
+  imageUrl    String?  // загруженное фото
+  createdAt   DateTime @default(now())
 }
 
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.

@@ -13,7 +13,7 @@ export function HeroBlock() {
       {/* Aurora-фон в палитре бренда: приглушённые синие и мягкий голубой */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <div
-          className="absolute -inset-[10px] will-change-transform
+          className="absolute -inset-[10px]
             [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
             [background-image:var(--aurora)]
             [background-size:300%_200%]
@@ -22,6 +22,7 @@ export function HeroBlock() {
             opacity-[0.48]
             animate-aurora
             [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
+          style={{ contain: 'layout paint' }}
         />
       </div>
 

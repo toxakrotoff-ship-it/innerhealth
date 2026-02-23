@@ -191,16 +191,18 @@ export default function PromoCodesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-          <div className="h-10 bg-gray-200 rounded w-40 mb-8"></div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="h-12 bg-gray-200"></div>
-            <div className="p-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded mb-2"></div>
-              ))}
+      <div className="admin-container">
+        <div className="admin-content">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="h-10 bg-gray-200 rounded w-40 mb-8"></div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="h-12 bg-gray-200"></div>
+              <div className="p-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-200 rounded mb-2"></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -210,16 +212,18 @@ export default function PromoCodesPage() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">{error}</p>
+      <div className="admin-container">
+        <div className="admin-content">
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+            <div className="flex">
+              <div className="shrink-0">
+                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -228,13 +232,14 @@ export default function PromoCodesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Промокоды</h1>
-          <p className="text-gray-600 mt-1">Управление промокодами для скидок</p>
-        </div>
-        <Button variant="primary"
+    <div className="admin-container">
+      <div className="admin-content">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Промокоды</h1>
+            <p className="text-gray-600 mt-1">Управление промокодами для скидок</p>
+          </div>
+          <Button variant="primary"
           onClick={() => {
             setShowForm(true);
             setEditingCode(null);
@@ -245,10 +250,10 @@ export default function PromoCodesPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Создать промокод
-        </Button>
-      </div>
+          </Button>
+        </div>
 
-      {showForm && (
+        {showForm && (
         <div className="card mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             {editingCode ? 'Редактирование промокода' : 'Создание нового промокода'}
@@ -364,7 +369,7 @@ export default function PromoCodesPage() {
           </div>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-hidden min-w-0">
           <div className="table-responsive overflow-x-auto">
             <table className="table table-horizontal min-w-[800px]">
               <thead>
@@ -387,14 +392,14 @@ export default function PromoCodesPage() {
                   <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Действует
                   </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-white border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]">
                     Действия
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {promoCodes.map((code) => (
-                  <tr key={code.id} className="hover:bg-gray-50 transition">
+                  <tr key={code.id} className="group hover:bg-gray-50 transition">
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium text-gray-900 text-center">
                       {code.code}
                     </td>
@@ -427,7 +432,7 @@ export default function PromoCodesPage() {
                         <span className="text-gray-400 text-xs">{code.validTo ? new Date(code.validTo).toLocaleDateString('ru-RU') : '—'}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium align-top text-center">
+                    <td className="px-4 py-3 text-sm font-medium align-top text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] transition-colors">
                       <div className="flex flex-wrap gap-2 justify-center">
                         <Button
                           variant="secondary"
@@ -459,6 +464,7 @@ export default function PromoCodesPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

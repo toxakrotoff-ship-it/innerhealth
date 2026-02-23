@@ -122,10 +122,7 @@ export default function AdminOrdersPage() {
   return (
     <div className="admin-container">
       <div className="admin-content">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Заказы (CRM)</h1>
-        <p className="text-gray-500 mb-6">
-          Просмотр заказов, состава и адресов доставки. Корзина и оформление заказа в разработке.
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Заказы (CRM)</h1>
 
         <div className="card mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">Поиск</label>
@@ -143,7 +140,7 @@ export default function AdminOrdersPage() {
             <table className="table table-horizontal">
               <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Заказ</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Клиент</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Сумма</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
@@ -164,7 +161,17 @@ export default function AdminOrdersPage() {
                         key={order.id}
                         className="hover:bg-gray-50 border-b border-gray-100"
                       >
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.id}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="font-medium text-gray-900">
+                            {order.shippingInfo?.fullName ?? '—'}
+                          </div>
+                          <div className="text-gray-600 mt-0.5">
+                            {order.shippingInfo?.phone ?? '—'}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1" title="ID заказа">
+                            {order.id}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.createdAt)}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{order.total.toFixed(2)} ₽</td>
                         <td className="px-4 py-3">
