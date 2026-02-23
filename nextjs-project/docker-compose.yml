@@ -8,7 +8,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://localhost}
-      RUN_MIGRATE: "1"
+      # 0 = не запускать миграции при старте (БД уже мигрирована/перенесена). Включить: RUN_MIGRATE=1 в .env
+      RUN_MIGRATE: "0"
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +29,23 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+      TELEGRAM_SITE_URL: http://app:3000
+      RUN_MIGRATE: "0"
+    command: ["npm", "run", "telegram-bot"]
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
 
   nginx:
     image: nginx:alpine

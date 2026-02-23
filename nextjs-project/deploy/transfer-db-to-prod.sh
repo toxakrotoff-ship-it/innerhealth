@@ -37,6 +37,9 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
+# pg_dump не принимает query-параметры в URI (?schema=... и т.д.) — убираем
+DUMP_URL="${DATABASE_URL%%\?*}"
+
 if [ -z "${PROD_HOST:-}" ]; then
   echo "Ошибка: задайте PROD_HOST (хост VPS)."
   echo "Пример: PROD_HOST=my-server.ru ./deploy/transfer-db-to-prod.sh"
@@ -65,7 +68,7 @@ if ! command -v pg_dump >/dev/null 2>&1; then
 fi
 
 echo "==> Передача и восстановление на $PROD_HOST..."
-pg_dump "$DATABASE_URL" -F p --no-owner --no-acl --clean --if-exists \
+pg_dump "$DUMP_URL" -F p --no-owner --no-acl --clean --if-exists \
   | ssh "${PROD_USER}@${PROD_HOST}" "cd ${PROD_PATH} && docker compose exec -T db psql -U ${PROD_POSTGRES_USER} -d ${PROD_POSTGRES_DB}"
 
 echo "==> Готово. Продовая БД обновлена из локальной."
