@@ -10,6 +10,8 @@ const CookieConsent = dynamic(
   () => import('@/components/site/cookie-consent').then((m) => ({ default: m.CookieConsent }))
 )
 
+/** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
+export const dynamic = 'force-dynamic'
 export const revalidate = 60
 
 export default function SiteLayout({
