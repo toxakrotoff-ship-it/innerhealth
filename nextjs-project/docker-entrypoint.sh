@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e
 if [ "$RUN_MIGRATE" = "1" ]; then
-  npx prisma migrate deploy
+  node ./node_modules/prisma/build/index.js migrate deploy
 fi
 exec "$@"
