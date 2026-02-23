@@ -30,6 +30,16 @@ interface EditorMediaPanelProps {
   onClose?: () => void;
 }
 
+/** Включить логи: добавьте в URL ?media_debug=1 или в консоли: window.__EDITOR_MEDIA_DEBUG__ = true */
+function getMediaDebug(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    process.env.NODE_ENV === 'development' ||
+    window.location.search.includes('media_debug=1') ||
+    !!(window as unknown as { __EDITOR_MEDIA_DEBUG__?: boolean }).__EDITOR_MEDIA_DEBUG__
+  );
+}
+
 function UploadedThumbnail({
   img,
   onInsert,
@@ -39,6 +49,13 @@ function UploadedThumbnail({
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  if (getMediaDebug() && loading && !error) {
+    const resolvedHref = typeof window !== 'undefined' && img.url
+      ? (img.url.startsWith('http') ? img.url : `${window.location.origin}${img.url.startsWith('/') ? '' : '/'}${img.url}`)
+      : img.url;
+    console.log('[EditorMedia] Thumbnail mount', { url: img.url, name: img.name, resolvedHref });
+  }
 
   return (
     <button
@@ -60,8 +77,24 @@ function UploadedThumbnail({
         alt={img.name}
         className="w-full h-full object-cover relative z-10"
         style={{ visibility: loading && !error ? 'hidden' : 'visible' }}
-        onLoad={() => { setLoading(false); setError(false); }}
-        onError={() => { setLoading(false); setError(true); }}
+        onLoad={() => {
+          if (getMediaDebug()) console.log('[EditorMedia] Thumbnail onLoad OK', img.url);
+          setLoading(false);
+          setError(false);
+        }}
+        onError={(e) => {
+          const target = e.currentTarget;
+          if (getMediaDebug()) {
+            console.warn('[EditorMedia] Thumbnail onError', {
+              url: img.url,
+              srcAttempted: target.src,
+              naturalWidth: target.naturalWidth,
+              naturalHeight: target.naturalHeight,
+            });
+          }
+          setLoading(false);
+          setError(true);
+        }}
       />
     </button>
   );
@@ -89,8 +122,10 @@ function uploadFile(
         try {
           const data = JSON.parse(xhr.responseText) as { url?: string };
           if (data?.url) {
+            if (getMediaDebug()) console.log('[EditorMedia] Upload OK', { url: data.url, status: xhr.status });
             resolve({ url: data.url });
           } else {
+            if (getMediaDebug()) console.warn('[EditorMedia] Upload response without url', data);
             reject(new Error('Сервер не вернул URL изображения'));
           }
         } catch {
@@ -99,6 +134,7 @@ function uploadFile(
       } else {
         try {
           const data = JSON.parse(xhr.responseText) as { error?: string };
+          if (getMediaDebug()) console.warn('[EditorMedia] Upload failed', { status: xhr.status, error: data?.error });
           reject(new Error(data?.error || `Ошибка ${xhr.status}`));
         } catch {
           reject(new Error(`Ошибка загрузки ${xhr.status}`));
@@ -106,7 +142,10 @@ function uploadFile(
       }
     });
 
-    xhr.addEventListener('error', () => reject(new Error('Ошибка сети')));
+    xhr.addEventListener('error', () => {
+      if (getMediaDebug()) console.warn('[EditorMedia] Upload network error');
+      reject(new Error('Ошибка сети'));
+    });
     xhr.addEventListener('abort', () => reject(new Error('Загрузка отменена')));
 
     xhr.open('POST', UPLOAD_ENDPOINT);
