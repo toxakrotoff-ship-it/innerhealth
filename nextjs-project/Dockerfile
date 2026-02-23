@@ -10,6 +10,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+# prisma.config.ts требует DATABASE_URL; при generate подключение не используется
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npm ci
 
 COPY . .
