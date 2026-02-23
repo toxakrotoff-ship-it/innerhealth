@@ -45,7 +45,7 @@ export default withAuth(
   function middleware(request) {
     const pathname = new URL(request.url).pathname
     if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
-      const rest = pathname.slice(adminSecretPath.length) || ''
+      const rest = pathname.slice(1 + adminSecretPath.length) || ''
       const rewritePath = `/admin${rest}`
       const res = NextResponse.rewrite(new URL(rewritePath, request.url))
       return addSecurityHeaders(res)
