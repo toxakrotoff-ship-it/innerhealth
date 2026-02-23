@@ -989,6 +989,7 @@
     text-align: left;
     cursor: pointer;
     transition: background 0.15s;
+    text-decoration: none;
   }
 
   .profile-menu-item:hover {

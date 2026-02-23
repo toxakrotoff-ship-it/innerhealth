@@ -38,7 +38,7 @@ export function ProductCard({
   return (
     <div
       ref={ref}
-      className="group block h-full w-full [perspective:600px]"
+      className="group block h-full w-full perspective-[600px]"
       style={
         {
           '--r-x': '0deg',
@@ -83,8 +83,8 @@ export function ProductCard({
             <span className="text-action-blue/40 text-4xl font-light">?</span>
           )}
         </div>
-        <div className="flex flex-1 min-h-0 flex-col p-4">
-          <div className="flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col p-4">
+          <div className="flex-1 min-h-0 min-w-0">
             <h3 className="font-medium text-text line-clamp-2 group-hover:text-action-blue transition-colors">
               {title}
             </h3>
@@ -99,7 +99,7 @@ export function ProductCard({
               )}
             </div>
           </div>
-          <div className="mt-3 flex flex-col sm:flex-row gap-2 shrink-0">
+          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
             <AddToCartButton
               productId={id}
               title={title}
@@ -111,7 +111,7 @@ export function ProductCard({
             />
             <Link
               href={detailHref}
-              className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-4 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center whitespace-nowrap"
+              className="inline-flex shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
             >
               Подробнее
             </Link>

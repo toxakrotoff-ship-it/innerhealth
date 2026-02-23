@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { notifyTelegramForm } from '@/lib/telegram-notify'
 
 const PARTNERSHIP_RATE_LIMIT = 5
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -92,6 +93,18 @@ export async function POST(request: Request) {
         role: role || undefined,
         socialLinks: socialLinks || undefined,
         message: message || undefined,
+      },
+    })
+
+    notifyTelegramForm({
+      formName: 'Партнёрская заявка',
+      fields: {
+        Имя: name,
+        Email: email,
+        Телефон: phone,
+        Роль: role ?? '—',
+        'Ссылки на соцсети': socialLinks ?? '—',
+        Сообщение: message ?? '—',
       },
     })
 

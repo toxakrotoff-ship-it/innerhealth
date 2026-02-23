@@ -48,7 +48,7 @@ export const authOptions = {
       if (!userId) return session
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, mustChangePassword: true },
+        select: { id: true, mustChangePassword: true, name: true, lastName: true },
       })
       if (!user) {
         return { ...session, user: null as unknown as typeof session.user }
@@ -58,6 +58,8 @@ export const authOptions = {
         session.user.email = token.email as string
         session.user.role = token.role as string
         session.user.mustChangePassword = user.mustChangePassword
+        const fullName = [user.name, user.lastName].filter(Boolean).join(' ') || (token.email as string)
+        session.user.name = fullName
       }
       return session
     }

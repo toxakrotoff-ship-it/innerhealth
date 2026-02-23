@@ -67,7 +67,7 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   const currentOrderedStyle = editor.getAttributes('orderedList').markerStyle || 'decimal';
 
   return (
-    <div className="flex flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+    <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
@@ -314,7 +314,7 @@ export function RichTextEditor({
   }, [value, editor]);
 
   return (
-    <div className={`border border-gray-200 rounded-lg overflow-hidden bg-white ${className}`}>
+    <div className={`flex flex-col border border-gray-200 rounded-lg bg-white min-h-[280px] max-h-[min(70vh,800px)] ${className}`}>
       <style dangerouslySetInnerHTML={{ __html: `
         .rich-text-editor-content h1 { font-size: 1.875rem; font-weight: 700; line-height: 1.3; margin-top: 0.75em; margin-bottom: 0.25em; }
         .rich-text-editor-content h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.35; margin-top: 0.75em; margin-bottom: 0.25em; }
@@ -323,7 +323,9 @@ export function RichTextEditor({
         ${LIST_STYLES}
       `}} />
       <MenuBar editor={editor} />
-      <EditorContent editor={editor} />
+      <div className="flex-1 min-h-0 overflow-auto rounded-b-lg">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }

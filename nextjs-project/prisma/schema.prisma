@@ -132,12 +132,42 @@ model User {
   id                   String   @id @default(cuid())
   email                String   @unique
   password             String
+  /// Имя
   name                 String?
+  /// Фамилия
+  lastName             String?
+  /// Телефон (для связи и отображения в профиле)
+  phone                String?
   role                 Role     @default(USER)
   mustChangePassword   Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   passwordResetTokens  PasswordResetToken[]
+  telegramWhitelist    TelegramWhitelist?
+  telegramLinkCodes    TelegramLinkCode[]
+}
+
+/// Вайтлист Telegram: какой админ привязал какой Telegram ID для уведомлений
+model TelegramWhitelist {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramUserId String   @unique // Telegram user ID (числовой, храним как строку)
+  linkedAt       DateTime @default(now())
+  @@index([telegramUserId])
+}
+
+/// Одноразовые коды привязки Telegram (срок жизни 5–10 мин)
+model TelegramLinkCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([code])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model PasswordResetToken {

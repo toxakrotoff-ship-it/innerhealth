@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
@@ -38,13 +39,13 @@ async function getHomeData() {
         where: { published: true, type: 'news' } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
-        select: { id: true, title: true, slug: true },
+        select: { id: true, title: true, slug: true, previewImage: true },
       }),
       prisma.post.findMany({
         where: { published: true, type: 'article' } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
-        select: { id: true, title: true, slug: true },
+        select: { id: true, title: true, slug: true, previewImage: true },
       }),
     ])
     return { categories, newProducts, newsPosts, articlePosts }
@@ -77,17 +78,21 @@ export default async function HomePage() {
               Весь каталог
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {newProducts.map((p) => (
-              <ProductCard
+              <div
                 key={p.id}
-                id={p.id}
-                title={p.title}
-                price={p.price}
-                priceOld={p.priceOld}
-                photo={p.photo}
-                slug={p.slug}
-              />
+                className="w-[calc((100%-1rem)/2)] max-w-[20rem] sm:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
+              >
+                <ProductCard
+                  id={p.id}
+                  title={p.title}
+                  price={p.price}
+                  priceOld={p.priceOld}
+                  photo={p.photo}
+                  slug={p.slug}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -108,9 +113,24 @@ export default async function HomePage() {
                 <li key={post.id}>
                   <Link
                     href={`/news/${post.slug}`}
-                    className="block p-4 bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
+                    className="flex flex-col sm:flex-row overflow-hidden bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
                   >
-                    <span className="font-medium text-text hover:text-action-blue">
+                    <div className="relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square bg-gray-100 shrink-0">
+                      {post.previewImage ? (
+                        <Image
+                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 100vw, 10rem"
+                        />
+                      ) : (
+                        <span className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                          Новость
+                        </span>
+                      )}
+                    </div>
+                    <span className="flex flex-1 items-center p-4 font-medium text-text hover:text-action-blue transition-colors">
                       {post.title}
                     </span>
                   </Link>
@@ -190,9 +210,24 @@ export default async function HomePage() {
                 <li key={post.id}>
                   <Link
                     href={`/news/${post.slug}`}
-                    className="block p-4 bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
+                    className="flex flex-col sm:flex-row overflow-hidden bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
                   >
-                    <span className="font-medium text-text hover:text-action-blue">
+                    <div className="relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square bg-gray-100 shrink-0">
+                      {post.previewImage ? (
+                        <Image
+                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 100vw, 10rem"
+                        />
+                      ) : (
+                        <span className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                          Статья
+                        </span>
+                      )}
+                    </div>
+                    <span className="flex flex-1 items-center p-4 font-medium text-text hover:text-action-blue transition-colors">
                       {post.title}
                     </span>
                   </Link>
