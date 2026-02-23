@@ -135,6 +135,7 @@ async function downloadImage(
 
 async function main(): Promise<void> {
   const dryRun = process.argv.includes('--dry-run');
+  const debug = process.argv.includes('--debug');
   if (dryRun) {
     console.log('[DRY RUN] Скачивание и обновление БД отключены.\n');
   }

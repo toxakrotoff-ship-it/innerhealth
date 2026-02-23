@@ -40,6 +40,11 @@ RUN npm ci --omit=dev && npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Скрипты для telegram-bot (ts-node запускает scripts/telegram-bot.ts)
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+# typescript нужен ts-node в рантайме (в production иначе только --omit=dev)
+RUN npm install typescript --no-save
+
 RUN chown -R nextjs:nodejs /app
 
 RUN printf '%s\n' '#!/bin/sh' 'set -e' \
