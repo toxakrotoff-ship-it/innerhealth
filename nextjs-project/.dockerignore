@@ -13,3 +13,8 @@ npm-debug.log*
 .idea
 coverage
 .turbo
+docs
+scripts/generate-favicon.mjs
+**/*.test.*
+**/__tests__
+**/.next
