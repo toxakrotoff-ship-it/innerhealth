@@ -23,54 +23,84 @@ const PartnersBlock = dynamic(
   { ssr: true }
 )
 
+const ReviewsCarousel = dynamic(
+  () =>
+    import('@/components/site/reviews-carousel').then((m) => ({ default: m.ReviewsCarousel })),
+  { ssr: true }
+)
+
 export const revalidate = 60
+
+type HomeReview = {
+  id: string
+  authorName: string
+  socialLink: string | null
+  text: string
+  imageUrl: string | null
+  createdAt: string
+}
 
 async function getHomeData() {
   try {
-    const [categories, newProducts, newsPosts, articlePosts] = await Promise.all([
-      prisma.category.findMany({
-        orderBy: { sortOrder: 'asc' },
-        include: { _count: { select: { products: true } } },
-      }),
-      prisma.product.findMany({
-        where: { slug: { not: null } },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-        select: {
-          id: true,
-          title: true,
-          price: true,
-          priceOld: true,
-          photo: true,
-          slug: true,
-        },
-      }),
-      prisma.post.findMany({
-        where: { published: true, type: 'news' } as Prisma.PostWhereInput,
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-      prisma.post.findMany({
-        where: { published: true, type: 'article' } as Prisma.PostWhereInput,
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-    ])
-    return { categories, newProducts, newsPosts, articlePosts }
+    const [categories, newProducts, newsPosts, articlePosts, approvedReviews] =
+      await Promise.all([
+        prisma.category.findMany({
+          orderBy: { sortOrder: 'asc' },
+          include: { _count: { select: { products: true } } },
+        }),
+        prisma.product.findMany({
+          where: { slug: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          take: 8,
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            priceOld: true,
+            photo: true,
+            slug: true,
+          },
+        }),
+        prisma.post.findMany({
+          where: { published: true, type: 'news' } as Prisma.PostWhereInput,
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        prisma.post.findMany({
+          where: { published: true, type: 'article' } as Prisma.PostWhereInput,
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        prisma.review.findMany({
+          where: { status: 'APPROVED' },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+        }),
+      ])
+    const reviews: HomeReview[] = approvedReviews.map((r) => ({
+      id: r.id,
+      authorName: r.authorName,
+      socialLink: r.socialLink,
+      text: r.text,
+      imageUrl: r.imageUrl,
+      createdAt: r.createdAt.toISOString(),
+    }))
+    return { categories, newProducts, newsPosts, articlePosts, reviews }
   } catch {
     return {
       categories: [],
       newProducts: [],
       newsPosts: [],
       articlePosts: [],
+      reviews: [] as HomeReview[],
     }
   }
 }
 
 export default async function HomePage() {
-  const { categories, newProducts, newsPosts, articlePosts } = await getHomeData()
+  const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
 
   return (
     <div>
@@ -232,15 +262,31 @@ export default async function HomePage() {
               Все отзывы
             </Link>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-            <p className="text-gray-500">Раздел отзывов в разработке.</p>
-            <Link
-              href="/otzyvy"
-              className="mt-4 inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
-            >
-              Перейти в отзывы
-            </Link>
-          </div>
+          {reviews.length > 0 ? (
+            <div className="space-y-6">
+              <ReviewsCarousel reviews={reviews} />
+              <div className="text-center">
+                <Link
+                  href="/otzyvy#review-form"
+                  className="inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
+                >
+                  Оставить отзыв
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+              <p className="text-gray-600">
+                Нам важно ваше мнение. Оставьте отзыв — он появится на сайте после модерации.
+              </p>
+              <Link
+                href="/otzyvy#review-form"
+                className="mt-4 inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
+              >
+                Оставить отзыв
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

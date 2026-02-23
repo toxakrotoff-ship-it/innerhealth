@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
 import {
@@ -58,23 +59,30 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             >
               <TiltCard>
                 <div
-                  className="relative flex min-h-[120px] flex-col justify-end p-6 text-center bg-cover bg-center rounded-2xl"
-                  style={{
-                    backgroundImage: bgImage
-                      ? `linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.5) 100%), url(${bgImage})`
-                      : undefined,
-                    backgroundColor: bgImage
-                      ? undefined
-                      : 'var(--soft-background)',
-                  }}
+                  className={`relative flex min-h-[120px] flex-col justify-end p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
                 >
+                  {bgImage && (
+                    <>
+                      <Image
+                        src={bgImage}
+                        alt=""
+                        fill
+                        className="object-cover object-center"
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                      />
+                      <div
+                        className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
+                        aria-hidden
+                      />
+                    </>
+                  )}
                   <span
-                    className={`relative font-medium drop-shadow-md block ${bgImage ? 'text-white' : 'text-text'}`}
+                    className={`relative z-10 font-medium drop-shadow-md block ${bgImage ? 'text-white' : 'text-text'}`}
                   >
                     {cat.title}
                   </span>
                   <span
-                    className={`relative text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                    className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
                   >
                     {cat._count.products} товаров
                   </span>
@@ -91,7 +99,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((p) => (
+            {products.map((p, index) => (
               <ProductCard
                 key={p.id}
                 id={p.id}
@@ -100,6 +108,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 priceOld={p.priceOld}
                 photo={p.photo}
                 slug={p.slug}
+                priority={index < 8}
               />
             ))}
           </div>

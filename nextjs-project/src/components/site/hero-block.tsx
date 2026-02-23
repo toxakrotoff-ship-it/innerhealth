@@ -16,12 +16,12 @@ export function HeroBlock() {
           className="absolute -inset-[10px]
             [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
             [background-image:var(--aurora)]
-            [background-size:300%_200%]
-            [background-position:50%_50%]
-            blur-[12px]
+            bg-size-[300%_200%]
+            bg-position-[50%_50%]
+            blur-md
             opacity-[0.48]
             animate-aurora
-            [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
+            mask-[radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
           style={{ contain: 'layout paint' }}
         />
       </div>
@@ -45,12 +45,12 @@ export function HeroBlock() {
 
           {/* Правая колонка: контейнер на всю высоту, картинка жёстко привязана к низу (absolute bottom-0) */}
           <div className="relative order-2 min-h-[280px] md:min-h-0 w-full">
-            <div className="absolute bottom-0 right-0 w-full max-w-md md:max-w-none aspect-[1680/904] md:aspect-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[480px] bg-transparent">
+            <div className="absolute bottom-0 right-0 w-full max-w-md md:max-w-none aspect-1680/904 md:aspect-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[480px] bg-transparent">
               <Image
                 src="/hero-portrait.png"
                 alt=""
                 fill
-                className="object-contain object-[right_bottom] bg-transparent"
+                className="object-contain object-bottom-right bg-transparent"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
               />

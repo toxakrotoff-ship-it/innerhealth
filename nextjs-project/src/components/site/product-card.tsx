@@ -13,6 +13,8 @@ interface ProductCardProps {
   priceOld?: number | null
   photo?: string | null
   slug?: string | null
+  /** Set for first row on catalog to improve LCP */
+  priority?: boolean
 }
 
 /** Weaker 3D tilt than TiltCard (factor 4), border transition, overlay; two actions: add to cart + details. */
@@ -23,6 +25,7 @@ export function ProductCard({
   priceOld,
   photo,
   slug,
+  priority = false,
 }: ProductCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const state = useRef({ rotateX: 0, rotateY: 0 })
@@ -78,6 +81,7 @@ export function ProductCard({
               fill
               className="object-contain p-4"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              priority={priority}
             />
           ) : (
             <span className="text-action-blue/40 text-4xl font-light">?</span>

@@ -50,7 +50,7 @@ export default async function CategoryPage({ params }: PageProps) {
           className="relative w-full overflow-hidden bg-[#e8d5d8]"
           aria-hidden
         >
-          <div className="relative w-full aspect-[3/1] min-h-[160px] sm:min-h-[200px]">
+          <div className="relative w-full aspect-3/1 min-h-[160px] sm:min-h-[200px]">
             <Image
               src={content.heroImage}
               alt=""
@@ -103,7 +103,7 @@ export default async function CategoryPage({ params }: PageProps) {
             <p className="text-gray-500">В этой категории пока нет товаров.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((p) => (
+              {products.map((p, index) => (
                 <ProductCard
                   key={p.id}
                   id={p.id}
@@ -112,6 +112,7 @@ export default async function CategoryPage({ params }: PageProps) {
                   priceOld={p.priceOld}
                   photo={p.photo}
                   slug={p.slug}
+                  priority={index < 8}
                 />
               ))}
             </div>

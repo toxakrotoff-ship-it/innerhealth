@@ -275,7 +275,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                     <div className="flex items-center gap-3">
                       <Link
                         href={`/${base}/products/${product.id}/edit`}
-                        className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium bg-[var(--color-highlight-blue)] text-[var(--color-text)] hover:opacity-90 transition-opacity min-h-[32px]"
+                        className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium bg-highlight-blue text-(--color-text) hover:opacity-90 transition-opacity min-h-[32px]"
                       >
                         Ред.
                       </Link>
