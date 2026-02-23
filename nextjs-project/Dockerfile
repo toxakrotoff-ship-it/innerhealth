@@ -1,6 +1,9 @@
 # --- Build stage ---
 FROM node:20-alpine AS builder
 
+# Для сборки нативных модулей (bcrypt и др.)
+RUN apk add --no-cache libc6-compat python3 make g++
+
 WORKDIR /app
 
 # Dependencies (package.json + package-lock.json if present)
