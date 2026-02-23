@@ -11,18 +11,26 @@ async function getWhitelistChatIds(): Promise<string[]> {
   return list.map((r) => r.telegramUserId);
 }
 
-async function sendMessage(chatId: string, text: string): Promise<void> {
+interface SendMessageOptions {
+  replyMarkup?: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
+}
+
+async function sendMessage(chatId: string, text: string, options?: SendMessageOptions): Promise<void> {
   if (!TELEGRAM_BOT_TOKEN) return;
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+  };
+  if (options?.replyMarkup) {
+    body.reply_markup = options.replyMarkup;
+  }
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.text();
@@ -115,6 +123,48 @@ export function notifyTelegramForm(payload: FormNotifyPayload): void {
 export interface ConnectionNotifyPayload {
   userId: string;
   telegramUserId: string;
+}
+
+export interface ReviewNotifyPayload {
+  reviewId: string;
+  authorName: string;
+  text: string;
+}
+
+/** Уведомление в Telegram о новом отзыве с кнопками «Разместить» / «Отклонить». Только для чатов из вайтлиста. */
+export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
+  const { reviewId, authorName, text } = payload;
+  const chatIdsPromise = getWhitelistChatIds();
+  chatIdsPromise.then(async (chatIds) => {
+    if (chatIds.length === 0) return;
+    const textPreview = text.length > 300 ? text.slice(0, 297) + '…' : text;
+    const lines: string[] = [
+      '📝 <b>Новый отзыв (на модерации)</b>',
+      `Автор: ${escapeHtml(authorName)}`,
+      '',
+      escapeHtml(textPreview),
+    ];
+    const messageText = lines.join('\n');
+    const callbackDataPrefix = 'review_';
+    const approveData = callbackDataPrefix + 'approve_' + reviewId;
+    const rejectData = callbackDataPrefix + 'reject_' + reviewId;
+    if (approveData.length > 64 || rejectData.length > 64) {
+      console.error('[telegram-notify] review id too long for callback_data');
+    }
+    const replyMarkup = {
+      inline_keyboard: [
+        [
+          { text: '✅ Разместить', callback_data: approveData.slice(0, 64) },
+          { text: '❌ Отклонить', callback_data: rejectData.slice(0, 64) },
+        ],
+      ],
+    };
+    for (const chatId of chatIds) {
+      await sendMessage(chatId, messageText, { replyMarkup }).catch((e) =>
+        console.error('[telegram-notify] review notify error:', e)
+      );
+    }
+  }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
 }
 
 /** Уведомление в Telegram о том, что пользователь привязал аккаунт (подключился к уведомлениям). */

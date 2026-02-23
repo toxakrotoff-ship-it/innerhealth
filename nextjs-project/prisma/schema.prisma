@@ -245,14 +245,23 @@ model SiteSetting {
   value String
 }
 
-/// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото.
+/// Статус модерации отзыва: ожидает модерации, одобрен (показывается на сайте), отклонён.
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото. На сайте показываются только со статусом APPROVED.
 model Review {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   authorName  String
-  socialLink  String?  // ссылка на профиль автора в соцсети
+  socialLink  String?      // ссылка на профиль автора в соцсети
   text        String
-  imageUrl    String?  // загруженное фото
-  createdAt   DateTime @default(now())
+  imageUrl    String?      // загруженное фото
+  status      ReviewStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  @@index([status])
 }
 
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.

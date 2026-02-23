@@ -135,7 +135,68 @@ async function sendMessage(chatId: string, text: string): Promise<void> {
   }
 }
 
-type TelegramUpdate = { update_id: number; message?: { from?: { id: number }; text?: string; chat?: { id: number } }; callback_query?: unknown };
+const REVIEW_APPROVE_PREFIX = 'review_approve_';
+const REVIEW_REJECT_PREFIX = 'review_reject_';
+
+async function setReviewStatus(reviewId: string, status: 'approved' | 'rejected'): Promise<{ success: boolean; error?: string }> {
+  try {
+    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const res = await fetchWithTimeout(`${base}/api/admin/reviews/${encodeURIComponent(reviewId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
+      body: JSON.stringify({ status }),
+    });
+    const data = (await res.json()) as { success?: boolean; error?: string };
+    if (!res.ok) return { success: false, error: (data && data.error) || 'Request failed' };
+    return { success: !!data.success, error: data.error };
+  } catch (e) {
+    console.error('[bot] setReviewStatus error:', e instanceof Error ? e.name : e);
+    return { success: false, error: 'Сервис недоступен' };
+  }
+}
+
+async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+  try {
+    await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text: text ? text.slice(0, 200) : undefined }),
+    });
+  } catch (e) {
+    console.error('[bot] answerCallbackQuery error:', e instanceof Error ? e.name : e);
+  }
+}
+
+async function editMessageText(chatId: number, messageId: number, text: string): Promise<void> {
+  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
+  try {
+    await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text: text.slice(0, 4096),
+        parse_mode: 'HTML',
+      }),
+    });
+  } catch (e) {
+    console.error('[bot] editMessageText error:', e instanceof Error ? e.name : e);
+  }
+}
+
+type CallbackQuery = {
+  id: string;
+  from?: { id: number };
+  data?: string;
+  message?: { chat?: { id: number }; message_id?: number; text?: string };
+};
+type TelegramUpdate = {
+  update_id: number;
+  message?: { from?: { id: number }; text?: string; chat?: { id: number } };
+  callback_query?: CallbackQuery;
+};
 
 async function getUpdates(offset: number): Promise<{ result?: TelegramUpdate[] }> {
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${offset}&timeout=30&limit=50`;
@@ -162,6 +223,43 @@ async function run(): Promise<void> {
     for (const update of updates) {
       try {
         offset = Math.max(offset, update.update_id + 1);
+
+        const cq = update.callback_query;
+        if (cq?.id != null && cq.from?.id != null && typeof cq.data === 'string') {
+          const fromId = String(cq.from.id);
+          const whitelist = await getWhitelistIds();
+          if (!whitelist.has(fromId)) {
+            await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
+            continue;
+          }
+          const data = cq.data;
+          if (data.startsWith(REVIEW_APPROVE_PREFIX)) {
+            const reviewId = data.slice(REVIEW_APPROVE_PREFIX.length);
+            const result = await setReviewStatus(reviewId, 'approved');
+            if (result.success) {
+              await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
+              if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
+                const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
+                await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n✅ Размещено на сайте.');
+              }
+            } else {
+              await answerCallbackQuery(cq.id, result.error || 'Ошибка');
+            }
+          } else if (data.startsWith(REVIEW_REJECT_PREFIX)) {
+            const reviewId = data.slice(REVIEW_REJECT_PREFIX.length);
+            const result = await setReviewStatus(reviewId, 'rejected');
+            if (result.success) {
+              await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
+              if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
+                const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
+                await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n❌ Отклонён.');
+              }
+            } else {
+              await answerCallbackQuery(cq.id, result.error || 'Ошибка');
+            }
+          }
+          continue;
+        }
 
         const msg = update.message;
         if (!msg?.from?.id || msg.chat?.id == null) continue;

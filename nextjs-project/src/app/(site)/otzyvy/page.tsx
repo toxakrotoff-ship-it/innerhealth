@@ -12,6 +12,7 @@ type ReviewRow = {
 
 export default async function ReviewsPage() {
   const reviews: ReviewRow[] = await prisma.review.findMany({
+    where: { status: 'APPROVED' },
     orderBy: { createdAt: 'desc' },
   });
 

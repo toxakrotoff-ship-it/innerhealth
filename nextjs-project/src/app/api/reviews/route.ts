@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '@/lib/prisma';
+import { notifyTelegramNewReview } from '@/lib/telegram-notify';
 
 const REVIEW_RATE_LIMIT = 5;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -51,11 +52,12 @@ function isValidUrl(s: string): boolean {
 }
 
 /**
- * GET /api/reviews — список отзывов для карусели (по убыванию даты).
+ * GET /api/reviews — список одобренных отзывов для карусели (по убыванию даты).
  */
 export async function GET() {
   try {
     const reviews = await prisma.review.findMany({
+      where: { status: 'APPROVED' },
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(reviews);
@@ -133,13 +135,20 @@ export async function POST(request: Request) {
       imageUrl = `/uploads/${UPLOAD_FOLDER}/${fileName}`;
     }
 
-    await prisma.review.create({
+    const review = await prisma.review.create({
       data: {
         authorName,
         socialLink: socialLink || undefined,
         text,
         imageUrl: imageUrl ?? undefined,
+        status: 'PENDING',
       },
+    });
+
+    notifyTelegramNewReview({
+      reviewId: review.id,
+      authorName,
+      text,
     });
 
     return NextResponse.json({ success: true });
