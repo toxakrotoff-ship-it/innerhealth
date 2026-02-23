@@ -8,7 +8,7 @@ const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
 
 /** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats). */
 function isTelegramServiceRequest(request: Request): boolean {
-  const pathname = request.nextUrl.pathname
+  const pathname = new URL(request.url).pathname
   if (!pathname.startsWith('/api/admin/telegram/')) return false
   const secret = process.env[SERVICE_SECRET_ENV]
   if (!secret || typeof secret !== 'string') return false
@@ -50,7 +50,7 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         if (isTelegramServiceRequest(req)) return true
-        const pathname = req.nextUrl.pathname
+        const pathname = new URL(req.url).pathname
         const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
         const isAdminApi = pathname.startsWith('/api/admin')
         if (!isAdminPath && !isAdminApi) return true
