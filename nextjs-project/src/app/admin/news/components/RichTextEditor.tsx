@@ -17,6 +17,10 @@ interface RichTextEditorProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Список загрузок редактора (хранится на странице — не сбрасывается при ремаунте редактора). */
+  uploadedMedia?: UploadedImage[];
+  /** Колбэк при новой загрузке (передайте с страницы, чтобы фото не пропадали). */
+  onMediaUploaded?: (img: UploadedImage) => void;
 }
 
 interface MenuBarProps {
@@ -289,8 +293,13 @@ export function RichTextEditor({
   placeholder = 'Введите текст...',
   disabled,
   className = '',
+  uploadedMedia: uploadedMediaProp,
+  onMediaUploaded: onMediaUploadedProp,
 }: RichTextEditorProps) {
-  const [uploadedMedia, setUploadedMedia] = useState<UploadedImage[]>([]);
+  const [uploadedMediaInternal, setUploadedMediaInternal] = useState<UploadedImage[]>([]);
+  const uploadedMedia = uploadedMediaProp ?? uploadedMediaInternal;
+  const onMediaUploaded =
+    onMediaUploadedProp ?? ((img: UploadedImage) => setUploadedMediaInternal((prev) => [...prev, img]));
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -342,7 +351,7 @@ export function RichTextEditor({
       <MenuBar
         editor={editor}
         uploadedMedia={uploadedMedia}
-        onMediaUploaded={(img) => setUploadedMedia((prev) => [...prev, img])}
+        onMediaUploaded={onMediaUploaded}
       />
       <div className="flex-1 min-h-0 overflow-auto rounded-b-lg">
         <EditorContent editor={editor} />

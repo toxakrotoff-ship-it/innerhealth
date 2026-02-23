@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { CoverImageDropzone } from '../../components/CoverImageDropzone';
+import type { UploadedImage } from '../../components/EditorMediaPanel';
 import type { JSONContent } from '@tiptap/core';
 
 type PostType = 'news' | 'article';
@@ -51,6 +52,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
     previewImage: string;
     published: boolean;
   } | null>(null);
+  const [editorUploadedMedia, setEditorUploadedMedia] = useState<UploadedImage[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -234,6 +236,8 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
               value={formData.content}
               onChange={(content) => setFormData((p) => (!p ? p : { ...p, content }))}
               placeholder="Введите текст..."
+              uploadedMedia={editorUploadedMedia}
+              onMediaUploaded={(img) => setEditorUploadedMedia((prev) => [...prev, img])}
             />
           </div>
 

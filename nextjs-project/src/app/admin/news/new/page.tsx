@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { CoverImageDropzone } from '../components/CoverImageDropzone';
+import type { UploadedImage } from '../components/EditorMediaPanel';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
 import type { JSONContent } from '@tiptap/core';
 
@@ -36,6 +37,7 @@ export default function NewNewsPage() {
     previewImage: '',
     published: false,
   });
+  const [editorUploadedMedia, setEditorUploadedMedia] = useState<UploadedImage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -214,6 +216,8 @@ export default function NewNewsPage() {
               value={formData.content}
               onChange={(content) => setFormData((p) => ({ ...p, content }))}
               placeholder="Введите текст..."
+              uploadedMedia={editorUploadedMedia}
+              onMediaUploaded={(img) => setEditorUploadedMedia((prev) => [...prev, img])}
             />
           </div>
 

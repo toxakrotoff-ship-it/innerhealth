@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const ACCEPTED_IMAGE_TYPES = 'image/jpeg,image/png,image/gif,image/webp';
 const UPLOAD_ENDPOINT = '/api/admin/upload';
@@ -17,6 +17,8 @@ interface UploadingItem {
   name: string;
   progress: number;
   error: string | null;
+  /** Превью во время загрузки (object URL, нужно отозвать при удалении). */
+  previewUrl?: string;
 }
 
 interface EditorMediaPanelProps {
@@ -26,6 +28,43 @@ interface EditorMediaPanelProps {
   onUploadedAdd: (img: UploadedImage) => void;
   onInsertImage: (url: string) => void;
   onClose?: () => void;
+}
+
+function UploadedThumbnail({
+  img,
+  onInsert,
+}: {
+  img: UploadedImage;
+  onInsert: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onInsert}
+      className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-100"
+    >
+      {loading && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse" aria-hidden />
+      )}
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 text-xs p-1">
+          <span aria-hidden>⚠</span>
+          <span>Не загрузилось</span>
+        </div>
+      )}
+      <img
+        src={img.url}
+        alt={img.name}
+        className="w-full h-full object-cover relative z-10"
+        style={{ visibility: loading && !error ? 'hidden' : 'visible' }}
+        onLoad={() => { setLoading(false); setError(false); }}
+        onError={() => { setLoading(false); setError(true); }}
+      />
+    </button>
+  );
 }
 
 function uploadFile(
@@ -93,24 +132,43 @@ export function EditorMediaPanel({
       Array.from(files).forEach((file) => {
         if (!file.type || !allowedTypes.includes(file.type)) return;
         const id = `u-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        setUploading((prev) => [...prev, { id, name: file.name, progress: 0, error: null }]);
+        const previewUrl = URL.createObjectURL(file);
+        setUploading((prev) => [...prev, { id, name: file.name, progress: 0, error: null, previewUrl }]);
         uploadFile(file, (progress) => {
           setUploading((prev) => prev.map((u) => (u.id === id ? { ...u, progress } : u)));
         })
           .then(({ url }) => {
-            setUploading((prev) => prev.filter((u) => u.id !== id));
+            setUploading((prev) => {
+              const next = prev.filter((u) => u.id !== id);
+              const item = prev.find((u) => u.id === id);
+              if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+              return next;
+            });
             onUploadedAdd({ id: url, url, name: file.name });
           })
           .catch((err) => {
-            setUploading((prev) =>
-              prev.map((u) =>
-                u.id === id ? { ...u, progress: 0, error: err instanceof Error ? err.message : 'Ошибка' } : u
-              )
-            );
+            setUploading((prev) => {
+              const item = prev.find((u) => u.id === id);
+              if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+              return prev.map((u) =>
+                u.id === id ? { ...u, progress: 0, error: err instanceof Error ? err.message : 'Ошибка', previewUrl: undefined } : u
+              );
+            });
           });
       });
     },
     [onUploadedAdd]
+  );
+
+  const uploadingRef = useRef<UploadingItem[]>([]);
+  uploadingRef.current = uploading;
+  useEffect(
+    () => () => {
+      uploadingRef.current.forEach((u) => {
+        if (u.previewUrl) URL.revokeObjectURL(u.previewUrl);
+      });
+    },
+    []
   );
 
   const handleDrop = useCallback(
@@ -186,22 +244,35 @@ export function EditorMediaPanel({
           <div className="space-y-2">
             <p className="text-xs font-medium text-gray-500">Загрузка</p>
             {uploading.map((u) => (
-              <div key={u.id} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="truncate text-gray-700 max-w-[180px]" title={u.name}>
-                    {u.name}
-                  </span>
-                  {u.error ? (
-                    <span className="text-red-600">{u.error}</span>
+              <div key={u.id} className="flex gap-2 items-center">
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                  {u.previewUrl ? (
+                    <img
+                      src={u.previewUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <span className="text-gray-500">{u.progress}%</span>
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">?</div>
                   )}
                 </div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 transition-[width] duration-200"
-                    style={{ width: u.error ? '0%' : `${u.progress}%` }}
-                  />
+                <div className="flex-1 min-w-0 flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="truncate text-gray-700 max-w-[180px]" title={u.name}>
+                      {u.name}
+                    </span>
+                    {u.error ? (
+                      <span className="text-red-600">{u.error}</span>
+                    ) : (
+                      <span className="text-gray-500">{u.progress}%</span>
+                    )}
+                  </div>
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-[width] duration-200"
+                      style={{ width: u.error ? '0%' : `${u.progress}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -213,18 +284,11 @@ export function EditorMediaPanel({
             <p className="text-xs font-medium text-gray-500">Загруженные — нажмите, чтобы вставить в текст</p>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[200px] overflow-y-auto">
               {uploaded.map((img) => (
-                <button
+                <UploadedThumbnail
                   key={img.id}
-                  type="button"
-                  onClick={() => onInsertImage(img.url)}
-                  className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 hover:ring-2 hover:ring-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <img
-                    src={img.url}
-                    alt={img.name}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
+                  img={img}
+                  onInsert={() => onInsertImage(img.url)}
+                />
               ))}
             </div>
           </div>
