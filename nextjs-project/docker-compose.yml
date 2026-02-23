@@ -60,6 +60,8 @@ services:
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
       - certbot_www:/var/www/certbot:ro
+      # Раздача загрузок (standalone Next.js не отдаёт public/): тот же каталог, что и у app
+      - ./public/uploads:/var/www/uploads:ro
     depends_on:
       - app
 
