@@ -20,6 +20,10 @@ interface UploadingItem {
 }
 
 interface EditorMediaPanelProps {
+  /** Список уже загруженных в этой сессии редактора (хранится в родителе, не сбрасывается при закрытии панели). */
+  uploaded: UploadedImage[];
+  /** Добавить фото в общий список после успешной загрузки. */
+  onUploadedAdd: (img: UploadedImage) => void;
   onInsertImage: (url: string) => void;
   onClose?: () => void;
 }
@@ -72,35 +76,42 @@ function uploadFile(
   });
 }
 
-export function EditorMediaPanel({ onInsertImage, onClose }: EditorMediaPanelProps) {
+export function EditorMediaPanel({
+  uploaded,
+  onUploadedAdd,
+  onInsertImage,
+  onClose,
+}: EditorMediaPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploaded, setUploaded] = useState<UploadedImage[]>([]);
   const [uploading, setUploading] = useState<UploadingItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
 
-  const startUpload = useCallback((files: FileList | null) => {
-    if (!files?.length) return;
-    const allowedTypes = ACCEPTED_IMAGE_TYPES.split(',');
-    Array.from(files).forEach((file) => {
-      if (!file.type || !allowedTypes.includes(file.type)) return;
-      const id = `u-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      setUploading((prev) => [...prev, { id, name: file.name, progress: 0, error: null }]);
-      uploadFile(file, (progress) => {
-        setUploading((prev) => prev.map((u) => (u.id === id ? { ...u, progress } : u)));
-      })
-        .then(({ url }) => {
-          setUploading((prev) => prev.filter((u) => u.id !== id));
-          setUploaded((prev) => [...prev, { id: url, url, name: file.name }]);
+  const startUpload = useCallback(
+    (files: FileList | null) => {
+      if (!files?.length) return;
+      const allowedTypes = ACCEPTED_IMAGE_TYPES.split(',');
+      Array.from(files).forEach((file) => {
+        if (!file.type || !allowedTypes.includes(file.type)) return;
+        const id = `u-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        setUploading((prev) => [...prev, { id, name: file.name, progress: 0, error: null }]);
+        uploadFile(file, (progress) => {
+          setUploading((prev) => prev.map((u) => (u.id === id ? { ...u, progress } : u)));
         })
-        .catch((err) => {
-          setUploading((prev) =>
-            prev.map((u) =>
-              u.id === id ? { ...u, progress: 0, error: err instanceof Error ? err.message : 'Ошибка' } : u
-            )
-          );
-        });
-    });
-  }, []);
+          .then(({ url }) => {
+            setUploading((prev) => prev.filter((u) => u.id !== id));
+            onUploadedAdd({ id: url, url, name: file.name });
+          })
+          .catch((err) => {
+            setUploading((prev) =>
+              prev.map((u) =>
+                u.id === id ? { ...u, progress: 0, error: err instanceof Error ? err.message : 'Ошибка' } : u
+              )
+            );
+          });
+      });
+    },
+    [onUploadedAdd]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -221,7 +232,7 @@ export function EditorMediaPanel({ onInsertImage, onClose }: EditorMediaPanelPro
 
         {uploaded.length === 0 && uploading.length === 0 && (
           <p className="text-xs text-gray-400 text-center py-2">
-            Загрузите изображения выше — они появятся здесь для быстрой вставки.
+            Загруженные в этой сессии изображения сохраняются здесь до ухода со страницы. Загрузите файлы выше или нажмите для выбора.
           </p>
         )}
       </div>

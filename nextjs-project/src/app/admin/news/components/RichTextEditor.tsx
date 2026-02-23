@@ -9,7 +9,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import type { JSONContent } from '@tiptap/core';
 import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
-import { EditorMediaPanel } from './EditorMediaPanel';
+import { EditorMediaPanel, type UploadedImage } from './EditorMediaPanel';
 
 interface RichTextEditorProps {
   value: JSONContent | null;
@@ -19,7 +19,13 @@ interface RichTextEditorProps {
   className?: string;
 }
 
-function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+interface MenuBarProps {
+  editor: ReturnType<typeof useEditor>;
+  uploadedMedia: UploadedImage[];
+  onMediaUploaded: (img: UploadedImage) => void;
+}
+
+function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
   const [bulletOpen, setBulletOpen] = useState(false);
   const [orderedOpen, setOrderedOpen] = useState(false);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
@@ -241,9 +247,11 @@ function MenuBar({ editor }: { editor: ReturnType<typeof useEditor> }) {
         🖼 Фото
       </button>
     </div>
-    {mediaPanelOpen && (
+        {mediaPanelOpen && (
       <div ref={mediaPanelRef}>
         <EditorMediaPanel
+          uploaded={uploadedMedia}
+          onUploadedAdd={onMediaUploaded}
           onInsertImage={insertImage}
           onClose={() => setMediaPanelOpen(false)}
         />
@@ -282,6 +290,8 @@ export function RichTextEditor({
   disabled,
   className = '',
 }: RichTextEditorProps) {
+  const [uploadedMedia, setUploadedMedia] = useState<UploadedImage[]>([]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -329,7 +339,11 @@ export function RichTextEditor({
         .rich-text-editor-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5em 0; }
         ${LIST_STYLES}
       `}} />
-      <MenuBar editor={editor} />
+      <MenuBar
+        editor={editor}
+        uploadedMedia={uploadedMedia}
+        onMediaUploaded={(img) => setUploadedMedia((prev) => [...prev, img])}
+      />
       <div className="flex-1 min-h-0 overflow-auto rounded-b-lg">
         <EditorContent editor={editor} />
       </div>
