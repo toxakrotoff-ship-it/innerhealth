@@ -2,9 +2,8 @@
 /**
  * Загружает все изображения с static.tildacdn.com в локальную папку проекта.
  *
- * - Находит в БД Product.photo и Category.image с URL https://static.tildacdn.com/*
- * - Скачивает каждое изображение в public/uploads/tilda/
- * - Обновляет записи в БД на локальный путь (/uploads/tilda/...)
+ * - Product.photo, Category.image, Post.previewImage и картинки в Post.content (TipTap)
+ * - Скачивает в public/uploads/tilda/, обновляет записи на /uploads/tilda/...
  *
  * Запуск из корня nextjs-project:
  *   npx ts-node scripts/download-tildacdn-images-to-local.ts
@@ -27,6 +26,36 @@ const PUBLIC_PREFIX = '/uploads/tilda';
 
 function isTildacdnUrl(value: string | null): value is string {
   return typeof value === 'string' && value.startsWith(TILDA_PHOTO_PREFIX);
+}
+
+/** TipTap node (content может быть вложенным) */
+interface TipTapNode {
+  type?: string;
+  content?: TipTapNode[];
+  attrs?: { src?: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+/** Собирает все URL static.tildacdn из узла и вложенных */
+function collectTildacdnUrlsFromNode(node: TipTapNode, out: Set<string>): void {
+  if (node.type === 'image' && node.attrs?.src && isTildacdnUrl(node.attrs.src)) {
+    out.add(node.attrs.src);
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) collectTildacdnUrlsFromNode(child, out);
+  }
+}
+
+/** Заменяет в копии узла все tildacdn URL на локальные пути */
+function replaceTildacdnInNode(node: TipTapNode, urlToLocal: Map<string, string>): TipTapNode {
+  const next: TipTapNode = { ...node };
+  if (next.attrs?.src && urlToLocal.has(next.attrs.src)) {
+    next.attrs = { ...next.attrs, src: urlToLocal.get(next.attrs.src)! };
+  }
+  if (Array.isArray(next.content)) {
+    next.content = next.content.map((c) => replaceTildacdnInNode(c, urlToLocal));
+  }
+  return next;
 }
 
 /** Генерирует безопасное имя файла из URL (уникальное по хешу) */
@@ -111,12 +140,40 @@ async function main(): Promise<void> {
     image: string;
   }>;
 
+  const posts = await prisma.post.findMany({
+    where: {
+      OR: [
+        { previewImage: { not: null } },
+        { content: { not: null } },
+      ],
+    },
+    select: { id: true, title: true, slug: true, previewImage: true, content: true },
+  });
+
+  const postPreviewUrls = posts.filter((p) => isTildacdnUrl(p.previewImage)) as Array<{
+    id: string;
+    title: string;
+    slug: string;
+    previewImage: string;
+    content: unknown;
+  }>;
+
+  const contentUrls = new Set<string>();
+  for (const post of posts) {
+    const raw = post.content as TipTapNode | null;
+    if (raw && typeof raw === 'object' && raw.type === 'doc' && Array.isArray(raw.content)) {
+      for (const node of raw.content) collectTildacdnUrlsFromNode(node, contentUrls);
+    }
+  }
+
   const uniqueUrls = new Set<string>();
   productUrls.forEach((p) => uniqueUrls.add(p.photo));
   categoryUrls.forEach((c) => uniqueUrls.add(c.image));
+  postPreviewUrls.forEach((p) => uniqueUrls.add(p.previewImage));
+  contentUrls.forEach((u) => uniqueUrls.add(u));
 
   console.log(
-    `Найдено: ${productUrls.length} товаров и ${categoryUrls.length} категорий с URL static.tildacdn.com (уникальных URL: ${uniqueUrls.size})\n`
+    `Найдено: ${productUrls.length} товаров, ${categoryUrls.length} категорий, ${postPreviewUrls.length} постов (preview), ${contentUrls.size} картинок в контенте. Уникальных URL: ${uniqueUrls.size}\n`
   );
 
   const urlToLocal = new Map<string, string>();
@@ -134,6 +191,7 @@ async function main(): Promise<void> {
 
   let productsUpdated = 0;
   let categoriesUpdated = 0;
+  let postsUpdated = 0;
 
   if (!dryRun) {
     for (const p of productUrls) {
@@ -156,13 +214,46 @@ async function main(): Promise<void> {
         categoriesUpdated++;
       }
     }
+    for (const post of posts) {
+      const updates: { previewImage?: string; content?: object } = {};
+      if (post.previewImage && urlToLocal.has(post.previewImage)) {
+        updates.previewImage = urlToLocal.get(post.previewImage)!;
+      }
+      const raw = post.content as TipTapNode | null;
+      if (raw && typeof raw === 'object' && raw.type === 'doc' && Array.isArray(raw.content)) {
+        const newContent = replaceTildacdnInNode(raw, urlToLocal);
+        if (JSON.stringify(newContent) !== JSON.stringify(raw)) {
+          updates.content = newContent as object;
+        }
+      }
+      if (Object.keys(updates).length > 0) {
+        await prisma.post.update({
+          where: { id: post.id },
+          data: updates,
+        });
+        postsUpdated++;
+      }
+    }
   } else {
     productsUpdated = productUrls.length;
     categoriesUpdated = categoryUrls.length;
+    let wouldUpdatePosts = 0;
+    for (const post of posts) {
+      const hasPreview = post.previewImage && isTildacdnUrl(post.previewImage);
+      let hasContent = false;
+      const raw = post.content as TipTapNode | null;
+      if (raw?.type === 'doc' && Array.isArray(raw.content)) {
+        const urlsInPost = new Set<string>();
+        for (const node of raw.content) collectTildacdnUrlsFromNode(node, urlsInPost);
+        hasContent = urlsInPost.size > 0;
+      }
+      if (hasPreview || hasContent) wouldUpdatePosts++;
+    }
+    postsUpdated = wouldUpdatePosts;
   }
 
   console.log(
-    `\nИтого: обновлено товаров ${productsUpdated}, категорий ${categoriesUpdated}. Локальная папка: public/uploads/tilda/`
+    `\nИтого: обновлено товаров ${productsUpdated}, категорий ${categoriesUpdated}, постов ${postsUpdated}. Локальная папка: public/uploads/tilda/`
   );
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { notifyTelegramConnection } from '@/lib/telegram-notify';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
         },
         update: { telegramUserId, linkedAt: new Date() },
       });
+    });
+
+    void notifyTelegramConnection({
+      userId: linkRecord.userId,
+      telegramUserId,
     });
 
     return NextResponse.json({ success: true, message: 'Вы добавлены в список уведомлений' });

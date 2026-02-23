@@ -111,3 +111,35 @@ export function notifyTelegramForm(payload: FormNotifyPayload): void {
     }
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
 }
+
+export interface ConnectionNotifyPayload {
+  userId: string;
+  telegramUserId: string;
+}
+
+/** Уведомление в Telegram о том, что пользователь привязал аккаунт (подключился к уведомлениям). */
+export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void {
+  const { userId, telegramUserId } = payload;
+  Promise.all([
+    getWhitelistChatIds(),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true, lastName: true },
+    }),
+  ])
+    .then(async ([chatIds, user]) => {
+      if (chatIds.length === 0) return;
+      const label = user
+        ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
+        : userId;
+      const text =
+        '🔗 <b>Подключение Telegram</b>\n\n' +
+        `Пользователь ${escapeHtml(label)} привязал уведомления (Telegram ID: <code>${escapeHtml(telegramUserId)}</code>).`;
+      for (const chatId of chatIds) {
+        await sendMessage(chatId, text).catch((e) =>
+          console.error('[telegram-notify] connection notify error:', e)
+        );
+      }
+    })
+    .catch((e) => console.error('[telegram-notify] connection notify:', e));
+}
