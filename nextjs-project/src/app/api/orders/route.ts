@@ -128,16 +128,34 @@ export async function POST(request: Request) {
         include: { items: { include: { product: { select: { title: true } } } } },
       })
 
+      const door = shipping.doorAddress
+      const addressForDb =
+        door && (door.street ?? door.house ?? door.apartment)
+          ? [door.street, door.house, door.apartment, door.entrance, door.floor, door.intercom]
+              .filter(Boolean)
+              .join(', ')
+          : shipping.address.trim()
+
       await tx.shippingInfo.create({
         data: {
           orderId: created.id,
           fullName: shipping.fullName.trim(),
           phone: shipping.phone.trim(),
           email: shipping.email.trim(),
-          address: shipping.address.trim(),
+          address: addressForDb,
           city: shipping.city.trim(),
           zipCode: (shipping.zipCode ?? '').toString().trim(),
           country: (shipping.country ?? 'Россия').trim(),
+          deliveryMethod: shipping.deliveryMethod ?? undefined,
+          cdekCityCode: shipping.cdekCityCode ?? undefined,
+          cdekPvzCode: shipping.cdekPvzCode ?? undefined,
+          cdekTariffCode: shipping.cdekTariffCode ?? undefined,
+          street: door?.street?.trim(),
+          house: door?.house?.trim(),
+          apartment: door?.apartment?.trim(),
+          entrance: door?.entrance?.trim(),
+          floor: door?.floor?.trim(),
+          intercom: door?.intercom?.trim(),
         },
       })
 
