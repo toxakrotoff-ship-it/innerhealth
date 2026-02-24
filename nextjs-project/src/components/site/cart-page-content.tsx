@@ -139,11 +139,21 @@ export function CartPageContent() {
       const tariffsDoor = dataDoor.tariffs ?? []
       if (tariffsPvz.length > 0) {
         const t = tariffsPvz[0]
-        setPvzTariff({ deliverySum: t.deliverySum, periodMin: t.periodMin, periodMax: t.periodMax })
+        setPvzTariff({
+          deliverySum: t.deliverySum,
+          periodMin: t.periodMin,
+          periodMax: t.periodMax,
+          tariffCode: t.tariffCode,
+        })
       } else setPvzTariff(null)
       if (tariffsDoor.length > 0) {
         const t = tariffsDoor[0]
-        setDoorTariff({ deliverySum: t.deliverySum, periodMin: t.periodMin, periodMax: t.periodMax })
+        setDoorTariff({
+          deliverySum: t.deliverySum,
+          periodMin: t.periodMin,
+          periodMax: t.periodMax,
+          tariffCode: t.tariffCode,
+        })
       } else setDoorTariff(null)
     } catch (e) {
       setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта доставки')
@@ -229,6 +239,29 @@ export function CartPageContent() {
             fullName: fullName || formData.fullName,
             city: city || formData.city,
             address: address || formData.address,
+            ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
+              ? {
+                  deliveryMethod,
+                  cdekCityCode: cityCode ?? undefined,
+                  cdekTariffCode:
+                    deliveryMethod === 'cdek_pvz'
+                      ? pvzTariff?.tariffCode
+                      : doorTariff?.tariffCode,
+                  ...(deliveryMethod === 'cdek_pvz' ? { cdekPvzCode: selectedPvz?.code } : {}),
+                  ...(deliveryMethod === 'cdek_door'
+                    ? {
+                        doorAddress: {
+                          street: doorAddress.street || undefined,
+                          house: doorAddress.house || undefined,
+                          apartment: doorAddress.apartment || undefined,
+                          entrance: doorAddress.entrance || undefined,
+                          floor: doorAddress.floor || undefined,
+                          intercom: doorAddress.intercom || undefined,
+                        },
+                      }
+                    : {}),
+                }
+              : {}),
           },
         }),
       })

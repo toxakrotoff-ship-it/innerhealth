@@ -21,6 +21,8 @@ export interface CdekTariffSummary {
   deliverySum: number
   periodMin: number
   periodMax: number
+  /** Код тарифа СДЭК (136, 139, 234 и т.д.) для создания заказа */
+  tariffCode?: number
 }
 
 export interface CdekPvzOption {
