@@ -45,7 +45,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export default withAuth(
-  function middleware(request) {
+  function proxy(request) {
     const pathname = new URL(request.url).pathname
     if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
       const rest = pathname.slice(1 + adminSecretPath.length) || ''

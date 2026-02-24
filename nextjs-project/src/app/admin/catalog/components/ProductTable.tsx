@@ -221,10 +221,10 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                         step={0.01}
                         value={editing.value}
                         onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-                        onBlur={() => editing && saveInline(product.id, 'price', editing.value)}
+                        onBlur={() => { if (editing) saveInline(product.id, 'price', editing.value); }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            editing && saveInline(product.id, 'price', editing.value)
+                            if (editing) saveInline(product.id, 'price', editing.value);
                           }
                           if (e.key === 'Escape') setEditing(null)
                         }}
@@ -248,10 +248,10 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                         min={0}
                         value={editing.value}
                         onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-                        onBlur={() => editing && saveInline(product.id, 'quantity', editing.value)}
+                        onBlur={() => { if (editing) saveInline(product.id, 'quantity', editing.value); }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            editing && saveInline(product.id, 'quantity', editing.value)
+                            if (editing) saveInline(product.id, 'quantity', editing.value);
                           }
                           if (e.key === 'Escape') setEditing(null)
                         }}

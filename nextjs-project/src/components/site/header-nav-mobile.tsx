@@ -47,7 +47,6 @@ export function HeaderNavMobile({ variant = 'light' }: HeaderNavMobileProps) {
               className="flex items-center px-5 pb-4 border-b border-gray-700"
               aria-label="Inner Health — на главную"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
                 alt="Inner Health"

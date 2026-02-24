@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/password';
-import { sendInitialPasswordLinkEmail } from '@/lib/email';
+import { sendInitialPasswordLinkEmail, getBaseUrlForEmails } from '@/lib/email';
 import {
   generateSecureToken,
   hashToken,
@@ -129,14 +129,7 @@ export async function POST(request: Request) {
       },
     });
 
-    let baseUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? '';
-    if (!baseUrl && typeof request.url === 'string') {
-      try {
-        baseUrl = new URL(request.url).origin;
-      } catch {
-        baseUrl = '';
-      }
-    }
+    const baseUrl = getBaseUrlForEmails(request);
     const link = `${baseUrl}/login/set-initial-password?token=${encodeURIComponent(record.id + '.' + secret)}`;
     const emailResult = await sendInitialPasswordLinkEmail(user.email, link);
 

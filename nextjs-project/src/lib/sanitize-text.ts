@@ -83,6 +83,7 @@ function normalizeWhitespace(value: string): string {
  */
 function stripControlChars(value: string): string {
   return value
+    // eslint-disable-next-line no-control-regex -- intentional: strip control characters
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     .replace(/\uFFFD/g, '');
 }

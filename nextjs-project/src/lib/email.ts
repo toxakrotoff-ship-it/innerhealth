@@ -1,5 +1,30 @@
 import nodemailer from 'nodemailer'
 
+const DEFAULT_PUBLIC_URL = 'https://innerhealth.ru'
+
+/**
+ * Base URL for links in emails. Never returns localhost so letters always contain prod link.
+ * Order: APP_URL → NEXTAUTH_URL → NEXT_PUBLIC_SITE_URL → request origin (if not localhost) → DEFAULT_PUBLIC_URL.
+ */
+export function getBaseUrlForEmails(request?: Request): string {
+  let baseUrl =
+    process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  if (!baseUrl && request?.url) {
+    try {
+      const origin = new URL(request.url).origin
+      if (origin && !/localhost|127\.0\.0\.1/i.test(origin)) {
+        baseUrl = origin
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (!baseUrl) {
+    baseUrl = DEFAULT_PUBLIC_URL
+  }
+  return baseUrl.replace(/\/$/, '')
+}
+
 /**
  * Send password reset email. No-op if SMTP is not configured.
  * Transporter is created per send so env (port/secure) is always current after restart.

@@ -64,7 +64,6 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="mt-8 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={IMAGE_FACE}
               alt="Красота и здоровье изнутри"
@@ -97,7 +96,6 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="mt-8 rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={IMAGE_NUTRITION}
               alt="Питание и здоровый образ жизни"

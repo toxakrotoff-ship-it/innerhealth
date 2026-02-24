@@ -15,7 +15,7 @@ async function translateToEnglish(title: string): Promise<string> {
     // В противном случае возвращаем упрощенный вариант
     const simplifiedTitle = title
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s\-]/g, '')
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/^-|-$/g, '');
     
@@ -25,7 +25,7 @@ async function translateToEnglish(title: string): Promise<string> {
     // В случае ошибки возвращаем упрощенную версию
     const simplifiedTitle = title
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s\-]/g, '')
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/^-|-$/g, '');
     

@@ -146,11 +146,16 @@ async function setReviewStatus(reviewId: string, status: 'approved' | 'rejected'
       headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
       body: JSON.stringify({ status }),
     });
-    const data = (await res.json()) as { success?: boolean; error?: string };
-    if (!res.ok) return { success: false, error: (data && data.error) || 'Request failed' };
+    let data: { success?: boolean; error?: string };
+    try {
+      data = (await res.json()) as { success?: boolean; error?: string };
+    } catch {
+      return { success: false, error: res.status === 401 ? 'Неверный сервисный ключ' : 'Сервис недоступен' };
+    }
+    if (!res.ok) return { success: false, error: (data?.error && typeof data.error === 'string' ? data.error : 'Request failed') || 'Request failed' };
     return { success: !!data.success, error: data.error };
   } catch (e) {
-    console.error('[bot] setReviewStatus error:', e instanceof Error ? e.name : e);
+    console.error('[bot] setReviewStatus error:', e instanceof Error ? e.message : e);
     return { success: false, error: 'Сервис недоступен' };
   }
 }
@@ -183,6 +188,24 @@ async function editMessageText(chatId: number, messageId: number, text: string):
     });
   } catch (e) {
     console.error('[bot] editMessageText error:', e instanceof Error ? e.name : e);
+  }
+}
+
+/** Убрать inline-кнопки у сообщения (после успешной модерации). */
+async function removeMessageReplyMarkup(chatId: number, messageId: number): Promise<void> {
+  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`;
+  try {
+    await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: { inline_keyboard: [] },
+      }),
+    });
+  } catch (e) {
+    console.error('[bot] removeMessageReplyMarkup error:', e instanceof Error ? e.name : e);
   }
 }
 
@@ -226,37 +249,54 @@ async function run(): Promise<void> {
 
         const cq = update.callback_query;
         if (cq?.id != null && cq.from?.id != null && typeof cq.data === 'string') {
-          const fromId = String(cq.from.id);
-          const whitelist = await getWhitelistIds();
-          if (!whitelist.has(fromId)) {
-            await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
-            continue;
-          }
-          const data = cq.data;
-          if (data.startsWith(REVIEW_APPROVE_PREFIX)) {
-            const reviewId = data.slice(REVIEW_APPROVE_PREFIX.length);
-            const result = await setReviewStatus(reviewId, 'approved');
-            if (result.success) {
-              await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
-              if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
-                const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
-                await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n✅ Размещено на сайте.');
+          try {
+            const fromId = String(cq.from.id);
+            const whitelist = await getWhitelistIds();
+            if (!whitelist.has(fromId)) {
+              await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
+              continue;
+            }
+            const data = cq.data;
+            if (data.startsWith(REVIEW_APPROVE_PREFIX)) {
+              const reviewId = data.slice(REVIEW_APPROVE_PREFIX.length).trim();
+              if (!reviewId) {
+                await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
+                continue;
+              }
+              const result = await setReviewStatus(reviewId, 'approved');
+              if (result.success) {
+                await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
+                if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
+                  const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
+                  await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n✅ Размещено на сайте.');
+                  await removeMessageReplyMarkup(cq.message.chat.id, cq.message.message_id);
+                }
+              } else {
+                await answerCallbackQuery(cq.id, result.error || 'Ошибка');
+              }
+            } else if (data.startsWith(REVIEW_REJECT_PREFIX)) {
+              const reviewId = data.slice(REVIEW_REJECT_PREFIX.length).trim();
+              if (!reviewId) {
+                await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
+                continue;
+              }
+              const result = await setReviewStatus(reviewId, 'rejected');
+              if (result.success) {
+                await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
+                if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
+                  const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
+                  await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n❌ Отклонён.');
+                  await removeMessageReplyMarkup(cq.message.chat.id, cq.message.message_id);
+                }
+              } else {
+                await answerCallbackQuery(cq.id, result.error || 'Ошибка');
               }
             } else {
-              await answerCallbackQuery(cq.id, result.error || 'Ошибка');
+              await answerCallbackQuery(cq.id, 'Неизвестная кнопка.');
             }
-          } else if (data.startsWith(REVIEW_REJECT_PREFIX)) {
-            const reviewId = data.slice(REVIEW_REJECT_PREFIX.length);
-            const result = await setReviewStatus(reviewId, 'rejected');
-            if (result.success) {
-              await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
-              if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
-                const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
-                await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n❌ Отклонён.');
-              }
-            } else {
-              await answerCallbackQuery(cq.id, result.error || 'Ошибка');
-            }
+          } catch (callbackErr) {
+            console.error('[bot] callback_query error:', callbackErr);
+            await answerCallbackQuery(cq.id, 'Ошибка. Попробуйте позже.').catch(() => {});
           }
           continue;
         }
