@@ -26,6 +26,7 @@ interface ShippingInfo {
   city: string;
   zipCode: string;
   country: string;
+  deliveryMethod?: string | null;
 }
 
 interface PromoCodeInfo {
@@ -44,6 +45,8 @@ interface Order {
   items: OrderItem[];
   shippingInfo: ShippingInfo | null;
   promoCode: PromoCodeInfo | null;
+  cdekOrderUuid?: string | null;
+  cdekOrderError?: string | null;
 }
 
 function formatDate(dateString: string): string {
@@ -59,8 +62,10 @@ function formatDate(dateString: string): string {
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
     pending: 'В обработке',
+    paid: 'Оплачен',
     completed: 'Завершён',
     cancelled: 'Отменён',
+    canceled: 'Отменён',
     shipped: 'Отправлен',
   };
   return map[status] ?? status;
@@ -72,6 +77,7 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cdekLoadingId, setCdekLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -88,6 +94,34 @@ export default function AdminOrdersPage() {
       setError(e instanceof Error ? e.message : 'Ошибка');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCreateCdekShipment(orderId: string) {
+    setCdekLoadingId(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/cdek-shipment`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? { ...o, cdekOrderUuid: data.uuid ?? o.cdekOrderUuid, cdekOrderError: null }
+              : o
+          )
+        );
+      } else {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId ? { ...o, cdekOrderError: data.error ?? 'Ошибка СДЭК' } : o
+          )
+        );
+        alert(data.error ?? 'Не удалось создать отгрузку СДЭК');
+      }
+    } catch {
+      alert('Ошибка запроса');
+    } finally {
+      setCdekLoadingId(null);
     }
   }
 
@@ -177,7 +211,7 @@ export default function AdminOrdersPage() {
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              order.status === 'completed'
+                              order.status === 'paid' || order.status === 'completed'
                                 ? 'bg-green-100 text-green-800'
                                 : order.status === 'pending'
                                   ? 'bg-amber-100 text-amber-800'
@@ -241,6 +275,29 @@ export default function AdminOrdersPage() {
                                   </div>
                                 ) : (
                                   <p className="text-gray-400 text-sm">Адрес доставки не указан</p>
+                                )}
+                                {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' ||
+                                  order.shippingInfo?.deliveryMethod === 'cdek_door') && (
+                                  <div className="mt-4 pt-3 border-t border-gray-200">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">СДЭК</h3>
+                                    {order.cdekOrderUuid ? (
+                                      <p className="text-sm text-gray-600">
+                                        Заказ СДЭК: <span className="font-mono text-xs">{order.cdekOrderUuid}</span>
+                                      </p>
+                                    ) : order.cdekOrderError ? (
+                                      <p className="text-sm text-amber-700 mb-2">{order.cdekOrderError}</p>
+                                    ) : null}
+                                    {order.status === 'paid' && !order.cdekOrderUuid && (
+                                      <button
+                                        type="button"
+                                        disabled={cdekLoadingId === order.id}
+                                        onClick={() => handleCreateCdekShipment(order.id)}
+                                        className="mt-1 text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                                      >
+                                        {cdekLoadingId === order.id ? 'Создание…' : 'Создать отгрузку в СДЭК'}
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
