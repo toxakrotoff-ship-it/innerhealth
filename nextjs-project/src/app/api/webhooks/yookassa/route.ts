@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createCdekOrder } from '@/lib/cdek'
 
 /**
  * Webhook ЮKassa: обновление статуса заказа по уведомлениям.
@@ -71,6 +72,40 @@ export async function POST(request: Request) {
       where: { id: orderId },
       data: { status: 'paid' },
     })
+
+    const orderWithShipping = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, cdekOrderUuid: true, shippingInfo: { select: { deliveryMethod: true } } },
+    })
+    const isCdek =
+      orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_pvz' ||
+      orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_door'
+    if (isCdek && !orderWithShipping?.cdekOrderUuid) {
+      const maxAttempts = 3
+      const delayMs = 2500
+      let lastError = ''
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const result = await createCdekOrder(orderId)
+        if ('uuid' in result) {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: { cdekOrderUuid: result.uuid, cdekOrderError: null },
+          })
+          break
+        }
+        lastError = result.error
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, delayMs))
+        }
+      }
+      if (lastError) {
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { cdekOrderError: lastError },
+        })
+        console.error('[webhook/yookassa] CDEK order create failed after retries', orderId, lastError)
+      }
+    }
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
     await prisma.order.update({
       where: { id: orderId },
