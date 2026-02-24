@@ -3,10 +3,18 @@
 # Использование: из каталога nextjs-project: ./deploy/deploy-quick.sh
 
 set -e
-cd "$(dirname "$0")/.."
+# Каталог с docker-compose (nextjs-project) — сюда вернёмся для сборки
+DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$DEPLOY_DIR"
+# Репозиторий может быть на уровень выше (innerhealth)
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+cd "$GIT_ROOT"
 
 echo "==> Pulling latest code..."
-git pull
+git fetch origin
+git reset --hard "origin/$(git branch --show-current)"
+
+cd "$DEPLOY_DIR"
 
 echo "==> Building app (with cache)..."
 docker compose build app
