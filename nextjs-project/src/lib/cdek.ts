@@ -5,9 +5,12 @@
  * - Location: города (https://apidoc.cdek.ru/#tag/location)
  * - Delivery point: поиск ПВЗ (https://apidoc.cdek.ru/#tag/delivery_point/operation/search)
  * - Calculator: расчёт тарифов (https://apidoc.cdek.ru/#tag/calculator)
+ * - Orders: создание заказа на отгрузку (https://apidoc.cdek.ru/#tag/orders)
  *
  * Тестовое окружение: CDEK_USE_TEST=true или CDEK_API_BASE=https://api.edu.cdek.ru/v2
  */
+
+import { prisma } from '@/lib/prisma'
 
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
@@ -562,5 +565,152 @@ export async function searchCdekDeliveryPoints(
       return tryGet()
     }
     throw postErr
+  }
+}
+
+// --- Orders: создание заказа на отгрузку ---
+
+const CDEK_SENDER_KEYS = [
+  'cdek_sender_name',
+  'cdek_sender_phone',
+  'cdek_sender_address',
+  'cdek_from_city_code',
+] as const
+
+/**
+ * Создаёт заказ на отгрузку в СДЭК (POST /v2/orders).
+ * Используется после оплаты заказа и при повторе из админки.
+ * Формат тела по документации https://apidoc.cdek.ru/#tag/orders
+ */
+export async function createCdekOrder(orderId: string): Promise<{ uuid: string } | { error: string }> {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { product: true } },
+        shippingInfo: true,
+      },
+    })
+    if (!order || !order.shippingInfo) {
+      return { error: 'Заказ или адрес доставки не найден' }
+    }
+    const sh = order.shippingInfo
+    if (sh.deliveryMethod !== 'cdek_pvz' && sh.deliveryMethod !== 'cdek_door') {
+      return { error: 'Доставка не СДЭК' }
+    }
+    if (sh.cdekCityCode == null || sh.cdekTariffCode == null) {
+      return { error: 'Не указаны код города или тариф СДЭК' }
+    }
+
+    const settings = await prisma.siteSetting.findMany({
+      where: { key: { in: [...CDEK_SENDER_KEYS] } },
+    })
+    const settingsMap: Record<string, string> = {}
+    for (const row of settings) {
+      settingsMap[row.key] = row.value
+    }
+    const senderName =
+      settingsMap.cdek_sender_name?.trim() || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
+    const senderPhone =
+      settingsMap.cdek_sender_phone?.trim() || process.env.CDEK_SENDER_PHONE?.trim() || ''
+    const senderAddress =
+      settingsMap.cdek_sender_address?.trim() || process.env.CDEK_SENDER_ADDRESS?.trim() || ''
+    const fromCityCode =
+      settingsMap.cdek_from_city_code?.trim() || process.env.CDEK_FROM_CITY_CODE?.trim() || ''
+    const fromCode = fromCityCode ? Number(fromCityCode) : undefined
+    if (fromCode == null || Number.isNaN(fromCode)) {
+      return { error: 'Не задан код города отправления СДЭК (настройки или CDEK_FROM_CITY_CODE)' }
+    }
+
+    const packages = mergeCdekPackages(
+      order.items.map((item) =>
+        productToCdekPackage(
+          item.product.weight,
+          item.product.length,
+          item.product.width,
+          item.product.height,
+          item.quantity
+        )
+      )
+    )
+
+    const packageItems = order.items.map((item) => ({
+      name: item.product.title?.slice(0, 255) || 'Товар',
+      ware_key: item.productId,
+      cost: item.price,
+      amount: item.quantity,
+      weight: Math.max(1, Math.round((item.product.weight ?? DEFAULT_PACKAGE_WEIGHT_G) * item.quantity)),
+      payment: { value: 0 },
+    }))
+
+    const from_location = { code: fromCode, country_code: 'RU' as const }
+    let to_location: Record<string, unknown>
+    if (sh.deliveryMethod === 'cdek_pvz' && sh.cdekPvzCode) {
+      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, delivery_point: sh.cdekPvzCode }
+    } else {
+      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const }
+      if (sh.deliveryMethod === 'cdek_door' && (sh.street || sh.house)) {
+        to_location.address = [sh.street, sh.house, sh.apartment, sh.entrance, sh.floor, sh.intercom]
+          .filter(Boolean)
+          .join(', ')
+      }
+    }
+
+    const body = {
+      type: 1,
+      tariff_code: sh.cdekTariffCode,
+      number: orderId,
+      from_location,
+      to_location,
+      recipient: {
+        name: sh.fullName,
+        phones: [{ number: sh.phone }],
+        ...(sh.email ? { email: sh.email } : {}),
+      },
+      sender: {
+        name: senderName,
+        ...(senderPhone ? { phones: [{ number: senderPhone }] } : {}),
+        ...(senderAddress ? { address: senderAddress } : {}),
+      },
+      packages: packages.map((pkg, idx) => ({
+        number: String(idx + 1),
+        weight: pkg.weight,
+        length: pkg.length,
+        width: pkg.width,
+        height: pkg.height,
+        items: packageItems,
+      })),
+    }
+
+    const token = await getCdekToken()
+    const base = getCdekApiBase()
+    const response = await fetch(`${base}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    })
+    const text = await response.text()
+    if (!response.ok) {
+      console.error('[CDEK createOrder]', orderId, response.status, text)
+      return { error: `СДЭК: ${response.status} ${text.slice(0, 200)}` }
+    }
+    let data: { entity?: { uuid?: string }; uuid?: string }
+    try {
+      data = JSON.parse(text) as { entity?: { uuid?: string }; uuid?: string }
+    } catch {
+      return { error: `СДЭК: неверный ответ ${text.slice(0, 100)}` }
+    }
+    const uuid = data.entity?.uuid ?? data.uuid
+    if (!uuid) {
+      return { error: `СДЭК: в ответе нет uuid. ${text.slice(0, 200)}` }
+    }
+    return { uuid }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    console.error('[CDEK createOrder]', orderId, e)
+    return { error: message }
   }
 }
