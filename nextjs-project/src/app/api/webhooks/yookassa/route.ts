@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 /**
- * Webhook ЮKassa: при успешной оплате переводим заказ в статус PAID.
- * URL настраивается в личном кабинете ЮKassa: Интеграция → HTTP-уведомления.
- * События: payment.succeeded (и при необходимости payment.canceled).
+ * Webhook ЮKassa: обновление статуса заказа по уведомлениям.
  *
+ * URL для уведомлений (указать в ЛК ЮKassa: Интеграция → HTTP-уведомления):
+ *   https://<ваш-домен>/api/webhooks/yookassa
+ *
+ * События: payment.succeeded (заказ → paid), payment.canceled (заказ → canceled).
  * Документация: https://yookassa.ru/developers/using-api/webhooks
  */
 
@@ -56,17 +58,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   }
 
-  if (body.event === 'payment.succeeded') {
-    const order = await prisma.order.findUnique({
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, status: true, yookassaPaymentId: true },
+  })
+  if (!order || order.yookassaPaymentId !== body.object.id) {
+    return NextResponse.json({ ok: true })
+  }
+
+  if (body.event === 'payment.succeeded' && order.status !== 'paid') {
+    await prisma.order.update({
       where: { id: orderId },
-      select: { id: true, status: true, yookassaPaymentId: true },
+      data: { status: 'paid' },
     })
-    if (order && order.yookassaPaymentId === body.object.id && order.status !== 'paid') {
-      await prisma.order.update({
-        where: { id: orderId },
-        data: { status: 'paid' },
-      })
-    }
+  } else if (body.event === 'payment.canceled' && order.status === 'pending') {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'canceled' },
+    })
   }
 
   return NextResponse.json({ ok: true })
