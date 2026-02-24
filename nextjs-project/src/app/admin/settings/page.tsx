@@ -74,12 +74,39 @@ export default function AdminSettingsPage() {
   const [mailboxEdit, setMailboxEdit] = useState<Record<string, string>>({});
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [unlinkingUserId, setUnlinkingUserId] = useState<string | null>(null);
+  const [twoFactorStatus, setTwoFactorStatus] = useState<{
+    twoFactorEnabled: boolean;
+    twoFactorMethod: string | null;
+  } | null>(null);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [totpUri, setTotpUri] = useState<string | null>(null);
+  const [totpCode, setTotpCode] = useState('');
+  const [disablePassword, setDisablePassword] = useState('');
+  const [showDisableModal, setShowDisableModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
     loadAdmins();
     loadTelegram();
+    load2FAStatus();
   }, []);
+
+  async function load2FAStatus() {
+    try {
+      const res = await fetch('/api/auth/2fa/setup');
+      if (res.ok) {
+        const data = await res.json();
+        setTwoFactorStatus({
+          twoFactorEnabled: data.twoFactorEnabled ?? false,
+          twoFactorMethod: data.twoFactorMethod ?? null,
+        });
+      } else {
+        setTwoFactorStatus(null);
+      }
+    } catch {
+      setTwoFactorStatus(null);
+    }
+  }
 
   async function loadAdmins() {
     try {
@@ -414,6 +441,221 @@ export default function AdminSettingsPage() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        <div className="card mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Двухфакторная аутентификация</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Дополнительная защита входа: код по email или приложение (Google Authenticator и др.).
+          </p>
+          {twoFactorStatus === null ? (
+            <p className="text-sm text-gray-500">Загрузка…</p>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Статус:{' '}
+                {!twoFactorStatus.twoFactorEnabled
+                  ? 'выключено'
+                  : twoFactorStatus.twoFactorMethod === 'email'
+                    ? 'включено (код по email)'
+                    : 'включено (приложение)'}
+              </p>
+              {!twoFactorStatus.twoFactorEnabled && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={twoFactorLoading}
+                    onClick={async () => {
+                      setTwoFactorLoading(true);
+                      setError(null);
+                      try {
+                        const res = await fetch('/api/auth/2fa/setup', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'enable', method: 'email' }),
+                        });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          throw new Error(data.error || 'Ошибка');
+                        }
+                        await load2FAStatus();
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : 'Ошибка');
+                      } finally {
+                        setTwoFactorLoading(false);
+                      }
+                    }}
+                  >
+                    Включить по email
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={twoFactorLoading}
+                    onClick={async () => {
+                      setTwoFactorLoading(true);
+                      setError(null);
+                      setTotpUri(null);
+                      setTotpCode('');
+                      try {
+                        const res = await fetch('/api/auth/2fa/setup', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'enable', method: 'totp' }),
+                        });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          throw new Error(data.error || 'Ошибка');
+                        }
+                        const data = await res.json();
+                        setTotpUri(data.uri ?? null);
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : 'Ошибка');
+                      } finally {
+                        setTwoFactorLoading(false);
+                      }
+                    }}
+                  >
+                    Включить через приложение
+                  </Button>
+                </div>
+              )}
+              {totpUri && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                  <p className="text-sm font-medium text-gray-800">Добавьте аккаунт в приложение</p>
+                  <p className="text-xs text-gray-600 break-all font-mono">{totpUri}</p>
+                  <p className="text-sm text-gray-600">Введите код из приложения:</p>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                      className="form-input w-28"
+                    />
+                    <Button
+                      type="button"
+                      disabled={twoFactorLoading || totpCode.length !== 6}
+                      onClick={async () => {
+                        setTwoFactorLoading(true);
+                        setError(null);
+                        try {
+                          const res = await fetch('/api/auth/2fa/setup', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'enable', method: 'totp', code: totpCode }),
+                          });
+                          if (!res.ok) {
+                            const data = await res.json().catch(() => ({}));
+                            throw new Error(data.error || 'Неверный код');
+                          }
+                          setTotpUri(null);
+                          setTotpCode('');
+                          await load2FAStatus();
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : 'Ошибка');
+                        } finally {
+                          setTwoFactorLoading(false);
+                        }
+                      }}
+                    >
+                      Подтвердить
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setTotpUri(null);
+                        setTotpCode('');
+                        load2FAStatus();
+                      }}
+                    >
+                      Отмена
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {twoFactorStatus.twoFactorEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={twoFactorLoading}
+                  onClick={() => {
+                    setShowDisableModal(true);
+                    setDisablePassword('');
+                  }}
+                >
+                  Отключить 2FA
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showDisableModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Отключить 2FA</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Введите пароль или текущий код из приложения для подтверждения.
+              </p>
+              <input
+                type="password"
+                placeholder="Пароль или код из приложения"
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                className="form-input w-full mb-4"
+                autoComplete="current-password"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowDisableModal(false);
+                    setDisablePassword('');
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="button"
+                  disabled={twoFactorLoading || !disablePassword.trim()}
+                  onClick={async () => {
+                    setTwoFactorLoading(true);
+                    setError(null);
+                    try {
+                      const res = await fetch('/api/auth/2fa/setup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(
+                          /^\d{6}$/.test(disablePassword.trim())
+                            ? { action: 'disable', code: disablePassword.trim() }
+                            : { action: 'disable', password: disablePassword.trim() }
+                        ),
+                      });
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.error || 'Неверный пароль или код');
+                      }
+                      setShowDisableModal(false);
+                      setDisablePassword('');
+                      await load2FAStatus();
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Ошибка');
+                    } finally {
+                      setTwoFactorLoading(false);
+                    }
+                  }}
+                >
+                  Отключить
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>
