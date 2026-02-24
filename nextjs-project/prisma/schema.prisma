@@ -152,12 +152,20 @@ model User {
   notificationEmail    String?
   role                 Role     @default(USER)
   mustChangePassword   Boolean  @default(false)
+  /// Включена ли двухфакторная аутентификация
+  twoFactorEnabled     Boolean  @default(false)
+  /// Способ 2FA: 'email' | 'totp'
+  twoFactorMethod      String?
+  /// Секрет TOTP (зашифрован), только при method = totp
+  totpSecretEncrypted  String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   passwordResetTokens       PasswordResetToken[]
   setInitialPasswordTokens  SetInitialPasswordToken[]
   telegramWhitelist         TelegramWhitelist?
   telegramLinkCodes         TelegramLinkCode[]
+  twoFactorPending          TwoFactorPending?
+  twoFactorGrants           TwoFactorGrant[]
 }
 
 /// Вайтлист Telegram: какой админ привязал какой Telegram ID для уведомлений
@@ -207,6 +215,32 @@ model SetInitialPasswordToken {
   emailCodeExpiresAt DateTime?
   codeVerifiedAt    DateTime?
   createdAt         DateTime  @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Ожидание ввода кода 2FA после успешной проверки пароля
+model TwoFactorPending {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash          String
+  expiresAt          DateTime
+  emailCodeHash      String?
+  emailCodeExpiresAt DateTime?
+  createdAt          DateTime  @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Одноразовый grant для завершения входа после успешной проверки 2FA
+model TwoFactorGrant {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
   @@index([userId])
   @@index([expiresAt])
 }
