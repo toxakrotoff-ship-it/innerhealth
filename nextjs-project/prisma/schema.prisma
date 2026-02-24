@@ -28,6 +28,10 @@ model Product {
   price           Float
   quantity        Int?
   priceOld        Float?
+  /// Цена при применении промокода (если задана — используется для строки заказа при скидке)
+  discountPrice   Float?
+  /// Участвует в скидке по промокоду (Rule: скидка применяется только к eligible и не к «уже по акции»)
+  isPromoEligible Boolean  @default(true)
   editions        String?
   modifications   String?
   externalId      String?
@@ -146,9 +150,10 @@ model User {
   mustChangePassword   Boolean  @default(false)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
-  passwordResetTokens  PasswordResetToken[]
-  telegramWhitelist    TelegramWhitelist?
-  telegramLinkCodes    TelegramLinkCode[]
+  passwordResetTokens       PasswordResetToken[]
+  setInitialPasswordTokens  SetInitialPasswordToken[]
+  telegramWhitelist         TelegramWhitelist?
+  telegramLinkCodes         TelegramLinkCode[]
 }
 
 /// Вайтлист Telegram: какой админ привязал какой Telegram ID для уведомлений
@@ -182,6 +187,22 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime @default(now())
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Токен завершения регистрации: ссылка + 6-значный код на почту. Одноразовый, с ограничением по времени.
+model SetInitialPasswordToken {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash         String    // bcrypt hash of secret from URL
+  expiresAt         DateTime
+  usedAt            DateTime?
+  emailCodeHash     String?   // bcrypt hash of 6-digit code
+  emailCodeExpiresAt DateTime?
+  codeVerifiedAt    DateTime?
+  createdAt         DateTime  @default(now())
   @@index([userId])
   @@index([expiresAt])
 }

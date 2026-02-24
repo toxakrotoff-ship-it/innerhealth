@@ -74,10 +74,10 @@ export default function AdminUsersPage() {
       setShowForm(false);
       setFormData({ email: '', name: '', role: 'USER' });
       if (data.emailSent) {
-        setSuccessMessage(`Пользователь создан. Пароль отправлен на ${data.email}.`);
+        setSuccessMessage(`Пользователь создан. Ссылка для завершения регистрации отправлена на ${data.email}.`);
       } else {
         setSuccessMessage(
-          `Пользователь создан. Письмо с паролем не отправлено${data.emailError ? `: ${data.emailError}` : ' — проверьте настройки SMTP.'}`
+          `Пользователь создан. Письмо со ссылкой не отправлено${data.emailError ? `: ${data.emailError}` : ' — проверьте настройки SMTP.'}`
         );
       }
       setTimeout(() => setSuccessMessage(null), 8000);
@@ -98,6 +98,24 @@ export default function AdminUsersPage() {
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Не удалось обновить роль');
+      }
+      await fetchUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Произошла ошибка');
+    }
+  }
+
+  async function handleDelete(user: AdminUser) {
+    if (!window.confirm(`Удалить пользователя ${user.email}?`)) return;
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Не удалось удалить пользователя');
       }
       await fetchUsers();
     } catch (err) {
@@ -166,7 +184,7 @@ export default function AdminUsersPage() {
         <div className="card mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Новый пользователь</h2>
           <p className="text-sm text-gray-600 mb-6">
-            Пароль будет сгенерирован автоматически и отправлен на указанный email с адреса support@innerhealth.ru.
+            На указанный email будет отправлена ссылка для завершения регистрации (без пароля в письме). Пользователь перейдёт по ссылке, получит код на почту и задаст пароль сам.
           </p>
           <form onSubmit={handleCreate}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -267,6 +285,9 @@ export default function AdminUsersPage() {
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Дата регистрации
                   </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Действия
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -293,6 +314,19 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString('ru-RU')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(user)}
+                        className="p-2 text-gray-400 hover:text-red-600 rounded transition"
+                        title="Удалить пользователя"
+                        aria-label="Удалить пользователя"
+                      >
+                        <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -8,6 +8,7 @@ import { Category, getCategories } from '@/app/admin/catalog/actions';
 import { sanitizeProductText } from '@/lib/sanitize-text';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { ProductGalleryEditor } from '../../components/ProductGalleryEditor';
+import { ProductRichTextEditor } from '../../components/ProductRichTextEditor';
 
 interface Product {
   id: string;
@@ -181,8 +182,6 @@ export function EditProductForm({ productId }: EditProductFormProps) {
   };
 
   const textFieldsToSanitize = [
-    'description', 'text',
-    'tab1', 'tab2', 'tab3', 'tab4',
     'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title',
   ];
 
@@ -237,6 +236,8 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           tab3Title: formData.tab3Title || null,
           tab4Title: formData.tab4Title || null,
           priceOld: formData.priceOld,
+          discountPrice: formData.discountPrice,
+          isPromoEligible: formData.isPromoEligible,
           weight: formData.weight ?? null,
           length: formData.length ?? null,
           width: formData.width ?? null,
@@ -362,6 +363,31 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 step="0.01"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Цена по промокоду (если задана — подставляется при скидке)</label>
+              <input
+                type="number"
+                name="discountPrice"
+                value={formData.discountPrice ?? ''}
+                onChange={handleNumberChange}
+                className="form-input w-full"
+                min="0"
+                step="0.01"
+                placeholder="—"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPromoEligible"
+                checked={formData.isPromoEligible}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isPromoEligible: e.target.checked }))}
+                className="form-input h-4 w-4 rounded"
+              />
+              <label htmlFor="isPromoEligible" className="text-sm font-medium text-gray-700">
+                Участвует в скидке по промокоду
+              </label>
+            </div>
 
             <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Габариты и вес (для доставки СДЭК)</p>
@@ -428,24 +454,18 @@ export function EditProductForm({ productId }: EditProductFormProps) {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Описание (краткое)</label>
-              <textarea
-                name="description"
+              <ProductRichTextEditor
                 value={formData.description}
-                onChange={handleChange}
-                className="form-input w-full"
-                rows={3}
+                onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
                 placeholder="Краткое описание для карточки"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Основной текст (под фото)</label>
-              <textarea
-                name="text"
+              <ProductRichTextEditor
                 value={formData.text}
-                onChange={handleChange}
-                className="form-input w-full"
-                rows={6}
+                onChange={(html) => setFormData((prev) => ({ ...prev, text: html }))}
                 placeholder="Текст под блоком с ценой и кнопкой"
               />
             </div>
@@ -464,13 +484,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input w-full max-w-md"
                   placeholder="Например: Преимущества"
                 />
-                <textarea
-                  name="tab1"
+                <ProductRichTextEditor
                   value={formData.tab1}
-                  onChange={handleChange}
-                  className="form-input w-full"
-                  rows={4}
-                  placeholder="Содержимое таба (каждый пункт с новой строки, можно начинать с - или •)"
+                  onChange={(html) => setFormData((prev) => ({ ...prev, tab1: html }))}
+                  placeholder="Содержимое таба (списки, жирный текст, фото)"
                 />
               </div>
               <div className="space-y-3">
@@ -483,12 +500,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input w-full max-w-md"
                   placeholder="Например: Состав"
                 />
-                <textarea
-                  name="tab2"
+                <ProductRichTextEditor
                   value={formData.tab2}
-                  onChange={handleChange}
-                  className="form-input w-full"
-                  rows={4}
+                  onChange={(html) => setFormData((prev) => ({ ...prev, tab2: html }))}
                   placeholder="Содержимое таба"
                 />
               </div>
@@ -502,12 +516,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input w-full max-w-md"
                   placeholder="Например: Способ применения и дозировка"
                 />
-                <textarea
-                  name="tab3"
+                <ProductRichTextEditor
                   value={formData.tab3}
-                  onChange={handleChange}
-                  className="form-input w-full"
-                  rows={4}
+                  onChange={(html) => setFormData((prev) => ({ ...prev, tab3: html }))}
                   placeholder="Содержимое таба"
                 />
               </div>
@@ -521,12 +532,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input w-full max-w-md"
                   placeholder="Например: Характеристики"
                 />
-                <textarea
-                  name="tab4"
+                <ProductRichTextEditor
                   value={formData.tab4}
-                  onChange={handleChange}
-                  className="form-input w-full"
-                  rows={4}
+                  onChange={(html) => setFormData((prev) => ({ ...prev, tab4: html }))}
                   placeholder="Содержимое таба"
                 />
               </div>

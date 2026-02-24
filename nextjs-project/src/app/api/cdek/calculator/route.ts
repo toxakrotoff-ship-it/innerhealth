@@ -14,6 +14,9 @@ import { cdekCalculatorBodySchema } from '@/lib/validations/cdek'
  * Калькулятор СДЭК (https://apidoc.cdek.ru/#tag/calculator).
  * Тело: { deliveryKind?, items, toLocation: { cityCode?, postalCode } }
  * Возвращает список тарифов с ценой и сроками доставки.
+ *
+ * Промокод не влияет на расчёт СДЭК: в запрос передаются только состав корзины (productId, quantity)
+ * и направление доставки. Стоимость доставки считается по весу и габаритам товаров, без учёта суммы заказа и скидок.
  */
 export async function POST(request: Request) {
   try {

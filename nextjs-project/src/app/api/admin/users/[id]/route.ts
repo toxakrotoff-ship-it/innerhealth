@@ -71,3 +71,52 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authError = await requireAdminRole();
+  if (authError) return authError;
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: 'User id required' }, { status: 400 });
+  }
+
+  const session = await getServerSession(authOptions);
+  if (session?.user && (session.user as { id?: string }).id === id) {
+    return NextResponse.json(
+      { error: 'Нельзя удалить свой аккаунт' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
+    }
+
+    await prisma.$transaction([
+      prisma.order.updateMany({
+        where: { userId: id },
+        data: { userId: null },
+      }),
+      prisma.user.delete({
+        where: { id },
+      }),
+    ]);
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete user' },
+      { status: 500 }
+    );
+  }
+}

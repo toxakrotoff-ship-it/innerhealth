@@ -27,6 +27,8 @@ export default async function CategoryPage({ params }: PageProps) {
               priceOld: true,
               photo: true,
               slug: true,
+              isPromoEligible: true,
+              discountPrice: true,
             },
           },
         },
@@ -113,6 +115,8 @@ export default async function CategoryPage({ params }: PageProps) {
                   priceOld={p.priceOld}
                   photo={p.photo}
                   slug={p.slug}
+                  isPromoEligible={p.isPromoEligible}
+                  discountPrice={p.discountPrice}
                   priority={index < 8}
                 />
               ))}

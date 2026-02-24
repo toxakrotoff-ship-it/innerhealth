@@ -13,6 +13,8 @@ interface ProductCardProps {
   priceOld?: number | null
   photo?: string | null
   slug?: string | null
+  isPromoEligible?: boolean
+  discountPrice?: number | null
   /** Set for first row on catalog to improve LCP */
   priority?: boolean
 }
@@ -25,6 +27,8 @@ export function ProductCard({
   priceOld,
   photo,
   slug,
+  isPromoEligible = true,
+  discountPrice = null,
   priority = false,
 }: ProductCardProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -118,6 +122,8 @@ export function ProductCard({
               photo={photo ?? null}
               slug={slug ?? null}
               hasPromoPrice={priceOld != null && priceOld > price}
+              isPromoEligible={isPromoEligible}
+              discountPrice={discountPrice}
               size="sm"
             />
             <Link

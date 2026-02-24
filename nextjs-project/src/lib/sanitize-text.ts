@@ -4,14 +4,11 @@
  * Результат: обычный текст с переносами строк; списки — строки, начинающиеся с "- ".
  */
 
-/** Поля продукта, которые нужно очищать от Tilda/HTML */
+/**
+ * Поля продукта, которые очищаются от Tilda/HTML в API.
+ * description, text, tab1–tab4 не входят: в них хранится HTML из TipTap-редактора.
+ */
 export const PRODUCT_TEXT_FIELDS = [
-  'description',
-  'text',
-  'tab1',
-  'tab2',
-  'tab3',
-  'tab4',
   'tab1Title',
   'tab2Title',
   'tab3Title',

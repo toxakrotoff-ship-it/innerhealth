@@ -38,6 +38,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         priceOld: true,
         photo: true,
         slug: true,
+        isPromoEligible: true,
+        discountPrice: true,
       },
     }),
   ])
@@ -109,6 +111,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 priceOld={p.priceOld}
                 photo={p.photo}
                 slug={p.slug}
+                isPromoEligible={p.isPromoEligible}
+                discountPrice={p.discountPrice}
                 priority={index < 8}
               />
             ))}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 /** Сток обновляется по кешу раз в 2 минуты. Используйте для корзины и блоков «в наличии». */
+export const dynamic = 'force-dynamic'
 export const revalidate = 120
 
 export async function GET() {

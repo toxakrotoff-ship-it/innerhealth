@@ -13,6 +13,8 @@ interface ProductPageContentProps {
     priceOld: number | null
     photo: string | null
     slug: string | null
+    isPromoEligible?: boolean
+    discountPrice?: number | null
   }
   tabs: { title: string; content: string }[]
 }
@@ -59,11 +61,22 @@ export function ProductPageContent({ product, tabs }: ProductPageContentProps) {
               hasPromoPrice={
                 product.priceOld != null && product.priceOld > product.price
               }
+              isPromoEligible={product.isPromoEligible}
+              discountPrice={product.discountPrice}
             />
           </div>
           {product.description && (
-            <div className="mt-6 text-gray-600 prose prose-sm max-w-none">
-              <p>{product.description}</p>
+            <div
+              className="mt-6 text-gray-600 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
+              dangerouslySetInnerHTML={
+                /<[a-z][\s\S]*>/i.test(product.description.trim())
+                  ? { __html: product.description }
+                  : undefined
+              }
+            >
+              {!/<[a-z][\s\S]*>/i.test(product.description.trim()) && (
+                <p>{product.description}</p>
+              )}
             </div>
           )}
         </div>
@@ -71,8 +84,17 @@ export function ProductPageContent({ product, tabs }: ProductPageContentProps) {
 
       {product.text && (
         <section className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-          <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 whitespace-pre-line">
-            {product.text}
+          <div
+            className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
+            dangerouslySetInnerHTML={
+              /<[a-z][\s\S]*>/i.test(product.text.trim())
+                ? { __html: product.text }
+                : undefined
+            }
+          >
+            {!/<[a-z][\s\S]*>/i.test(product.text.trim()) && (
+              <span className="whitespace-pre-line">{product.text}</span>
+            )}
           </div>
         </section>
       )}

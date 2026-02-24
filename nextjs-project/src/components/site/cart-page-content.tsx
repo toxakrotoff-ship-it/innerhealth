@@ -23,8 +23,9 @@ interface PromoResult {
 }
 
 /**
- * Скидка по промокоду применяется только к сумме товаров без акционной цены.
- * Формула: (Сумма без акции × (1 − Скидка/100)) + Сумма с акцией.
+ * Скидка по промокоду применяется только к сумме eligible-товаров без акционной цены.
+ * Товары с hasPromoPrice и с isPromoEligible=false в скидку не входят.
+ * У eligible-товаров с discountPrice при скидке подставляется discountPrice за единицу.
  */
 function applyPromoToSubtotal(subtotal: number, promo: PromoResult | null): number {
   if (!promo?.valid || !promo.discountValue) return subtotal
@@ -78,12 +79,26 @@ export function CartPageContent() {
   const subtotalPromoPrice = items
     .filter((i) => i.hasPromoPrice)
     .reduce((sum, i) => sum + i.price * i.quantity, 0)
-  const subtotalRegular = items
-    .filter((i) => !i.hasPromoPrice)
-    .reduce((sum, i) => sum + i.price * i.quantity, 0)
-  const subtotal = subtotalPromoPrice + subtotalRegular
-  const totalAfterPromo = applyPromoToSubtotal(subtotalRegular, promoResult)
-  const total = subtotalPromoPrice + totalAfterPromo
+  const eligibleWithFixedPrice = items.filter(
+    (i) => !i.hasPromoPrice && i.isPromoEligible !== false && i.discountPrice != null
+  )
+  const eligibleForPercent = items.filter(
+    (i) => !i.hasPromoPrice && i.isPromoEligible !== false && (i.discountPrice == null || i.discountPrice === undefined)
+  )
+  const ineligible = items.filter((i) => !i.hasPromoPrice && i.isPromoEligible === false)
+  const subtotalEligibleFixed = eligibleWithFixedPrice.reduce(
+    (sum, i) => sum + (i.discountPrice ?? i.price) * i.quantity,
+    0
+  )
+  const subtotalEligiblePercent = eligibleForPercent.reduce(
+    (sum, i) => sum + i.price * i.quantity,
+    0
+  )
+  const subtotalIneligible = ineligible.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  // Промокод применяется только к сумме товаров. Доставка не дисконтируется.
+  const totalAfterPromo = applyPromoToSubtotal(subtotalEligiblePercent, promoResult)
+  const subtotal = subtotalPromoPrice + subtotalEligibleFixed + subtotalEligiblePercent + subtotalIneligible
+  const total = subtotalPromoPrice + subtotalEligibleFixed + totalAfterPromo + subtotalIneligible
   const discount = subtotal - total
   const deliverySum =
     deliveryMethod === 'cdek_pvz'
@@ -91,6 +106,7 @@ export function CartPageContent() {
       : deliveryMethod === 'cdek_door'
         ? doorTariff?.deliverySum ?? 0
         : 0
+  // Итого к оплате = (сумма товаров со скидкой) + доставка; доставка всегда без скидки
   const totalWithDelivery = total + deliverySum
   const cityCode = selectedCity?.code ?? (selectedCity as { city_code?: number } | null)?.city_code
 
@@ -380,12 +396,17 @@ export function CartPageContent() {
                 </div>
               )}
               {(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && deliverySum > 0 && (
-                <div className="flex justify-between text-gray-600">
-                  <span>
-                    Доставка СДЭК ({deliveryMethod === 'cdek_pvz' ? 'до ПВЗ' : 'до двери'})
-                  </span>
-                  <span>{deliverySum.toLocaleString('ru-RU')} ₽</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-gray-600">
+                    <span>
+                      Доставка СДЭК ({deliveryMethod === 'cdek_pvz' ? 'до ПВЗ' : 'до двери'})
+                    </span>
+                    <span>{deliverySum.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Стоимость доставки не зависит от скидки по промокоду.
+                  </p>
+                </>
               )}
               <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-200">
                 <span>К оплате</span>

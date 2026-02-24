@@ -11,6 +11,10 @@ interface AddToCartButtonProps {
   slug: string | null
   /** Товар с акционной ценой (priceOld) — скидка по промокоду на заказ на него не применяется */
   hasPromoPrice?: boolean
+  /** Участвует в скидке по промокоду */
+  isPromoEligible?: boolean
+  /** Цена при применении промокода (если задана) */
+  discountPrice?: number | null
   /** Compact style for product cards; default for product page */
   size?: 'default' | 'sm'
   className?: string
@@ -23,6 +27,8 @@ export function AddToCartButton({
   photo,
   slug,
   hasPromoPrice = false,
+  isPromoEligible = true,
+  discountPrice = null,
   size = 'default',
   className,
 }: AddToCartButtonProps) {
@@ -38,6 +44,8 @@ export function AddToCartButton({
       photo,
       slug,
       hasPromoPrice,
+      isPromoEligible,
+      discountPrice,
     })
     openDrawer()
   }

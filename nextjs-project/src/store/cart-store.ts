@@ -10,6 +10,10 @@ export interface CartLine {
   slug: string | null
   /** Товар уже по акционной цене (есть priceOld) — скидка по промокоду на него не применяется */
   hasPromoPrice?: boolean
+  /** Участвует в скидке по промокоду (Rule: скидка только к eligible и не к «уже по акции») */
+  isPromoEligible?: boolean
+  /** Цена за единицу при применении промокода (если задана — подставляется вместо расчёта %/фикс) */
+  discountPrice?: number | null
 }
 
 interface CartState {
@@ -40,10 +44,12 @@ export const useCartStore = create<CartState>()(
                       ...i,
                       quantity: i.quantity + line.quantity,
                       hasPromoPrice: line.hasPromoPrice ?? i.hasPromoPrice,
+                      isPromoEligible: line.isPromoEligible ?? i.isPromoEligible,
+                      discountPrice: line.discountPrice ?? i.discountPrice,
                     }
                   : i
               )
-            : [...state.items, { ...line, hasPromoPrice: line.hasPromoPrice ?? false }]
+            : [...state.items, { ...line, hasPromoPrice: line.hasPromoPrice ?? false, isPromoEligible: line.isPromoEligible ?? true, discountPrice: line.discountPrice ?? null }]
           return { items }
         })
       },

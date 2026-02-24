@@ -4,7 +4,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { hashPassword } from '@/lib/password';
-import { sendNewUserCredentials } from '@/lib/email';
+import { sendInitialPasswordLinkEmail } from '@/lib/email';
+import {
+  generateSecureToken,
+  hashToken,
+  getLinkExpiresAt,
+} from '@/lib/set-initial-password';
 import { Role } from '@prisma/client';
 
 const PASSWORD_LENGTH = 14;
@@ -114,12 +119,26 @@ export async function POST(request: Request) {
       },
     });
 
-    const emailResult = await sendNewUserCredentials(
-      email,
-      user.email,
-      plainPassword,
-      user.name
-    );
+    const secret = generateSecureToken();
+    const tokenHash = await hashToken(secret);
+    const record = await prisma.setInitialPasswordToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: getLinkExpiresAt(),
+      },
+    });
+
+    let baseUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? '';
+    if (!baseUrl && typeof request.url === 'string') {
+      try {
+        baseUrl = new URL(request.url).origin;
+      } catch {
+        baseUrl = '';
+      }
+    }
+    const link = `${baseUrl}/login/set-initial-password?token=${encodeURIComponent(record.id + '.' + secret)}`;
+    const emailResult = await sendInitialPasswordLinkEmail(user.email, link);
 
     return NextResponse.json({
       id: user.id,

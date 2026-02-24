@@ -50,23 +50,29 @@ export async function POST(request: Request) {
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true, priceOld: true },
+      select: { id: true, price: true, priceOld: true, discountPrice: true, isPromoEligible: true },
     })
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     let sumPromoPrice = 0
-    let sumRegular = 0
+    let sumEligibleFixed = 0
+    let sumEligiblePercent = 0
+    let sumIneligible = 0
     for (const item of items) {
       const product = productMap.get(item.productId)
       if (!product) {
         return NextResponse.json({ error: `Товар не найден: ${item.productId}` }, { status: 400 })
       }
-      const lineTotal = product.price * item.quantity
       const hasPromoPrice = product.priceOld != null && product.priceOld > product.price
+      const isEligible = product.isPromoEligible !== false
       if (hasPromoPrice) {
-        sumPromoPrice += lineTotal
+        sumPromoPrice += product.price * item.quantity
+      } else if (isEligible && product.discountPrice != null) {
+        sumEligibleFixed += product.discountPrice * item.quantity
+      } else if (isEligible) {
+        sumEligiblePercent += product.price * item.quantity
       } else {
-        sumRegular += lineTotal
+        sumIneligible += product.price * item.quantity
       }
     }
 
@@ -90,7 +96,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const goodsTotal = sumPromoPrice + applyPromoToSubtotal(sumRegular, promo)
+    // Промокод применяется только к сумме товаров; доставка прибавляется без скидки
+    const goodsTotal =
+      sumPromoPrice + sumEligibleFixed + applyPromoToSubtotal(sumEligiblePercent, promo) + sumIneligible
     const total = goodsTotal + deliverySum
 
     const order = await prisma.$transaction(async (tx) => {

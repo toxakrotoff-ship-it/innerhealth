@@ -57,6 +57,102 @@ export async function sendPasswordResetEmail(
 const SUPPORT_FROM = process.env.SUPPORT_EMAIL_FROM ?? 'support@innerhealth.ru'
 
 /**
+ * Send initial password link (for new user registration completion).
+ * Text: «Для завершения регистрации пройдите по: {link}»
+ */
+export async function sendInitialPasswordLinkEmail(
+  to: string,
+  link: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; initial password link not sent to', to)
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+  try {
+    console.log('[email] Sending initial password link to', to)
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      to,
+      subject: 'Завершение регистрации — Inner Health',
+      text: `Для завершения регистрации пройдите по ссылке:\n\n${link}`,
+      html: `<p>Для завершения регистрации пройдите по ссылке:</p><p><a href="${link}">${link}</a></p><p>— Команда Inner Health</p>`.trim(),
+    })
+    console.log('[email] Initial password link sent to', to)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send initial password link error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Send one-time 6-digit code for initial password step.
+ * Text: «Ваш одноразовый код: {code}»
+ */
+export async function sendInitialPasswordCodeEmail(
+  to: string,
+  code: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; initial password code not sent to', to)
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+  try {
+    console.log('[email] Sending initial password code to', to)
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      to,
+      subject: 'Код для завершения регистрации — Inner Health',
+      text: `Ваш одноразовый код: ${code}`,
+      html: `<p>Ваш одноразовый код: <strong>${code}</strong></p><p>— Команда Inner Health</p>`.trim(),
+    })
+    console.log('[email] Initial password code sent to', to)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send initial password code error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
  * Send new user credentials (login + generated password) from support@innerhealth.ru.
  * No-op if SMTP is not configured.
  */

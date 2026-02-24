@@ -4,6 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 function TabContent({ text }: { text: string }) {
+  const isHtml = /<[a-z][\s\S]*>/i.test(text.trim());
+  if (isHtml) {
+    return (
+      <div
+        className="prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    );
+  }
   const lines = text.split(/\r?\n/).filter(Boolean);
   const asList = lines.some((l) => /^[-•*]\s*/.test(l.trim()));
   if (asList) {
