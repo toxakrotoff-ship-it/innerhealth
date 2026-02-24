@@ -56,12 +56,12 @@ export default function LoginPage() {
           className="absolute -inset-[10px] will-change-transform
             [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
             [background-image:var(--aurora)]
-            [background-size:300%_200%]
-            [background-position:50%_50%]
-            blur-[12px]
+            bg-size-[300%_200%]
+            bg-position-[50%_50%]
+            blur-md
             opacity-[0.48]
             animate-aurora
-            [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
+            mask-[radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
         />
       </div>
 
@@ -150,7 +150,7 @@ export default function LoginPage() {
           <p className="mt-4 text-center text-sm text-white/80">
             <Link
               href="/login/forgot-password"
-              className="text-[#D9EFFF] hover:underline"
+              className="text-highlight-blue hover:underline"
             >
               Забыли пароль?
             </Link>

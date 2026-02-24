@@ -8,7 +8,8 @@ import {
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 
-export const revalidate = 60
+/** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
+export const revalidate = 3600
 
 const PRODUCTS_PER_PAGE = 24
 

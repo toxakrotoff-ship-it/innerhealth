@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next'
 
-/** Cache-Control for catalog: fresh 60s, then serve stale up to 5 min while revalidating in background */
+/** Catalog: pre-rendered, fresh 1h, then serve stale while revalidating (ISR). */
 const CATALOG_CACHE_CONTROL =
-  'public, max-age=60, stale-while-revalidate=300'
+  'public, max-age=3600, stale-while-revalidate=3600'
 
 const nextConfig: NextConfig = {
   output: 'standalone',

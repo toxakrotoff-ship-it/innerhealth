@@ -5,7 +5,8 @@ import { ProductCard } from '@/components/site/product-card'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
 
-export const revalidate = 60
+/** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
+export const revalidate = 3600
 
 interface PageProps {
   params: Promise<{ categorySlug: string }>
@@ -50,7 +51,7 @@ export default async function CategoryPage({ params }: PageProps) {
           className="relative w-full overflow-hidden bg-[#e8d5d8]"
           aria-hidden
         >
-          <div className="relative w-full aspect-3/1 min-h-[160px] sm:min-h-[200px]">
+          <div className="relative w-full aspect-[3/1] min-h-[160px] sm:min-h-[200px]">
             <Image
               src={content.heroImage}
               alt=""

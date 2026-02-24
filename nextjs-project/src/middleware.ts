@@ -6,14 +6,17 @@ const adminSecretPath = process.env.ADMIN_SECRET_PATH || 'admin'
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
 
-/** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats). */
+/** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats, reviews PATCH). */
 function isTelegramServiceRequest(request: Request): boolean {
   const pathname = new URL(request.url).pathname
-  if (!pathname.startsWith('/api/admin/telegram/')) return false
   const secret = process.env[SERVICE_SECRET_ENV]
   if (!secret || typeof secret !== 'string') return false
   const key = request.headers.get(SERVICE_HEADER)
-  return key === secret
+  if (key !== secret) return false
+  // Разрешаем только известные эндпоинты бота
+  if (pathname.startsWith('/api/admin/telegram/')) return true
+  if (request.method === 'PATCH' && /^\/api\/admin\/reviews\/[^/]+\/?$/.test(pathname)) return true
+  return false
 }
 
 /** Security headers for all responses (payment-ready, PCI-aware). */

@@ -76,12 +76,19 @@ export function ProductCard({
         <div className="relative aspect-square bg-highlight-blue flex items-center justify-center overflow-hidden">
           {photo ? (
             <Image
-              src={photo.startsWith('/') ? photo : `/${photo.replace(/^\//, '')}`}
+              src={
+                photo.startsWith('http://') || photo.startsWith('https://')
+                  ? photo
+                  : photo.startsWith('/')
+                    ? photo
+                    : `/${photo.replace(/^\//, '')}`
+              }
               alt={title}
               fill
               className="object-contain p-4"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               priority={priority}
+              unoptimized={photo.startsWith('http://') || photo.startsWith('https://')}
             />
           ) : (
             <span className="text-action-blue/40 text-4xl font-light">?</span>
