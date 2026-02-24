@@ -127,6 +127,10 @@ model Order {
   status           String   @default("pending")
   /** ID платежа ЮKassa (для связки с webhook и return_url) */
   yookassaPaymentId String?  @unique
+  /// UUID заказа в СДЭК после успешного создания
+  cdekOrderUuid    String?  @unique
+  /// Последнее сообщение об ошибке СДЭК (для админки и повтора)
+  cdekOrderError   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   shippingInfo     ShippingInfo?
@@ -218,6 +222,21 @@ model ShippingInfo {
   city      String
   zipCode   String
   country   String
+  /// 'cdek_pvz' | 'cdek_door' | null
+  deliveryMethod  String?
+  /// Код города СДЭК получателя
+  cdekCityCode    Int?
+  /// Код ПВЗ (для cdek_pvz)
+  cdekPvzCode     String?
+  /// Код тарифа СДЭК (136, 139, 234 и т.д.)
+  cdekTariffCode  Int?
+  /// Адрес до двери (структурированный)
+  street          String?
+  house           String?
+  apartment       String?
+  entrance        String?
+  floor           String?
+  intercom        String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
