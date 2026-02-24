@@ -8,6 +8,8 @@ const SETTING_KEYS = [
   'yookassa_shop_id',
   'yookassa_secret_key',
   'yookassa_term_id',
+  'yookassa_receipt_vat_code',
+  'yookassa_receipt_vat_code_delivery',
   'site_name',
   'site_contact_email',
   'default_currency',

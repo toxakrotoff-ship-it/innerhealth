@@ -18,17 +18,36 @@ interface AdminTelegram {
   linkedAt: string | null;
 }
 
+/** Коды НДС для чеков 54-ФЗ (справочник ЮKassa). */
+const VAT_CODE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '1', label: 'Без НДС' },
+  { value: '2', label: 'НДС 0%' },
+  { value: '3', label: 'НДС 10%' },
+  { value: '4', label: 'НДС 20%' },
+  { value: '5', label: 'НДС 10/110' },
+  { value: '6', label: 'НДС 20/120' },
+  { value: '7', label: 'НДС 5%' },
+  { value: '8', label: 'НДС 7%' },
+  { value: '9', label: 'НДС 5/105' },
+  { value: '10', label: 'НДС 7/107' },
+  { value: '11', label: 'НДС 22%' },
+  { value: '12', label: 'НДС 22/122' },
+];
+
 const FIELDS: Array<{
   key: string;
   label: string;
-  type: 'text' | 'password';
+  type: 'text' | 'password' | 'select';
   placeholder?: string;
   group: 'cdek' | 'yookassa' | 'site';
+  options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'cdek_api_key', label: 'API-ключ СДЭК', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'yookassa_shop_id', label: 'Shop ID ЮKassa', type: 'text', placeholder: 'Идентификатор магазина', group: 'yookassa' },
   { key: 'yookassa_secret_key', label: 'Секретный ключ ЮKassa', type: 'password', placeholder: '••••••••', group: 'yookassa' },
   { key: 'yookassa_term_id', label: 'Term ID ЮKassa (терминал)', type: 'text', placeholder: 'ID терминала при необходимости', group: 'yookassa' },
+  { key: 'yookassa_receipt_vat_code', label: 'НДС чека (товары)', type: 'select', group: 'yookassa', options: VAT_CODE_OPTIONS },
+  { key: 'yookassa_receipt_vat_code_delivery', label: 'НДС чека (доставка)', type: 'select', group: 'yookassa', options: VAT_CODE_OPTIONS },
   { key: 'site_name', label: 'Название сайта', type: 'text', placeholder: 'Inner Health', group: 'site' },
   { key: 'site_contact_email', label: 'Email для связи', type: 'text', placeholder: 'info@example.com', group: 'site' },
   { key: 'default_currency', label: 'Валюта по умолчанию', type: 'text', placeholder: 'RUB', group: 'site' },
@@ -141,7 +160,7 @@ export default function AdminSettingsPage() {
       <div className="admin-content">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Настройки сайта</h1>
         <p className="text-gray-500 mb-6">
-          API-ключи и параметры доставки и оплаты. Секретные значения хранятся в базе и не отображаются после сохранения.
+          API-ключи и параметры доставки и оплаты. Для оплаты корзины используются Shop ID и секретный ключ ЮKassa из этого раздела; чек 54-ФЗ формируется с выбранными ставками НДС для товаров и доставки. Секретные значения хранятся в базе и не отображаются после сохранения.
         </p>
 
         {error && (
@@ -165,15 +184,30 @@ export default function AdminSettingsPage() {
                     <label htmlFor={field.key} className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label}
                     </label>
-                    <input
-                      id={field.key}
-                      type={field.type}
-                      className="form-input w-full"
-                      placeholder={field.placeholder}
-                      value={values[field.key] ?? ''}
-                      onChange={(e) => updateValue(field.key, e.target.value)}
-                      autoComplete="off"
-                    />
+                    {field.type === 'select' && field.options ? (
+                      <select
+                        id={field.key}
+                        className="form-input w-full"
+                        value={(values[field.key] || (field.key === 'yookassa_receipt_vat_code' || field.key === 'yookassa_receipt_vat_code_delivery' ? '1' : ''))}
+                        onChange={(e) => updateValue(field.key, e.target.value)}
+                      >
+                        {field.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={field.key}
+                        type={field.type}
+                        className="form-input w-full"
+                        placeholder={field.placeholder}
+                        value={values[field.key] ?? ''}
+                        onChange={(e) => updateValue(field.key, e.target.value)}
+                        autoComplete="off"
+                      />
+                    )}
                   </div>
                 ))}
               </div>

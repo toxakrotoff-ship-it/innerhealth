@@ -13,6 +13,13 @@ import { notifyTelegramOrder } from '@/lib/telegram-notify'
 import { sendNewOrderNotification } from '@/lib/email'
 import { randomUUID } from 'crypto'
 
+/** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
+function parseVatCode(value: string | undefined, fallback: number): number {
+  const n = parseInt(value ?? '', 10)
+  if (Number.isNaN(n) || n < 1 || n > 12) return fallback
+  return n
+}
+
 /** Скидка по промокоду применяется только к сумме товаров без акционной цены. */
 function applyPromoToSubtotal(
   subtotal: number,
@@ -204,23 +211,54 @@ export async function POST(request: Request) {
       )
     }
 
-    const hasYookassa =
+    const yookassaKeys = [
+      'yookassa_shop_id',
+      'yookassa_secret_key',
+      'yookassa_receipt_vat_code',
+      'yookassa_receipt_vat_code_delivery',
+    ] as const
+    const yookassaRows = await prisma.siteSetting.findMany({
+      where: { key: { in: [...yookassaKeys] } },
+    })
+    const yookassaSettings: Record<string, string> = {}
+    for (const row of yookassaRows) {
+      yookassaSettings[row.key] = row.value
+    }
+    const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
+    const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
+    const hasYookassaFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
+    const hasYookassaFromEnv =
       typeof process.env.YOOKASSA_SHOP_ID === 'string' &&
       process.env.YOOKASSA_SHOP_ID.length > 0 &&
       typeof process.env.YOOKASSA_SECRET_KEY === 'string' &&
       process.env.YOOKASSA_SECRET_KEY.length > 0
+    const hasYookassa = hasYookassaFromAdmin || hasYookassaFromEnv
 
     if (hasYookassa) {
       try {
         const baseUrl = getBaseUrl()
+        const vatCodeGoods = parseVatCode(yookassaSettings.yookassa_receipt_vat_code, 1)
+        const vatCodeDelivery = parseVatCode(
+          yookassaSettings.yookassa_receipt_vat_code_delivery,
+          vatCodeGoods
+        )
         const receiptItems = buildReceiptItemsFromOrderItems(
           order.items.map((oi) => ({
             description: oi.product.title,
             quantity: oi.quantity,
             price: oi.price,
-          }))
+          })),
+          vatCodeGoods
         )
-        const receiptWithDelivery = appendDeliveryReceiptItem(receiptItems, deliverySum)
+        const receiptWithDelivery = appendDeliveryReceiptItem(
+          receiptItems,
+          deliverySum,
+          vatCodeDelivery
+        )
+        const credentials =
+          hasYookassaFromAdmin
+            ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin }
+            : undefined
         const { paymentId, confirmationUrl } = await createYookassaPayment({
           amount: total,
           description: `Заказ №${order.id}`,
@@ -229,6 +267,7 @@ export async function POST(request: Request) {
           receiptItems: receiptWithDelivery,
           returnUrl: `${baseUrl}/cart?payment=success`,
           idempotenceKey: randomUUID(),
+          credentials,
         })
         await prisma.order.update({
           where: { id: order.id },

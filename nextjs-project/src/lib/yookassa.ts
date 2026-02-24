@@ -2,22 +2,32 @@
  * Интеграция с API ЮKassa (https://yookassa.ru/developers).
  * Создание платежа (redirect), чек 54-ФЗ, идемпотентность.
  *
- * Переменные окружения:
- * - YOOKASSA_SHOP_ID — идентификатор магазина (обязательно)
- * - YOOKASSA_SECRET_KEY — секретный ключ (обязательно)
- * - APP_URL или NEXTAUTH_URL — базовый URL для return_url (опционально)
+ * Учётные данные: из params.credentials или из env (YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY).
+ * APP_URL или NEXTAUTH_URL — базовый URL для return_url (опционально).
  */
 
 const YOOKASSA_API = 'https://api.yookassa.ru/v3'
 
-function getAuthHeader(): string {
+export interface YookassaCredentials {
+  shopId: string
+  secretKey: string
+}
+
+function buildAuthHeader(credentials: YookassaCredentials): string {
+  const encoded = Buffer.from(`${credentials.shopId}:${credentials.secretKey}`).toString('base64')
+  return `Basic ${encoded}`
+}
+
+function getCredentials(override?: YookassaCredentials | null): YookassaCredentials {
+  if (override?.shopId && override?.secretKey) {
+    return { shopId: override.shopId, secretKey: override.secretKey }
+  }
   const shopId = process.env.YOOKASSA_SHOP_ID
   const secretKey = process.env.YOOKASSA_SECRET_KEY
   if (!shopId || !secretKey) {
     throw new Error('YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are required')
   }
-  const encoded = Buffer.from(`${shopId}:${secretKey}`).toString('base64')
-  return `Basic ${encoded}`
+  return { shopId, secretKey }
 }
 
 function getBaseUrl(): string {
@@ -52,6 +62,8 @@ export interface CreatePaymentParams {
   returnUrl: string
   /** Ключ идемпотентности (уникальный на запрос) */
   idempotenceKey: string
+  /** Учётные данные ЮKassa (если не заданы — берутся из env) */
+  credentials?: YookassaCredentials | null
 }
 
 /** Ответ API создания платежа (нужные поля) */
@@ -72,7 +84,8 @@ export interface YookassaPaymentResponse {
 export async function createYookassaPayment(
   params: CreatePaymentParams
 ): Promise<{ paymentId: string; confirmationUrl: string }> {
-  const auth = getAuthHeader()
+  const credentials = getCredentials(params.credentials)
+  const auth = buildAuthHeader(credentials)
   const body = {
     amount: {
       value: params.amount.toFixed(2),

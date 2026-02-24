@@ -21,5 +21,8 @@ echo "==> Building telegram-bot (кэш, быстро)..."
 docker compose build telegram-bot
 docker compose up -d telegram-bot
 
+echo "==> Перезапуск контейнеров app и telegram-bot..."
+docker compose restart app telegram-bot
+
 echo "==> Done."
 docker compose ps

@@ -2,24 +2,38 @@ import nodemailer from 'nodemailer'
 
 const DEFAULT_PUBLIC_URL = 'https://innerhealth.ru'
 
+function isLocalhostUrl(url: string): boolean {
+  if (!url || !url.trim()) return true
+  try {
+    const u = new URL(url.replace(/\/$/, ''))
+    return /localhost|127\.0\.0\.1/i.test(u.hostname)
+  } catch {
+    return true
+  }
+}
+
 /**
- * Base URL for links in emails. Never returns localhost so letters always contain prod link.
+ * Base URL for links in emails. Never returns localhost — env/request localhost values are ignored.
  * Order: APP_URL → NEXTAUTH_URL → NEXT_PUBLIC_SITE_URL → request origin (if not localhost) → DEFAULT_PUBLIC_URL.
  */
 export function getBaseUrlForEmails(request?: Request): string {
-  let baseUrl =
-    process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? ''
+  const candidates = [
+    process.env.APP_URL,
+    process.env.NEXTAUTH_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ].filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+  let baseUrl = candidates.find((u) => !isLocalhostUrl(u)) ?? ''
   if (!baseUrl && request?.url) {
     try {
       const origin = new URL(request.url).origin
-      if (origin && !/localhost|127\.0\.0\.1/i.test(origin)) {
+      if (origin && !isLocalhostUrl(origin)) {
         baseUrl = origin
       }
     } catch {
       // ignore
     }
   }
-  if (!baseUrl) {
+  if (!baseUrl || isLocalhostUrl(baseUrl)) {
     baseUrl = DEFAULT_PUBLIC_URL
   }
   return baseUrl.replace(/\/$/, '')
