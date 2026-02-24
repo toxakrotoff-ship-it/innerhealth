@@ -19,6 +19,24 @@ export default function LoginPage() {
       e.preventDefault()
       setError('')
       setIsSubmitting(true)
+      const step1Res = await fetch('/api/auth/login-step1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+        credentials: 'include',
+      })
+      const step1Data = await step1Res.json().catch(() => ({}))
+      if (!step1Res.ok) {
+        setIsSubmitting(false)
+        setError('Неверные учетные данные')
+        return
+      }
+      if (step1Data.need2FA === true) {
+        setIsSubmitting(false)
+        const method = step1Data.method ?? 'email'
+        router.push(`/login/2fa?method=${encodeURIComponent(method)}`)
+        return
+      }
       const result = await signIn('credentials', {
         email: email.trim(),
         password,
