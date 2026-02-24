@@ -44,7 +44,15 @@ export async function POST(request: Request) {
     },
   })
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? ''
+  // Use env on server; fallback to request origin so email link is never localhost on prod
+  let baseUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? ''
+  if (!baseUrl && typeof request.url === 'string') {
+    try {
+      baseUrl = new URL(request.url).origin
+    } catch {
+      baseUrl = ''
+    }
+  }
   const resetLink = `${baseUrl}/login/reset-password?token=${encodeURIComponent(record.id + '.' + secret)}`
   const sendResult = await sendPasswordResetEmail(user.email, resetLink, EXPIRES_MINUTES)
   if (!sendResult.ok) {

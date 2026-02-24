@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -29,7 +29,12 @@ export default function LoginPage() {
         setError('Неверные учетные данные')
         return
       }
-      router.push('/admin/catalog')
+      const session = await getSession()
+      if (session?.user?.mustChangePassword) {
+        router.push('/login/change-password')
+      } else {
+        router.push('/admin/catalog')
+      }
       router.refresh()
     },
     [email, password, router]
