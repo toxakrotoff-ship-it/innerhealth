@@ -5,6 +5,10 @@ import { prisma } from '@/lib/prisma';
 
 const SETTING_KEYS = [
   'cdek_api_key',
+  'cdek_sender_name',
+  'cdek_sender_phone',
+  'cdek_sender_address',
+  'cdek_from_city_code',
   'yookassa_shop_id',
   'yookassa_secret_key',
   'yookassa_term_id',

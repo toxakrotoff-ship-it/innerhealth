@@ -43,6 +43,10 @@ const FIELDS: Array<{
   options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'cdek_api_key', label: 'API-ключ СДЭК', type: 'password', placeholder: '••••••••', group: 'cdek' },
+  { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
+  { key: 'cdek_sender_phone', label: 'Телефон отправителя (СДЭК)', type: 'text', placeholder: '+7 (999) 123-45-67', group: 'cdek' },
+  { key: 'cdek_sender_address', label: 'Адрес отправителя (СДЭК)', type: 'text', placeholder: 'Город, улица, дом', group: 'cdek' },
+  { key: 'cdek_from_city_code', label: 'Код города отправления СДЭК', type: 'text', placeholder: '44', group: 'cdek' },
   { key: 'yookassa_shop_id', label: 'Shop ID ЮKassa', type: 'text', placeholder: 'Идентификатор магазина', group: 'yookassa' },
   { key: 'yookassa_secret_key', label: 'Секретный ключ ЮKassa', type: 'password', placeholder: '••••••••', group: 'yookassa' },
   { key: 'yookassa_term_id', label: 'Term ID ЮKassa (терминал)', type: 'text', placeholder: 'ID терминала при необходимости', group: 'yookassa' },
