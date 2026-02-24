@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const DEFAULT_CENTER: [number, number] = [55.7558, 37.6173]
 const DEFAULT_ZOOM = 10
+const YMAPS_WAIT_TIMEOUT_MS = 15_000
 
 interface PvzPoint {
   code?: string
@@ -18,6 +19,7 @@ interface YandexMapPvzProps {
   selectedCode?: string
   /** При выборе маркера */
   onSelect?: (code: string) => void
+  /** Ключ API Яндекс.Карт (обязателен). Либо передайте сюда, либо задайте NEXT_PUBLIC_YANDEX_MAPS_API_KEY */
   apiKey?: string
 }
 
@@ -57,6 +59,10 @@ export function YandexMapPvz({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<YandexMapInstance | null>(null)
   const placemarksRef = useRef<unknown[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const key = apiKey ?? (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY : undefined) ?? ''
+  const hasKey = Boolean(key?.trim())
 
   const coords = points
     .map((p) => {
@@ -68,17 +74,21 @@ export function YandexMapPvz({
     .filter(Boolean) as [number, number][]
 
   useEffect(() => {
+    setLoadError(null)
     const container = containerRef.current
-    if (!container) return
+    if (!container || !hasKey) return
 
-    const key = apiKey ?? process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? ''
     const scriptUrl = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(key)}&lang=ru_RU`
 
     const initMap = () => {
       if (!window.ymaps) return
       window.ymaps.ready(() => {
         if (!containerRef.current) return
+        setLoadError(null)
         if (mapRef.current) mapRef.current.destroy()
+        while (containerRef.current.firstChild) {
+          containerRef.current.removeChild(containerRef.current.firstChild)
+        }
         const center =
           coords.length > 0
             ? coords.reduce(
@@ -115,7 +125,7 @@ export function YandexMapPvz({
 
     const scriptAlreadyInPage =
       typeof document !== 'undefined' &&
-      document.querySelector(`script[src^="https://api-maps.yandex.ru/2.1/"]`)
+      document.querySelector(`script[src="${scriptUrl}"]`)
 
     if (window.ymaps) {
       initMap()
@@ -127,10 +137,14 @@ export function YandexMapPvz({
     }
 
     if (scriptAlreadyInPage) {
+      const deadline = Date.now() + YMAPS_WAIT_TIMEOUT_MS
       const checkYmaps = setInterval(() => {
         if (window.ymaps) {
           clearInterval(checkYmaps)
           initMap()
+        } else if (Date.now() > deadline) {
+          clearInterval(checkYmaps)
+          setLoadError('Не удалось загрузить карту. Проверьте API-ключ Яндекс.Карт.')
         }
       }, 50)
       return () => {
@@ -145,20 +159,35 @@ export function YandexMapPvz({
     script.src = scriptUrl
     script.async = true
     script.onload = initMap
+    script.onerror = () => {
+      setLoadError('Не удалось загрузить карту. Проверьте NEXT_PUBLIC_YANDEX_MAPS_API_KEY.')
+    }
     document.head.appendChild(script)
     return () => {
+      script.remove()
       mapRef.current?.destroy()
       mapRef.current = null
       placemarksRef.current = []
     }
-  }, [points.length, coords.length, selectedCode, apiKey])
+  }, [hasKey, key, points.length, coords.length, selectedCode, apiKey])
+
+  const showPlaceholder = !hasKey || loadError
+  const placeholderMessage = !hasKey
+    ? 'Для отображения карты пунктов выдачи укажите ключ API Яндекс.Карт (NEXT_PUBLIC_YANDEX_MAPS_API_KEY) в настройках проекта.'
+    : loadError ?? ''
 
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={showPlaceholder ? `${className} flex items-center justify-center bg-gray-100 rounded-xl border border-gray-200 text-center` : className}
       style={{ minHeight: '320px' }}
       aria-label="Карта пунктов выдачи СДЭК"
-    />
+    >
+      {showPlaceholder && (
+        <p className={`text-sm px-4 ${loadError ? 'text-red-600' : 'text-gray-600'}`}>
+          {placeholderMessage}
+        </p>
+      )}
+    </div>
   )
 }
