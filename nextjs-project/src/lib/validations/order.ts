@@ -12,6 +12,17 @@ export const orderItemSchema = z.object({
   price: z.number().min(0).optional(), // server recalculates; client can send for display
 })
 
+const doorAddressSchema = z
+  .object({
+    street: z.string().max(200).trim().optional(),
+    house: z.string().max(50).trim().optional(),
+    apartment: z.string().max(50).trim().optional(),
+    entrance: z.string().max(50).trim().optional(),
+    floor: z.string().max(20).trim().optional(),
+    intercom: z.string().max(50).trim().optional(),
+  })
+  .optional()
+
 export const shippingSchema = z.object({
   fullName: z.string().min(1, 'Укажите имя').max(MAX_STRING_LENGTH).trim(),
   phone: z.string().min(1, 'Укажите телефон').max(PHONE_MAX).trim(),
@@ -20,6 +31,11 @@ export const shippingSchema = z.object({
   city: z.string().min(1, 'Укажите город').max(100).trim(),
   zipCode: z.string().max(20).trim(),
   country: z.string().max(100).trim().optional(),
+  deliveryMethod: z.enum(['cdek_pvz', 'cdek_door']).nullable().optional(),
+  cdekCityCode: z.number().int().positive().nullable().optional(),
+  cdekPvzCode: z.string().max(50).nullable().optional(),
+  cdekTariffCode: z.number().int().positive().nullable().optional(),
+  doorAddress: doorAddressSchema,
 })
 
 export const createOrderBodySchema = z.object({
