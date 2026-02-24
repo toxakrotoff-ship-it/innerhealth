@@ -3,16 +3,35 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { SessionStrategy } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, isBcryptHash } from '@/lib/password'
+import { consumeGrant } from '@/lib/two-factor'
 
 export const authOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+        grantToken: { label: 'Grant Token', type: 'text' },
       },
       async authorize(credentials) {
+        const grantToken = credentials?.grantToken as string | undefined
+        if (grantToken?.trim()) {
+          const result = await consumeGrant(grantToken.trim())
+          if (!result) return null
+          const user = await prisma.user.findUnique({
+            where: { id: result.userId },
+          })
+          if (!user) return null
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? 'Admin User',
+            role: user.role,
+            mustChangePassword: user.mustChangePassword,
+          }
+        }
+
         if (!credentials?.email || !credentials?.password) return null
         const email = credentials.email.trim().toLowerCase()
         const user = await prisma.user.findUnique({
@@ -23,6 +42,7 @@ export const authOptions = {
           ? await verifyPassword(credentials.password, user.password)
           : user.password === credentials.password
         if (!valid) return null
+        if (user.twoFactorEnabled) return null
         return {
           id: user.id,
           email: user.email,
