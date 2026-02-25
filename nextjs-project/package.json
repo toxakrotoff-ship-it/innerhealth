@@ -21,6 +21,7 @@
     "sync:product-photos": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/sync-product-photos-from-tilda.ts",
     "tilda:download-images": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/download-tildacdn-images-to-local.ts",
     "telegram-bot": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/telegram-bot.ts",
+    "redirects:compare": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/compare-sites-redirects.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",

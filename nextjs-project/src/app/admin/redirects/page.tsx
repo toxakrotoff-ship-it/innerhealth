@@ -15,6 +15,12 @@ interface RedirectRow {
   updatedAt: string;
 }
 
+interface ImportResult {
+  created: number;
+  skipped: number;
+  errors: string[];
+}
+
 const STATUS_OPTIONS: Array<{ value: number; label: string }> = [
   { value: 301, label: '301 Moved Permanently (рекомендуется для Тилды/рекламы)' },
   { value: 302, label: '302 Found (временный)' },
@@ -35,6 +41,9 @@ export default function AdminRedirectsPage() {
     statusCode: 301,
     note: '',
   });
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
   async function fetchList() {
     try {
@@ -134,6 +143,34 @@ export default function AdminRedirectsPage() {
     }
   }
 
+  async function handleImportCsv(e: React.FormEvent) {
+    e.preventDefault();
+    if (!importFile) {
+      setError('Выберите CSV файл');
+      return;
+    }
+    setImporting(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('csv', importFile);
+      const res = await fetch('/api/admin/redirects/import', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка импорта');
+      setImportResult({ created: data.created, skipped: data.skipped, errors: data.errors ?? [] });
+      setImportFile(null);
+      await fetchList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка импорта');
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
@@ -141,6 +178,45 @@ export default function AdminRedirectsPage() {
         <Button onClick={openCreate} disabled={saving}>
           Добавить редирект
         </Button>
+      </div>
+
+      <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
+        <h2 className="text-lg font-semibold mb-2">Импорт из CSV</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Формат: <code className="bg-gray-200 px-1 rounded">sourcePath,destination,statusCode,statusOnNew,note</code>. Первая строка может быть заголовком. Кодировка UTF-8.
+        </p>
+        <form onSubmit={handleImportCsv} className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-gray-700">Файл CSV</span>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="border border-gray-300 rounded-lg px-3 py-2"
+              onChange={(e) => {
+                setImportFile(e.target.files?.[0] ?? null);
+                setImportResult(null);
+              }}
+            />
+          </label>
+          <Button type="submit" disabled={importing || !importFile}>
+            {importing ? 'Импорт…' : 'Импортировать'}
+          </Button>
+        </form>
+        {importResult && (
+          <div className="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
+            Создано: {importResult.created}, пропущено (дубли): {importResult.skipped}
+            {importResult.errors.length > 0 && (
+              <ul className="mt-2 list-disc list-inside text-amber-700">
+                {importResult.errors.slice(0, 10).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+                {importResult.errors.length > 10 && (
+                  <li>… и ещё {importResult.errors.length - 10} ошибок</li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <p className="text-gray-600 mb-6">

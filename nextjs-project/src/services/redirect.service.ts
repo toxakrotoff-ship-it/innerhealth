@@ -108,3 +108,97 @@ export async function updateRedirect(
 export async function deleteRedirect(id: string) {
   return prisma.redirect.delete({ where: { id } });
 }
+
+/** Строка CSV для импорта: sourcePath,destination,statusCode,statusOnNew,note */
+export interface CsvRedirectRow {
+  sourcePath: string;
+  destination: string;
+  statusCode?: number;
+  note?: string | null;
+}
+
+/** Парсинг одной строки CSV с учётом кавычек и запятых */
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (!inQuotes && c === ',') {
+      result.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += c;
+  }
+  result.push(current.trim());
+  return result;
+}
+
+/**
+ * Импорт редиректов из CSV.
+ * Формат: sourcePath,destination,statusCode,statusOnNew,note (заголовок опционален).
+ * Возвращает количество созданных, пропущенных (дубли) и список ошибок.
+ */
+export async function importRedirectsFromCsv(csvText: string): Promise<{
+  created: number;
+  skipped: number;
+  errors: string[];
+}> {
+  const created = { count: 0 };
+  const skipped = { count: 0 };
+  const errors: string[] = [];
+  const lines = csvText.replace(/\r\n/g, '\n').split('\n').filter((l) => l.trim());
+  if (lines.length === 0) {
+    return { created: 0, skipped: 0, errors: ['Файл пуст'] };
+  }
+
+  let startIndex = 0;
+  const first = parseCsvLine(lines[0]);
+  if (first[0]?.toLowerCase() === 'sourcepath' || first[0]?.toLowerCase().includes('source')) {
+    startIndex = 1;
+  }
+
+  for (let i = startIndex; i < lines.length; i++) {
+    const cells = parseCsvLine(lines[i]);
+    const sourcePath = (cells[0] ?? '').trim();
+    const destination = (cells[1] ?? '').trim();
+    const statusCodeRaw = (cells[2] ?? '').trim();
+    const note = (cells[4] ?? '').trim() || null;
+
+    if (!sourcePath || !destination) {
+      errors.push(`Строка ${i + 1}: не указаны sourcePath или destination`);
+      continue;
+    }
+
+    let statusCode = 301;
+    if (statusCodeRaw) {
+      const n = parseInt(statusCodeRaw, 10);
+      if (REDIRECT_STATUS_CODES.includes(n as RedirectStatusCode)) statusCode = n;
+    }
+
+    try {
+      await prisma.redirect.create({
+        data: {
+          sourcePath: normalizePath(sourcePath),
+          destination,
+          statusCode,
+          note,
+        },
+      });
+      created.count += 1;
+    } catch (e: unknown) {
+      if (String(e).includes('Unique constraint') || String(e).includes('unique')) {
+        skipped.count += 1;
+      } else {
+        errors.push(`Строка ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  }
+
+  return { created: created.count, skipped: skipped.count, errors };
+}
