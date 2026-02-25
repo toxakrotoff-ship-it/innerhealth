@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { createCdekOrder } from '@/lib/cdek'
+import * as orderService from '@/services/order.service'
 
 /**
  * Webhook ЮKassa: обновление статуса заказа по уведомлениям.
@@ -59,24 +59,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, status: true, yookassaPaymentId: true },
-  })
+  const order = await orderService.findOrderForWebhook(orderId)
   if (!order || order.yookassaPaymentId !== body.object.id) {
     return NextResponse.json({ ok: true })
   }
 
   if (body.event === 'payment.succeeded' && order.status !== 'paid') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'paid' },
-    })
+    await orderService.updateOrderStatus(orderId, 'paid')
 
-    const orderWithShipping = await prisma.order.findUnique({
-      where: { id: orderId },
-      select: { id: true, cdekOrderUuid: true, shippingInfo: { select: { deliveryMethod: true } } },
-    })
+    const orderWithShipping = await orderService.findOrderWithShipping(orderId)
     const isCdek =
       orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_pvz' ||
       orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_door'
@@ -87,9 +78,9 @@ export async function POST(request: Request) {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const result = await createCdekOrder(orderId)
         if ('uuid' in result) {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: { cdekOrderUuid: result.uuid, cdekOrderError: null },
+          await orderService.updateOrder(orderId, {
+            cdekOrderUuid: result.uuid,
+            cdekOrderError: null,
           })
           break
         }
@@ -99,18 +90,12 @@ export async function POST(request: Request) {
         }
       }
       if (lastError) {
-        await prisma.order.update({
-          where: { id: orderId },
-          data: { cdekOrderError: lastError },
-        })
+        await orderService.updateOrder(orderId, { cdekOrderError: lastError })
         console.error('[webhook/yookassa] CDEK order create failed after retries', orderId, lastError)
       }
     }
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'canceled' },
-    })
+    await orderService.updateOrderStatus(orderId, 'canceled')
   }
 
   return NextResponse.json({ ok: true })

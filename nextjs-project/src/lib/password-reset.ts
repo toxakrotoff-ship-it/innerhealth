@@ -1,6 +1,5 @@
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
-import { prisma } from '@/lib/prisma'
 
 const TOKEN_BYTES = 32
 const EXPIRES_MINUTES = 60

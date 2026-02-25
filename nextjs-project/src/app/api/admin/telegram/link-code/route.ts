@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { randomBytes } from 'crypto';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as telegramService from '@/services/telegram.service';
 
 const CODE_BYTES = 12; // 24 hex chars
 const EXPIRES_MINUTES = 10;
@@ -11,16 +10,10 @@ function generateCode(): string {
   return randomBytes(CODE_BYTES).toString('hex');
 }
 
-/** POST: создать одноразовый код привязки и вернуть ссылку на бота */
+/** POST: создать одноразовый код привязки и вернуть ссылку на бота (ADMIN only). */
 export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const role = session.user.role as string;
-  if (role !== 'ADMIN' && role !== 'WRITER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token || typeof token !== 'string') {
@@ -34,12 +27,10 @@ export async function POST() {
     const code = generateCode();
     const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
 
-    await prisma.telegramLinkCode.create({
-      data: {
-        code,
-        userId: session.user.id,
-        expiresAt,
-      },
+    await telegramService.createTelegramLinkCode({
+      code,
+      userId: session.user.id,
+      expiresAt,
     });
 
     let botUsername: string;

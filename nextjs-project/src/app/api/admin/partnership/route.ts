@@ -1,18 +1,13 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAdminSession } from '@/lib/require-admin'
+import * as partnershipService from '@/services/partnership.service'
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireAdminSession()
+  if (session instanceof NextResponse) return session
 
   try {
-    const leads = await prisma.partnershipLead.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
+    const leads = await partnershipService.getPartnershipLeads()
     return NextResponse.json(leads)
   } catch (e) {
     console.error('Admin partnership list error:', e)

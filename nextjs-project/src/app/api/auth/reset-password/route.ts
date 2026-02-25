@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { verifyTokenHash } from '@/lib/password-reset'
+import * as authTokensService from '@/services/auth-tokens.service'
 import { hashPassword } from '@/lib/password'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { z } from 'zod'
@@ -35,10 +35,7 @@ export async function POST(request: Request) {
   }
   const [recordId, secret] = parts
 
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { id: recordId },
-    include: { user: true },
-  })
+  const record = await authTokensService.findPasswordResetTokenById(recordId)
   if (!record || record.usedAt) {
     return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
   }
@@ -52,16 +49,10 @@ export async function POST(request: Request) {
   }
 
   const hashedPassword = await hashPassword(password)
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { password: hashedPassword, mustChangePassword: false },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-  ])
+  await authTokensService.usePasswordResetTokenAndUpdateUser(record.id, record.userId, {
+    password: hashedPassword,
+    mustChangePassword: false,
+  })
 
   return NextResponse.json({ message: 'Пароль успешно изменён. Войдите с новым паролем.' })
 }

@@ -1,43 +1,18 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as settingsService from '@/services/settings.service';
 
-const SETTING_KEYS = [
-  'cdek_api_key',
-  'cdek_sender_name',
-  'cdek_sender_phone',
-  'cdek_sender_address',
-  'cdek_from_city_code',
-  'yookassa_shop_id',
-  'yookassa_secret_key',
-  'yookassa_term_id',
-  'yookassa_receipt_vat_code',
-  'yookassa_receipt_vat_code_delivery',
-  'site_name',
-  'site_contact_email',
-  'default_currency',
-] as const;
+export type { SettingKey } from '@/services/settings.service';
 
-export type SettingKey = (typeof SETTING_KEYS)[number];
+const putSettingsSchema = z.record(z.string(), z.string());
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const rows = await prisma.siteSetting.findMany({
-      where: { key: { in: [...SETTING_KEYS] } },
-    });
-    const map: Record<string, string> = {};
-    for (const k of SETTING_KEYS) {
-      map[k] = '';
-    }
-    for (const row of rows) {
-      map[row.key] = row.value;
-    }
+    const map = await settingsService.getSettingsMap();
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings GET error:', err);
@@ -49,33 +24,20 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let body: z.infer<typeof putSettingsSchema>;
+  try {
+    const raw = await request.json();
+    body = putSettingsSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   try {
-    const body = (await request.json()) as Record<string, string>;
-    for (const key of SETTING_KEYS) {
-      const value = body[key];
-      if (value === undefined) continue;
-      const str = typeof value === 'string' ? value : String(value ?? '');
-      await prisma.siteSetting.upsert({
-        where: { key },
-        create: { key, value: str },
-        update: { value: str },
-      });
-    }
-    const rows = await prisma.siteSetting.findMany({
-      where: { key: { in: [...SETTING_KEYS] } },
-    });
-    const map: Record<string, string> = {};
-    for (const k of SETTING_KEYS) {
-      map[k] = '';
-    }
-    for (const row of rows) {
-      map[row.key] = row.value;
-    }
+    const map = await settingsService.upsertSettings(body);
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings PUT error:', err);

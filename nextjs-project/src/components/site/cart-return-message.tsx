@@ -1,16 +1,13 @@
-'use client'
-
-import { useSearchParams } from 'next/navigation'
-
 /**
- * Показывает сообщение при возврате с страницы оплаты ЮKassa
- * (return_url: /cart?payment=success или /cart?payment=cancel).
- * Читает query на клиенте, чтобы не передавать searchParams (Promise) в пропсы страницы и не вызывать предупреждение sync-dynamic-apis в dev tools.
+ * Shows message when returning from YooKassa payment page
+ * (return_url: /cart?payment=success or /cart?payment=cancel).
+ * Receives payment from the cart page (RSC); no client boundary.
  */
-export function CartReturnMessage() {
-  const searchParams = useSearchParams()
-  const payment = searchParams.get('payment') ?? undefined
-
+export function CartReturnMessage({
+  payment,
+}: {
+  payment?: string
+}) {
   if (payment === 'success') {
     return (
       <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-center">

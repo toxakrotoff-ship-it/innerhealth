@@ -1,24 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as telegramService from '@/services/telegram.service';
 
-/** GET: статус привязки Telegram для текущего админа */
+/** GET: статус привязки Telegram для текущего админа (ADMIN only). */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const role = session.user.role as string;
-  if (role !== 'ADMIN' && role !== 'WRITER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const whitelist = await prisma.telegramWhitelist.findUnique({
-      where: { userId: session.user.id },
-      select: { telegramUserId: true, linkedAt: true },
-    });
+    const whitelist = await telegramService.findTelegramWhitelistStatusByUserId(session.user.id);
     return NextResponse.json({
       linked: !!whitelist,
       linkedAt: whitelist?.linkedAt?.toISOString() ?? null,

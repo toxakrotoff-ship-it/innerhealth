@@ -1,7 +1,12 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { YandexMapPvz } from './yandex-map-pvz'
+
+const YandexMapPvz = dynamic(
+  () => import('./yandex-map-pvz').then((m) => ({ default: m.YandexMapPvz })),
+  { ssr: false }
+)
 
 /** Прокручивает элемент в область видимости */
 function scrollIntoViewSmooth(el: HTMLElement | null) {

@@ -172,7 +172,12 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         seoTitle: data.seoTitle ?? '',
         seoDescr: data.seoDescr ?? '',
         seoKeywords: data.seoKeywords ?? '',
-        photos: Array.isArray(data.photos) ? data.photos.filter((u): u is string => typeof u === 'string') : (data.photo ? [data.photo] : []),
+        photos: (() => {
+          if (!Array.isArray(data.photos)) return data.photo ? [data.photo] : [];
+          return data.photos.map((p: unknown) =>
+            typeof p === 'string' ? p : (p && typeof p === 'object' && 'url' in p && typeof (p as { url: string }).url === 'string' ? (p as { url: string }).url : '')
+          ).filter(Boolean) as string[];
+        })(),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');

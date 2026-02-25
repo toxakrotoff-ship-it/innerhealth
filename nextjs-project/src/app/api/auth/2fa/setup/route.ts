@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import { verifyPassword, isBcryptHash } from '@/lib/password'
+import * as userService from '@/services/user.service'
 import {
   generateTotpSecret,
   encryptTotpSecret,
@@ -23,16 +23,13 @@ export async function GET() {
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id as string },
-    select: { twoFactorEnabled: true, twoFactorMethod: true },
-  })
-  if (!user) {
+  const user2fa = await userService.findUserByIdFor2fa(session.user.id as string)
+  if (!user2fa) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
   return NextResponse.json({
-    twoFactorEnabled: user.twoFactorEnabled,
-    twoFactorMethod: user.twoFactorMethod,
+    twoFactorEnabled: user2fa.twoFactorEnabled,
+    twoFactorMethod: user2fa.twoFactorMethod,
   })
 }
 
@@ -51,17 +48,7 @@ export async function POST(request: Request) {
   }
 
   const userId = session.user.id as string
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      password: true,
-      twoFactorEnabled: true,
-      twoFactorMethod: true,
-      totpSecretEncrypted: true,
-    },
-  })
+  const user = await userService.findUserByIdFor2fa(userId)
 
   if (!user) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -85,13 +72,10 @@ export async function POST(request: Request) {
       )
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorMethod: null,
-        totpSecretEncrypted: null,
-      },
+    await userService.updateUser(userId, {
+      twoFactorEnabled: false,
+      twoFactorMethod: null,
+      totpSecretEncrypted: null,
     })
     return NextResponse.json({ ok: true })
   }
@@ -105,13 +89,10 @@ export async function POST(request: Request) {
     }
 
     if (body.method === 'email') {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          twoFactorEnabled: true,
-          twoFactorMethod: 'email',
-          totpSecretEncrypted: null,
-        },
+      await userService.updateUser(userId, {
+        twoFactorEnabled: true,
+        twoFactorMethod: 'email',
+        totpSecretEncrypted: null,
       })
       return NextResponse.json({ ok: true })
     }
@@ -120,13 +101,10 @@ export async function POST(request: Request) {
       if (!body.code) {
         const secret = generateTotpSecret()
         const encrypted = encryptTotpSecret(secret)
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            twoFactorMethod: 'totp',
-            totpSecretEncrypted: encrypted,
-            twoFactorEnabled: false,
-          },
+        await userService.updateUser(userId, {
+          twoFactorMethod: 'totp',
+          totpSecretEncrypted: encrypted,
+          twoFactorEnabled: false,
         })
         const uri = getTotpUri(secret, user.email, 'Inner Health')
         return NextResponse.json({ uri })
@@ -142,10 +120,7 @@ export async function POST(request: Request) {
       if (!valid) {
         return NextResponse.json({ error: 'Invalid code' }, { status: 401 })
       }
-      await prisma.user.update({
-        where: { id: userId },
-        data: { twoFactorEnabled: true },
-      })
+      await userService.updateUser(userId, { twoFactorEnabled: true })
       return NextResponse.json({ ok: true })
     }
   }

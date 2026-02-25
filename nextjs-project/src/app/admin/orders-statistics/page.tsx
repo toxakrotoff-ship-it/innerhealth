@@ -2,11 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// Простой тип для заказа
+interface OrderItemRow {
+  id: string;
+  quantity: number;
+  price: number;
+  productId?: string;
+}
+
 interface Order {
   id: string;
   userId: string | null;
-  items: any[];
+  items: OrderItemRow[];
   total: number;
   status: string;
   createdAt: string;

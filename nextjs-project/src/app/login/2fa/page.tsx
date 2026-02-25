@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { Suspense, useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -8,7 +8,7 @@ import { signIn, getSession } from 'next-auth/react'
 
 const RESEND_COOLDOWN_SEC = 60
 
-export default function Login2FAPage() {
+function Login2FAForm() {
   const searchParams = useSearchParams()
   const method = (searchParams.get('method') ?? 'email') as 'email' | 'totp'
   const router = useRouter()
@@ -167,5 +167,36 @@ export default function Login2FAPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+function Login2FAPageFallback() {
+  return (
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#1a2332]">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
+        <div
+          className="absolute -inset-[10px] will-change-transform
+            [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
+            [background-image:var(--aurora)]
+            bg-size-[300%_200%]
+            bg-position-[50%_50%]
+            blur-md
+            opacity-[0.48]
+            animate-aurora
+            mask-[radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
+        />
+      </div>
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-4 py-10">
+        <p className="text-white/80">Загрузка…</p>
+      </div>
+    </div>
+  )
+}
+
+export default function Login2FAPage() {
+  return (
+    <Suspense fallback={<Login2FAPageFallback />}>
+      <Login2FAForm />
+    </Suspense>
   )
 }

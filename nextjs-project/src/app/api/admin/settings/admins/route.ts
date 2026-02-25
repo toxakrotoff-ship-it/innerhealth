@@ -1,30 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as userService from '@/services/user.service';
+
+const patchAdminSchema = z.object({
+  userId: z.string().min(1, 'userId обязателен'),
+  notificationEmail: z.string().trim().transform((s) => s || null).nullable().optional(),
+});
 
 /** GET: список администраторов (роль ADMIN) с полями email, notificationEmail. Только для ADMIN. */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        lastName: true,
-        notificationEmail: true,
-      },
-      orderBy: { email: 'asc' },
-    });
+    const admins = await userService.getAdminsForSettingsList();
     const list = admins.map((u) => ({
       id: u.id,
       email: u.email,
@@ -43,52 +33,35 @@ export async function GET() {
 
 /** PATCH: установить или снять привязанный ящик для администратора. Только для ADMIN. */
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
-  let body: { userId?: string; notificationEmail?: string | null };
+  let body: z.infer<typeof patchAdminSchema>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-  const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
-  if (!userId) {
-    return NextResponse.json({ error: 'userId обязателен' }, { status: 400 });
+    const raw = await request.json();
+    body = patchAdminSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const notificationEmail =
-    body.notificationEmail === null || body.notificationEmail === undefined
-      ? null
-      : typeof body.notificationEmail === 'string'
-        ? body.notificationEmail.trim() || null
-        : null;
+  const { userId, notificationEmail } = body;
 
   try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, role: 'ADMIN' },
-    });
+    const user = await userService.findAdminById(userId);
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден или не администратор' }, { status: 404 });
     }
-    await prisma.user.update({
-      where: { id: userId },
-      data: { notificationEmail },
-    });
-    const updated = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, name: true, lastName: true, notificationEmail: true },
-    });
+    await userService.updateUser(userId, { notificationEmail });
+    const updated = await userService.findUserProfile(userId);
+    if (!updated) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
     return NextResponse.json({
-      id: updated!.id,
-      email: updated!.email,
-      name: [updated!.name, updated!.lastName].filter(Boolean).join(' ') || updated!.email,
-      notificationEmail: updated!.notificationEmail?.trim() || null,
+      id: updated.id,
+      email: updated.email,
+      name: [updated.name, updated.lastName].filter(Boolean).join(' ') || updated.email,
+      notificationEmail: updated.notificationEmail?.trim() || null,
     });
   } catch (e) {
     console.error('Settings admins PATCH error:', e);

@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import type { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
 import { createOrderBodySchema } from '@/lib/validations/order'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import {
@@ -12,6 +10,11 @@ import {
 import { notifyTelegramOrder } from '@/lib/telegram-notify'
 import { sendNewOrderNotification } from '@/lib/email'
 import { randomUUID } from 'crypto'
+import * as productService from '@/services/product.service'
+import * as promoService from '@/services/promo.service'
+import * as orderService from '@/services/order.service'
+import * as userService from '@/services/user.service'
+import * as settingsService from '@/services/settings.service'
 
 /** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
 function parseVatCode(value: string | undefined, fallback: number): number {
@@ -55,10 +58,7 @@ export async function POST(request: Request) {
     const { items, total: clientTotal, promoCodeId, deliverySum = 0, shipping } = parsed.data
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, price: true, priceOld: true, discountPrice: true, isPromoEligible: true },
-    })
+    const products = await productService.getProductsForOrder(productIds)
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     let sumPromoPrice = 0
@@ -85,9 +85,7 @@ export async function POST(request: Request) {
 
     let promo: { discountType: string; discountValue: number } | null = null
     if (promoCodeId) {
-      const promoRecord = await prisma.promoCode.findUnique({
-        where: { id: promoCodeId },
-      })
+      const promoRecord = await promoService.findPromoById(promoCodeId)
       if (promoRecord?.isActive) {
         const now = new Date()
         const validFrom = !promoRecord.validFrom || now >= promoRecord.validFrom
@@ -108,75 +106,36 @@ export async function POST(request: Request) {
       sumPromoPrice + sumEligibleFixed + applyPromoToSubtotal(sumEligiblePercent, promo) + sumIneligible
     const total = goodsTotal + deliverySum
 
-    const order = await prisma.$transaction(async (tx) => {
-      const created = await tx.order.create({
-        data: {
-          total,
-          status: 'pending',
-          promoCodeId: promoCodeId || undefined,
-          items: {
-            create: items.map((i) => {
-              const product = productMap.get(i.productId)!
-              return {
-                productId: i.productId,
-                quantity: i.quantity,
-                price: product.price,
-              }
-            }),
-          },
-        },
-        include: { items: { include: { product: { select: { title: true } } } } },
-      })
-
-      const door = shipping.doorAddress
-      const addressForDb =
-        door && (door.street ?? door.house ?? door.apartment)
-          ? [door.street, door.house, door.apartment, door.entrance, door.floor, door.intercom]
-              .filter(Boolean)
-              .join(', ')
-          : shipping.address.trim()
-
-      await tx.shippingInfo.create({
-        data: {
-          orderId: created.id,
-          fullName: shipping.fullName.trim(),
-          phone: shipping.phone.trim(),
-          email: shipping.email.trim(),
-          address: addressForDb,
-          city: shipping.city.trim(),
-          zipCode: (shipping.zipCode ?? '').toString().trim(),
-          country: (shipping.country ?? 'Россия').trim(),
-          deliveryMethod: shipping.deliveryMethod ?? undefined,
-          cdekCityCode: shipping.cdekCityCode ?? undefined,
-          cdekPvzCode: shipping.cdekPvzCode ?? undefined,
-          cdekTariffCode: shipping.cdekTariffCode ?? undefined,
-          street: door?.street?.trim(),
-          house: door?.house?.trim(),
-          apartment: door?.apartment?.trim(),
-          entrance: door?.entrance?.trim(),
-          floor: door?.floor?.trim(),
-          intercom: door?.intercom?.trim(),
-        },
-      })
-
-      if (promoCodeId) {
-        await tx.promoCode.update({
-          where: { id: promoCodeId },
-          data: { usedCount: { increment: 1 } },
-        })
-      }
-
-      return created
+    const order = await orderService.createOrderWithItemsAndShipping({
+      total,
+      promoCodeId: promoCodeId || null,
+      items: items.map((i) => {
+        const product = productMap.get(i.productId)!
+        return {
+          productId: i.productId,
+          quantity: i.quantity,
+          price: product.price,
+        }
+      }),
+      shipping: {
+        fullName: shipping.fullName.trim(),
+        phone: shipping.phone.trim(),
+        email: shipping.email.trim(),
+        address: shipping.address.trim(),
+        city: shipping.city.trim(),
+        zipCode: (shipping.zipCode ?? '').toString().trim(),
+        country: (shipping.country ?? 'Россия').trim(),
+        deliveryMethod: shipping.deliveryMethod ?? undefined,
+        cdekCityCode: shipping.cdekCityCode ?? undefined,
+        cdekPvzCode: shipping.cdekPvzCode ?? undefined,
+        cdekTariffCode: shipping.cdekTariffCode ?? undefined,
+        doorAddress: shipping.doorAddress,
+      },
     })
 
-    let promoCodeStr: string | null = null
-    if (promoCodeId) {
-      const p = await prisma.promoCode.findUnique({
-        where: { id: promoCodeId },
-        select: { code: true },
-      })
-      promoCodeStr = p?.code ?? null
-    }
+    const promoCodeStr = promoCodeId
+      ? await promoService.getPromoCodeStringById(promoCodeId)
+      : null
     notifyTelegramOrder({
       orderId: order.id,
       total: order.total,
@@ -216,32 +175,14 @@ export async function POST(request: Request) {
       },
       promoCode: promoCodeStr,
     }
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: { email: true, notificationEmail: true },
-    })
-    const adminEmails = admins.map(
-      (a) => (a.notificationEmail?.trim() || a.email).trim()
-    ).filter(Boolean)
+    const adminEmails = await userService.getAdminNotificationEmails()
     if (adminEmails.length > 0) {
       void sendNewOrderNotification(adminEmails, orderNotificationPayload).catch((e) =>
         console.error('[orders] New order email notification error:', e)
       )
     }
 
-    const yookassaKeys = [
-      'yookassa_shop_id',
-      'yookassa_secret_key',
-      'yookassa_receipt_vat_code',
-      'yookassa_receipt_vat_code_delivery',
-    ] as const
-    const yookassaRows = await prisma.siteSetting.findMany({
-      where: { key: { in: [...yookassaKeys] } },
-    })
-    const yookassaSettings: Record<string, string> = {}
-    for (const row of yookassaRows) {
-      yookassaSettings[row.key] = row.value
-    }
+    const yookassaSettings = await settingsService.getYookassaSettingsMap()
     const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
     const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
     const hasYookassaFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
@@ -287,10 +228,7 @@ export async function POST(request: Request) {
           idempotenceKey: randomUUID(),
           credentials,
         })
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { yookassaPaymentId: paymentId } as Prisma.OrderUpdateInput,
-        })
+        await orderService.updateOrder(order.id, { yookassaPaymentId: paymentId })
         return NextResponse.json({
           id: order.id,
           success: true,

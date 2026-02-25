@@ -1,41 +1,38 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
 import { Role } from '@prisma/client';
+import * as userService from '@/services/user.service';
 
-async function requireAdminRole() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  return null;
-}
-
-const ROLE_VALUES: Role[] = ['USER', 'WRITER', 'ADMIN'];
+const patchUserSchema = z.object({
+  name: z.string().max(255).transform((s) => s.trim() || null).nullable().optional(),
+  role: z.enum(['USER', 'WRITER', 'ADMIN']).optional(),
+});
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = await requireAdminRole();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: 'User id required' }, { status: 400 });
   }
 
+  let body: z.infer<typeof patchUserSchema>;
   try {
-    const body = await request.json();
-    const name = typeof body.name === 'string' ? body.name.trim() || null : undefined;
-    const role =
-      typeof body.role === 'string' && ROLE_VALUES.includes(body.role as Role)
-        ? (body.role as Role)
-        : undefined;
+    const raw = await request.json();
+    body = patchUserSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  try {
+    const name = body.name;
+    const role = body.role;
 
     const updateData: { name?: string | null; role?: Role } = {};
     if (name !== undefined) updateData.name = name;
@@ -45,16 +42,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+    const user = await userService.updateUser(id, updateData, {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
     });
     return NextResponse.json({
       id: user.id,
@@ -76,16 +69,15 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authError = await requireAdminRole();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: 'User id required' }, { status: 400 });
   }
 
-  const session = await getServerSession(authOptions);
-  if (session?.user && (session.user as { id?: string }).id === id) {
+  if (session.user.id === id) {
     return NextResponse.json(
       { error: 'Нельзя удалить свой аккаунт' },
       { status: 403 }
@@ -93,23 +85,12 @@ export async function DELETE(
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const user = await userService.findUserByIdMinimal(id);
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
     }
 
-    await prisma.$transaction([
-      prisma.order.updateMany({
-        where: { userId: id },
-        data: { userId: null },
-      }),
-      prisma.user.delete({
-        where: { id },
-      }),
-    ]);
+    await userService.deleteUserAndDetachOrders(id);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

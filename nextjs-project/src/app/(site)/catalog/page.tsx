@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
+import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import {
   filterCatalogBlockCategories,
   getCategoryBackgroundImage,
@@ -27,21 +29,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { products: true } } },
     }),
-    prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: PRODUCTS_PER_PAGE + 1,
-      skip,
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        priceOld: true,
-        photo: true,
-        slug: true,
-        isPromoEligible: true,
-        discountPrice: true,
-      },
-    }),
+    productService.getProductsForCatalog(skip, PRODUCTS_PER_PAGE + 1),
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories)
@@ -113,7 +101,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 slug={p.slug}
                 isPromoEligible={p.isPromoEligible}
                 discountPrice={p.discountPrice}
-                priority={index < 8}
+                priority={index < 2}
+                blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
               />
             ))}
           </div>

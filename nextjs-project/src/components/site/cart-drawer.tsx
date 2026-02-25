@@ -7,7 +7,7 @@ import { useCartStore } from '@/store/cart-store'
 import { cn } from '@/lib/utils'
 
 export function CartDrawer() {
-  const { items, isDrawerOpen, closeDrawer, removeItem } = useCartStore()
+  const { items, isDrawerOpen, closeDrawer, removeItem, mergeItemDetails } = useCartStore()
   const asideRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -31,7 +31,32 @@ export function CartDrawer() {
     }
   }, [isDrawerOpen])
 
-  const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  /** Enrich slim items (rehydrated from localStorage) with product details. */
+  useEffect(() => {
+    const slimIds = items.filter((i) => i.title == null).map((i) => i.productId)
+    if (slimIds.length === 0) return
+    const controller = new AbortController()
+    fetch(`/api/products/cart-items?ids=${slimIds.join(',')}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((products: Array<{ id: string; title: string; price: number; priceOld: number | null; photo: string | null; slug: string | null; isPromoEligible: boolean | null; discountPrice: number | null }>) => {
+        products.forEach((p) => {
+          const hasPromoPrice = p.priceOld != null && p.priceOld > p.price
+          mergeItemDetails(p.id, {
+            title: p.title,
+            price: p.price,
+            photo: p.photo ?? null,
+            slug: p.slug ?? null,
+            hasPromoPrice,
+            isPromoEligible: p.isPromoEligible ?? true,
+            discountPrice: p.discountPrice ?? null,
+          })
+        })
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [items, mergeItemDetails])
+
+  const total = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0)
 
   return (
     <>
@@ -77,11 +102,11 @@ export function CartDrawer() {
             <ul className="space-y-4">
               {items.map((line) => (
                 <li key={line.productId} className="flex gap-3 border-b border-gray-100 pb-4">
-                  <div className="relative w-16 h-16 rounded-lg bg-highlight-blue flex-shrink-0 overflow-hidden">
+                  <div className="relative w-16 h-16 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
                     {line.photo ? (
                       <Image
                         src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
-                        alt={line.title}
+                        alt={line.title ?? ''}
                         fill
                         className="object-contain p-1"
                       />
@@ -95,11 +120,13 @@ export function CartDrawer() {
                       onClick={closeDrawer}
                       className="font-medium text-text hover:text-action-blue line-clamp-2"
                     >
-                      {line.title}
+                      {line.title ?? 'Загрузка...'}
                     </Link>
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-sm text-gray-600">
-                        {line.price.toLocaleString('ru-RU')} ₽ × {line.quantity}
+                        {line.price != null
+                          ? `${line.price.toLocaleString('ru-RU')} ₽ × ${line.quantity}`
+                          : `— × ${line.quantity}`}
                       </span>
                       <button
                         type="button"

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as reviewService from '@/services/review.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -13,16 +13,6 @@ function isServiceRequest(request: Request): boolean {
   return key === secret;
 }
 
-async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-  return null;
-}
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -37,31 +27,27 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Missing review id' }, { status: 400 });
   }
 
-  let body: { status?: string };
+  const patchReviewSchema = z.object({
+    status: z.enum(['approved', 'rejected']),
+  });
+  let body: z.infer<typeof patchReviewSchema>;
   try {
-    body = await request.json();
+    const raw = await request.json();
+    body = patchReviewSchema.parse(raw);
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const rawStatus = typeof body.status === 'string' ? body.status.trim().toLowerCase() : '';
-  if (rawStatus !== 'approved' && rawStatus !== 'rejected') {
     return NextResponse.json(
       { error: 'status must be "approved" or "rejected"' },
       { status: 400 }
     );
   }
 
-  const newStatus = rawStatus === 'approved' ? 'APPROVED' : 'REJECTED';
+  const newStatus = body.status === 'approved' ? 'APPROVED' : 'REJECTED';
 
   const isBot = isServiceRequest(request);
 
   if (isBot) {
     try {
-      const review = await prisma.review.findUnique({
-        where: { id },
-        select: { id: true, status: true },
-      });
+      const review = await reviewService.findReviewById(id);
       if (!review) {
         return NextResponse.json({ error: 'Review not found' }, { status: 404 });
       }
@@ -71,10 +57,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           { status: 400 }
         );
       }
-      await prisma.review.update({
-        where: { id },
-        data: { status: newStatus },
-      });
+      await reviewService.updateReview(id, { status: newStatus });
       return NextResponse.json({ success: true, status: newStatus });
     } catch (e) {
       console.error('PATCH review status (bot) error:', e);
@@ -82,21 +65,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const review = await prisma.review.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const review = await reviewService.findReviewById(id);
     if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
-    await prisma.review.update({
-      where: { id },
-      data: { status: newStatus },
-    });
+    await reviewService.updateReview(id, { status: newStatus });
     return NextResponse.json({ success: true, status: newStatus });
   } catch (e) {
     console.error('PATCH review status (admin) error:', e);
@@ -106,8 +83,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 /** DELETE /api/admin/reviews/[id] — удалить отзыв. Только для ADMIN по сессии. */
 export async function DELETE(_request: Request, context: RouteContext) {
-  const authError = await requireAdmin();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const { id } = await context.params;
   if (!id) {
@@ -115,14 +92,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   try {
-    const review = await prisma.review.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const review = await reviewService.findReviewById(id);
     if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
-    await prisma.review.delete({ where: { id } });
+    await reviewService.deleteReview(id);
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('DELETE review error:', e);

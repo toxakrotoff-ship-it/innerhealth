@@ -1,0 +1,172 @@
+import 'server-only';
+import type { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+
+const orderAdminInclude = {
+  items: { include: { product: true } },
+  promoCode: true,
+  shippingInfo: true,
+} as const;
+
+/** Get order by id (minimal, for webhook). */
+export async function findOrderForWebhook(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, status: true, yookassaPaymentId: true },
+  });
+}
+
+/** Get order with shipping for CDEK flow. */
+export async function findOrderWithShipping(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      cdekOrderUuid: true,
+      shippingInfo: { select: { deliveryMethod: true } },
+    },
+  });
+}
+
+/** Get order with items and shipping for CDEK createCdekOrder. */
+export async function findOrderWithItemsAndShippingForCdek(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: { include: { product: true } },
+      shippingInfo: true,
+    },
+  });
+}
+
+/** Get order by id for admin CDEK shipment. */
+export async function findOrderForCdekShipment(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      cdekOrderUuid: true,
+      shippingInfo: { select: { deliveryMethod: true } },
+    },
+  });
+}
+
+/** Get all orders for admin list. */
+export async function getOrdersForAdmin() {
+  return prisma.order.findMany({
+    include: orderAdminInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+/** Update order status. */
+export async function updateOrderStatus(
+  orderId: string,
+  status: string
+) {
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { status },
+  });
+}
+
+/** Update order with arbitrary data. */
+export async function updateOrder(
+  orderId: string,
+  data: Prisma.OrderUpdateInput
+) {
+  return prisma.order.update({
+    where: { id: orderId },
+    data,
+  });
+}
+
+export interface CreateOrderShippingParams {
+  fullName: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  country: string;
+  deliveryMethod?: string;
+  cdekCityCode?: number;
+  cdekPvzCode?: string;
+  cdekTariffCode?: number;
+  doorAddress?: {
+    street?: string;
+    house?: string;
+    apartment?: string;
+    entrance?: string;
+    floor?: string;
+    intercom?: string;
+  };
+}
+
+/** Create order with items and shipping in a transaction. */
+export async function createOrderWithItemsAndShipping(params: {
+  total: number;
+  promoCodeId: string | null;
+  items: Array<{ productId: string; quantity: number; price: number }>;
+  shipping: CreateOrderShippingParams;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.order.create({
+      data: {
+        total: params.total,
+        status: 'pending',
+        promoCodeId: params.promoCodeId || undefined,
+        items: {
+          create: params.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            price: i.price,
+          })),
+        },
+      },
+      include: { items: { include: { product: { select: { title: true } } } } },
+    });
+
+    const door = params.shipping.doorAddress;
+    const addressForDb =
+      door && (door.street ?? door.house ?? door.apartment)
+        ? [door.street, door.house, door.apartment, door.entrance, door.floor, door.intercom]
+            .filter(Boolean)
+            .join(', ')
+        : params.shipping.address.trim();
+
+    await tx.shippingInfo.create({
+      data: {
+        orderId: created.id,
+        fullName: params.shipping.fullName.trim(),
+        phone: params.shipping.phone.trim(),
+        email: params.shipping.email.trim(),
+        address: addressForDb,
+        city: params.shipping.city.trim(),
+        zipCode: params.shipping.zipCode,
+        country: params.shipping.country.trim(),
+        deliveryMethod: params.shipping.deliveryMethod ?? undefined,
+        cdekCityCode: params.shipping.cdekCityCode ?? undefined,
+        cdekPvzCode: params.shipping.cdekPvzCode ?? undefined,
+        cdekTariffCode: params.shipping.cdekTariffCode ?? undefined,
+        street: door?.street?.trim(),
+        house: door?.house?.trim(),
+        apartment: door?.apartment?.trim(),
+        entrance: door?.entrance?.trim(),
+        floor: door?.floor?.trim(),
+        intercom: door?.intercom?.trim(),
+      },
+    });
+
+    if (params.promoCodeId) {
+      await tx.promoCode.update({
+        where: { id: params.promoCodeId },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
+
+    return created;
+  });
+}

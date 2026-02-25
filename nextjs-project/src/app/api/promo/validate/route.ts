@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import * as promoService from '@/services/promo.service'
 import { validatePromoBodySchema } from '@/lib/validations/promo'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 
@@ -24,9 +24,7 @@ export async function POST(request: Request) {
     }
     const code = parsed.data.code
 
-    const promo = await prisma.promoCode.findUnique({
-      where: { code },
-    })
+    const promo = await promoService.findPromoByCode(code)
 
     if (!promo || !promo.isActive) {
       return NextResponse.json({ valid: false, error: 'Промокод не найден или недействителен' })

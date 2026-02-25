@@ -77,6 +77,10 @@ model Product {
   cartItems       CartItem[]
   orderItems      OrderItem[]
   categories      ProductCategory[]
+
+  @@index([slug])
+  @@index([createdAt])
+  @@index([tildaUid])
 }
 
 model Category {
@@ -136,6 +140,8 @@ model Order {
   shippingInfo     ShippingInfo?
   promoCodeId      String?
   promoCode        PromoCode? @relation(fields: [promoCodeId], references: [id])
+
+  @@index([status])
 }
 
 model User {

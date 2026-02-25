@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import * as telegramService from '@/services/telegram.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -18,9 +18,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const list = await prisma.telegramWhitelist.findMany({
-      select: { telegramUserId: true },
-    });
+    const list = await telegramService.getTelegramWhitelist();
     return NextResponse.json({
       telegramUserIds: list.map((r) => r.telegramUserId),
     });

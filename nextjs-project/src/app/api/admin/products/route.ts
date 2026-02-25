@@ -1,38 +1,27 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import type { Prisma } from '@prisma/client';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
+import * as productService from '@/services/product.service';
 
 export async function GET(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
   if (id) {
-    // Получение отдельного товара по ID (с категориями для формы редактирования)
     try {
-      const product = await prisma.product.findUnique({
-        where: { id },
-        include: { categories: true },
-      });
-
+      const product = await productService.getProductById(id);
       if (!product) {
         return NextResponse.json(
           { error: 'Product not found' },
           { status: 404 }
         );
       }
-
       return NextResponse.json(product);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -41,80 +30,57 @@ export async function GET(request: Request) {
         { status: 500 }
       );
     }
-  } else {
-    // Получение списка товаров (с категориями для фильтра в админке)
-    try {
-      const products = await prisma.product.findMany({
-        orderBy: {
-          createdAt: 'desc'
-        },
-        include: {
-          categories: {
-            include: {
-              category: { select: { id: true, title: true } }
-            }
-          }
-        }
-      });
-      
-      console.log('API Response data type:', typeof products);
-      console.log('API Response is array:', Array.isArray(products));
-      console.log('API Response count:', products.length);
-      
-      // Проверка, что возвращаемый тип данных корректен
-      if (!Array.isArray(products)) {
-        console.error('API Error: Expected array but got:', typeof products);
-        return NextResponse.json(
-          { error: 'Invalid data format returned from database' },
-          { status: 500 }
-        );
-      }
-      
-      return NextResponse.json(products);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      );
-    }
-  }
-}
-
-export async function PUT(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
   }
 
   try {
-    const body = await request.json();
-    const { id, categoryIds, ...data } = body;
-    
-    if (!id) {
+    const products = await productService.getProductsWithCategories();
+    if (!Array.isArray(products)) {
+      console.error('API Error: Expected array but got:', typeof products);
       return NextResponse.json(
-        { error: 'Product ID is required' },
-        { status: 400 }
+        { error: 'Invalid data format returned from database' },
+        { status: 500 }
       );
     }
-    
-    // Проверяем, существует ли продукт
-    const existingProduct = await prisma.product.findUnique({
-      where: { id }
-    });
-    
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch products' },
+      { status: 500 }
+    );
+  }
+}
+
+const putProductSchema = z.object({
+  id: z.string().min(1, 'Product ID is required'),
+  categoryIds: z.array(z.string()).optional(),
+}).passthrough();
+
+export async function PUT(request: Request) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let parsed: z.infer<typeof putProductSchema>;
+  try {
+    const raw = await request.json();
+    parsed = putProductSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  const { id, categoryIds, ...data } = parsed;
+
+  try {
+
+    const existingProduct = await productService.findProductById(id);
     if (!existingProduct) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
-    
-    // Поля модели Product (без id, createdAt, updatedAt, связей)
+
     const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
@@ -123,24 +89,24 @@ export async function PUT(request: Request) {
       if (key in data && data[key] !== undefined) sanitizedData[key] = data[key];
     }
     if (Array.isArray(sanitizedData.photos) && sanitizedData.photos.length > 0) {
-      sanitizedData.photo = typeof sanitizedData.photos[0] === 'string' ? sanitizedData.photos[0] : null;
+      const urls = sanitizedData.photos.filter((u: unknown) => typeof u === 'string') as string[];
+      sanitizedData.photo = urls[0] ?? null;
+      const existingPhotos = Array.isArray(existingProduct.photos) ? existingProduct.photos as Array<{ url?: string; blurDataURL?: string } | string> : [];
+      const blurByUrl: Record<string, string> = {};
+      for (const p of existingPhotos) {
+        const url = typeof p === 'string' ? p : p?.url;
+        const blur = typeof p === 'object' && p && 'blurDataURL' in p && typeof (p as { blurDataURL?: string }).blurDataURL === 'string' ? (p as { blurDataURL: string }).blurDataURL : undefined;
+        if (url && blur) blurByUrl[url] = blur;
+      }
+      sanitizedData.photos = urls.map((url) => (blurByUrl[url] ? { url, blurDataURL: blurByUrl[url] } : { url })) as unknown;
     }
     Object.assign(sanitizedData, sanitizeProductTextFields(sanitizedData));
 
-    if (categoryIds !== undefined) {
-      await prisma.productCategory.deleteMany({ where: { productId: id } });
-      if (Array.isArray(categoryIds) && categoryIds.length > 0) {
-        await prisma.productCategory.createMany({
-          data: categoryIds.map((categoryId: string) => ({ productId: id, categoryId })),
-        });
-      }
-    }
-
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: sanitizedData as Parameters<typeof prisma.product.update>[0]['data'],
-    });
-    
+    const updatedProduct = await productService.updateProduct(
+      id,
+      sanitizedData as Prisma.ProductUpdateInput,
+      categoryIds
+    );
     return NextResponse.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
@@ -158,37 +124,34 @@ export async function PUT(request: Request) {
   }
 }
 
+const patchProductSchema = z.object({
+  id: z.string().min(1, 'Product ID is required'),
+  price: z.number().min(0).optional(),
+  quantity: z.number().int().min(0).optional(),
+}).refine((d) => d.price !== undefined || d.quantity !== undefined, { message: 'Provide at least one of price, quantity' });
+
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let parsed: z.infer<typeof patchProductSchema>;
+  try {
+    const raw = await request.json();
+    parsed = patchProductSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  try {
-    const body = await request.json();
-    const { id, price, quantity } = body as { id?: string; price?: number; quantity?: number };
+  const { id, price, quantity } = parsed;
 
-    if (!id || typeof id !== 'string') {
-      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
-    }
-    if (price !== undefined && (typeof price !== 'number' || price < 0)) {
-      return NextResponse.json({ error: 'Invalid price' }, { status: 400 });
-    }
-    if (quantity !== undefined && (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity))) {
-      return NextResponse.json({ error: 'Invalid quantity' }, { status: 400 });
-    }
+  try {
 
     const data: { price?: number; quantity?: number } = {};
     if (price !== undefined) data.price = price;
     if (quantity !== undefined) data.quantity = quantity;
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'Provide at least one of price, quantity' }, { status: 400 });
-    }
 
-    const updated = await prisma.product.update({
-      where: { id },
-      data,
-    });
+    const updated = await productService.patchProductPriceQuantity(id, data);
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PATCH product error:', error);
@@ -199,26 +162,31 @@ export async function PATCH(request: Request) {
   }
 }
 
+const postProductSchema = z.object({
+  categoryIds: z.array(z.string()).optional(),
+}).passthrough();
+
 export async function POST(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let parsed: z.infer<typeof postProductSchema>;
+  try {
+    const raw = await request.json();
+    parsed = postProductSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  try {
-    const body = await request.json();
-    const { categoryIds, ...data } = body;
+  const { categoryIds, ...data } = parsed as { categoryIds?: string[] } & Record<string, unknown>;
 
-    // Ensure slug: generate from title if missing
-    let slug = data.slug?.trim() || null;
-    if (!slug && data.title) {
-      const baseSlug = slugify(data.title);
-      const existing = await prisma.product.findMany({ select: { slug: true } });
-      const existingSlugs = existing.map((p) => p.slug).filter(Boolean) as string[];
+  try {
+    let slug = typeof data.slug === 'string' ? data.slug.trim() || null : null;
+    const titleStr = typeof data.title === 'string' ? data.title : undefined;
+    if (!slug && titleStr) {
+      const baseSlug = slugify(titleStr);
+      const existingSlugs = await productService.getExistingProductSlugs();
       slug = slugifyUnique(baseSlug, existingSlugs);
     }
     const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
@@ -232,26 +200,14 @@ export async function POST(request: Request) {
       sanitizedCreate.photo = typeof sanitizedCreate.photos[0] === 'string' ? sanitizedCreate.photos[0] : null;
     }
     Object.assign(sanitizedCreate, sanitizeProductTextFields(sanitizedCreate));
-    if (!sanitizedCreate.tildaUid && data.title) {
+    if (!sanitizedCreate.tildaUid && titleStr) {
       sanitizedCreate.tildaUid = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     }
 
-    const newProduct = await prisma.product.create({
-      data: sanitizedCreate as Parameters<typeof prisma.product.create>[0]['data'],
-    });
-
-    // Если переданы categoryIds, создаем связи
-    if (categoryIds && categoryIds.length > 0) {
-      await prisma.productCategory.createMany({
-        data: categoryIds.map((categoryId: string) => ({ productId: newProduct.id, categoryId })),
-      });
-    }
-    
-    // Возвращаем продукт без категорий (чтобы избежать проблем с типами)
-    const productWithoutCategories = await prisma.product.findUnique({
-      where: { id: newProduct.id }
-    });
-    
+    const productWithoutCategories = await productService.createProduct(
+      sanitizedCreate as Prisma.ProductCreateInput,
+      categoryIds
+    );
     return NextResponse.json(productWithoutCategories);
   } catch (error) {
     console.error('Error creating product:', error);
@@ -262,43 +218,34 @@ export async function POST(request: Request) {
   }
 }
 
+const deleteProductSchema = z.object({ id: z.string().min(1, 'Product ID is required') });
+
 export async function DELETE(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let parsed: z.infer<typeof deleteProductSchema>;
+  try {
+    const raw = await request.json();
+    parsed = deleteProductSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
+  const { id } = parsed;
+
   try {
-    const { id } = await request.json();
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Product ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Проверяем, существует ли продукт
-    const existingProduct = await prisma.product.findUnique({
-      where: { id }
-    });
-    
+
+    const existingProduct = await productService.findProductById(id);
     if (!existingProduct) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
-    
-    // Удаляем продукт
-    const deletedProduct = await prisma.product.delete({
-      where: { id }
-    });
-    
+
+    const deletedProduct = await productService.deleteProduct(id);
     return NextResponse.json(deletedProduct);
   } catch (error) {
     console.error('Error deleting product:', error);

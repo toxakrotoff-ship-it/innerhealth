@@ -159,7 +159,7 @@ export default function NewProductPage() {
     getCategoriesWithCounts().then((data) => setCategories(data));
   }, []);
 
-  const handleChange = (field: keyof Product, value: any) => {
+  const handleChange = (field: keyof Product, value: Product[keyof Product]) => {
     setProduct({
       ...product,
       [field]: value

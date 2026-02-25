@@ -403,10 +403,11 @@ export async function importProductsFromCSV(csvContent: string) {
         successCount++;
         console.log(`[DEBUG] Успешно обработан товар ${i + 1}`);
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Ошибка импорта товара ${i + 1}:`, error);
         errorCount++;
-        errors.push(`Ошибка при импорте товара ${i + 1}: ${error.message || error}`);
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push(`Ошибка при импорте товара ${i + 1}: ${message}`);
       }
     }
     
@@ -419,12 +420,13 @@ export async function importProductsFromCSV(csvContent: string) {
       errorCount,
       errors
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Ошибка импорта CSV:', error);
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
       message: 'Ошибка при импорте данных',
-      error: error.message || error
+      error: message
     };
   }
 }

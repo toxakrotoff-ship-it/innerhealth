@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
 import { hashPassword } from '@/lib/password';
 import { sendInitialPasswordLinkEmail, getBaseUrlForEmails } from '@/lib/email';
 import {
@@ -11,9 +10,19 @@ import {
   getLinkExpiresAt,
 } from '@/lib/set-initial-password';
 import { Role } from '@prisma/client';
+import * as userService from '@/services/user.service';
+import * as authTokensService from '@/services/auth-tokens.service';
 
 const PASSWORD_LENGTH = 14;
 const PASSWORD_CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const ROLE_VALUES: Role[] = ['USER', 'WRITER', 'ADMIN'];
+
+const postUserSchema = z.object({
+  email: z.string().email().transform((s) => s.trim().toLowerCase()),
+  name: z.string().max(255).transform((s) => s.trim() || null).nullable().optional(),
+  role: z.enum(['USER', 'WRITER', 'ADMIN']).default('USER'),
+});
 
 function generatePassword(): string {
   const bytes = randomBytes(PASSWORD_LENGTH);
@@ -24,34 +33,12 @@ function generatePassword(): string {
   return result;
 }
 
-function requireAdminRole() {
-  return async () => {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (session.user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-    return null;
-  };
-}
-
 export async function GET() {
-  const authError = await requireAdminRole()();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const users = await userService.getUsersForAdmin();
     const formatted = users.map((u) => ({
       id: u.id,
       email: u.email,
@@ -69,30 +56,24 @@ export async function GET() {
   }
 }
 
-const ROLE_VALUES: Role[] = ['USER', 'WRITER', 'ADMIN'];
-
 export async function POST(request: Request) {
-  const authError = await requireAdminRole()();
-  if (authError) return authError;
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let body: z.infer<typeof postUserSchema>;
+  try {
+    const raw = await request.json();
+    body = postUserSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg || 'Email обязателен' }, { status: 400 });
+  }
+
+  const { email, name, role } = body;
 
   try {
-    const body = await request.json();
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const name = typeof body.name === 'string' ? body.name.trim() || null : null;
-    const role = typeof body.role === 'string' && ROLE_VALUES.includes(body.role as Role)
-      ? (body.role as Role)
-      : 'USER';
 
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email обязателен' },
-        { status: 400 }
-      );
-    }
-
-    const existing = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existing = await userService.findUserByEmail(email);
     if (existing) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
@@ -102,31 +83,20 @@ export async function POST(request: Request) {
 
     const plainPassword = generatePassword();
     const hashedPassword = await hashPassword(plainPassword);
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: name ?? undefined,
-        role,
-        mustChangePassword: true,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+    const user = await userService.createUser({
+      email,
+      password: hashedPassword,
+      name: name ?? undefined,
+      role: role as Role,
+      mustChangePassword: true,
     });
 
     const secret = generateSecureToken();
     const tokenHash = await hashToken(secret);
-    const record = await prisma.setInitialPasswordToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: getLinkExpiresAt(),
-      },
+    const record = await authTokensService.createSetInitialPasswordToken({
+      userId: user.id,
+      tokenHash,
+      expiresAt: getLinkExpiresAt(),
     });
 
     const baseUrl = getBaseUrlForEmails(request);

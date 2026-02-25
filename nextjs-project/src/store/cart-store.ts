@@ -4,10 +4,11 @@ import { persist } from 'zustand/middleware'
 export interface CartLine {
   productId: string
   quantity: number
-  price: number
-  title: string
-  photo: string | null
-  slug: string | null
+  /** Omitted when rehydrated from localStorage (only productId+quantity persisted). */
+  price?: number
+  title?: string
+  photo?: string | null
+  slug?: string | null
   /** Товар уже по акционной цене (есть priceOld) — скидка по промокоду на него не применяется */
   hasPromoPrice?: boolean
   /** Участвует в скидке по промокоду (Rule: скидка только к eligible и не к «уже по акции») */
@@ -16,12 +17,18 @@ export interface CartLine {
   discountPrice?: number | null
 }
 
+export type CartLineDetails = Pick<
+  CartLine,
+  'title' | 'price' | 'photo' | 'slug' | 'hasPromoPrice' | 'isPromoEligible' | 'discountPrice'
+>
+
 interface CartState {
   items: CartLine[]
   isDrawerOpen: boolean
   addItem: (line: CartLine) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
+  mergeItemDetails: (productId: string, details: CartLineDetails) => void
   openDrawer: () => void
   closeDrawer: () => void
   toggleDrawer: () => void
@@ -72,6 +79,14 @@ export const useCartStore = create<CartState>()(
         }))
       },
 
+      mergeItemDetails(productId, details) {
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.productId === productId ? { ...i, ...details } : i
+          ),
+        }))
+      },
+
       openDrawer: () => set({ isDrawerOpen: true }),
       closeDrawer: () => set({ isDrawerOpen: false }),
       toggleDrawer: () => set((s) => ({ isDrawerOpen: !s.isDrawerOpen })),
@@ -79,7 +94,10 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'innerhealth-cart',
-      partialize: (state) => ({ items: state.items }),
+      /** Persist only productId and quantity to reduce localStorage size. */
+      partialize: (state) => ({
+        items: state.items.map(({ productId, quantity }) => ({ productId, quantity })),
+      }),
     }
   )
 )

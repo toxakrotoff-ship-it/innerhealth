@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { verifyTokenHash, verifyCodeHash } from '@/lib/set-initial-password'
+import * as authTokensService from '@/services/auth-tokens.service'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { z } from 'zod'
 
@@ -33,9 +33,7 @@ export async function POST(request: Request) {
   }
   const [recordId, secret] = parts
 
-  const record = await prisma.setInitialPasswordToken.findUnique({
-    where: { id: recordId },
-  })
+  const record = await authTokensService.findSetInitialPasswordTokenById(recordId)
   if (!record || record.usedAt) {
     return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
   }
@@ -59,9 +57,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Неверный код' }, { status: 400 })
   }
 
-  await prisma.setInitialPasswordToken.update({
-    where: { id: record.id },
-    data: { codeVerifiedAt: new Date() },
+  await authTokensService.updateSetInitialPasswordToken(record.id, {
+    codeVerifiedAt: new Date(),
   })
 
   return NextResponse.json({ ok: true })

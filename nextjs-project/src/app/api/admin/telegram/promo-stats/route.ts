@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import * as promoService from '@/services/promo.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -18,15 +18,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const promos = await prisma.promoCode.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        code: true,
-        usedCount: true,
-        usageLimit: true,
-        isActive: true,
-      },
-    });
+    const promos = await promoService.getPromoCodesForAdmin();
     return NextResponse.json({
       promos: promos.map((p) => ({
         code: p.code,

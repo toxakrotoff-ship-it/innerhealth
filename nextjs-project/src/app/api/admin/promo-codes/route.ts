@@ -1,42 +1,47 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { z } from 'zod';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as promoService from '@/services/promo.service';
+
+const dateOptional = z.union([z.string(), z.date()]).nullable().optional().transform((v) => (v ? new Date(v) : null));
+
+const postPromoCodeSchema = z.object({
+  code: z.string().min(1, 'Code is required'),
+  discountType: z.enum(['percentage', 'fixed']),
+  discountValue: z.number().min(0, 'Invalid discount value'),
+  isActive: z.boolean().optional().default(true),
+  usageLimit: z.number().int().min(0).nullable().optional(),
+  validFrom: dateOptional,
+  validTo: dateOptional,
+});
+
+const putPromoCodeSchema = z.object({
+  id: z.string().min(1, 'ID is required'),
+  code: z.string().optional(),
+  discountType: z.enum(['percentage', 'fixed']).optional(),
+  discountValue: z.number().min(0).optional(),
+  isActive: z.boolean().optional(),
+  usageLimit: z.number().int().min(0).nullable().optional(),
+  validFrom: dateOptional,
+  validTo: dateOptional,
+});
+
+const deletePromoCodeSchema = z.object({ id: z.string().min(1, 'ID is required') });
 
 export async function GET() {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    // Получаем все промокоды с информацией о количестве использований
-    const promoCodes = await prisma.promoCode.findMany({
-      include: {
-        _count: {
-          select: {
-            orders: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
-    // Преобразуем данные для ответа
-    const formattedCodes = promoCodes.map(code => ({
+    const promoCodes = await promoService.getPromoCodesForAdmin();
+    const formattedCodes = promoCodes.map((code) => ({
       id: code.id,
       code: code.code,
       discountType: code.discountType,
       discountValue: code.discountValue,
       isActive: code.isActive,
       usageLimit: code.usageLimit,
-      usedCount: code._count.orders,
+      usedCount: code.usedCount,
       validFrom: code.validFrom,
       validTo: code.validTo,
       createdAt: code.createdAt.toISOString(),
@@ -53,51 +58,27 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let data: z.infer<typeof postPromoCodeSchema>;
+  try {
+    const raw = await request.json();
+    data = postPromoCodeSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   try {
-    const data = await request.json();
-    
-    // Валидация данных
-    if (!data.code) {
-      return NextResponse.json(
-        { error: 'Code is required' },
-        { status: 400 }
-      );
-    }
-    
-    if (!data.discountType || !['percentage', 'fixed'].includes(data.discountType)) {
-      return NextResponse.json(
-        { error: 'Invalid discount type' },
-        { status: 400 }
-      );
-    }
-    
-    if (data.discountValue === undefined || data.discountValue < 0) {
-      return NextResponse.json(
-        { error: 'Invalid discount value' },
-        { status: 400 }
-      );
-    }
-    
-    // Создаем промокод
-    const promoCode = await prisma.promoCode.create({
-      data: {
-        code: data.code,
-        discountType: data.discountType,
-        discountValue: data.discountValue,
-        isActive: data.isActive !== undefined ? data.isActive : true,
-        usageLimit: data.usageLimit,
-        validFrom: data.validFrom ? new Date(data.validFrom) : null,
-        validTo: data.validTo ? new Date(data.validTo) : null,
-      }
+    const promoCode = await promoService.createPromoCode({
+      code: data.code,
+      discountType: data.discountType,
+      discountValue: data.discountValue,
+      isActive: data.isActive,
+      usageLimit: data.usageLimit ?? undefined,
+      validFrom: data.validFrom,
+      validTo: data.validTo,
     });
     
     return NextResponse.json(promoCode);
@@ -111,50 +92,38 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let data: z.infer<typeof putPromoCodeSchema>;
+  try {
+    const raw = await request.json();
+    data = putPromoCodeSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   try {
-    const data = await request.json();
-    
-    // Валидация данных
-    if (!data.id) {
-      return NextResponse.json(
-        { error: 'ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Проверяем, существует ли промокод
-    const existingCode = await prisma.promoCode.findUnique({
-      where: { id: data.id }
-    });
-    
+    const existingCode = await promoService.findPromoCodeById(data.id);
     if (!existingCode) {
       return NextResponse.json(
         { error: 'Promo code not found' },
         { status: 404 }
       );
     }
-    
-    // Обновляем промокод
-    const promoCode = await prisma.promoCode.update({
-      where: { id: data.id },
-      data: {
-        code: data.code || existingCode.code,
-        discountType: data.discountType || existingCode.discountType,
-        discountValue: data.discountValue !== undefined ? data.discountValue : existingCode.discountValue,
-        isActive: data.isActive !== undefined ? data.isActive : existingCode.isActive,
-        usageLimit: data.usageLimit !== undefined ? data.usageLimit : existingCode.usageLimit,
-        validFrom: data.validFrom ? new Date(data.validFrom) : existingCode.validFrom,
-        validTo: data.validTo ? new Date(data.validTo) : existingCode.validTo,
-      }
+
+    const validFrom = data.validFrom ?? existingCode.validFrom;
+    const validTo = data.validTo ?? existingCode.validTo;
+
+    const promoCode = await promoService.updatePromoCode(data.id, {
+      code: data.code ?? existingCode.code,
+      discountType: data.discountType ?? existingCode.discountType,
+      discountValue: data.discountValue ?? existingCode.discountValue,
+      isActive: data.isActive ?? existingCode.isActive,
+      usageLimit: data.usageLimit ?? existingCode.usageLimit,
+      validFrom,
+      validTo,
     });
     
     return NextResponse.json(promoCode);
@@ -168,41 +137,30 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  let parsed: z.infer<typeof deletePromoCodeSchema>;
+  try {
+    const raw = await request.json();
+    parsed = deletePromoCodeSchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
+  const { id } = parsed;
+
   try {
-    const { id } = await request.json();
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Проверяем, существует ли промокод
-    const existingCode = await prisma.promoCode.findUnique({
-      where: { id }
-    });
-    
+    const existingCode = await promoService.findPromoCodeById(id);
     if (!existingCode) {
       return NextResponse.json(
         { error: 'Promo code not found' },
         { status: 404 }
       );
     }
-    
-    // Удаляем промокод
-    await prisma.promoCode.delete({
-      where: { id }
-    });
+
+    await promoService.deletePromoCode(id);
     
     return NextResponse.json({ message: 'Promo code deleted successfully' });
   } catch (error) {

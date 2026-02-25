@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
+import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
 
@@ -26,6 +27,7 @@ export default async function CategoryPage({ params }: PageProps) {
               price: true,
               priceOld: true,
               photo: true,
+              photos: true,
               slug: true,
               isPromoEligible: true,
               discountPrice: true,
@@ -117,7 +119,8 @@ export default async function CategoryPage({ params }: PageProps) {
                   slug={p.slug}
                   isPromoEligible={p.isPromoEligible}
                   discountPrice={p.discountPrice}
-                  priority={index < 8}
+                  priority={index < 2}
+                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />
               ))}
             </div>

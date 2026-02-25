@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { verifyTokenHash } from '@/lib/set-initial-password'
+import * as authTokensService from '@/services/auth-tokens.service'
 import {
   generateSixDigitCode,
   hashCode,
@@ -35,10 +35,7 @@ export async function POST(request: Request) {
   }
   const [recordId, secret] = parts
 
-  const record = await prisma.setInitialPasswordToken.findUnique({
-    where: { id: recordId },
-    include: { user: true },
-  })
+  const record = await authTokensService.findSetInitialPasswordTokenById(recordId)
   if (!record || record.usedAt) {
     return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
   }
@@ -62,9 +59,9 @@ export async function POST(request: Request) {
   const code = generateSixDigitCode()
   const emailCodeHash = await hashCode(code)
   const emailCodeExpiresAt = getCodeExpiresAt()
-  await prisma.setInitialPasswordToken.update({
-    where: { id: record.id },
-    data: { emailCodeHash, emailCodeExpiresAt },
+  await authTokensService.updateSetInitialPasswordToken(record.id, {
+    emailCodeHash,
+    emailCodeExpiresAt,
   })
 
   const sendResult = await sendInitialPasswordCodeEmail(record.user.email, code)

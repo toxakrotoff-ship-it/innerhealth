@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { requireAdminSession } from '@/lib/require-admin'
 import { createCdekOrder } from '@/lib/cdek'
+import * as orderService from '@/services/order.service'
 
 /**
  * POST /api/admin/orders/[id]/cdek-shipment
@@ -13,21 +12,11 @@ export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireAdminSession()
+  if (session instanceof NextResponse) return session
 
   const { id: orderId } = await context.params
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: {
-      id: true,
-      status: true,
-      cdekOrderUuid: true,
-      shippingInfo: { select: { deliveryMethod: true } },
-    },
-  })
+  const order = await orderService.findOrderForCdekShipment(orderId)
 
   if (!order) {
     return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 })
@@ -56,17 +45,14 @@ export async function POST(
 
   const result = await createCdekOrder(orderId)
   if ('uuid' in result) {
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { cdekOrderUuid: result.uuid, cdekOrderError: null },
+    await orderService.updateOrder(orderId, {
+      cdekOrderUuid: result.uuid,
+      cdekOrderError: null,
     })
     return NextResponse.json({ success: true, uuid: result.uuid })
   }
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { cdekOrderError: result.error },
-  })
+  await orderService.updateOrder(orderId, { cdekOrderError: result.error })
   return NextResponse.json(
     { success: false, error: result.error },
     { status: 502 }

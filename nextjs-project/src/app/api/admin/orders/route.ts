@@ -1,35 +1,13 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as orderService from '@/services/order.service';
 
-export async function GET(request: Request) {
-  // Проверяем аутентификацию на сервере
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+export async function GET() {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    // Получаем заказы с информацией о промокодах
-    const orders = await prisma.order.findMany({
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        },
-        promoCode: true,
-        shippingInfo: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
+    const orders = await orderService.getOrdersForAdmin();
     return NextResponse.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);

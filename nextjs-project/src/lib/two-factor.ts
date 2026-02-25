@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from 'node:crypto'
 import bcrypt from 'bcrypt'
-import { prisma } from '@/lib/prisma'
+import * as auth2faService from '@/services/auth-2fa.service'
 
 export const TWO_FACTOR_PENDING_COOKIE = 'two_factor_pending'
 const PENDING_TTL_SEC = 10 * 60 // 10 min
@@ -87,9 +87,7 @@ export function clearPendingCookieHeader(): string {
 export async function createGrant(userId: string): Promise<{ grantId: string }> {
   const expiresAt = new Date()
   expiresAt.setSeconds(expiresAt.getSeconds() + GRANT_TTL_SEC)
-  const grant = await prisma.twoFactorGrant.create({
-    data: { userId, expiresAt },
-  })
+  const grant = await auth2faService.createTwoFactorGrant(userId, expiresAt)
   return { grantId: grant.id }
 }
 
@@ -99,17 +97,7 @@ export async function createGrant(userId: string): Promise<{ grantId: string }> 
 export async function consumeGrant(
   grantId: string
 ): Promise<{ userId: string } | null> {
-  const grant = await prisma.twoFactorGrant.findUnique({
-    where: { id: grantId },
-  })
-  if (!grant || grant.usedAt !== null || grant.expiresAt <= new Date()) {
-    return null
-  }
-  await prisma.twoFactorGrant.update({
-    where: { id: grantId },
-    data: { usedAt: new Date() },
-  })
-  return { userId: grant.userId }
+  return auth2faService.findAndConsumeTwoFactorGrant(grantId)
 }
 
 export const TWO_FACTOR_PENDING_TTL_SEC = PENDING_TTL_SEC

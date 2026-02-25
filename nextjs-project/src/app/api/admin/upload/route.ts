@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAdminSession } from '@/lib/require-admin';
 import fs from 'fs';
 import path from 'path';
 
@@ -10,10 +9,8 @@ const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

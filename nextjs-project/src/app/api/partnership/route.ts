@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
+import * as partnershipService from '@/services/partnership.service'
 
 const PARTNERSHIP_RATE_LIMIT = 5
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -85,15 +85,13 @@ export async function POST(request: Request) {
       )
     }
 
-    await prisma.partnershipLead.create({
-      data: {
-        name,
-        email,
-        phone,
-        role: role || undefined,
-        socialLinks: socialLinks || undefined,
-        message: message || undefined,
-      },
+    await partnershipService.createPartnershipLead({
+      name,
+      email,
+      phone,
+      role: role || undefined,
+      socialLinks: socialLinks || undefined,
+      message: message || undefined,
     })
 
     notifyTelegramForm({

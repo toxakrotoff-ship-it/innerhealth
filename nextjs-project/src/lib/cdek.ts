@@ -10,8 +10,6 @@
  * Тестовое окружение: CDEK_USE_TEST=true или CDEK_API_BASE=https://api.edu.cdek.ru/v2
  */
 
-import { prisma } from '@/lib/prisma'
-
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
 
@@ -584,13 +582,9 @@ const CDEK_SENDER_KEYS = [
  */
 export async function createCdekOrder(orderId: string): Promise<{ uuid: string } | { error: string }> {
   try {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: { include: { product: true } },
-        shippingInfo: true,
-      },
-    })
+    const orderService = await import('@/services/order.service')
+    const settingsService = await import('@/services/settings.service')
+    const order = await orderService.findOrderWithItemsAndShippingForCdek(orderId)
     if (!order || !order.shippingInfo) {
       return { error: 'Заказ или адрес доставки не найден' }
     }
@@ -602,13 +596,7 @@ export async function createCdekOrder(orderId: string): Promise<{ uuid: string }
       return { error: 'Не указаны код города или тариф СДЭК' }
     }
 
-    const settings = await prisma.siteSetting.findMany({
-      where: { key: { in: [...CDEK_SENDER_KEYS] } },
-    })
-    const settingsMap: Record<string, string> = {}
-    for (const row of settings) {
-      settingsMap[row.key] = row.value
-    }
+    const settingsMap = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS])
     const senderName =
       settingsMap.cdek_sender_name?.trim() || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
     const senderPhone =

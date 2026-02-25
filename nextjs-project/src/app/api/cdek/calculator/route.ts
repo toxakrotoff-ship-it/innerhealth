@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import * as productService from '@/services/product.service'
 import {
   calculateCdekTariffList,
   productToCdekPackage,
@@ -30,16 +30,7 @@ export async function POST(request: Request) {
     const { items, toLocation, deliveryKind } = parsed.data
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true,
-        weight: true,
-        length: true,
-        width: true,
-        height: true,
-      },
-    })
+    const products = await productService.getProductsForCdek(productIds)
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     const packages = mergeCdekPackages(

@@ -3,7 +3,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
+import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
 import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
 import { PostCard } from '@/components/site/post-card'
@@ -48,19 +50,7 @@ async function getHomeData() {
           orderBy: { sortOrder: 'asc' },
           include: { _count: { select: { products: true } } },
         }),
-        prisma.product.findMany({
-          where: { slug: { not: null } },
-          orderBy: { createdAt: 'desc' },
-          take: 8,
-          select: {
-            id: true,
-            title: true,
-            price: true,
-            priceOld: true,
-            photo: true,
-            slug: true,
-          },
-        }),
+        productService.getProductsForHome(8),
         prisma.post.findMany({
           where: { published: true, type: 'news' } as Prisma.PostWhereInput,
           orderBy: { createdAt: 'desc' },
@@ -119,7 +109,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
-            {newProducts.map((p) => (
+            {newProducts.map((p, index) => (
               <div
                 key={p.id}
                 className="w-[calc((100%-1rem)/2)] max-w-[20rem] sm:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
@@ -131,6 +121,8 @@ export default async function HomePage() {
                   priceOld={p.priceOld}
                   photo={p.photo}
                   slug={p.slug}
+                  priority={index < 2}
+                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />
               </div>
             ))}

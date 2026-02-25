@@ -1,13 +1,12 @@
-import { prisma } from '@/lib/prisma';
+import * as telegramService from '@/services/telegram.service';
+import * as userService from '@/services/user.service';
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = 'https://api.telegram.org';
 
 async function getWhitelistChatIds(): Promise<string[]> {
   if (!TELEGRAM_BOT_TOKEN) return [];
-  const list = await prisma.telegramWhitelist.findMany({
-    select: { telegramUserId: true },
-  });
+  const list = await telegramService.getTelegramWhitelist();
   return list.map((r) => r.telegramUserId);
 }
 
@@ -172,10 +171,7 @@ export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void
   const { userId, telegramUserId } = payload;
   Promise.all([
     getWhitelistChatIds(),
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true, name: true, lastName: true },
-    }),
+    userService.findUserProfile(userId),
   ])
     .then(async ([chatIds, user]) => {
       if (chatIds.length === 0) return;

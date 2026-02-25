@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { prisma } from '@/lib/prisma';
+import * as reviewService from '@/services/review.service';
 import { notifyTelegramNewReview } from '@/lib/telegram-notify';
 
 const REVIEW_RATE_LIMIT = 5;
@@ -56,10 +56,7 @@ function isValidUrl(s: string): boolean {
  */
 export async function GET() {
   try {
-    const reviews = await prisma.review.findMany({
-      where: { status: 'APPROVED' },
-      orderBy: { createdAt: 'desc' },
-    });
+    const reviews = await reviewService.getApprovedReviews();
     return NextResponse.json(reviews);
   } catch (error) {
     console.error('Reviews GET error:', error);
@@ -135,14 +132,12 @@ export async function POST(request: Request) {
       imageUrl = `/uploads/${UPLOAD_FOLDER}/${fileName}`;
     }
 
-    const review = await prisma.review.create({
-      data: {
-        authorName,
-        socialLink: socialLink || undefined,
-        text,
-        imageUrl: imageUrl ?? undefined,
-        status: 'PENDING',
-      },
+    const review = await reviewService.createReview({
+      authorName,
+      socialLink: socialLink || undefined,
+      text,
+      imageUrl: imageUrl ?? undefined,
+      status: 'PENDING',
     });
 
     notifyTelegramNewReview({

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
 import { notifyTelegramConnection } from '@/lib/telegram-notify';
+import * as telegramService from '@/services/telegram.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -18,50 +19,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let body: { code?: string; telegramUserId?: string };
+  const bodySchema = z.object({
+    code: z.string().min(1, 'Missing code').transform((s) => s.trim()),
+    telegramUserId: z.string().min(1, 'Missing telegramUserId').transform((s) => s.trim()),
+  });
+  let body: z.infer<typeof bodySchema>;
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    const raw = await request.json();
+    body = bodySchema.parse(raw);
+  } catch (err) {
+    const msg = err instanceof z.ZodError ? err.issues.map((e) => e.message).join('; ') : 'Invalid payload';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const code = typeof body.code === 'string' ? body.code.trim() : '';
-  const telegramUserId = typeof body.telegramUserId === 'string' ? body.telegramUserId.trim() : '';
-  if (!code || !telegramUserId) {
-    return NextResponse.json(
-      { error: 'Missing code or telegramUserId' },
-      { status: 400 }
-    );
-  }
+  const { code, telegramUserId } = body;
 
   try {
-    const linkRecord = await prisma.telegramLinkCode.findUnique({
-      where: { code },
-      select: { userId: true, expiresAt: true },
-    });
-
-    if (!linkRecord) {
+    const userId = await telegramService.confirmTelegramLinkAndReturnUserId(code, telegramUserId);
+    if (!userId) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
     }
-    if (new Date() > linkRecord.expiresAt) {
-      await prisma.telegramLinkCode.delete({ where: { code } }).catch(() => {});
-      return NextResponse.json({ error: 'Code expired' }, { status: 400 });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.telegramLinkCode.delete({ where: { code } });
-      await tx.telegramWhitelist.upsert({
-        where: { userId: linkRecord.userId },
-        create: {
-          userId: linkRecord.userId,
-          telegramUserId,
-        },
-        update: { telegramUserId, linkedAt: new Date() },
-      });
-    });
 
     void notifyTelegramConnection({
-      userId: linkRecord.userId,
+      userId,
       telegramUserId,
     });
 

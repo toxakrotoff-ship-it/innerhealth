@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as productService from '@/services/product.service';
 import fs from 'fs';
 import path from 'path';
 import { promises as fsPromises } from 'fs';
@@ -30,10 +29,8 @@ function isUrlAllowed(url: URL): boolean {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
     const formData = await request.formData();
@@ -54,10 +51,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingProduct = await prisma.product.findUnique({
-      where: { id: productId }
-    });
-
+    const existingProduct = await productService.findProductById(productId);
     if (!existingProduct) {
       return NextResponse.json(
         { error: 'Product not found' },
@@ -126,12 +120,8 @@ export async function POST(request: Request) {
     }
     await fsPromises.writeFile(filePath, buffer);
 
-    // Обновляем путь к фото в базе данных
-    const updatedProduct = await prisma.product.update({
-      where: { id: productId },
-      data: {
-        photo: `/uploads/products/${productName}/${fileName}`
-      }
+    const updatedProduct = await productService.updateProduct(productId, {
+      photo: `/uploads/products/${productName}/${fileName}`,
     });
 
     return NextResponse.json({

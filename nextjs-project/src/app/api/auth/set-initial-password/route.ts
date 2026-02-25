@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { verifyTokenHash } from '@/lib/set-initial-password'
 import { hashPassword } from '@/lib/password'
+import * as authTokensService from '@/services/auth-tokens.service'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { z } from 'zod'
 
@@ -34,10 +34,7 @@ export async function POST(request: Request) {
   }
   const [recordId, secret] = parts
 
-  const record = await prisma.setInitialPasswordToken.findUnique({
-    where: { id: recordId },
-    include: { user: true },
-  })
+  const record = await authTokensService.findSetInitialPasswordTokenById(recordId)
   if (!record || record.usedAt) {
     return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
   }
@@ -54,16 +51,10 @@ export async function POST(request: Request) {
   }
 
   const hashedPassword = await hashPassword(password)
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { password: hashedPassword, mustChangePassword: false },
-    }),
-    prisma.setInitialPasswordToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-  ])
+  await authTokensService.useSetInitialPasswordTokenAndUpdateUser(record.id, record.userId, {
+    password: hashedPassword,
+    mustChangePassword: false,
+  })
 
   return NextResponse.json({ message: 'Пароль успешно установлен. Войдите с новым паролем.' })
 }

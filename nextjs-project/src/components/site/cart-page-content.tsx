@@ -40,6 +40,32 @@ export function CartPageContent() {
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
+  const mergeItemDetails = useCartStore((s) => s.mergeItemDetails)
+
+  /** Enrich slim items (rehydrated from localStorage) with product details. */
+  useEffect(() => {
+    const slimIds = items.filter((i) => i.title == null).map((i) => i.productId)
+    if (slimIds.length === 0) return
+    const controller = new AbortController()
+    fetch(`/api/products/cart-items?ids=${slimIds.join(',')}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((products: Array<{ id: string; title: string; price: number; priceOld: number | null; photo: string | null; slug: string | null; isPromoEligible: boolean | null; discountPrice: number | null }>) => {
+        products.forEach((p) => {
+          const hasPromoPrice = p.priceOld != null && p.priceOld > p.price
+          mergeItemDetails(p.id, {
+            title: p.title,
+            price: p.price,
+            photo: p.photo ?? null,
+            slug: p.slug ?? null,
+            hasPromoPrice,
+            isPromoEligible: p.isPromoEligible ?? true,
+            discountPrice: p.discountPrice ?? null,
+          })
+        })
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [items, mergeItemDetails])
 
   const [promoCode, setPromoCode] = useState('')
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null)
@@ -76,9 +102,10 @@ export function CartPageContent() {
   const [comment, setComment] = useState('')
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
 
+  const price = (i: { price?: number }) => i.price ?? 0
   const subtotalPromoPrice = items
     .filter((i) => i.hasPromoPrice)
-    .reduce((sum, i) => sum + i.price * i.quantity, 0)
+    .reduce((sum, i) => sum + price(i) * i.quantity, 0)
   const eligibleWithFixedPrice = items.filter(
     (i) => !i.hasPromoPrice && i.isPromoEligible !== false && i.discountPrice != null
   )
@@ -87,14 +114,14 @@ export function CartPageContent() {
   )
   const ineligible = items.filter((i) => !i.hasPromoPrice && i.isPromoEligible === false)
   const subtotalEligibleFixed = eligibleWithFixedPrice.reduce(
-    (sum, i) => sum + (i.discountPrice ?? i.price) * i.quantity,
+    (sum, i) => sum + (i.discountPrice ?? price(i)) * i.quantity,
     0
   )
   const subtotalEligiblePercent = eligibleForPercent.reduce(
-    (sum, i) => sum + i.price * i.quantity,
+    (sum, i) => sum + price(i) * i.quantity,
     0
   )
-  const subtotalIneligible = ineligible.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  const subtotalIneligible = ineligible.reduce((sum, i) => sum + price(i) * i.quantity, 0)
   // Промокод применяется только к сумме товаров. Доставка не дисконтируется.
   const totalAfterPromo = applyPromoToSubtotal(subtotalEligiblePercent, promoResult)
   const subtotal = subtotalPromoPrice + subtotalEligibleFixed + subtotalEligiblePercent + subtotalIneligible
@@ -230,7 +257,7 @@ export function CartPageContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price ?? 0 })),
           total: totalWithDelivery,
           deliverySum: deliverySum > 0 ? deliverySum : undefined,
           promoCodeId: promoResult?.valid ? promoResult.id : null,
@@ -471,11 +498,11 @@ function CartLineRow({
 }) {
   return (
     <div className="flex gap-4 bg-white rounded-xl border border-gray-200 p-4">
-      <div className="relative w-20 h-20 rounded-lg bg-highlight-blue flex-shrink-0 overflow-hidden">
+      <div className="relative w-20 h-20 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
         {line.photo ? (
           <Image
             src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
-            alt={line.title}
+            alt={line.title ?? ''}
             fill
             className="object-contain p-1"
           />
@@ -488,11 +515,13 @@ function CartLineRow({
           href={line.slug ? `/product/${line.slug}` : `/product/id/${line.productId}`}
           className="font-medium text-text hover:text-action-blue line-clamp-2"
         >
-          {line.title}
+          {line.title ?? 'Загрузка...'}
         </Link>
         <div className="mt-1 flex items-center gap-3">
           <span className="text-gray-600">
-            {line.price.toLocaleString('ru-RU')} ₽ ×{' '}
+            {line.price != null
+              ? `${line.price.toLocaleString('ru-RU')} ₽ × `
+              : '— × '}
             <input
               type="number"
               min={1}
@@ -507,7 +536,7 @@ function CartLineRow({
         </div>
       </div>
       <div className="font-medium text-text">
-        {(line.price * line.quantity).toLocaleString('ru-RU')} ₽
+        {((line.price ?? 0) * line.quantity).toLocaleString('ru-RU')} ₽
       </div>
     </div>
   )

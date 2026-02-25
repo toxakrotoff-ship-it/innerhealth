@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import {
   getPendingIdFromCookie,
   createGrant,
@@ -8,12 +7,26 @@ import {
 } from '@/lib/two-factor'
 import { verifyTotpCode } from '@/lib/totp'
 import { verifyCodeHash } from '@/lib/set-initial-password'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import * as auth2faService from '@/services/auth-2fa.service'
 
 const bodySchema = z.object({
   code: z.string().length(6, 'Code must be 6 digits').regex(/^\d+$/),
 })
 
+const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+
 export async function POST(request: Request) {
+  const clientId = getClientIdentifier(request)
+  const rate = checkRateLimit(clientId, 'verify-2fa', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
+  if (!rate.success) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+    )
+  }
+
   const cookieHeader = request.headers.get('cookie')
   const pendingId = getPendingIdFromCookie(cookieHeader)
 
@@ -29,18 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid code' }, { status: 400 })
   }
 
-  const pending = await prisma.twoFactorPending.findUnique({
-    where: { id: pendingId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          twoFactorMethod: true,
-          totpSecretEncrypted: true,
-        },
-      },
-    },
-  })
+  const pending = await auth2faService.findTwoFactorPendingWithUser(pendingId)
 
   if (!pending || pending.expiresAt <= new Date()) {
     return NextResponse.json({ error: 'Invalid or expired 2FA session' }, { status: 401 })
@@ -66,9 +68,7 @@ export async function POST(request: Request) {
 
   const { grantId } = await createGrant(user.id)
 
-  await prisma.twoFactorPending.delete({
-    where: { id: pendingId },
-  }).catch(() => {})
+  await auth2faService.deleteTwoFactorPending(pendingId)
 
   const response = NextResponse.json({ grantToken: grantId })
   response.headers.append('Set-Cookie', clearPendingCookieHeader())

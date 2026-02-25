@@ -1,6 +1,6 @@
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
-import { YandexMap } from '@/components/site/yandex-map'
 import { ContactLinks } from '@/components/site/contact-links'
+import { YandexMapDynamic } from '@/components/site/yandex-map-dynamic'
 
 export const metadata = {
   title: 'Контакты | Inner Health',
@@ -33,7 +33,7 @@ export default function ContactsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Карта слева */}
           <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 min-h-[320px]">
-            <YandexMap className="w-full h-full min-h-[320px]" />
+            <YandexMapDynamic className="w-full h-full min-h-[320px]" />
           </div>
 
           {/* Текстовый блок справа */}

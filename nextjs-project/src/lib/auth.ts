@@ -1,9 +1,9 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { SessionStrategy } from 'next-auth'
-import { prisma } from '@/lib/prisma'
 import { verifyPassword, isBcryptHash } from '@/lib/password'
 import { consumeGrant } from '@/lib/two-factor'
+import * as userService from '@/services/user.service'
 
 export const authOptions = {
   providers: [
@@ -19,9 +19,7 @@ export const authOptions = {
         if (grantToken?.trim()) {
           const result = await consumeGrant(grantToken.trim())
           if (!result) return null
-          const user = await prisma.user.findUnique({
-            where: { id: result.userId },
-          })
+          const user = await userService.findUserByIdForAuth(result.userId)
           if (!user) return null
           return {
             id: user.id,
@@ -34,9 +32,7 @@ export const authOptions = {
 
         if (!credentials?.email || !credentials?.password) return null
         const email = credentials.email.trim().toLowerCase()
-        const user = await prisma.user.findUnique({
-          where: { email },
-        })
+        const user = await userService.findUserByEmail(email)
         if (!user) return null
         const valid = isBcryptHash(user.password)
           ? await verifyPassword(credentials.password, user.password)
@@ -66,10 +62,7 @@ export const authOptions = {
     async session({ session, token }) {
       const userId = token.id as string | undefined
       if (!userId) return session
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, mustChangePassword: true, name: true, lastName: true },
-      })
+      const user = await userService.findUserById(userId)
       if (!user) {
         return { ...session, user: null as unknown as typeof session.user }
       }

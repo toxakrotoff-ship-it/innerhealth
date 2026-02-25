@@ -15,8 +15,10 @@ interface ProductCardProps {
   slug?: string | null
   isPromoEligible?: boolean
   discountPrice?: number | null
-  /** Set for first row on catalog to improve LCP */
+  /** Set for above-the-fold images (e.g. first 2 products) to improve LCP */
   priority?: boolean
+  /** Base64 blur placeholder from upload pipeline for placeholder="blur" */
+  blurDataURL?: string | null
 }
 
 /** Weaker 3D tilt than TiltCard (factor 4), border transition, overlay; two actions: add to cart + details. */
@@ -30,6 +32,7 @@ export function ProductCard({
   isPromoEligible = true,
   discountPrice = null,
   priority = false,
+  blurDataURL = null,
 }: ProductCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const state = useRef({ rotateX: 0, rotateY: 0 })
@@ -90,8 +93,10 @@ export function ProductCard({
               alt={title}
               fill
               className="object-contain p-4"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={priority}
+              placeholder={blurDataURL ? 'blur' : undefined}
+              blurDataURL={blurDataURL ?? undefined}
               unoptimized={photo.startsWith('http://') || photo.startsWith('https://')}
             />
           ) : (

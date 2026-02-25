@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { sendPasswordResetEmail, getBaseUrlForEmails } from '@/lib/email'
+import * as userService from '@/services/user.service'
+import * as authTokensService from '@/services/auth-tokens.service'
 import {
   generateSecureToken,
   hashToken,
@@ -29,26 +30,24 @@ export async function POST(request: Request) {
   }
   const { email } = parsed.data
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await userService.findUserByEmail(email)
   if (!user) {
     return NextResponse.json({ message: 'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля.' })
   }
 
   const secret = generateSecureToken()
   const tokenHash = await hashToken(secret)
-  const record = await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      expiresAt: getExpiresAt(),
-    },
+  const record = await authTokensService.createPasswordResetToken({
+    userId: user.id,
+    tokenHash,
+    expiresAt: getExpiresAt(),
   })
 
   const baseUrl = getBaseUrlForEmails(request)
   const resetLink = `${baseUrl}/login/reset-password?token=${encodeURIComponent(record.id + '.' + secret)}`
   const sendResult = await sendPasswordResetEmail(user.email, resetLink, EXPIRES_MINUTES)
   if (!sendResult.ok) {
-    await prisma.passwordResetToken.delete({ where: { id: record.id } })
+    await authTokensService.deletePasswordResetToken(record.id)
     console.error('[forgot-password] Send failed:', sendResult.error)
     return NextResponse.json(
       {

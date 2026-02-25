@@ -1,5 +1,5 @@
-import { generateSecret, verify, generateURI } from 'otplib'
-import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { generateSecret, generate, generateURI } from 'otplib'
+import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from 'node:crypto'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12
@@ -60,20 +60,36 @@ export function decryptTotpSecret(encrypted: string): string {
   return decipher.update(ciphertext).toString('utf8') + decipher.final('utf8')
 }
 
+const TOTP_PERIOD = 30
+
+/**
+ * Constant-time comparison of two strings (e.g. 6-digit codes). Both must have the same length.
+ */
+function timingSafeEqualStrings(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const bufA = Buffer.from(a, 'utf8')
+  const bufB = Buffer.from(b, 'utf8')
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
+
 /**
  * Verify TOTP code against encrypted secret. Uses ±1 step tolerance.
+ * Uses crypto.timingSafeEqual for code comparison to prevent timing attacks.
  */
 export async function verifyTotpCode(
   encryptedSecret: string,
   code: string
 ): Promise<boolean> {
   const secret = decryptTotpSecret(encryptedSecret)
-  const result = await verify({
-    secret,
-    token: code,
-    epochTolerance: 1,
-  })
-  return result.valid
+  const nowSec = Math.floor(Date.now() / 1000)
+  const step = Math.floor(nowSec / TOTP_PERIOD)
+  for (const delta of [-1, 0, 1]) {
+    const epoch = (step + delta) * TOTP_PERIOD
+    const expected = await generate({ secret, epoch })
+    if (timingSafeEqualStrings(code, expected)) return true
+  }
+  return false
 }
 
 /**

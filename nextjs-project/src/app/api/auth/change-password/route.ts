@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
-import { verifyPassword, isBcryptHash } from '@/lib/password'
+import { hashPassword, verifyPassword, isBcryptHash } from '@/lib/password'
+import * as userService from '@/services/user.service'
 import { z } from 'zod'
 
 const bodySchema = z.object({
@@ -27,9 +26,7 @@ export async function POST(request: Request) {
   }
   const { currentPassword, newPassword } = parsed.data
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-  })
+  const user = await userService.findUserByIdFor2fa(session.user.id as string)
   if (!user) {
     return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
   }
@@ -42,9 +39,9 @@ export async function POST(request: Request) {
   }
 
   const hashedPassword = await hashPassword(newPassword)
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { password: hashedPassword, mustChangePassword: false },
+  await userService.updateUser(user.id, {
+    password: hashedPassword,
+    mustChangePassword: false,
   })
 
   return NextResponse.json({ message: 'Пароль успешно изменён.' })

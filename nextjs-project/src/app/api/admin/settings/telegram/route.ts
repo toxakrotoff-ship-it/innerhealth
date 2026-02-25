@@ -1,32 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { requireAdminSession } from '@/lib/require-admin';
+import * as userService from '@/services/user.service';
+import * as telegramService from '@/services/telegram.service';
 
 /** GET: список привязок Telegram по администраторам (роль ADMIN). Только для ADMIN. */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   try {
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        lastName: true,
-        telegramWhitelist: {
-          select: { telegramUserId: true, linkedAt: true },
-        },
-      },
-      orderBy: { email: 'asc' },
-    });
+    const admins = await userService.getAdminsWithTelegramWhitelist();
     const list = admins.map((u) => ({
       id: u.id,
       email: u.email,
@@ -46,13 +29,8 @@ export async function GET() {
 
 /** DELETE: отвязать Telegram у пользователя (userId в query). Только для ADMIN. */
 export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId')?.trim();
@@ -61,15 +39,11 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, role: 'ADMIN' },
-    });
+    const user = await userService.findAdminById(userId);
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден или не администратор' }, { status: 404 });
     }
-    await prisma.telegramWhitelist.deleteMany({
-      where: { userId },
-    });
+    await telegramService.deleteTelegramWhitelistByUserId(userId);
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('Settings telegram DELETE error:', e);

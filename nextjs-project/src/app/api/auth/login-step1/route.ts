@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { verifyPassword, isBcryptHash } from '@/lib/password'
 import { createPendingToken, buildPendingCookieValue } from '@/lib/two-factor'
 import { send2FACodeEmail } from '@/lib/email'
 import { generateSixDigitCode, hashCode } from '@/lib/set-initial-password'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import * as userService from '@/services/user.service'
+import * as auth2faService from '@/services/auth-2fa.service'
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -13,8 +15,19 @@ const bodySchema = z.object({
 
 const PENDING_EXPIRES_MINUTES = 10
 const EMAIL_CODE_EXPIRES_MINUTES = 5
+const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
 
 export async function POST(request: Request) {
+  const clientId = getClientIdentifier(request)
+  const rate = checkRateLimit(clientId, 'login-step1', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
+  if (!rate.success) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+    )
+  }
+
   let body: z.infer<typeof bodySchema>
   try {
     const raw = await request.json()
@@ -24,30 +37,30 @@ export async function POST(request: Request) {
   }
 
   const email = body.email.trim().toLowerCase()
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: {
-      id: true,
-      email: true,
-      password: true,
-      twoFactorEnabled: true,
-      twoFactorMethod: true,
-    },
-  })
+  const user = await userService.findUserByEmail(email)
+  const userFor2fa = user
+    ? {
+        id: user.id,
+        email: user.email,
+        password: user.password,
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorMethod: user.twoFactorMethod,
+      }
+    : null
 
-  if (!user) {
+  if (!userFor2fa) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  const valid = isBcryptHash(user.password)
-    ? await verifyPassword(body.password, user.password)
-    : user.password === body.password
+  const valid = isBcryptHash(userFor2fa.password)
+    ? await verifyPassword(body.password, userFor2fa.password)
+    : userFor2fa.password === body.password
 
   if (!valid) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  if (!user.twoFactorEnabled) {
+  if (!userFor2fa.twoFactorEnabled) {
     return NextResponse.json({ success: true })
   }
 
@@ -58,34 +71,25 @@ export async function POST(request: Request) {
   let emailCodeHash: string | null = null
   let emailCodeExpiresAt: Date | null = null
 
-  if (user.twoFactorMethod === 'email') {
+  if (userFor2fa.twoFactorMethod === 'email') {
     const code = generateSixDigitCode()
     emailCodeHash = await hashCode(code)
     emailCodeExpiresAt = new Date()
     emailCodeExpiresAt.setMinutes(emailCodeExpiresAt.getMinutes() + EMAIL_CODE_EXPIRES_MINUTES)
-    await send2FACodeEmail(user.email, code)
+    await send2FACodeEmail(userFor2fa.email, code)
   }
 
-  const pending = await prisma.twoFactorPending.upsert({
-    where: { userId: user.id },
-    create: {
-      userId: user.id,
-      tokenHash,
-      expiresAt,
-      emailCodeHash,
-      emailCodeExpiresAt,
-    },
-    update: {
-      tokenHash,
-      expiresAt,
-      emailCodeHash,
-      emailCodeExpiresAt,
-    },
+  const pending = await auth2faService.upsertTwoFactorPending({
+    userId: userFor2fa.id,
+    tokenHash,
+    expiresAt,
+    emailCodeHash,
+    emailCodeExpiresAt,
   })
 
   const response = NextResponse.json({
     need2FA: true,
-    method: user.twoFactorMethod ?? 'email',
+    method: userFor2fa.twoFactorMethod ?? 'email',
   })
   response.headers.append('Set-Cookie', buildPendingCookieValue(pending.id))
   return response
