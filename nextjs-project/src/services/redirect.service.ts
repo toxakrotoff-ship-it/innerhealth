@@ -93,7 +93,8 @@ export async function updateRedirect(
     note: string | null;
   }>
 ) {
-  const payload: Parameters<typeof prisma.redirect.update>[1]['data'] = { ...data };
+  type UpdateData = Parameters<typeof prisma.redirect.update>[0]['data'];
+  const payload: UpdateData = { ...data };
   if (data.sourcePath !== undefined) payload.sourcePath = normalizePath(data.sourcePath);
   if (data.statusCode !== undefined) {
     if (!REDIRECT_STATUS_CODES.includes(data.statusCode as RedirectStatusCode)) {
