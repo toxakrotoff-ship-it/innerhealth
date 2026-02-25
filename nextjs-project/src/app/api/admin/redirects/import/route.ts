@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   try {
     const result = await importRedirectsFromCsv(text);
-    revalidateTag('redirects');
+    revalidateTag('redirects', 'max');
     return NextResponse.json({
       created: result.created,
       skipped: result.skipped,
