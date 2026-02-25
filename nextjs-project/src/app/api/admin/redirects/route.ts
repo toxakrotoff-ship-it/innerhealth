@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   try {
     const created = await redirectService.createRedirect(parsed.data);
-    revalidateTag('redirects');
+    revalidateTag('redirects', 'max');
     return NextResponse.json(created);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Failed to create redirect';

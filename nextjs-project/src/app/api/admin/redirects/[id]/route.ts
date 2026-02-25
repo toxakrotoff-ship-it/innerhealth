@@ -37,7 +37,7 @@ export async function PATCH(
 
   try {
     const updated = await redirectService.updateRedirect(id, parsed.data);
-    revalidateTag('redirects');
+    revalidateTag('redirects', 'max');
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
@@ -66,7 +66,7 @@ export async function DELETE(
   const { id } = await params;
   try {
     await redirectService.deleteRedirect(id);
-    revalidateTag('redirects');
+    revalidateTag('redirects', 'max');
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const err = e as { code?: string };
