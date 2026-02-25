@@ -44,9 +44,34 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response
 }
 
+/** Редиректы из БД (Tilda → сайт): запрос к /api/redirect-check, при совпадении — 301 и др. */
+async function applyRedirectIfMatched(request: Request): Promise<NextResponse | null> {
+  const pathname = new URL(request.url).pathname
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/login')) return null
+  if (pathname.startsWith(`/${adminSecretPath}`)) return null
+  const base = new URL(request.url).origin
+  const checkUrl = `${base}/api/redirect-check?path=${encodeURIComponent(pathname)}`
+  try {
+    const res = await fetch(checkUrl, { cache: 'no-store' })
+    if (res.status !== 200) return null
+    const body = await res.json()
+    const destination = body?.destination
+    const statusCode = Number(body?.statusCode)
+    if (!destination || typeof destination !== 'string') return null
+    const allowed = [301, 302, 307, 308]
+    const code = allowed.includes(statusCode) ? statusCode : 301
+    const target = destination.startsWith('http') ? destination : `${base}${destination.startsWith('/') ? '' : '/'}${destination}`
+    return NextResponse.redirect(target, code)
+  } catch {
+    return null
+  }
+}
+
 export default withAuth(
-  function proxy(request) {
+  async function proxy(request: Request) {
     const pathname = new URL(request.url).pathname
+    const redirectRes = await applyRedirectIfMatched(request)
+    if (redirectRes) return redirectRes
     if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
       const rest = pathname.slice(1 + adminSecretPath.length) || ''
       const rewritePath = `/admin${rest}`
@@ -72,12 +97,13 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    '/',
     '/admin/:path*',
     '/api/admin/:path*',
     '/api/orders',
     '/api/promo/:path*',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
-    '/:segment/:path*', // catches custom ADMIN_SECRET_PATH (e.g. /secret-panel/catalog)
+    '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
   ],
 }
