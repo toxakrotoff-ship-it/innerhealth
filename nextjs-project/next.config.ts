@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
       dynamic: 30, // 30 s for dynamic segments
     },
   },
+  /** Редиректы со старых URL (Tilda, смена путей) на текущий сайт. Добавляйте пары source → destination. */
+  async redirects() {
+    const redirects: Array<{ source: string; destination: string; permanent: boolean }> = [
+      // Примеры: старые пути Tilda или смена структуры
+      // { source: '/page12345678', destination: '/', permanent: true },
+      // { source: '/magazin', destination: '/catalog', permanent: true },
+      // { source: '/tovar/:slug', destination: '/product/:slug', permanent: true },
+    ]
+    return redirects
+  },
   async headers() {
     return [
       {

@@ -363,3 +363,19 @@ model TildaLead {
   @@index([tildaDate])
   @@index([email])
 }
+
+/// Редиректы со старых URL (Tilda и др.) на текущий сайт. statusCode: 301 (по умолчанию), 302, 307, 308.
+model Redirect {
+  id           String   @id @default(cuid())
+  sourcePath   String   /// Путь-источник (например /page12345), без query
+  destination  String   /// Куда редиректить (например / или /product/slug)
+  statusCode   Int      @default(301) /// 301 | 302 | 307 | 308
+  entityType   String?  /// PRODUCT | PAGE | CUSTOM — для привязки к сущности в админке
+  entityId     String?  /// id товара или slug страницы
+  note         String?  /// Комментарий (старый URL с Тильды и т.д.)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([sourcePath])
+  @@index([sourcePath])
+}
