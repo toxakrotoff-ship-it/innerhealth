@@ -1,5 +1,7 @@
 # Telegram-бот для уведомлений Inner Health
 
+Бот реализован: скрипт **nextjs-project/scripts/telegram-bot.ts**, запуск из каталога nextjs-project: `npm run telegram-bot`. В Docker поднимается сервис `telegram-bot` (см. [deploy-vps.md](./deploy-vps.md)). Переменные: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_SERVICE_SECRET`; в контейнере `TELEGRAM_SITE_URL` задаётся как `http://app:3000`.
+
 ## Обзор
 
 Бот привязан к сайту и предназначен для:
@@ -145,4 +147,4 @@
 4. В Telegram нажать **Start** (или отправить команду /start). Бот ответит: «Вы добавлены в список уведомлений».
 5. При необходимости обновить страницу профиля в админке — статус сменится на «Telegram подключён».
 
-Для работы бота должен быть запущен процесс: `npm run telegram-bot` (из каталога `nextjs-project`). В `.env` должны быть заданы `TELEGRAM_BOT_TOKEN`, `TELEGRAM_SERVICE_SECRET`, `TELEGRAM_SITE_URL` (см. docs/env's.md).
+Для работы бота должен быть запущен процесс: `npm run telegram-bot` (из каталога **nextjs-project**). В `.env` должны быть заданы `TELEGRAM_BOT_TOKEN`, `TELEGRAM_SERVICE_SECRET`; `TELEGRAM_SITE_URL` при запуске в Docker задаётся в docker-compose как `http://app:3000`. Полный список переменных: [env's.md](./env's.md).

@@ -43,6 +43,7 @@ cd innerhealth/nextjs-project
 
 - `NEXTAUTH_URL` — домен прода (например `https://innerhealth.ru`).
 - `NEXTAUTH_SECRET`, ключи YooKassa, CDEK, Telegram, SMTP и т.д.
+- **Карта СДЭК и контакты:** `NEXT_PUBLIC_YANDEX_MAPS_API_KEY` — ключ из [Яндекс.Разработки](https://developer.tech.yandex.ru/) (JavaScript API карт). Добавьте в `.env` на сервере одну строку, затем пересоберите образ: `docker compose build app && docker compose up -d app`. После этого при любом `git pull` и `./deploy/deploy-quick.sh` ключ подхватится из уже существующего `.env` (файл не коммитится в git).
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — если нужны не дефолтные; `DATABASE_URL` в docker-compose подставляется из них, в .env можно не дублировать.
 - **Telegram-бот:** в `docker-compose.yml` для сервиса `telegram-bot` уже задано `TELEGRAM_SITE_URL: http://app:3000` — так бот из своего контейнера ходит в контейнер приложения по имени сервиса `app`. Переопределять в `.env` не нужно.
 
@@ -57,7 +58,7 @@ nano .env   # или vim
 ```bash
 sudo apt install certbot
 sudo certbot certonly --webroot -w /var/lib/certbot -d innerhealth.ru -d www.innerhealth.ru
-```y
+```
 
 Смонтировать сертификаты в Nginx: в `docker-compose.yml` для сервиса `nginx` добавить volume:
 
@@ -75,7 +76,7 @@ docker compose up -d --force-recreate nginx
 
 ## Деплой в пару кликов
 
-Из каталога `nextjs-project`:
+Все команды ниже выполняются из каталога **nextjs-project** (в нём лежат `docker-compose.yml` и папка `deploy/`).
 
 ```bash
 chmod +x deploy/deploy.sh
@@ -89,6 +90,83 @@ chmod +x deploy/deploy.sh
 3. `docker compose up -d`
 
 Миграции при старте отключены (`RUN_MIGRATE=0`), чтобы не трогать уже перенесённую БД. Запустить миграции вручную при необходимости: `docker compose run --rm app npx prisma migrate deploy`. Чтобы снова включить автозапуск миграций при старте app, задайте в `.env`: `RUN_MIGRATE=1`.
+
+## Быстрое обновление (без полной пересборки)
+
+Когда нужно просто подтянуть новый код (например, модерация отзывов, правки бота) и не ломать уже работающий прод:
+
+- **Не пересобираются:** образы `db`, `nginx` (они не трогаются).
+- **Сборка с кэшем:** только образы `app` и `telegram-bot` (быстрее, чем `build --no-cache`).
+- **Миграции** применяются перед перезапуском app.
+
+На VPS из каталога **nextjs-project**:
+
+```bash
+chmod +x deploy/deploy-quick.sh
+./deploy/deploy-quick.sh
+```
+
+Скрипт по шагам: `git pull` → `docker compose build app` → миграции → `up -d app` → сборка и перезапуск `telegram-bot`. Ручной вариант тех же шагов:
+
+```bash
+cd /opt/innerhealth/nextjs-project
+git pull
+docker compose build app
+docker compose run --rm app npx prisma migrate deploy
+docker compose up -d app
+docker compose build telegram-bot && docker compose up -d telegram-bot
+```
+
+## Ключ Яндекс.Карт на VPS (карта СДЭК в корзине)
+
+1. По SSH зайдите на сервер и откройте `.env` в каталоге **nextjs-project**:
+   ```bash
+   ssh user1@82.202.159.85
+   cd /opt/innerhealth/nextjs-project
+   nano .env
+   ```
+2. Добавьте строку (подставьте свой ключ с https://developer.tech.yandex.ru/):
+   ```
+   NEXT_PUBLIC_YANDEX_MAPS_API_KEY=ваш_ключ_яндекс_карт
+   ```
+3. Сохраните файл и пересоберите/перезапустите приложение:
+   ```bash
+   docker compose build app
+   docker compose up -d app
+   ```
+Готово. Файл `.env` в git не попадает, поэтому при следующих `git pull` и `./deploy/deploy-quick.sh` ключ остаётся в `.env` на сервере и снова подставляется при сборке.
+
+## Просмотр логов на проде
+
+Все команды — из каталога **nextjs-project** на VPS (например после `ssh user1@82.202.159.85` и `cd /opt/innerhealth/nextjs-project` или ваш путь к проекту).
+
+**Логи только бота (кнопки модерации отзывов, /start, /promo):**
+
+```bash
+# В реальном времени, последние 100 строк
+docker compose logs -f telegram-bot --tail=100
+```
+
+**Логи приложения (Next.js, API, ошибки PATCH /api/admin/reviews):**
+
+```bash
+docker compose logs -f app --tail=100
+```
+
+**Все сервисы разом:**
+
+```bash
+docker compose logs -f --tail=50
+```
+
+**Без -f (одним снимком, удобно скопировать):**
+
+```bash
+docker compose logs telegram-bot --tail=200
+docker compose logs app --tail=200
+```
+
+При нажатии кнопок «Разместить»/«Отклонить» в логах бота будут строки вида `[bot] setReviewStatus error:` при ошибке или ответ API; в логах app — запросы к `PATCH /api/admin/reviews/...`. Проверьте, что в `.env` на сервере задан один и тот же `TELEGRAM_SERVICE_SECRET` (используется и приложением, и ботом).
 
 ## Ручной запуск без скрипта
 

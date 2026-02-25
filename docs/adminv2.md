@@ -1,4 +1,9 @@
 Technical Specification: InnerHealth.ru Core
+
+**Текущее состояние реализации:** см. [STATUS.md](./STATUS.md). Реализованы: админка (каталог, товары, категории, новости, промокоды, заказы, пользователи, настройки, модерация отзывов, профиль с Telegram), публичная часть (главная, каталог, карточка товара, корзина, новости, отзывы), импорт CSV, TipTap в новостях и товарах, YooKassa и СДЭК (API), инлайн-редактирование цены/остатка в каталоге, галерея изображений с D&D, правила промокодов (Rule A/B/C) в корзине и заказах. В планах: NextAuth v5 + 2FA.
+
+---
+
 1. Project Role & Stack
 
 Role: Senior Fullstack Developer.
@@ -6,17 +11,17 @@ Goal: Initialize the core architecture for InnerHealth.ru, including database, m
 
 Tech Stack:
 
-    Framework: Next.js 15+ (App Router)
+    Framework: Next.js 16 (App Router) — в проекте nextjs-project
 
-    Database: PostgreSQL + Prisma ORM
+    Database: PostgreSQL + Prisma ORM (схема и миграции в nextjs-project/prisma)
 
-    Styling: Tailwind CSS + Shadcn/ui
+    Styling: Tailwind CSS + Shadcn-подобные компоненты
 
-    Typography: Montserrat (Global font)
+    Typography: Montserrat (глобально в layout.tsx, next/font)
 
-    Auth: NextAuth.js v5 + 2FA
+    Auth: NextAuth.js v4 (Credentials, JWT); v5 + 2FA — в планах
 
-   (Задел на будущее) Integrations: CDEK (Logistics), Yookassa (Payments)
+    Integrations: YooKassa (оплата), CDEK (доставка) — реализованы API; Telegram-бот — отдельный сервис
 
 
 3. Core Business Logic
@@ -53,9 +58,9 @@ Tech Stack:
 
 4.2. Admin Panel Features
 
-    Path: /${process.env.ADMIN_SECRET_PATH}.
+    Path: маршруты под /admin; в middleware проверка учитывает ADMIN_SECRET_PATH (matcher пока зашит под «admin»). См. STATUS.md.
 
-    Security: NextAuth v5 + 2FA.
+    Security: NextAuth v4; v5 + 2FA в планах.
 
     Архитектура (Две основные ветки):
 

@@ -1,8 +1,10 @@
 # Prisma: миграции и подготовка к деплою
 
+Схема и миграции находятся в **nextjs-project/prisma/** (schema.prisma, migrations/). Подключение к БД задаётся в `nextjs-project/prisma.config.ts` через переменную `DATABASE_URL` (из .env / .env.local).
+
 ## Текущее состояние миграций
 
-В `prisma/migrations/` лежат миграции в порядке применения:
+В **nextjs-project/prisma/migrations/** лежат миграции в порядке применения:
 
 | Миграция | Описание |
 |----------|----------|
@@ -15,8 +17,10 @@
 | `20260221120000_add_partnership_lead` | Таблица PartnershipLead |
 | `20260221130000_add_partnership_lead_social_links` | PartnershipLead.socialLinks |
 | `20260221140000_add_tilda_lead_model` | Таблица TildaLead |
+| `20260221150000_add_yookassa_payment_id` | Поле заказа для ID платежа ЮKassa |
+| `20260221160000_add_site_setting` | Таблица SiteSetting (настройки сайта) |
 
-На **новой** (пустой) production-БД достаточно выполнить `prisma migrate deploy` — все миграции применятся по порядку.
+На **новой** (пустой) production-БД достаточно выполнить из каталога nextjs-project: `npx prisma migrate deploy` — все миграции применятся по порядку.
 
 ---
 
@@ -50,7 +54,7 @@ cd nextjs-project
    npx prisma migrate deploy
    ```
 
-После этого `npx prisma migrate status` должен показать, что все 9 миграций применены.
+После этого `npx prisma migrate status` (из nextjs-project) должен показать, что все миграции применены.
 
 ---
 
@@ -65,7 +69,7 @@ cd nextjs-project
 - `NEXT_PUBLIC_SITE_URL` — URL сайта (например `https://innerhealth.ru`)
 - Остальные по необходимости: YooKassa, CDEK, SMTP, `ADMIN_SECRET_PATH`, `UPLOAD_STRATEGY` и т.д.
 
-Подключение к БД для Prisma берётся из `prisma.config.ts` (в т.ч. из `process.env.DATABASE_URL`).
+Подключение к БД для Prisma берётся из **nextjs-project/prisma.config.ts** (переменная `DATABASE_URL` из .env / .env.local).
 
 ### Шаги при деплое
 

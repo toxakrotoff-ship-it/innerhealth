@@ -1,5 +1,7 @@
 # 📜 Technical Specification: InnerHealth.ru Core
 
+**Устаревшая версия.** Актуальный стек и статус: [STATUS.md](./STATUS.md), [adminv2.md](./adminv2.md).
+
 ## 1. Project Role & Stack
 **Role:** Senior Fullstack Developer.
 **Goal:** Initialize the core architecture for InnerHealth.ru, including database, migration tools, and admin functionality.
