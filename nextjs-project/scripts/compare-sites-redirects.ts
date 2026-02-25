@@ -254,7 +254,7 @@ function escapeCsvCell(s: string): string {
 
 function writeCsv(filePath: string, rows: CrawlResult[]): void {
   const header = 'sourcePath,destination,statusCode,statusOnNew,note';
-  const lines = [header, ...rows.map((r) => [r.sourcePath, r.destination, r.statusCode, r.statusOnNew, r.note ?? ''].map(escapeCsvCell).join(','))];
+  const lines = [header, ...rows.map((r) => [r.sourcePath, r.destination, String(r.statusCode), String(r.statusOnNew), r.note ?? ''].map(escapeCsvCell).join(','))];
   fs.writeFileSync(filePath, '\uFEFF' + lines.join('\n'), 'utf-8');
   console.error(`CSV записан: ${filePath} (${rows.length} строк)`);
 }
@@ -341,7 +341,7 @@ async function main(): Promise<void> {
   } else if (!importDb) {
     // вывод в stdout как CSV
     const header = 'sourcePath,destination,statusCode,statusOnNew,note';
-    const lines = [header, ...results.map((r) => [r.sourcePath, r.destination, r.statusCode, r.statusOnNew, r.note ?? ''].map(escapeCsvCell).join(','))];
+    const lines = [header, ...results.map((r) => [r.sourcePath, r.destination, String(r.statusCode), String(r.statusOnNew), r.note ?? ''].map(escapeCsvCell).join(','))];
     console.log(lines.join('\n'));
   }
 
@@ -352,7 +352,7 @@ async function main(): Promise<void> {
     }
     const { PrismaClient } = await import('@prisma/client');
     const { PrismaPg } = await import('@prisma/adapter-pg');
-    const { default: Pool } = await import('pg');
+    const { default: Pool } = (await import('pg')) as { default: new (config: { connectionString: string }) => unknown };
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const adapter = new PrismaPg(pool);
     const prisma = new PrismaClient({ adapter });
