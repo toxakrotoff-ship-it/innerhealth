@@ -9,7 +9,7 @@
 - **Frontend / Backend:** [Next.js](https://nextjs.org/) 16 (App Router), React 19, TypeScript
 - **Стили:** Tailwind CSS 4, Radix UI, Shadcn-подобные компоненты
 - **БД:** PostgreSQL, [Prisma](https://www.prisma.io/) 7 (в т.ч. `@prisma/adapter-pg`)
-- **Аутентификация:** NextAuth v4 (Credentials, JWT)
+- **Аутентификация:** NextAuth v4 (Credentials, JWT); в планах — переход на v5 и 2FA (см. [docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md))
 - **Редактор контента:** TipTap
 - **Деплой:** Docker, Nginx; опционально Let's Encrypt
 
@@ -86,6 +86,7 @@ npm run dev
 
 - **[docs/env's.md](docs/env's.md)** — перечень переменных окружения (база, auth, YooKassa, CDEK, Telegram, SMTP и др.)
 - **[nextjs-project/docs/password-reset-env.md](nextjs-project/docs/password-reset-env.md)** — сброс пароля и настройка SMTP (в т.ч. VK WorkSpace, Gmail, Яндекс, Mail.ru)
+- **[nextjs-project/docs/2fa-env.md](nextjs-project/docs/2fa-env.md)** — переменные для 2FA (TOTP, email-коды)
 
 ### Деплой и инфраструктура
 
@@ -98,21 +99,26 @@ npm run dev
 - **[docs/STATUS.md](docs/STATUS.md)** — текущий статус проекта (реализовано / в планах)
 - **[docs/adminv2.md](docs/adminv2.md)** — ТЗ админки
 - **[docs/tg_bot.md](docs/tg_bot.md)** — Telegram-бот: уведомления, вайтлист, промокоды
-- **[docs/step_3_yokassa\|cdek.md](docs/step_3_yokassa%7Ccdek.md)** — YooKassa и СДЭК
+- **[docs/step_3_yokassa|cdek.md](docs/step_3_yokassa%7Ccdek.md)** — YooKassa и СДЭК
 - **[docs/tilda-leads-order-composition.md](docs/tilda-leads-order-composition.md)** — лиды и состав заказа из Tilda
+
+### Планы и roadmap
+
+- **[docs/plans/](docs/plans/)** — планы доработок (2FA, СДЭК, roadmap)
+- **[docs/plans/PROJECT-INDEX.md](docs/plans/PROJECT-INDEX.md)** — полный индекс проекта и навигация по коду
+- **[docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md)** — план внедрения 2FA
 
 ### Дополнительно
 
 - **[docs/categories.md](docs/categories.md)** — категории каталога
 - **[docs/performance-optimization.md](docs/performance-optimization.md)** — оптимизация производительности
-- **[docs/help_me_dockerized.md](docs/help_me_dockerized.md)** — помощь по Docker-развёртыванию
 
 ---
 
 ## Основные маршруты приложения
 
 - **Публичная часть:** `/`, `/catalog`, `/catalog/[categorySlug]`, `/product/[slug]`, `/product/id/[id]`, `/cart`, `/news`, `/news/[slug]`, `/o-nas`, `/contacts`, `/sotrudnichestvo`, `/privacy`, `/oferta` и др.
-- **Вход:** `/login`, `/login/forgot-password`, `/login/reset-password`, `/login/change-password`
+- **Вход:** `/login`, `/login/2fa`, `/login/forgot-password`, `/login/reset-password`, `/login/change-password`, `/login/set-initial-password`
 - **Админка:** `/admin` (редирект на каталог), `/admin/catalog`, `/admin/catalog/categories`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit`, `/admin/products/import`, `/admin/news`, `/admin/promo-codes`, `/admin/orders`, `/admin/orders-statistics`, `/admin/users`, `/admin/settings`, `/admin/profile`, `/admin/tilda-leads`, `/admin/partnership`
 
 API: префикс `/api` (auth, admin, cart, orders, telegram и т.д.).
