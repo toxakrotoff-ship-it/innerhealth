@@ -175,6 +175,13 @@ export default function LoginPage() {
             </Link>
           </p>
         )}
+
+        <p className="mt-2 text-center text-sm text-white/80">
+          Нет аккаунта?{' '}
+          <Link href="/register" className="text-highlight-blue hover:underline">
+            Зарегистрироваться
+          </Link>
+        </p>
       </form>
     </div>
   )
