@@ -430,12 +430,12 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
         <Input
           value={form.street}
           onChange={(event) => setForm((prev) => ({ ...prev, street: event.target.value }))}
-          placeholder="Улица (для cdek_door)"
+          placeholder="Улица (только для доставки до двери)"
         />
         <Input
           value={form.house}
           onChange={(event) => setForm((prev) => ({ ...prev, house: event.target.value }))}
-          placeholder="Дом (для cdek_door)"
+          placeholder="Дом (только для доставки до двери)"
         />
       </div>
     )
