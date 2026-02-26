@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { label: 'АКЦИИ', href: '/catalog/aktsii' },
   { label: 'Сотрудничество', href: '/sotrudnichestvo' },
   { label: 'Контакты', href: '/contacts' },
+  { label: 'FAQ', href: '/faq' },
 ] as const
 
 interface HeaderNavMobileProps {

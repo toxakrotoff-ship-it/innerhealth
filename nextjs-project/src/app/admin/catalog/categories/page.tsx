@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Button from '@/components/ui/button';
 import {
   getCategories,
@@ -9,19 +9,57 @@ import {
   deleteCategory,
   Category
 } from '@/app/admin/catalog/actions';
+import {
+  buildCategoryTree,
+  flattenCategoryTree,
+  getDescendantCategoryIds,
+  type FlatCategoryTreeNode,
+} from '@/lib/category-tree';
+
+interface CategoryFormState {
+  title: string;
+  slug: string;
+  image: string;
+  sortOrder: number;
+  parentId: string;
+}
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CategoryFormState>({
     title: '',
     slug: '',
     image: '',
-    sortOrder: 0
+    sortOrder: 0,
+    parentId: '',
   });
   const [error, setError] = useState<string | null>(null);
+
+  const categoryTree = useMemo(() => {
+    return buildCategoryTree(
+      categories.map((category) => ({
+        id: category.id,
+        title: category.title,
+        slug: category.slug,
+        sortOrder: category.sortOrder ?? null,
+        parentId: category.parentId ?? null,
+      }))
+    );
+  }, [categories]);
+
+  const flattenedTree = useMemo(() => flattenCategoryTree(categoryTree), [categoryTree]);
+
+  const disabledParentIds = useMemo(() => {
+    if (!editingCategory) {
+      return new Set<string>();
+    }
+    const descendants = getDescendantCategoryIds(categoryTree, editingCategory.id);
+    descendants.add(editingCategory.id);
+    return descendants;
+  }, [categoryTree, editingCategory]);
 
   useEffect(() => {
     fetchCategories();
@@ -47,11 +85,12 @@ export default function AdminCategoriesPage() {
         title: formData.title,
         slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
         image: formData.image,
-        sortOrder: formData.sortOrder
+        sortOrder: formData.sortOrder,
+        parentId: formData.parentId || null,
       });
       
       setCategories([...categories, newCategory]);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0 });
+      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
       setIsCreating(false);
     } catch (error) {
       console.error('Error creating category:', error);
@@ -72,7 +111,8 @@ export default function AdminCategoriesPage() {
         title: formData.title,
         slug: formData.slug,
         image: formData.image,
-        sortOrder: formData.sortOrder
+        sortOrder: formData.sortOrder,
+        parentId: formData.parentId || null,
       });
       
       const updatedCategories = categories.map(cat =>
@@ -81,7 +121,7 @@ export default function AdminCategoriesPage() {
       
       setCategories(updatedCategories);
       setEditingCategory(null);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0 });
+      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
     } catch (error) {
       console.error('Error updating category:', error);
       if (error instanceof Error) {
@@ -113,13 +153,19 @@ export default function AdminCategoriesPage() {
       title: category.title,
       slug: category.slug,
       image: category.image || '',
-      sortOrder: category.sortOrder || 0
+      sortOrder: category.sortOrder || 0,
+      parentId: category.parentId || '',
     });
   };
 
   const handleCancelEdit = () => {
     setEditingCategory(null);
-    setFormData({ title: '', slug: '', image: '', sortOrder: 0 });
+    setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
+  };
+
+  const getIndentedLabel = (node: FlatCategoryTreeNode) => {
+    if (node.depth === 0) return node.title;
+    return `${'— '.repeat(node.depth)}${node.title}`;
   };
 
   if (isLoading) {
@@ -245,6 +291,31 @@ export default function AdminCategoriesPage() {
                   className="form-input"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Родительская категория
+                </label>
+                <select
+                  value={formData.parentId}
+                  onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+                  className="form-input"
+                >
+                  <option value="">Без родителя</option>
+                  {flattenedTree.map((categoryNode) => (
+                    <option
+                      key={categoryNode.id}
+                      value={categoryNode.id}
+                      disabled={disabledParentIds.has(categoryNode.id)}
+                    >
+                      {getIndentedLabel(categoryNode)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Выберите родителя для построения иерархии разделов.
+                </p>
+              </div>
               
               <div className="flex space-x-3">
                 <Button variant="primary"
@@ -263,58 +334,51 @@ export default function AdminCategoriesPage() {
           </div>
         )}
 
-        {/* Список категорий */}
+        {/* Дерево категорий */}
         <div className="card min-w-0">
-          <div className="table-responsive">
-            <table className="table table-horizontal min-w-[640px]">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Название
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Slug
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Сортировка
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((category) => (
-                  <tr key={category.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {category.title}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {category.slug}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {category.sortOrder}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-4">
-                        <Button variant="secondary" size="sm"
-                          onClick={() => handleEditCategory(category)}
-                        >
-                          Ред.
-                        </Button>
-                        <Button variant="destructive" size="sm"
-                          onClick={() => handleDeleteCategory(category.id)}
-                        >
-                          Удалить
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700">Дерево категорий</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Вложенность отображается с отступами, действия доступны для каждого узла.
+            </p>
           </div>
-          
+
+          <ul className="divide-y divide-gray-100">
+            {flattenedTree.map((categoryNode) => {
+              const category = categories.find((item) => item.id === categoryNode.id);
+              if (!category) return null;
+
+              return (
+                <li key={category.id} className="px-4 py-3 hover:bg-gray-50 transition">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="min-w-0">
+                      <div
+                        className="text-sm font-medium text-gray-900 truncate"
+                        style={{ paddingLeft: `${categoryNode.depth * 18}px` }}
+                        title={category.title}
+                      >
+                        {categoryNode.depth > 0 && <span className="text-gray-400 mr-1">{'—'.repeat(categoryNode.depth)}</span>}
+                        {category.title}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-3">
+                        <span>slug: {category.slug}</span>
+                        <span>сортировка: {category.sortOrder ?? 0}</span>
+                      </div>
+                    </div>
+                    <div className="flex space-x-3">
+                      <Button variant="secondary" size="sm" onClick={() => handleEditCategory(category)}>
+                        Ред.
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
+                        Удалить
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
           {categories.length === 0 && !isCreating && !editingCategory && (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

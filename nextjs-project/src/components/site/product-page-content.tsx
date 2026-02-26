@@ -1,6 +1,15 @@
-import Image from 'next/image'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { ProductTabs } from '@/components/site/product-tabs'
+import { CompareToggleButton } from '@/components/site/compare-toggle-button'
+import { RecentlyViewedTracker } from '@/components/site/recently-viewed-tracker'
+import { RecentlyViewedProducts } from '@/components/site/recently-viewed-products'
+import { ProductCard } from '@/components/site/product-card'
+import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
+import { QuickOrderDialog } from '@/components/site/quick-order-dialog'
+import { ProductMediaGallery } from '@/components/site/product-media-gallery'
+import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
+import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 
 interface ProductPageContentProps {
   product: {
@@ -12,35 +21,63 @@ interface ProductPageContentProps {
     price: number
     priceOld: number | null
     photo: string | null
+    photos?: unknown
+    quantity?: number | null
     slug: string | null
     isPromoEligible?: boolean
     discountPrice?: number | null
   }
   tabs: { title: string; content: string }[]
+  photos: ProductGalleryPhoto[]
+  relatedProducts: Array<{
+    id: string
+    title: string
+    price: number
+    priceOld: number | null
+    photo: string | null
+    photos?: unknown
+    slug: string | null
+    isPromoEligible: boolean
+    discountPrice: number | null
+  }>
 }
 
-export function ProductPageContent({ product, tabs }: ProductPageContentProps) {
+interface StockBadgeState {
+  label: string
+  className: string
+}
+
+function getStockBadge(quantity: number | null | undefined): StockBadgeState {
+  if (quantity == null || quantity <= 0) return { label: 'Предзаказ', className: 'bg-amber-100 text-amber-700' }
+  if (quantity >= 10) return { label: 'В наличии', className: 'bg-green-100 text-green-700' }
+  return { label: 'Заканчивается', className: 'bg-orange-100 text-orange-700' }
+}
+
+export function ProductPageContent({ product, tabs, photos, relatedProducts }: ProductPageContentProps) {
+  const stock = getStockBadge(product.quantity)
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
+      <Breadcrumbs
+        items={[
+          { label: 'Главная', href: '/' },
+          { label: 'Каталог', href: '/catalog' },
+          { label: product.title },
+        ]}
+      />
+      <RecentlyViewedTracker productId={product.id} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="relative aspect-square max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue flex items-center justify-center overflow-hidden">
-          {product.photo ? (
-            <Image
-              src={product.photo.startsWith('/') ? product.photo : `/${product.photo.replace(/^\//, '')}`}
-              alt={product.title}
-              fill
-              className="object-contain p-8"
-              priority
-            />
-          ) : (
-            <span className="text-action-blue/40 text-6xl">?</span>
-          )}
-        </div>
+        <ProductMediaGallery title={product.title} photos={photos} />
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-text">{product.title}</h1>
           {product.brand && (
             <p className="mt-2 text-gray-600">{product.brand}</p>
           )}
+          <div className="mt-3">
+            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${stock.className}`}>
+              {stock.label}
+            </span>
+          </div>
           <div className="mt-4 flex items-center gap-3">
             <span className="text-2xl font-semibold text-text">
               {product.price.toLocaleString('ru-RU')} ₽
@@ -51,19 +88,22 @@ export function ProductPageContent({ product, tabs }: ProductPageContentProps) {
               </span>
             )}
           </div>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
             <AddToCartButton
               productId={product.id}
               title={product.title}
               price={product.price}
               photo={product.photo}
               slug={product.slug}
-              hasPromoPrice={
-                product.priceOld != null && product.priceOld > product.price
-              }
+              hasPromoPrice={product.priceOld != null && product.priceOld > product.price}
               isPromoEligible={product.isPromoEligible}
               discountPrice={product.discountPrice}
             />
+            <WishlistToggleButton productId={product.id} className="min-h-[44px]" />
+            <QuickOrderDialog productId={product.id} productTitle={product.title} />
+          </div>
+          <div className="mt-3">
+            <CompareToggleButton productId={product.id} />
           </div>
           {product.description && (
             <div
@@ -100,6 +140,30 @@ export function ProductPageContent({ product, tabs }: ProductPageContentProps) {
       )}
 
       {tabs.length > 0 && <ProductTabs tabs={tabs} />}
+
+      {relatedProducts.length > 0 && (
+        <section className="mt-12 pt-8 border-t border-gray-200">
+          <h2 className="text-xl font-bold text-text mb-4">С этим товаром покупают</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {relatedProducts.map((item) => (
+              <ProductCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                price={item.price}
+                priceOld={item.priceOld}
+                photo={item.photo}
+                slug={item.slug}
+                isPromoEligible={item.isPromoEligible}
+                discountPrice={item.discountPrice}
+                blurDataURL={getFirstPhotoBlurDataURL(item.photos)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <RecentlyViewedProducts excludeProductId={product.id} />
     </div>
   )
 }

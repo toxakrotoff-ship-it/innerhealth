@@ -1,6 +1,7 @@
 import nextDynamic from 'next/dynamic'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
+import { BackToTopButton } from '@/components/site/back-to-top-button'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -24,6 +25,7 @@ export default function SiteLayout({
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <BackToTopButton />
       <CartDrawer />
       <CookieConsent />
     </div>

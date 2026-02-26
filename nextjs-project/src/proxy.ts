@@ -46,6 +46,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 /** Редиректы из БД (Tilda → сайт): запрос к /api/redirect-check, при совпадении — 301 и др. */
 async function applyRedirectIfMatched(request: Request): Promise<NextResponse | null> {
+  // In dev, avoid internal self-fetch in proxy to prevent local startup hangs.
+  if (process.env.NODE_ENV !== 'production') return null
+
   const pathname = new URL(request.url).pathname
   if (pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/login')) return null
   if (pathname.startsWith(`/${adminSecretPath}`)) return null
@@ -67,43 +70,54 @@ async function applyRedirectIfMatched(request: Request): Promise<NextResponse | 
   }
 }
 
-export default withAuth(
-  async function proxy(request: Request) {
-    const pathname = new URL(request.url).pathname
-    const redirectRes = await applyRedirectIfMatched(request)
-    if (redirectRes) return redirectRes
-    if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
-      const rest = pathname.slice(1 + adminSecretPath.length) || ''
-      const rewritePath = `/admin${rest}`
-      const res = NextResponse.rewrite(new URL(rewritePath, request.url))
-      return addSecurityHeaders(res)
-    }
-    const res = NextResponse.next()
+async function proxyHandler(request: Request) {
+  const pathname = new URL(request.url).pathname
+  const redirectRes = await applyRedirectIfMatched(request)
+  if (redirectRes) return redirectRes
+  if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
+    const rest = pathname.slice(1 + adminSecretPath.length) || ''
+    const rewritePath = `/admin${rest}`
+    const res = NextResponse.rewrite(new URL(rewritePath, request.url))
     return addSecurityHeaders(res)
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        if (isTelegramServiceRequest(req)) return true
-        const pathname = new URL(req.url).pathname
-        const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
-        const isAdminApi = pathname.startsWith('/api/admin')
-        if (!isAdminPath && !isAdminApi) return true
-        return !!token
-      },
-    },
   }
-)
+  const res = NextResponse.next()
+  return addSecurityHeaders(res)
+}
+
+const proxyWithAuth = withAuth(proxyHandler, {
+  callbacks: {
+    authorized: ({ token, req }) => {
+      if (isTelegramServiceRequest(req)) return true
+      const pathname = new URL(req.url).pathname
+      const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
+      const isAdminApi = pathname.startsWith('/api/admin')
+      if (!isAdminPath && !isAdminApi) return true
+      return !!token
+    },
+  },
+})
+
+// Turbopack + next-auth middleware can hang during local dev startup.
+// Keep auth middleware in production, and use lightweight proxy in development.
+const proxy = process.env.NODE_ENV === 'production' ? proxyWithAuth : proxyHandler
+export default proxy
+
+const productionMatcher = [
+  '/',
+  '/admin/:path*',
+  '/api/admin/:path*',
+  '/api/orders',
+  '/api/promo/:path*',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
+]
+
+const developmentMatcher = [
+  '/admin/:path*',
+  '/api/admin/:path*',
+]
 
 export const config = {
-  matcher: [
-    '/',
-    '/admin/:path*',
-    '/api/admin/:path*',
-    '/api/orders',
-    '/api/promo/:path*',
-    '/api/auth/forgot-password',
-    '/api/auth/reset-password',
-    '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
-  ],
+  matcher: process.env.NODE_ENV === 'production' ? productionMatcher : developmentMatcher,
 }

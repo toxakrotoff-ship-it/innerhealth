@@ -6,6 +6,9 @@ const CATALOG_CACHE_CONTROL =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  turbopack: {
+    root: process.cwd(),
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],

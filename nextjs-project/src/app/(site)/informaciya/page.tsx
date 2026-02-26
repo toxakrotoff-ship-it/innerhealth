@@ -21,7 +21,7 @@ export default async function InformaciyaPage() {
   const posts = await getArticlesList()
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-text mb-6">Статьи</h1>
       {posts.length > 0 ? (
         <ul className="space-y-4">

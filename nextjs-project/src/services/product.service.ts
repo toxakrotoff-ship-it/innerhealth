@@ -41,6 +41,8 @@ export async function getProductsWithCategories() {
 export const productCardSelect = {
   id: true,
   title: true,
+  brand: true,
+  sku: true,
   price: true,
   priceOld: true,
   photo: true,
@@ -49,6 +51,158 @@ export const productCardSelect = {
   isPromoEligible: true,
   discountPrice: true,
 } as const;
+
+export interface CatalogQueryOptions {
+  page: number;
+  pageSize: number;
+  q?: string;
+  brands?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  promoOnly?: boolean;
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc';
+}
+
+function buildCatalogOrderBy(sort: CatalogQueryOptions['sort']): Prisma.ProductOrderByWithRelationInput[] {
+  if (sort === 'price_asc') return [{ price: 'asc' }, { createdAt: 'desc' }];
+  if (sort === 'price_desc') return [{ price: 'desc' }, { createdAt: 'desc' }];
+  if (sort === 'name_asc') return [{ title: 'asc' }, { createdAt: 'desc' }];
+  return [{ createdAt: 'desc' }];
+}
+
+function buildCatalogWhere(options: CatalogQueryOptions): Prisma.ProductWhereInput {
+  const q = options.q?.trim();
+  const where: Prisma.ProductWhereInput = {};
+
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { sku: { contains: q, mode: 'insensitive' } },
+    ];
+  }
+
+  if (options.brands && options.brands.length > 0) {
+    where.brand = { in: options.brands };
+  }
+
+  if (options.minPrice != null || options.maxPrice != null) {
+    where.price = {
+      gte: options.minPrice ?? undefined,
+      lte: options.maxPrice ?? undefined,
+    };
+  }
+
+  if (options.promoOnly) {
+    where.priceOld = { not: null };
+  }
+
+  return where;
+}
+
+export async function getCatalogProducts(options: CatalogQueryOptions) {
+  const page = Math.max(1, options.page);
+  const pageSize = Math.max(1, options.pageSize);
+  const skip = (page - 1) * pageSize;
+  const where = buildCatalogWhere(options);
+  const orderBy = buildCatalogOrderBy(options.sort);
+
+  const [items, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy,
+      skip,
+      take: pageSize,
+      select: productCardSelect,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    hasNextPage: skip + items.length < total,
+  };
+}
+
+export async function getCatalogBrandOptions(): Promise<string[]> {
+  const rows = await prisma.product.findMany({
+    where: {
+      brand: {
+        not: null,
+      },
+    },
+    select: {
+      brand: true,
+    },
+    distinct: ['brand'],
+    orderBy: [{ brand: 'asc' }],
+  });
+
+  return rows.map((row) => row.brand).filter((brand): brand is string => Boolean(brand?.trim()));
+}
+
+export async function suggestProducts(query: string, limit = 8) {
+  const q = query.trim();
+  if (!q) return [];
+
+  return prisma.product.findMany({
+    where: {
+      OR: [
+        { title: { contains: q, mode: 'insensitive' } },
+        { sku: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: [{ createdAt: 'desc' }],
+    take: Math.max(1, Math.min(limit, 10)),
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      sku: true,
+      price: true,
+    },
+  });
+}
+
+export async function getProductsForCompare(productIds: string[]) {
+  if (productIds.length === 0) return [];
+  return prisma.product.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      photo: true,
+      price: true,
+      priceOld: true,
+      brand: true,
+      sku: true,
+      characteristicsComposition: true,
+      characteristicsNutrition100g: true,
+      characteristicsEnergyValue100g: true,
+      characteristicsShelfLife: true,
+    },
+  });
+}
+
+export async function getProductQuickViewSummary(productId: string) {
+  return prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      photo: true,
+      price: true,
+      priceOld: true,
+      brand: true,
+      sku: true,
+      description: true,
+      isPromoEligible: true,
+      discountPrice: true,
+    },
+  });
+}
 
 /** Get products for catalog page (paginated). Does not fetch photos Json. */
 export async function getProductsForCatalog(skip: number, take: number) {
@@ -114,6 +268,28 @@ export async function getProductsForCart(productIds: string[]) {
       discountPrice: true,
     },
   });
+}
+
+/** Get related products by categories (MVP for PDP). */
+export async function getRelatedProductsByCategory(
+  productId: string,
+  categoryIds: string[],
+  take: number
+) {
+  if (categoryIds.length === 0) return []
+  return prisma.product.findMany({
+    where: {
+      id: { not: productId },
+      categories: {
+        some: {
+          categoryId: { in: categoryIds },
+        },
+      },
+    },
+    take,
+    orderBy: { createdAt: 'desc' },
+    select: productCardSelect,
+  })
 }
 
 /** Get all product ids and quantities (for stock endpoint). */

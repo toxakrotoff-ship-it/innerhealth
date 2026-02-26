@@ -16,11 +16,11 @@ export default function PrivacyPage() {
   return (
     <div className="bg-white min-h-screen">
       {/* Хлебные крошки */}
-      <div className="max-w-4xl mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
 
-      <article className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <article className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
             Политика конфиденциальности

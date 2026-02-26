@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { label: 'АКЦИИ', href: '/catalog/aktsii' },
   { label: 'Сотрудничество', href: '/sotrudnichestvo' },
   { label: 'Контакты', href: '/contacts' },
+  { label: 'FAQ', href: '/faq' },
 ] as const
 
 const PHONE = '+7 (989) 103-91-92'
@@ -24,8 +25,8 @@ const headerIconLink =
 export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-700 bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-gray-900/90">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:gap-x-4 py-3 min-h-16">
           {/* Бургер слева (до lg); лого только при полном меню (lg+) и внутри сайдбара */}
           <HeaderNavMobile variant="dark" />
 
@@ -47,14 +48,14 @@ export async function SiteHeader() {
           </div>
 
           <nav
-            className="hidden lg:flex items-center gap-3 xl:gap-4 justify-center flex-1 min-w-0 px-2"
+            className="hidden lg:flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:gap-x-3 xl:gap-x-4 flex-1 min-w-0 px-2"
             aria-label="Основное меню"
           >
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
-                className="text-sm font-medium text-gray-300 hover:text-white transition-colors py-2"
+                className="text-sm font-medium text-gray-300 hover:text-white transition-colors py-2 whitespace-nowrap"
               >
                 {label}
               </Link>
@@ -64,7 +65,7 @@ export async function SiteHeader() {
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 min-w-0">
             <a
               href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
-              className="hidden sm:block text-sm font-medium text-gray-200 hover:text-white whitespace-nowrap transition-colors"
+              className="hidden xl:block text-sm font-medium text-gray-200 hover:text-white whitespace-nowrap transition-colors shrink-0"
             >
               {PHONE}
             </a>

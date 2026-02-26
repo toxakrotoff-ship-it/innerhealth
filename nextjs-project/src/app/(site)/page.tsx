@@ -101,7 +101,7 @@ export default async function HomePage() {
 
       {/* Новинки */}
       <section className="py-12 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-text">Новинки</h2>
             <Link href="/catalog" className="text-action-blue font-medium hover:underline">
@@ -132,7 +132,7 @@ export default async function HomePage() {
 
       {/* Новости */}
       <section className="py-12 bg-soft-background">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-text">Новости</h2>
             <Link href="/news" className="text-action-blue font-medium hover:underline">
@@ -160,7 +160,7 @@ export default async function HomePage() {
 
       {/* Разделы каталога */}
       <section className="py-12 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-text mb-6">Разделы каталога</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {filterCatalogBlockCategories(categories).map((cat) => {
@@ -219,7 +219,7 @@ export default async function HomePage() {
 
       {/* Статьи */}
       <section className="py-12 bg-soft-background">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-text">Статьи</h2>
             <Link href="/informaciya" className="text-action-blue font-medium hover:underline">
@@ -247,7 +247,7 @@ export default async function HomePage() {
 
       {/* Отзывы */}
       <section className="py-12 bg-soft-background">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-text">Отзывы</h2>
             <Link href="/otzyvy" className="text-action-blue font-medium hover:underline">

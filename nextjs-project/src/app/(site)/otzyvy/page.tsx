@@ -26,7 +26,7 @@ export default async function ReviewsPage() {
   }));
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-text mb-8">Отзывы</h1>
       <ReviewsSection initialReviews={serialized} />
     </div>

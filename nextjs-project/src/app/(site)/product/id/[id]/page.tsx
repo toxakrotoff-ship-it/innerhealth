@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
+import * as productService from '@/services/product.service'
+import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 
 export const revalidate = 60
 
@@ -40,5 +42,16 @@ export default async function ProductByIdPage({ params }: PageProps) {
 
   if (product.slug) redirect(`/product/${product.slug}`)
 
-  return <ProductPageContent product={product} tabs={buildTabs(product)} />
+  const categoryIds = product.categories.map((item) => item.categoryId)
+  const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8)
+  const photos = parseProductGalleryPhotos(product.photos, product.photo)
+
+  return (
+    <ProductPageContent
+      product={product}
+      tabs={buildTabs(product)}
+      photos={photos}
+      relatedProducts={relatedProducts}
+    />
+  )
 }

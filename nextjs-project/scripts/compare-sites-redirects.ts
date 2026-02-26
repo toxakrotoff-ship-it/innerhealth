@@ -7,10 +7,13 @@
  *      по совпадению заголовка (и пути при равенстве) — редирект старый путь → новый путь (например /page123 → /product/slug).
  *
  * Запуск (из nextjs-project):
- *   npx ts-node scripts/compare-sites-redirects.ts <rootUrl> <newOrigin> [--match] [--out file.csv] [--import-db] [--discrepancies-only] [--max-pages N] [--delay Ms]
+ *   npx ts-node scripts/compare-sites-redirects.ts <rootUrl> <newOrigin> [--match] [--sitemap URL] [--out file.csv] [--import-db] [--discrepancies-only] [--max-pages N] [--delay Ms]
  *
- * Примеры для innerhealth.ru:
- *   npm run redirects:compare -- https://innerhealth.ru https://NEW_IP --match --out redirects.csv
+ * Примеры для innerhealth.ru (страницы типа /collagen/tproduct/... часто есть только в sitemap):
+ *   npm run redirects:compare -- https://innerhealth.ru https://NEW_IP --match --sitemap https://innerhealth.ru/sitemap.xml --out redirects.csv
+ *
+ * Матч по YML-экспорту Тильды (store-*.yml): старый tproduct URL → новый путь по названию товара:
+ *   npm run redirects:compare -- https://innerhealth.ru http://82.202.159.85 --yml ./store-6292080-202602251308.yml --out redirects.csv
  *   npm run redirects:compare -- https://innerhealth.ru https://NEW_IP --match --import-db --max-pages 500
  *
  * Запуск на VPS в Docker (из каталога с docker-compose.yml):
@@ -20,6 +23,8 @@
  *
  * CSV для загрузки в админке: sourcePath,destination,statusCode,statusOnNew,note
  */
+
+/// <reference path="./pg.d.ts" />
 
 import path from 'path';
 import fs from 'fs';
@@ -81,6 +86,77 @@ function extractPageMeta(html: string, pathname: string): PageMeta {
   return { path: pathname || '/', title, metaDescription: metaDesc };
 }
 
+/** Один оффер из YML-экспорта Тильды (store-*.yml): старый URL и название для матча. */
+interface TildaYmlOffer {
+  sourcePath: string;
+  name: string;
+}
+
+/** Парсинг YML-каталога Тильды (XML): <offer><url>...</url><name>...</name></offer> */
+function parseTildaYml(filePath: string, baseOrigin: string): TildaYmlOffer[] {
+  const xml = fs.readFileSync(filePath, 'utf-8');
+  const $ = cheerio.load(xml, { xmlMode: true });
+  const offers: TildaYmlOffer[] = [];
+  $('offer').each((_, el) => {
+    const url = $(el).find('url').first().text().trim();
+    const name = $(el).find('name').first().text().trim();
+    if (!url) return;
+    try {
+      const u = new URL(url);
+      if (u.origin !== baseOrigin) return;
+      const sourcePath = normalizePath(u.pathname) || '/';
+      offers.push({ sourcePath, name: name || '' });
+    } catch {
+      // ignore invalid URL
+    }
+  });
+  return offers;
+}
+
+/** Загрузить пути из sitemap.xml (и при необходимости из sitemap index). Только same-origin. */
+async function fetchPathsFromSitemap(
+  sitemapUrl: string,
+  baseOrigin: string,
+  options: { delayMs: number; maxChildSitemaps?: number }
+): Promise<Set<string>> {
+  const paths = new Set<string>();
+  const maxChild = options.maxChildSitemaps ?? 20;
+
+  async function parseSitemap(url: string): Promise<void> {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'InnerHealth-RedirectCrawler/1.0' },
+      });
+      if (!res.ok) return;
+      const xml = await res.text();
+      const $ = cheerio.load(xml, { xmlMode: true });
+      $('url loc').each((_, el) => {
+        const loc = $(el).text().trim();
+        if (!loc) return;
+        try {
+          const u = new URL(loc);
+          if (u.origin !== baseOrigin) return;
+          const p = normalizePath(u.pathname) || '/';
+          paths.add(p);
+        } catch {
+          // ignore
+        }
+      });
+      const sitemapLocs = $('sitemap loc').toArray();
+      for (let i = 0; i < Math.min(sitemapLocs.length, maxChild); i++) {
+        const loc = $(sitemapLocs[i]).text().trim();
+        if (loc) await parseSitemap(loc);
+        await new Promise((r) => setTimeout(r, options.delayMs));
+      }
+    } catch (e) {
+      console.error(`Sitemap ${url}:`, (e as Error).message);
+    }
+  }
+
+  await parseSitemap(sitemapUrl);
+  return paths;
+}
+
 /** Извлечь все same-origin пути из HTML */
 function extractPaths(html: string, baseOrigin: string): Set<string> {
   const set = new Set<string>(['/']);
@@ -100,17 +176,27 @@ function extractPaths(html: string, baseOrigin: string): Set<string> {
   return set;
 }
 
-/** Обход сайта BFS, сбор всех уникальных путей */
+/** Обход сайта BFS, сбор всех уникальных путей. Если задан sitemapUrl, пути из sitemap добавляются в очередь. */
 async function crawlSite(
   rootUrl: string,
-  options: { maxPages: number; delayMs: number }
+  options: { maxPages: number; delayMs: number; sitemapUrl?: string }
 ): Promise<Set<string>> {
   const visited = new Set<string>();
-  const queue: string[] = ['/'];
-  let processed = 0;
+  let queue: string[] = ['/'];
   const baseOrigin = new URL(rootUrl).origin;
   const base = baseOrigin.replace(/\/$/, '');
 
+  if (options.sitemapUrl) {
+    console.error('Загрузка путей из sitemap…', options.sitemapUrl);
+    const sitemapPaths = await fetchPathsFromSitemap(options.sitemapUrl, baseOrigin, {
+      delayMs: options.delayMs,
+      maxChildSitemaps: 20,
+    });
+    console.error('Из sitemap добавлено путей:', sitemapPaths.size);
+    queue = ['/', ...Array.from(sitemapPaths).filter((p) => p && p !== '/')];
+  }
+
+  let processed = 0;
   while (queue.length > 0 && processed < options.maxPages) {
     const pathname = queue.shift()!;
     const pathKey = pathname || '/';
@@ -146,18 +232,28 @@ async function crawlSite(
   return visited;
 }
 
-/** Обход сайта с сохранением title/meta для каждой страницы (для матча) */
+/** Обход сайта с сохранением title/meta для каждой страницы (для матча). Если задан sitemapUrl, пути из sitemap добавляются в очередь. */
 async function crawlSiteWithMeta(
   rootUrl: string,
-  options: { maxPages: number; delayMs: number }
+  options: { maxPages: number; delayMs: number; sitemapUrl?: string }
 ): Promise<Map<string, PageMeta>> {
   const metaByPath = new Map<string, PageMeta>();
   const visited = new Set<string>();
-  const queue: string[] = ['/'];
-  let processed = 0;
+  let queue: string[] = ['/'];
   const baseOrigin = new URL(rootUrl).origin;
   const base = baseOrigin.replace(/\/$/, '');
 
+  if (options.sitemapUrl) {
+    console.error('Загрузка путей из sitemap…', options.sitemapUrl);
+    const sitemapPaths = await fetchPathsFromSitemap(options.sitemapUrl, baseOrigin, {
+      delayMs: options.delayMs,
+      maxChildSitemaps: 20,
+    });
+    console.error('Из sitemap добавлено путей:', sitemapPaths.size);
+    queue = ['/', ...Array.from(sitemapPaths).filter((p) => p && p !== '/')];
+  }
+
+  let processed = 0;
   while (queue.length > 0 && processed < options.maxPages) {
     const pathname = queue.shift()!;
     const pathKey = pathname || '/';
@@ -261,37 +357,97 @@ function writeCsv(filePath: string, rows: CrawlResult[]): void {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const rootUrl = args.find((a) => a.startsWith('http'));
-  const newOriginArg = args.filter((a) => a.startsWith('http'))[1];
+  const urlArgs = args.filter((a) => a.startsWith('http'));
+  const ymlIndex = args.indexOf('--yml');
+  const ymlPath = ymlIndex >= 0 ? args[ymlIndex + 1] : undefined;
   const outIndex = args.indexOf('--out');
   const outFile = outIndex >= 0 ? args[outIndex + 1] : undefined;
   const importDb = args.includes('--import-db');
   const useMatch = args.includes('--match');
   const discrepanciesOnly = args.includes('--discrepancies-only');
+  const sitemapIndex = args.indexOf('--sitemap');
+  const sitemapUrl = sitemapIndex >= 0 ? args[sitemapIndex + 1] : undefined;
   const maxPages = parseInt(args[args.indexOf('--max-pages') + 1] ?? '', 10) || DEFAULT_MAX_PAGES;
   const delayMs = parseInt(args[args.indexOf('--delay') + 1] ?? '', 10) || DEFAULT_DELAY_MS;
 
-  if (!rootUrl || !newOriginArg) {
-    console.error(
-      'Использование: npx ts-node scripts/compare-sites-redirects.ts <rootUrl> <newOrigin> [--match] [--out file.csv] [--import-db] [--discrepancies-only] [--max-pages N] [--delay Ms]'
-    );
-    console.error('Пример: npx ts-node scripts/compare-sites-redirects.ts https://innerhealth.ru https://NEW_IP --match --out redirects.csv');
+  let rootUrl: string | undefined;
+  let newOriginArg: string | undefined;
+  if (ymlPath && urlArgs.length === 1) {
+    newOriginArg = urlArgs[0];
+    rootUrl = undefined;
+  } else if (urlArgs.length >= 2) {
+    rootUrl = urlArgs[0];
+    newOriginArg = urlArgs[1];
+  } else {
+    rootUrl = urlArgs[0];
+    newOriginArg = urlArgs[1];
+  }
+
+  if (!newOriginArg) {
+    console.error('Укажите newOrigin (URL или IP нового сайта).');
+    process.exit(1);
+  }
+  if (!ymlPath && !rootUrl) {
+    console.error('Укажите rootUrl (старый сайт) или --yml <путь к store-*.yml>.');
+    process.exit(1);
+  }
+  if (ymlPath && !fs.existsSync(ymlPath)) {
+    console.error('Файл не найден:', ymlPath);
     process.exit(1);
   }
 
   let newOrigin = newOriginArg;
   if (!newOrigin.startsWith('http')) newOrigin = `http://${newOrigin}`;
 
-  console.error('Корневой URL (старый сайт):', rootUrl);
+  const baseOriginForYml = rootUrl ? new URL(rootUrl).origin : undefined;
+
+  console.error('Корневой URL (старый сайт):', rootUrl ?? '(из YML)');
   console.error('Новый хост:', newOrigin);
-  console.error('Режим матча (старый→новый по title):', useMatch);
+  if (ymlPath) console.error('YML каталог Тильды:', ymlPath);
+  console.error('Режим матча (старый→новый по title/name):', useMatch || !!ymlPath);
+  if (sitemapUrl) console.error('Sitemap:', sitemapUrl);
   console.error('Макс. страниц:', maxPages, 'Задержка (мс):', delayMs);
 
   const results: CrawlResult[] = [];
 
-  if (useMatch) {
+  if (ymlPath) {
+    const baseOrigin = baseOriginForYml ?? (() => {
+      const xml = fs.readFileSync(ymlPath, 'utf-8');
+      const $ = cheerio.load(xml, { xmlMode: true });
+      const firstUrl = $('offer url').first().text().trim();
+      if (!firstUrl) {
+        console.error('В YML не найдено ни одного <offer><url>.');
+        process.exit(1);
+      }
+      return new URL(firstUrl).origin;
+    })();
+    const offers = parseTildaYml(ymlPath, baseOrigin);
+    console.error('Из YML загружено офферов (tproduct):', offers.length);
+
+    console.error('Обход нового сайта с извлечением title/meta…');
+    const newMetaByPath = await crawlSiteWithMeta(newOrigin, { maxPages, delayMs });
+    console.error('Найдено страниц на новом сайте:', newMetaByPath.size);
+
+    let idx = 0;
+    for (const offer of offers) {
+      idx += 1;
+      if (idx % 30 === 0) console.error(`Матч YML: ${idx}/${offers.length}`);
+      const fakeMeta: PageMeta = { path: offer.sourcePath, title: offer.name, metaDescription: '' };
+      const { path: destination, note: matchNote } = findBestDestination(offer.sourcePath, fakeMeta, newMetaByPath);
+      const statusOnNew = await checkNewPath(newOrigin, destination, delayMs);
+      const isDiscrepancy = statusOnNew !== 200;
+      if (discrepanciesOnly && !isDiscrepancy) continue;
+      results.push({
+        sourcePath: offer.sourcePath,
+        destination,
+        statusCode: REDIRECT_STATUS_DEFAULT,
+        statusOnNew,
+        note: [matchNote, isDiscrepancy ? `HTTP ${statusOnNew}` : null].filter(Boolean).join('; ') || null,
+      });
+    }
+  } else if (useMatch) {
     console.error('Обход старого сайта с извлечением title/meta…');
-    const oldMetaByPath = await crawlSiteWithMeta(rootUrl, { maxPages, delayMs });
+    const oldMetaByPath = await crawlSiteWithMeta(rootUrl, { maxPages, delayMs, sitemapUrl });
     console.error('Найдено страниц на старом сайте:', oldMetaByPath.size);
 
     console.error('Обход нового сайта с извлечением title/meta…');
@@ -315,7 +471,7 @@ async function main(): Promise<void> {
       });
     }
   } else {
-    const paths = await crawlSite(rootUrl, { maxPages, delayMs });
+    const paths = await crawlSite(rootUrl, { maxPages, delayMs, sitemapUrl });
     console.error('Найдено путей на старом сайте:', paths.size);
 
     let idx = 0;

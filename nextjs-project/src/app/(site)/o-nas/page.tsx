@@ -20,7 +20,7 @@ export default function AboutPage() {
   return (
     <div className="bg-white">
       {/* Хлебные крошки */}
-      <div className="max-w-4xl mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
         <nav className="text-sm text-gray-500" aria-label="Хлебные крошки">
           <Link href="/" className="hover:text-action-blue transition-colors">
             Главная
@@ -30,7 +30,7 @@ export default function AboutPage() {
         </nav>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
         <h1 className="text-3xl sm:text-4xl font-bold text-text mb-10">О нас</h1>
 
         {/* Блок 1: Формула красоты и молодости */}

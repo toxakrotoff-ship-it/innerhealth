@@ -101,6 +101,7 @@ export function CartPageContent() {
   })
   const [comment, setComment] = useState('')
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
+  const [isPrivacyAccepted, setIsPrivacyAccepted] = useState(false)
 
   const price = (i: { price?: number }) => i.price ?? 0
   const subtotalPromoPrice = items
@@ -477,11 +478,27 @@ export function CartPageContent() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !isPrivacyAccepted}
           className="w-full rounded-full bg-action-blue text-gray-800 font-medium py-3 min-h-[44px] hover:bg-action-blue/90 disabled:opacity-50"
         >
           {submitting ? 'Оформление...' : 'Оформить заказ'}
         </button>
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={isPrivacyAccepted}
+            onChange={(e) => setIsPrivacyAccepted(e.target.checked)}
+            required
+            className="mt-1 h-4 w-4 rounded border-gray-300"
+          />
+          <span>
+            Ознакомлен(а) с{' '}
+            <Link href="/privacy" className="text-action-blue hover:underline">
+              политикой конфиденциальности
+            </Link>
+            .
+          </span>
+        </label>
       </div>
     </form>
   )

@@ -29,6 +29,11 @@
 }
 
 @layer base {
+  /* Масштабирование контента: шрифт и rem растут с шириной viewport (не раздвигаем контейнер). */
+  html {
+    font-size: clamp(16px, 1rem + 0.25vw, 22px);
+  }
+
   :root {
     --color-action-blue: #7EB8D9;
     --color-soft-background: #F9F9F9;

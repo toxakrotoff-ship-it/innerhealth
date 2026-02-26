@@ -24,7 +24,7 @@ export function PartnersBlock() {
       className="py-16 lg:py-20 bg-white border-t border-gray-200"
       aria-labelledby="partners-heading"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
         <h2
           id="partners-heading"
           className="text-2xl sm:text-3xl font-bold text-text mb-10 text-center"

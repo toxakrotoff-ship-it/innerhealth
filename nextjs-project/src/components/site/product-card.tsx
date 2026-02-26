@@ -5,10 +5,14 @@ import Image from 'next/image'
 import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
+import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
+import { ProductQuickView } from '@/components/site/product-quick-view'
 
 interface ProductCardProps {
   id: string
   title: string
+  brand?: string | null
+  sku?: string | null
   price: number
   priceOld?: number | null
   photo?: string | null
@@ -25,6 +29,8 @@ interface ProductCardProps {
 export function ProductCard({
   id,
   title,
+  brand,
+  sku,
   price,
   priceOld,
   photo,
@@ -81,6 +87,20 @@ export function ProductCard({
         }}
       >
         <div className="relative aspect-square bg-highlight-blue flex items-center justify-center overflow-hidden">
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
+            <ProductQuickView
+              id={id}
+              title={title}
+              price={price}
+              priceOld={priceOld}
+              photo={photo}
+              slug={slug}
+              isPromoEligible={isPromoEligible}
+              discountPrice={discountPrice}
+              iconOnly
+            />
+            <WishlistToggleButton productId={id} iconOnly />
+          </div>
           {photo ? (
             <Image
               src={
@@ -108,6 +128,11 @@ export function ProductCard({
             <h3 className="font-medium text-text line-clamp-2 group-hover:text-action-blue transition-colors">
               {title}
             </h3>
+            {(brand || sku) && (
+              <p className="mt-1 text-xs text-gray-500 line-clamp-1">
+                {brand ? `Бренд: ${brand}` : ''}{brand && sku ? ' • ' : ''}{sku ? `SKU: ${sku}` : ''}
+              </p>
+            )}
             <div className="mt-2 flex items-center gap-2">
               <span className="text-lg font-semibold text-text">
                 {price.toLocaleString('ru-RU')} ₽

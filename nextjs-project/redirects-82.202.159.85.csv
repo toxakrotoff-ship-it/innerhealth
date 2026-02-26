@@ -1,0 +1,24 @@
+﻿sourcePath,destination,statusCode,statusOnNew,note
+/,/,301,200,exact path
+/o-nas,/o-nas,301,200,exact path
+/akcii,/akcii,301,404,"no match, same path; HTTP 404"
+/sertifikaty-sootvetstviya,/sertifikaty-sootvetstviya,301,200,exact path
+/sotrudnichestvo,/sotrudnichestvo,301,200,exact path
+/contacts,/contacts,301,200,exact path
+/collagen/tproduct/509169298-682688137011-peptidi-kollagena-ii-tipa,/collagen/tproduct/509169298-682688137011-peptidi-kollagena-ii-tipa,301,404,"no match, same path; HTTP 404"
+/collagen,/collagen,301,404,"no match, same path; HTTP 404"
+/gribnaya-kollektsiya,/gribnaya-kollektsiya,301,404,"no match, same path; HTTP 404"
+/nutrienty,/,301,200,title overlap
+/peptidy-kostnogo-buliona,/peptidy-kostnogo-buliona,301,404,"no match, same path; HTTP 404"
+/podarochnye-nabory,/podarochnye-nabory,301,404,"no match, same path; HTTP 404"
+/page32602995.html,/page32602995.html,301,404,"no match, same path; HTTP 404"
+/page31736602.html,/sertifikaty-sootvetstviya,301,200,title overlap
+/oferta,/oferta,301,200,exact path
+/pay,/pay,301,404,"no match, same path; HTTP 404"
+/informaciya,/informaciya,301,200,exact path
+/page42156643.html,/page42156643.html,301,404,"no match, same path; HTTP 404"
+/page31478599.html,/page31478599.html,301,404,"no match, same path; HTTP 404"
+/page31479540.html,/page31479540.html,301,404,"no match, same path; HTTP 404"
+/page31734856.html,/,301,200,title overlap
+/page32523682.html,/page32523682.html,301,404,"no match, same path; HTTP 404"
+/null,/null,301,404,"no match, same path; HTTP 404"

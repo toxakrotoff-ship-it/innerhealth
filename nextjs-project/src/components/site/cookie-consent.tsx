@@ -27,7 +27,7 @@ export function CookieConsent() {
       role="dialog"
       aria-label="Уведомление об использовании cookies"
     >
-      <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-700 text-center sm:text-left">
           Мы используем файлы cookie для обеспечения наилучшего взаимодействия с
           сайтом.

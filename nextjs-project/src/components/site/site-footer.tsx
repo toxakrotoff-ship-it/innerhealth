@@ -6,6 +6,7 @@ const FOOTER_LINKS = [
   { label: 'Сертификаты соответствия', href: '/sertifikaty-sootvetstviya' },
   { label: 'Сотрудничество', href: '/sotrudnichestvo' },
   { label: 'Отзывы', href: '/otzyvy' },
+  { label: 'FAQ', href: '/faq' },
   { label: 'Информация', href: '/informaciya' },
   { label: 'Политика конфиденциальности', href: '/privacy' },
   { label: 'Публичная оферта', href: '/oferta' },
@@ -27,7 +28,7 @@ const BANK = {
 export function SiteFooter() {
   return (
     <footer className="bg-sky-50/80 border-t border-gray-200 text-text mt-auto">
-      <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <h3 className="font-semibold text-gray-900 mb-3">Inner Health</h3>
@@ -50,7 +51,7 @@ export function SiteFooter() {
           <div>
             <h3 className="font-semibold text-gray-900 mb-3">Покупателям</h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              {FOOTER_LINKS.slice(3, 6).map(({ label, href }) => (
+              {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-action-blue transition-colors">
                     {label}
@@ -62,7 +63,7 @@ export function SiteFooter() {
           <div>
             <h3 className="font-semibold text-gray-900 mb-3">Юридическое</h3>
             <ul className="space-y-2 text-sm text-gray-600">
-              {FOOTER_LINKS.slice(6, 8).map(({ label, href }) => (
+              {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-action-blue transition-colors">
                     {label}

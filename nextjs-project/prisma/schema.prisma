@@ -76,6 +76,7 @@ model Product {
   updatedAt       DateTime  @updatedAt
   cartItems       CartItem[]
   orderItems      OrderItem[]
+  quickOrders     QuickOrder[]
   categories      ProductCategory[]
 
   @@index([slug])
@@ -89,9 +90,14 @@ model Category {
   slug            String    @unique
   image           String?
   sortOrder       Int?
+  parentId        String?
+  parent          Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        Category[] @relation("CategoryHierarchy")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   products        ProductCategory[]
+
+  @@index([parentId])
 }
 
 model ProductCategory {
@@ -317,6 +323,36 @@ model PartnershipLead {
   socialLinks   String?  // ссылки на соцсети для анализа
   message       String?
   createdAt     DateTime @default(now())
+}
+
+/// Глобальный FAQ для страницы /faq.
+model Faq {
+  id          String   @id @default(cuid())
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, sortOrder])
+}
+
+/// Быстрые заявки "Купить в 1 клик".
+model QuickOrder {
+  id          String   @id @default(cuid())
+  name        String?
+  phone       String
+  comment     String?
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int      @default(1)
+  status      String   @default("new")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([productId, createdAt])
 }
 
 /// Настройки сайта (ключ-значение): СДЭК, ЮKassa, контакты и т.д.

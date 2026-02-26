@@ -3,6 +3,8 @@ import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
+import { ProductListRow } from '@/components/site/product-list-row'
+import { CatalogControls } from '@/components/site/catalog-controls'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import {
   filterCatalogBlockCategories,
@@ -16,29 +18,95 @@ export const revalidate = 3600
 const PRODUCTS_PER_PAGE = 24
 
 interface CatalogPageProps {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{
+    page?: string
+    q?: string
+    minPrice?: string
+    maxPrice?: string
+    brand?: string
+    promo?: string
+    sort?: string
+    view?: string
+  }>
 }
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
-  const { page: pageParam } = await searchParams
-  const page = Math.max(1, parseInt(String(pageParam), 10) || 1)
-  const skip = (page - 1) * PRODUCTS_PER_PAGE
+  const {
+    page: pageParam,
+    q: qParam,
+    minPrice: minPriceParam,
+    maxPrice: maxPriceParam,
+    brand: brandParam,
+    promo: promoParam,
+    sort: sortParam,
+    view: viewParam,
+  } = await searchParams
 
-  const [categories, productsResult] = await Promise.all([
+  const q = qParam?.trim() ?? ''
+  const minPrice = minPriceParam ? Number(minPriceParam) : undefined
+  const maxPrice = maxPriceParam ? Number(maxPriceParam) : undefined
+  const promoOnly = promoParam === '1'
+  const selectedBrands = (brandParam ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  const sort =
+    sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'name_asc'
+      ? sortParam
+      : 'newest'
+  const view = viewParam === 'list' ? 'list' : 'grid'
+  const page = Math.max(1, parseInt(String(pageParam), 10) || 1)
+
+  const [categories, brandOptions, catalogResult] = await Promise.all([
     prisma.category.findMany({
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { products: true } } },
     }),
-    productService.getProductsForCatalog(skip, PRODUCTS_PER_PAGE + 1),
+    productService.getCatalogBrandOptions(),
+    productService.getCatalogProducts({
+      page,
+      pageSize: PRODUCTS_PER_PAGE,
+      q,
+      brands: selectedBrands,
+      minPrice,
+      maxPrice,
+      promoOnly,
+      sort,
+    }),
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories)
-  const hasNextPage = productsResult.length > PRODUCTS_PER_PAGE
-  const products = productsResult.slice(0, PRODUCTS_PER_PAGE)
+  const hasNextPage = catalogResult.hasNextPage
+  const products = catalogResult.items
+
+  const buildPageHref = (nextPage: number) => {
+    const params = new URLSearchParams()
+    if (nextPage > 1) params.set('page', String(nextPage))
+    if (q) params.set('q', q)
+    if (minPrice != null && !Number.isNaN(minPrice)) params.set('minPrice', String(minPrice))
+    if (maxPrice != null && !Number.isNaN(maxPrice)) params.set('maxPrice', String(maxPrice))
+    if (selectedBrands.length > 0) params.set('brand', selectedBrands.join(','))
+    if (promoOnly) params.set('promo', '1')
+    if (sort !== 'newest') params.set('sort', sort)
+    if (view !== 'grid') params.set('view', view)
+    const query = params.toString()
+    return query ? `/catalog?${query}` : '/catalog'
+  }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-text mb-6">Каталог</h1>
+      <CatalogControls
+        initialQuery={q}
+        brandOptions={brandOptions}
+        selectedBrands={selectedBrands}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        promoOnly={promoOnly}
+        sort={sort}
+        view={view}
+      />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {catalogBlockCategories.map((cat) => {
           const bgImage = getCategoryBackgroundImage(cat.slug)
@@ -89,23 +157,45 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <p className="text-gray-500">Товары появятся после добавления в админке.</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((p, index) => (
-              <ProductCard
-                key={p.id}
-                id={p.id}
-                title={p.title}
-                price={p.price}
-                priceOld={p.priceOld}
-                photo={p.photo}
-                slug={p.slug}
-                isPromoEligible={p.isPromoEligible}
-                discountPrice={p.discountPrice}
-                priority={index < 2}
-                blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-              />
-            ))}
-          </div>
+          {view === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {products.map((p, index) => (
+                <ProductCard
+                  key={p.id}
+                  id={p.id}
+                  title={p.title}
+                  brand={p.brand}
+                  sku={p.sku}
+                  price={p.price}
+                  priceOld={p.priceOld}
+                  photo={p.photo}
+                  slug={p.slug}
+                  isPromoEligible={p.isPromoEligible}
+                  discountPrice={p.discountPrice}
+                  priority={index < 2}
+                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {products.map((p) => (
+                <ProductListRow
+                  key={p.id}
+                  id={p.id}
+                  title={p.title}
+                  brand={p.brand}
+                  sku={p.sku}
+                  price={p.price}
+                  priceOld={p.priceOld}
+                  photo={p.photo}
+                  slug={p.slug}
+                  isPromoEligible={p.isPromoEligible}
+                  discountPrice={p.discountPrice}
+                />
+              ))}
+            </div>
+          )}
           {(page > 1 || hasNextPage) && (
             <nav
               className="mt-8 flex flex-wrap items-center justify-center gap-2"
@@ -113,7 +203,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             >
               {page > 1 && (
                 <Link
-                  href={page === 2 ? '/catalog' : `/catalog?page=${page - 1}`}
+                  href={buildPageHref(page - 1)}
                   className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
                 >
                   ← Назад
@@ -124,7 +214,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               </span>
               {hasNextPage && (
                 <Link
-                  href={`/catalog?page=${page + 1}`}
+                  href={buildPageHref(page + 1)}
                   className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
                 >
                   Вперёд →

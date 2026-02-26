@@ -15,11 +15,11 @@ const breadcrumbItems = [
 export default function SotrudnichestvoPage() {
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text mb-4">
             Сотрудничество

@@ -26,7 +26,7 @@ export function HeroBlock() {
         />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full min-h-[520px] sm:min-h-[560px] lg:min-h-[520px] flex flex-col">
+      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 h-full min-h-[520px] sm:min-h-[560px] lg:min-h-[520px] flex flex-col">
         <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-[auto_1fr] md:grid-rows-1 gap-8 lg:gap-12 flex-1 min-h-0 pt-12 lg:pt-16 pb-0">
           {/* Левая колонка: текст и CTA явно слева, компактный блок */}
           <div className="flex flex-col justify-center order-1 text-center md:text-left min-h-0 md:max-w-sm lg:max-w-md xl:max-w-lg w-full">
@@ -45,7 +45,7 @@ export function HeroBlock() {
 
           {/* Правая колонка: контейнер на всю высоту, картинка жёстко привязана к низу (absolute bottom-0) */}
           <div className="relative order-2 min-h-[280px] md:min-h-0 w-full">
-            <div className="absolute bottom-0 right-0 w-full max-w-md md:max-w-none aspect-1680/904 md:aspect-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[480px] bg-transparent">
+            <div className="absolute bottom-0 right-0 w-full max-w-md md:max-w-xl lg:max-w-2xl xl:max-w-3xl aspect-1680/904 md:aspect-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[480px] bg-transparent">
               <Image
                 src="/hero-portrait.png"
                 alt=""

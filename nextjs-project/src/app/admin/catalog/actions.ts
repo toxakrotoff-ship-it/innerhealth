@@ -2,21 +2,88 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 export interface Category {
   id: string;
   title: string;
   slug: string;
-  image?: string;
-  sortOrder?: number;
+  image?: string | null;
+  sortOrder?: number | null;
+  parentId?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface CategoryInput {
+  title: string;
+  slug: string;
+  image?: string | null;
+  sortOrder?: number | null;
+  parentId?: string | null;
+}
+
+const categoryInputSchema = z.object({
+  title: z.string().trim().min(1, 'Название категории обязательно'),
+  slug: z.string().trim().min(1, 'Slug обязателен'),
+  image: z.string().trim().nullable().optional(),
+  sortOrder: z.number().int().nullable().optional(),
+  parentId: z.string().trim().nullable().optional(),
+});
+
+const categoryUpdateSchema = categoryInputSchema.partial();
+
+async function ensureCategoryParentExists(parentId: string | null | undefined): Promise<void> {
+  if (!parentId) return;
+
+  const parent = await prisma.category.findUnique({
+    where: { id: parentId },
+    select: { id: true },
+  });
+
+  if (!parent) {
+    throw new Error('Выбранная родительская категория не найдена');
+  }
+}
+
+async function ensureNoCategoryCycle(
+  categoryId: string | null,
+  parentId: string | null | undefined
+): Promise<void> {
+  if (!parentId) return;
+  if (categoryId && categoryId === parentId) {
+    throw new Error('Категория не может быть родителем самой себя');
+  }
+
+  const visited = new Set<string>();
+  let currentParentId: string | null = parentId;
+
+  while (currentParentId) {
+    if (visited.has(currentParentId)) {
+      throw new Error('Обнаружен цикл в дереве категорий');
+    }
+    if (categoryId && currentParentId === categoryId) {
+      throw new Error('Нельзя выбрать дочернюю категорию в качестве родителя');
+    }
+
+    visited.add(currentParentId);
+    const parent = await prisma.category.findUnique({
+      where: { id: currentParentId },
+      select: { parentId: true },
+    });
+
+    if (!parent) break;
+    currentParentId = parent.parentId;
+  }
 }
 
 export interface ProductCategory {
   productId: string;
   categoryId: string;
 }
+
+type ProductEntity = Prisma.ProductGetPayload<Record<string, never>>;
 
 // Получение всех категорий с количеством товаров
 export async function getCategoriesWithCounts(): Promise<(Category & { productCount: number })[]> {
@@ -34,6 +101,7 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
         slug: true,
         image: true,
         sortOrder: true,
+        parentId: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -43,6 +111,7 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
         }
       },
       orderBy: [
+        { parentId: 'asc' },
         { sortOrder: 'asc' },
         { title: 'asc' }
       ]
@@ -137,6 +206,7 @@ export async function getCategories(): Promise<Category[]> {
     // Используем Prisma напрямую для получения категорий
     const categories = await prisma.category.findMany({
       orderBy: [
+        { parentId: 'asc' },
         { sortOrder: 'asc' },
         { title: 'asc' }
       ]
@@ -171,7 +241,7 @@ export async function getCategory(id: string): Promise<Category | null> {
 }
 
 // Создание новой категории
-export async function createCategory(data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> {
+export async function createCategory(data: CategoryInput): Promise<Category> {
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
@@ -186,13 +256,24 @@ export async function createCategory(data: Omit<Category, 'id' | 'createdAt' | '
       throw new Error('Category model is not available in database connection');
     }
     
+    const parsed = categoryInputSchema.parse({
+      ...data,
+      image: data.image?.trim() ? data.image.trim() : null,
+      parentId: data.parentId?.trim() ? data.parentId.trim() : null,
+      sortOrder: data.sortOrder ?? null,
+    });
+
+    await ensureCategoryParentExists(parsed.parentId);
+    await ensureNoCategoryCycle(null, parsed.parentId);
+
     // Используем Prisma напрямую для создания категории, чтобы избежать проблем с генерацией ID
     const category = await prisma.category.create({
       data: {
-        title: data.title,
-        slug: data.slug,
-        image: data.image,
-        sortOrder: data.sortOrder,
+        title: parsed.title,
+        slug: parsed.slug,
+        image: parsed.image,
+        sortOrder: parsed.sortOrder,
+        parentId: parsed.parentId,
         createdAt: new Date(),
         updatedAt: new Date()
       }
@@ -211,20 +292,31 @@ export async function createCategory(data: Omit<Category, 'id' | 'createdAt' | '
 }
 
 // Обновление категории
-export async function updateCategory(id: string, data: Partial<Omit<Category, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Category> {
+export async function updateCategory(id: string, data: Partial<CategoryInput>): Promise<Category> {
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
       throw new Error('Database connection is not initialized');
     }
     
+    const parsed = categoryUpdateSchema.parse({
+      ...data,
+      image: data.image === undefined ? undefined : data.image?.trim() ? data.image.trim() : null,
+      parentId: data.parentId === undefined ? undefined : data.parentId?.trim() ? data.parentId.trim() : null,
+      sortOrder: data.sortOrder ?? null,
+    });
+
+    await ensureCategoryParentExists(parsed.parentId);
+    await ensureNoCategoryCycle(id, parsed.parentId);
+
     const category = await prisma.category.update({
       where: { id },
       data: {
-        title: data.title,
-        slug: data.slug,
-        image: data.image,
-        sortOrder: data.sortOrder,
+        title: parsed.title,
+        slug: parsed.slug,
+        image: parsed.image,
+        sortOrder: parsed.sortOrder,
+        parentId: parsed.parentId,
         updatedAt: new Date()
       }
     });
@@ -289,7 +381,7 @@ export async function getCategoryProductCount(categoryId: string): Promise<numbe
 }
 
 // Получение всех товаров с фильтрацией по категории
-export async function getProductsByCategory(categoryId: string): Promise<any[]> {
+export async function getProductsByCategory(categoryId: string): Promise<ProductEntity[]> {
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {

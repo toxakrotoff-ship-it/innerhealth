@@ -1,10 +1,12 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
+import { getCategoryAncestorChain } from '@/lib/category-tree'
 
 /** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
 export const revalidate = 3600
@@ -18,6 +20,15 @@ export default async function CategoryPage({ params }: PageProps) {
   const category = await prisma.category.findUnique({
     where: { slug: categorySlug },
     include: {
+      children: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          sortOrder: true,
+        },
+        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+      },
       products: {
         include: {
           product: {
@@ -40,6 +51,28 @@ export default async function CategoryPage({ params }: PageProps) {
 
   if (!category) notFound()
 
+  const allCategories = await prisma.category.findMany({
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      parentId: true,
+      sortOrder: true,
+    },
+  })
+
+  const breadcrumbChain = getCategoryAncestorChain(allCategories, category.id)
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: 'Каталог', href: '/catalog' },
+    ...breadcrumbChain.map((node, index) => {
+      const isLast = index === breadcrumbChain.length - 1
+      return isLast
+        ? { label: node.title }
+        : { label: node.title, href: `/catalog/${node.slug}` }
+    }),
+  ]
+
   const products = category.products.map((pc) => pc.product)
   const content = getCategoryPageContent(categorySlug)
   const hasHero = Boolean(content?.heroImage)
@@ -55,7 +88,7 @@ export default async function CategoryPage({ params }: PageProps) {
           className="relative w-full overflow-hidden bg-[#e8d5d8]"
           aria-hidden
         >
-          <div className="relative w-full aspect-[3/1] min-h-[160px] sm:min-h-[200px]">
+          <div className="relative w-full aspect-3/1 min-h-[160px] sm:min-h-[200px]">
             <Image
               src={content.heroImage}
               alt=""
@@ -90,20 +123,32 @@ export default async function CategoryPage({ params }: PageProps) {
 
       {/* Хлебные крошки */}
       <section className="bg-highlight-blue border-b border-gray-200/70">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <Breadcrumbs
-            items={[
-              { label: 'Главная', href: '/' },
-              { label: 'Каталог', href: '/catalog' },
-              { label: category.title },
-            ]}
+            items={breadcrumbItems}
           />
         </div>
       </section>
 
       <section className="py-12 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-bold text-text mb-6">{category.title}</h1>
+          {category.children.length > 0 && (
+            <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <h2 className="text-base font-semibold text-text mb-3">Подкатегории</h2>
+              <div className="flex flex-wrap gap-2">
+                {category.children.map((child) => (
+                  <Link
+                    key={child.id}
+                    href={`/catalog/${child.slug}`}
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-text hover:border-action-blue hover:text-action-blue transition-colors"
+                  >
+                    {child.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           {products.length === 0 ? (
             <p className="text-gray-500">В этой категории пока нет товаров.</p>
           ) : (

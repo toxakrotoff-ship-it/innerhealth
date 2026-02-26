@@ -74,17 +74,24 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
     </svg>
   ),
+  faq: (
+    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75h6.75m-6.75 3h4.5m-8.625 6A2.625 2.625 0 012.625 16.125V5.25A2.625 2.625 0 015.25 2.625h13.5A2.625 2.625 0 0121.375 5.25v10.875a2.625 2.625 0 01-2.625 2.625H9.375l-3.75 2.625V18.75z" />
+    </svg>
+  ),
 }
 
 const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
   { path: 'profile', label: 'Профиль', icon: icons.profile },
   { path: 'catalog', label: 'Каталог товаров', icon: icons.catalog },
   { path: 'reviews', label: 'Модерация отзывов', icon: icons.reviews },
+  { path: 'faq', label: 'FAQ', icon: icons.faq },
   { path: 'catalog/categories', label: 'Категории', icon: icons.categories },
   { path: 'news', label: 'Новости', icon: icons.news },
   { path: 'news?type=article', label: 'Статьи', icon: icons.news },
   { path: 'promo-codes', label: 'Промокоды', icon: icons.promo },
   { path: 'orders', label: 'Заказы (CRM)', icon: icons.orders },
+  { path: 'quick-orders', label: 'Быстрые заявки', icon: icons.orders },
   { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
   { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
@@ -113,6 +120,10 @@ export default function AdminNav() {
           isActive = pathname === '/admin/reviews'
         } else if (item.path === 'redirects') {
           isActive = pathname === '/admin/redirects'
+        } else if (item.path === 'faq') {
+          isActive = pathname === '/admin/faq'
+        } else if (item.path === 'quick-orders') {
+          isActive = pathname === '/admin/quick-orders'
         } else {
           isActive = pathname === `/admin/${item.path}`
         }

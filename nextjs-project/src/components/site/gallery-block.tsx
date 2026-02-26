@@ -51,7 +51,7 @@ export function GalleryBlock() {
   return (
     <>
       <section className="py-12 bg-white" aria-label="Галерея">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {GALLERY_IMAGES.map((img, index) => (
               <button
