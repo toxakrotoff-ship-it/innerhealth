@@ -95,6 +95,52 @@ export async function sendPasswordResetEmail(
 
 const SUPPORT_FROM = process.env.SUPPORT_EMAIL_FROM ?? 'support@innerhealth.ru'
 
+export async function sendEmailVerificationLinkEmail(
+  to: string,
+  verificationLink: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; verification email not sent to', to)
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+
+  try {
+    console.log('[email] Sending verification link to', to)
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      to,
+      subject: 'Подтверждение email — Inner Health',
+      text: `Подтвердите ваш email по ссылке:\n\n${verificationLink}\n\nЕсли вы не создавали аккаунт, проигнорируйте письмо.`,
+      html: `<p>Подтвердите ваш email по ссылке:</p><p><a href="${verificationLink}">${verificationLink}</a></p><p>Если вы не создавали аккаунт, проигнорируйте письмо.</p><p>— Команда Inner Health</p>`.trim(),
+    })
+    console.log('[email] Verification email sent to', to)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send verification link error:', message)
+    return { ok: false, error: message }
+  }
+}
+
 /**
  * Send initial password link (for new user registration completion).
  * Text: «Для завершения регистрации пройдите по: {link}»

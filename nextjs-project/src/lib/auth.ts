@@ -1,4 +1,3 @@
-import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { SessionStrategy } from 'next-auth'
 import { verifyPassword, isBcryptHash } from '@/lib/password'
@@ -27,6 +26,7 @@ export const authOptions = {
             name: user.name ?? 'Admin User',
             role: user.role,
             mustChangePassword: user.mustChangePassword,
+            isEmailVerified: Boolean(user.emailVerifiedAt),
           }
         }
 
@@ -45,6 +45,7 @@ export const authOptions = {
           name: user.name ?? 'Admin User',
           role: user.role,
           mustChangePassword: user.mustChangePassword,
+          isEmailVerified: Boolean(user.emailVerifiedAt),
         }
       },
     }),
@@ -56,6 +57,7 @@ export const authOptions = {
         token.email = user.email
         token.role = user.role
         token.mustChangePassword = user.mustChangePassword
+        token.isEmailVerified = Boolean(user.isEmailVerified)
       }
       return token
     },
@@ -71,6 +73,7 @@ export const authOptions = {
         session.user.email = token.email as string
         session.user.role = token.role as string
         session.user.mustChangePassword = user.mustChangePassword
+        session.user.isEmailVerified = Boolean(user.emailVerifiedAt)
         const fullName = [user.name, user.lastName].filter(Boolean).join(' ') || (token.email as string)
         session.user.name = fullName
       }

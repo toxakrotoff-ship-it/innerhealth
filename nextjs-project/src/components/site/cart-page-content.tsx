@@ -12,6 +12,11 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
+import { SavedAddressSelector } from '@/components/site/saved-address-selector'
+import {
+  mapUserAddressToShipping,
+  type UserAddressForCheckout,
+} from '@/lib/mappers/user-address-to-shipping'
 
 interface PromoResult {
   valid: boolean
@@ -67,6 +72,28 @@ export function CartPageContent() {
     return () => controller.abort()
   }, [items, mergeItemDetails])
 
+  useEffect(() => {
+    let isDisposed = false
+
+    async function loadSavedAddresses() {
+      try {
+        const response = await fetch('/api/account/addresses')
+        if (!response.ok) return
+        const data = (await response.json()) as UserAddressForCheckout[]
+        if (isDisposed) return
+        setSavedAddresses(data)
+        if (data.length > 0) setSelectedSavedAddressId(data[0].id)
+      } catch {
+        // Keep guest and unverified flows unchanged.
+      }
+    }
+
+    void loadSavedAddresses()
+    return () => {
+      isDisposed = true
+    }
+  }, [])
+
   const [promoCode, setPromoCode] = useState('')
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null)
   const [promoLoading, setPromoLoading] = useState(false)
@@ -102,6 +129,9 @@ export function CartPageContent() {
   const [comment, setComment] = useState('')
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
   const [isPrivacyAccepted, setIsPrivacyAccepted] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<UserAddressForCheckout[]>([])
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
+  const [usingSavedAddress, setUsingSavedAddress] = useState(false)
 
   const price = (i: { price?: number }) => i.price ?? 0
   const subtotalPromoPrice = items
@@ -137,6 +167,26 @@ export function CartPageContent() {
   // Итого к оплате = (сумма товаров со скидкой) + доставка; доставка всегда без скидки
   const totalWithDelivery = total + deliverySum
   const cityCode = selectedCity?.code ?? (selectedCity as { city_code?: number } | null)?.city_code
+
+  const applySavedAddress = useCallback(
+    (addressId: string) => {
+      const selectedAddress = savedAddresses.find((address) => address.id === addressId)
+      if (!selectedAddress) return
+
+      const mapped = mapUserAddressToShipping(selectedAddress)
+      setSelectedCity(mapped.selectedCity)
+      setDeliveryMethod(mapped.deliveryMethod)
+      setSelectedPvz(mapped.selectedPvz)
+      setDoorAddress(mapped.doorAddress)
+      setFormData((prev) => ({
+        ...prev,
+        address: mapped.formPatch.address,
+        city: mapped.formPatch.city,
+        zipCode: mapped.formPatch.zipCode,
+      }))
+    },
+    [savedAddresses]
+  )
 
   const handleCalculateDelivery = useCallback(async () => {
     if (cityCode == null) return
@@ -189,6 +239,16 @@ export function CartPageContent() {
       setCalculationLoading(false)
     }
   }, [cityCode, items])
+
+  useEffect(() => {
+    if (!usingSavedAddress || !selectedSavedAddressId) return
+    applySavedAddress(selectedSavedAddressId)
+  }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
+
+  useEffect(() => {
+    if (!usingSavedAddress || cityCode == null) return
+    void handleCalculateDelivery()
+  }, [usingSavedAddress, cityCode, handleCalculateDelivery])
 
   useEffect(() => {
     if (cityCode != null && deliveryMethod === 'cdek_pvz') {
@@ -393,28 +453,56 @@ export function CartPageContent() {
 
       {/* Остальная форма: доставка, контакты, итого */}
       <div className="space-y-6">
-        <DeliverySection
-            selectedCity={selectedCity}
-            onCitySelect={setSelectedCity}
-            pvzTariff={pvzTariff}
-            doorTariff={doorTariff}
-            calculationLoading={calculationLoading}
-            onCalculate={handleCalculateDelivery}
-            deliveryMethod={deliveryMethod}
-            onDeliveryMethodChange={setDeliveryMethod}
-            deliveryPoints={deliveryPoints}
-            deliveryPointsLoading={deliveryPointsLoading}
-            deliveryPointsError={deliveryPointsError}
-            selectedPvz={selectedPvz}
-            onPvzSelect={setSelectedPvz}
-            recipientName={recipientName}
-            onRecipientNameChange={setRecipientName}
-            doorAddress={doorAddress}
-            onDoorAddressChange={(patch) => setDoorAddress((prev) => ({ ...prev, ...patch }))}
-            comment={comment}
-            onCommentChange={setComment}
-            error={deliveryError}
+        {savedAddresses.length > 0 ? (
+          <SavedAddressSelector
+            addresses={savedAddresses}
+            selectedAddressId={selectedSavedAddressId}
+            usingSavedAddress={usingSavedAddress}
+            onSelectAddress={(addressId) => {
+              setSelectedSavedAddressId(addressId)
+              if (usingSavedAddress) applySavedAddress(addressId)
+            }}
+            onUseSavedAddress={() => {
+              if (!selectedSavedAddressId) return
+              applySavedAddress(selectedSavedAddressId)
+              setUsingSavedAddress(true)
+            }}
+            onUseAnotherAddress={() => setUsingSavedAddress(false)}
           />
+        ) : null}
+
+        {usingSavedAddress ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 className="font-semibold text-text mb-2">Доставка</h2>
+            <p className="text-sm text-gray-600">
+              Используется сохранённый адрес. Чтобы заполнить поля вручную, выберите
+              {' '}«Использовать другой адрес».
+            </p>
+          </div>
+        ) : (
+          <DeliverySection
+              selectedCity={selectedCity}
+              onCitySelect={setSelectedCity}
+              pvzTariff={pvzTariff}
+              doorTariff={doorTariff}
+              calculationLoading={calculationLoading}
+              onCalculate={handleCalculateDelivery}
+              deliveryMethod={deliveryMethod}
+              onDeliveryMethodChange={setDeliveryMethod}
+              deliveryPoints={deliveryPoints}
+              deliveryPointsLoading={deliveryPointsLoading}
+              deliveryPointsError={deliveryPointsError}
+              selectedPvz={selectedPvz}
+              onPvzSelect={setSelectedPvz}
+              recipientName={recipientName}
+              onRecipientNameChange={setRecipientName}
+              doorAddress={doorAddress}
+              onDoorAddressChange={(patch) => setDoorAddress((prev) => ({ ...prev, ...patch }))}
+              comment={comment}
+              onCommentChange={setComment}
+              error={deliveryError}
+            />
+        )}
 
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="font-semibold text-text mb-4">Контактные данные</h2>

@@ -5,6 +5,7 @@ declare module 'next-auth' {
     id?: string
     role?: string
     mustChangePassword?: boolean
+    isEmailVerified?: boolean
   }
 
   interface Session {
@@ -16,6 +17,17 @@ declare module 'next-auth' {
       role?: string
       lastLogin?: string
       mustChangePassword?: boolean
+      isEmailVerified?: boolean
     }
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string
+    email?: string
+    role?: string
+    mustChangePassword?: boolean
+    isEmailVerified?: boolean
   }
 }

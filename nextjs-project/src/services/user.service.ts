@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma';
 /** Find user by id (for session callback). */
 export async function findUserById(
   id: string,
-  select?: { id: true; mustChangePassword: true; name: true; lastName: true }
+  select?: { id: true; mustChangePassword: true; name: true; lastName: true; emailVerifiedAt: true }
 ) {
   return prisma.user.findUnique({
     where: { id },
-    select: select ?? { id: true, mustChangePassword: true, name: true, lastName: true },
+    select: select ?? { id: true, mustChangePassword: true, name: true, lastName: true, emailVerifiedAt: true },
   });
 }
 
@@ -17,7 +17,40 @@ export async function findUserById(
 export async function findUserByIdForAuth(id: string) {
   return prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, role: true, mustChangePassword: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      mustChangePassword: true,
+      emailVerifiedAt: true,
+    },
+  });
+}
+
+/** Find user by id for email verification flow. */
+export async function findUserByIdForEmailVerification(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      emailVerifiedAt: true,
+    },
+  });
+}
+
+/** Find user by email for email verification flow. */
+export async function findUserByEmailForEmailVerification(email: string) {
+  return prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      emailVerifiedAt: true,
+    },
   });
 }
 
@@ -62,6 +95,8 @@ export async function createUser(params: {
   email: string;
   password: string;
   name?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
   role: Role;
   mustChangePassword?: boolean;
 }) {
@@ -70,6 +105,8 @@ export async function createUser(params: {
       email: params.email.trim().toLowerCase(),
       password: params.password,
       name: params.name ?? undefined,
+      lastName: params.lastName ?? undefined,
+      phone: params.phone ?? undefined,
       role: params.role,
       mustChangePassword: params.mustChangePassword ?? false,
     },
@@ -97,6 +134,7 @@ export async function updateUser(
     twoFactorMethod?: string | null;
     totpSecretEncrypted?: string | null;
     notificationEmail?: string | null;
+    emailVerifiedAt?: Date | null;
   },
   select?: { id: true; email: true; name: true; role: true; createdAt: true }
 ) {

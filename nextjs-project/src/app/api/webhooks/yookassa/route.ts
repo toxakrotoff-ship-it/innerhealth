@@ -80,6 +80,7 @@ export async function POST(request: Request) {
         if ('uuid' in result) {
           await orderService.updateOrder(orderId, {
             cdekOrderUuid: result.uuid,
+            cdekTrackNumber: result.trackNumber ?? null,
             cdekOrderError: null,
           })
           break

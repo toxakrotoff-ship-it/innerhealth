@@ -24,6 +24,7 @@ export async function findOrderWithShipping(orderId: string) {
       id: true,
       status: true,
       cdekOrderUuid: true,
+      cdekTrackNumber: true,
       shippingInfo: { select: { deliveryMethod: true } },
     },
   });
@@ -48,6 +49,7 @@ export async function findOrderForCdekShipment(orderId: string) {
       id: true,
       status: true,
       cdekOrderUuid: true,
+      cdekTrackNumber: true,
       shippingInfo: { select: { deliveryMethod: true } },
     },
   });

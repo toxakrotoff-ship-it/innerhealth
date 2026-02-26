@@ -47,9 +47,10 @@ export async function POST(
   if ('uuid' in result) {
     await orderService.updateOrder(orderId, {
       cdekOrderUuid: result.uuid,
+      cdekTrackNumber: result.trackNumber ?? null,
       cdekOrderError: null,
     })
-    return NextResponse.json({ success: true, uuid: result.uuid })
+    return NextResponse.json({ success: true, uuid: result.uuid, trackNumber: result.trackNumber ?? null })
   }
 
   await orderService.updateOrder(orderId, { cdekOrderError: result.error })

@@ -24,7 +24,7 @@
  * CSV для загрузки в админке: sourcePath,destination,statusCode,statusOnNew,note
  */
 
-/// <reference path="./pg.d.ts" />
+import type {} from './pg';
 
 import path from 'path';
 import fs from 'fs';

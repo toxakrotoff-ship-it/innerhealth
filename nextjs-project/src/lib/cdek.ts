@@ -580,7 +580,9 @@ const CDEK_SENDER_KEYS = [
  * Используется после оплаты заказа и при повторе из админки.
  * Формат тела по документации https://apidoc.cdek.ru/#tag/orders
  */
-export async function createCdekOrder(orderId: string): Promise<{ uuid: string } | { error: string }> {
+export async function createCdekOrder(
+  orderId: string
+): Promise<{ uuid: string; trackNumber?: string } | { error: string }> {
   try {
     const orderService = await import('@/services/order.service')
     const settingsService = await import('@/services/settings.service')
@@ -685,17 +687,24 @@ export async function createCdekOrder(orderId: string): Promise<{ uuid: string }
       console.error('[CDEK createOrder]', orderId, response.status, text)
       return { error: `СДЭК: ${response.status} ${text.slice(0, 200)}` }
     }
-    let data: { entity?: { uuid?: string }; uuid?: string }
+    let data: {
+      entity?: { uuid?: string; cdek_number?: string; track_number?: string }
+      uuid?: string
+      cdek_number?: string
+      track_number?: string
+    }
     try {
       data = JSON.parse(text) as { entity?: { uuid?: string }; uuid?: string }
     } catch {
       return { error: `СДЭК: неверный ответ ${text.slice(0, 100)}` }
     }
     const uuid = data.entity?.uuid ?? data.uuid
+    const trackNumber =
+      data.entity?.cdek_number ?? data.entity?.track_number ?? data.cdek_number ?? data.track_number
     if (!uuid) {
       return { error: `СДЭК: в ответе нет uuid. ${text.slice(0, 200)}` }
     }
-    return { uuid }
+    return { uuid, trackNumber }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
     console.error('[CDEK createOrder]', orderId, e)
