@@ -12,7 +12,7 @@ const faqSchema = z.object({
 })
 
 function getFirstZodErrorMessage(error: z.ZodError): string {
-  const firstIssue = error.issues.at(0)
+  const firstIssue = error.issues[0]
   return firstIssue?.message ?? 'Проверьте корректность заполнения полей'
 }
 

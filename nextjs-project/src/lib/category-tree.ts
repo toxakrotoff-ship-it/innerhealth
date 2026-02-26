@@ -33,7 +33,7 @@ export function buildCategoryTree(categories: readonly CategoryTreeItem[]): Cate
     map.set(category.id, { ...category, children: [] })
   }
 
-  for (const node of map.values()) {
+  for (const node of Array.from(map.values())) {
     if (!node.parentId) {
       roots.push(node)
       continue

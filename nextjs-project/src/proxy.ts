@@ -102,22 +102,16 @@ const proxyWithAuth = withAuth(proxyHandler, {
 const proxy = process.env.NODE_ENV === 'production' ? proxyWithAuth : proxyHandler
 export default proxy
 
-const productionMatcher = [
-  '/',
-  '/admin/:path*',
-  '/api/admin/:path*',
-  '/api/orders',
-  '/api/promo/:path*',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
-]
-
-const developmentMatcher = [
-  '/admin/:path*',
-  '/api/admin/:path*',
-]
-
 export const config = {
-  matcher: process.env.NODE_ENV === 'production' ? productionMatcher : developmentMatcher,
+  // Must stay static: Next.js parses matcher at build-time.
+  matcher: [
+    '/',
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/api/orders',
+    '/api/promo/:path*',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
+  ],
 }
