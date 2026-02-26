@@ -38,6 +38,29 @@ interface AddressFormState {
   intercom: string
 }
 
+interface CdekCityOption {
+  code: number
+  city?: string
+  region?: string
+}
+
+interface CdekPvzOption {
+  code?: string
+  name?: string
+  address?: string
+  full_address?: string
+}
+
+interface CdekLookupUiState {
+  cityQuery: string
+  cityOptions: CdekCityOption[]
+  isCitiesLoading: boolean
+  pvzQuery: string
+  pvzOptions: CdekPvzOption[]
+  isPvzLoading: boolean
+  pvzError: string | null
+}
+
 const initialFormState: AddressFormState = {
   label: '',
   city: '',
@@ -90,15 +113,74 @@ function mapFormToPayload(form: AddressFormState) {
   }
 }
 
+async function searchCdekCities(query: string): Promise<CdekCityOption[]> {
+  if (!query.trim()) return []
+  const response = await fetch(`/api/cdek/cities?q=${encodeURIComponent(query.trim())}&size=15`)
+  if (!response.ok) return []
+  const data = (await response.json().catch(() => null)) as { cities?: CdekCityOption[] } | null
+  return Array.isArray(data?.cities) ? data.cities : []
+}
+
+async function fetchCdekDeliveryPoints(cityCode: string): Promise<CdekPvzOption[]> {
+  if (!cityCode.trim()) return []
+  const response = await fetch(
+    `/api/cdek/deliverypoints?cityCode=${encodeURIComponent(cityCode)}&type=PVZ&size=50`
+  )
+  if (!response.ok) return []
+  const data = (await response.json().catch(() => null)) as { deliveryPoints?: CdekPvzOption[] } | null
+  return Array.isArray(data?.deliveryPoints) ? data.deliveryPoints : []
+}
+
 export function AccountAddressesManager({ initialAddresses }: { initialAddresses: AccountAddress[] }) {
   const [addresses, setAddresses] = useState<AccountAddress[]>(initialAddresses)
   const [createForm, setCreateForm] = useState<AddressFormState>(initialFormState)
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<AddressFormState>(initialFormState)
+  const [createLookup, setCreateLookup] = useState<CdekLookupUiState>({
+    cityQuery: '',
+    cityOptions: [],
+    isCitiesLoading: false,
+    pvzQuery: '',
+    pvzOptions: [],
+    isPvzLoading: false,
+    pvzError: null,
+  })
+  const [editLookup, setEditLookup] = useState<CdekLookupUiState>({
+    cityQuery: '',
+    cityOptions: [],
+    isCitiesLoading: false,
+    pvzQuery: '',
+    pvzOptions: [],
+    isPvzLoading: false,
+    pvzError: null,
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const reachedAddressLimit = useMemo(() => addresses.length >= 3, [addresses.length])
+
+  async function runCitySearch(
+    lookup: CdekLookupUiState,
+    setLookup: Dispatch<SetStateAction<CdekLookupUiState>>
+  ) {
+    setLookup((prev) => ({ ...prev, isCitiesLoading: true, cityOptions: [] }))
+    const options = await searchCdekCities(lookup.cityQuery)
+    setLookup((prev) => ({ ...prev, cityOptions: options, isCitiesLoading: false }))
+  }
+
+  async function loadPvzOptions(
+    cityCode: string,
+    setLookup: Dispatch<SetStateAction<CdekLookupUiState>>
+  ) {
+    setLookup((prev) => ({ ...prev, isPvzLoading: true, pvzError: null, pvzOptions: [] }))
+    const points = await fetchCdekDeliveryPoints(cityCode)
+    setLookup((prev) => ({
+      ...prev,
+      pvzOptions: points,
+      isPvzLoading: false,
+      pvzError: points.length === 0 ? 'Пункты выдачи не найдены для выбранного города.' : null,
+    }))
+  }
 
   async function createAddress() {
     setIsSubmitting(true)
@@ -118,6 +200,15 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
       if (payload && 'id' in payload) {
         setAddresses((prev) => [payload, ...prev])
         setCreateForm(initialFormState)
+        setCreateLookup({
+          cityQuery: '',
+          cityOptions: [],
+          isCitiesLoading: false,
+          pvzQuery: '',
+          pvzOptions: [],
+          isPvzLoading: false,
+          pvzError: null,
+        })
       }
     } finally {
       setIsSubmitting(false)
@@ -170,12 +261,37 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
   function startEditing(address: AccountAddress) {
     setEditingAddressId(address.id)
     setEditForm(mapAddressToForm(address))
+    setEditLookup({
+      cityQuery: address.city,
+      cityOptions: [],
+      isCitiesLoading: false,
+      pvzQuery: '',
+      pvzOptions: [],
+      isPvzLoading: false,
+      pvzError: null,
+    })
+    if (address.deliveryMethod === 'cdek_pvz' && address.cdekCityCode > 0) {
+      void loadPvzOptions(String(address.cdekCityCode), setEditLookup)
+    }
   }
 
   function renderForm(
     form: AddressFormState,
-    setForm: Dispatch<SetStateAction<AddressFormState>>
+    setForm: Dispatch<SetStateAction<AddressFormState>>,
+    lookup: CdekLookupUiState,
+    setLookup: Dispatch<SetStateAction<CdekLookupUiState>>
   ) {
+    const filteredPvzOptions = lookup.pvzQuery.trim()
+      ? lookup.pvzOptions.filter((point) => {
+          const q = lookup.pvzQuery.trim().toLowerCase()
+          const name = (point.name ?? '').toLowerCase()
+          const address = (point.address ?? '').toLowerCase()
+          const fullAddress = (point.full_address ?? '').toLowerCase()
+          const code = (point.code ?? '').toLowerCase()
+          return name.includes(q) || address.includes(q) || fullAddress.includes(q) || code.includes(q)
+        })
+      : lookup.pvzOptions
+
     return (
       <div className="grid gap-3 sm:grid-cols-2">
         <Input
@@ -183,21 +299,60 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
           onChange={(event) => setForm((prev) => ({ ...prev, label: event.target.value }))}
           placeholder="Название (Дом, Офис...)"
         />
-        <Input
-          value={form.city}
-          onChange={(event) => setForm((prev) => ({ ...prev, city: event.target.value }))}
-          placeholder="Город"
-        />
-        <Input
-          value={form.cdekCityCode}
-          onChange={(event) => setForm((prev) => ({ ...prev, cdekCityCode: event.target.value }))}
-          placeholder="Код города CDEK"
-        />
-        <Input
-          value={form.addressLine}
-          onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
-          placeholder="Адрес строкой"
-        />
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              value={lookup.cityQuery}
+              onChange={(event) =>
+                setLookup((prev) => ({ ...prev, cityQuery: event.target.value, cityOptions: [] }))
+              }
+              placeholder="Город (поиск через CDEK)"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => runCitySearch(lookup, setLookup)}
+              disabled={lookup.isCitiesLoading}
+            >
+              {lookup.isCitiesLoading ? '...' : 'Найти'}
+            </Button>
+          </div>
+          {lookup.cityOptions.length > 0 ? (
+            <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+              {lookup.cityOptions.map((city) => (
+                <button
+                  key={`${city.code}-${city.city ?? 'city'}`}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      city: city.city ?? prev.city,
+                      cdekCityCode: String(city.code),
+                      cdekPvzCode: '',
+                      addressLine: '',
+                    }))
+                    setLookup((prev) => ({
+                      ...prev,
+                      cityQuery: city.city ?? prev.cityQuery,
+                      cityOptions: [],
+                      pvzQuery: '',
+                    }))
+                    void loadPvzOptions(String(city.code), setLookup)
+                  }}
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-white"
+                >
+                  <span className="font-medium">{city.city ?? 'Без названия'}</span>
+                  <span className="ml-2 text-xs text-gray-500">({city.code})</span>
+                  {city.region ? <span className="ml-2 text-xs text-gray-500">{city.region}</span> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input value={form.city} readOnly placeholder="Выбранный город" />
+            <Input value={form.cdekCityCode} readOnly placeholder="Код города CDEK" />
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1 text-sm text-gray-600">
           Способ доставки
@@ -207,6 +362,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
               setForm((prev) => ({
                 ...prev,
                 deliveryMethod: event.target.value as 'cdek_pvz' | 'cdek_door',
+                cdekPvzCode: event.target.value === 'cdek_pvz' ? prev.cdekPvzCode : '',
               }))
             }
             className="h-10 rounded-[16px] border border-input bg-white px-3 text-sm"
@@ -216,11 +372,60 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
           </select>
         </label>
 
-        <Input
-          value={form.cdekPvzCode}
-          onChange={(event) => setForm((prev) => ({ ...prev, cdekPvzCode: event.target.value }))}
-          placeholder="Код ПВЗ (для cdek_pvz)"
-        />
+        {form.deliveryMethod === 'cdek_pvz' ? (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                value={lookup.pvzQuery}
+                onChange={(event) => setLookup((prev) => ({ ...prev, pvzQuery: event.target.value }))}
+                placeholder="Поиск ПВЗ (код/название/адрес)"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => loadPvzOptions(form.cdekCityCode, setLookup)}
+                disabled={!form.cdekCityCode || lookup.isPvzLoading}
+              >
+                {lookup.isPvzLoading ? '...' : 'Обновить'}
+              </Button>
+            </div>
+            {lookup.pvzError ? <p className="text-xs text-red-600">{lookup.pvzError}</p> : null}
+            {filteredPvzOptions.length > 0 ? (
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
+                {filteredPvzOptions.map((point) => {
+                  const pointAddress =
+                    point.full_address || point.address || point.name || 'Адрес недоступен'
+                  return (
+                    <button
+                      key={`${point.code ?? 'pvz'}-${pointAddress}`}
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          cdekPvzCode: point.code ?? '',
+                          addressLine: pointAddress,
+                        }))
+                      }
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-white"
+                    >
+                      <div className="font-medium">{point.name ?? point.code ?? 'ПВЗ'}</div>
+                      <div className="text-xs text-gray-600">{pointAddress}</div>
+                      {point.code ? <div className="text-xs text-gray-500">Код: {point.code}</div> : null}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+            <Input value={form.cdekPvzCode} readOnly placeholder="Код ПВЗ" />
+            <Input value={form.addressLine} readOnly placeholder="Адрес ПВЗ" />
+          </div>
+        ) : (
+          <Input
+            value={form.addressLine}
+            onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
+            placeholder="Адрес строкой"
+          />
+        )}
 
         <Input
           value={form.street}
@@ -245,7 +450,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
         </p>
 
         <div className="mt-4 space-y-3">
-          {renderForm(createForm, setCreateForm)}
+          {renderForm(createForm, setCreateForm, createLookup, setCreateLookup)}
           <Button
             type="button"
             onClick={createAddress}
@@ -265,7 +470,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
             <div key={address.id} className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-5">
               {isEditing ? (
                 <div className="space-y-3">
-                  {renderForm(editForm, setEditForm)}
+                  {renderForm(editForm, setEditForm, editLookup, setEditLookup)}
                   <div className="flex gap-2">
                     <Button
                       type="button"
