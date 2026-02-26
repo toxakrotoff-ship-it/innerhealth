@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
+import { HeaderProfileMenu } from './header-profile-menu'
 
 const NAV_LINKS = [
   { label: 'О нас', href: '/o-nas' },
@@ -26,15 +27,7 @@ const headerIconLink =
 
 export async function SiteHeader() {
   const session = await getServerSession(authOptions)
-  const userRole = session?.user?.role
-  const isAdminUser = userRole === 'ADMIN' || userRole === 'WRITER'
   const isAuthenticated = Boolean(session?.user?.id)
-  const profileHref = isAuthenticated ? (isAdminUser ? '/admin/catalog' : '/account') : '/login'
-  const profileLabel = isAuthenticated
-    ? isAdminUser
-      ? 'Управление сайтом'
-      : 'Личный кабинет'
-    : 'Войти'
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-700 bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-gray-900/90">
@@ -117,14 +110,7 @@ export async function SiteHeader() {
               </a>
             </div>
             <HeaderCartButton variant="dark" />
-            <Link
-              href={profileHref}
-              className={headerIconLink}
-              aria-label={profileLabel}
-              title={profileLabel}
-            >
-              <ProfileIcon />
-            </Link>
+            <HeaderProfileMenu isAuthenticated={isAuthenticated} role={session?.user?.role} />
           </div>
         </div>
       </div>
@@ -164,15 +150,3 @@ function TelegramIcon() {
   )
 }
 
-function ProfileIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M5.121 17.804A9 9 0 1112 21a8.96 8.96 0 01-6.879-3.196zM15 9a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-    </svg>
-  )
-}
