@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
@@ -24,6 +25,12 @@ export default function RegisterPage() {
     event.preventDefault()
     setError('')
     setSuccessMessage('')
+
+    if (password !== confirmPassword) {
+      setError('Пароли не совпадают')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -99,6 +106,16 @@ export default function RegisterPage() {
             placeholder="Пароль (минимум 8 символов)"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            className="block h-10 w-full rounded-md border border-white/20 bg-white px-4 py-1.5 text-[#1a2332] placeholder:text-neutral-500 focus:border-white/40 focus:ring-2 focus:ring-white/20 focus:outline-none sm:text-sm sm:leading-6"
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="Повторите пароль"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
             className="block h-10 w-full rounded-md border border-white/20 bg-white px-4 py-1.5 text-[#1a2332] placeholder:text-neutral-500 focus:border-white/40 focus:ring-2 focus:ring-white/20 focus:outline-none sm:text-sm sm:leading-6"
           />
           <input
