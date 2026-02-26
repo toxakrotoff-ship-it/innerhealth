@@ -62,3 +62,4 @@ coverage/
 # Prisma (generated client lives in node_modules / custom output)
 # prisma/migrations/ — commit; .prisma/ — ignore if present
 .prisma/
+.worktrees/
