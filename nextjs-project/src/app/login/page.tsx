@@ -51,7 +51,8 @@ export default function LoginPage() {
       if (session?.user?.mustChangePassword) {
         router.push('/login/change-password')
       } else {
-        router.push('/admin/catalog')
+        const isAdminEntry = session?.user?.role === 'ADMIN' || session?.user?.role === 'WRITER'
+        router.push(isAdminEntry ? '/admin/catalog' : '/account')
       }
       router.refresh()
     },
