@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { getPendingIdFromCookie } from '@/lib/two-factor'
 import { send2FACodeEmail } from '@/lib/email'
 import { generateSixDigitCode, hashCode } from '@/lib/set-initial-password'
@@ -6,8 +7,19 @@ import * as auth2faService from '@/services/auth-2fa.service'
 
 const EMAIL_CODE_EXPIRES_MINUTES = 5
 const RESEND_COOLDOWN_MS = 60_000 // 1 min
+const RATE_LIMIT_MAX = 5
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
 
 export async function POST(request: Request) {
+  const clientId = getClientIdentifier(request)
+  const rate = await checkRateLimit(clientId, '2fa-send-code', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
+  if (!rate.success) {
+    return NextResponse.json(
+      { error: 'Too many code requests. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+    )
+  }
+
   const cookieHeader = request.headers.get('cookie')
   const pendingId = getPendingIdFromCookie(cookieHeader)
 

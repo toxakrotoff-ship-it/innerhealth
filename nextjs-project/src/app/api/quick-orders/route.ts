@@ -30,7 +30,7 @@ const quickOrderSchema = z.object({
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'quick-order', QUICK_ORDER_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'quick-order', QUICK_ORDER_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много заявок. Попробуйте позже.' },

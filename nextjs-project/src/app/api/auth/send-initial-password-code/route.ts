@@ -15,7 +15,7 @@ const RATE_LIMIT = 5
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'send-initial-code', RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'send-initial-code', RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много запросов. Попробуйте позже.' },

@@ -39,7 +39,7 @@ const ORDER_RATE_LIMIT = 10 // orders per minute per IP
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'order', ORDER_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'order', ORDER_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много заказов. Попробуйте позже.' },

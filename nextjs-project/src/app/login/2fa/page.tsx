@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { signIn, getSession } from 'next-auth/react'
+import { OtpSixInput } from '@/components/auth/otp-six-input'
 
 const RESEND_COOLDOWN_SEC = 60
 
@@ -123,16 +124,14 @@ function Login2FAForm() {
         </h1>
 
         <form onSubmit={handleSubmit} className="w-full space-y-4">
-          <input
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="000000"
-            maxLength={6}
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            className="block h-12 w-full rounded-md border border-white/20 bg-white px-4 py-2 text-center text-xl tracking-[0.5em] text-[#1a2332] placeholder:text-neutral-400 focus:border-white/40 focus:ring-2 focus:ring-white/20 focus:outline-none"
-          />
+          <div className="flex justify-center gap-2">
+            <OtpSixInput
+              value={code}
+              onChange={setCode}
+              aria-label="Код подтверждения"
+              className="flex gap-2"
+            />
+          </div>
           {error && (
             <p className="text-center text-sm text-red-400">{error}</p>
           )}

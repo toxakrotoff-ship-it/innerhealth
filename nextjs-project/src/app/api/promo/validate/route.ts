@@ -7,7 +7,7 @@ const PROMO_VALIDATE_RATE_LIMIT = 30 // requests per minute per IP
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'promo-validate', PROMO_VALIDATE_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'promo-validate', PROMO_VALIDATE_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { valid: false, error: 'Слишком много попыток. Подождите минуту.' },

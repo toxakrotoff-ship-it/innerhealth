@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
+import { getEmailRiskVerdict } from '@/lib/security/email-risk'
 import { getBaseUrlForEmails, sendEmailVerificationLinkEmail } from '@/lib/email'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { verifyEmailRequestBodySchema } from '@/lib/validations/account'
@@ -21,7 +22,7 @@ function isEmailVerificationServiceError(error: unknown): error is EmailVerifica
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'verify-email-request', VERIFY_EMAIL_REQUEST_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'verify-email-request', VERIFY_EMAIL_REQUEST_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many verification requests. Try again later.' },
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
     return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  if (payload.email && getEmailRiskVerdict(payload.email) === 'block') {
+    return NextResponse.json({ ok: true })
   }
 
   const session = await getServerSession(authOptions)

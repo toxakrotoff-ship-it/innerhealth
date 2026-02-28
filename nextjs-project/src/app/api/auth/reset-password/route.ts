@@ -14,7 +14,7 @@ const RESET_PASSWORD_RATE_LIMIT = 10 // per minute per IP
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'reset-password', RESET_PASSWORD_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'reset-password', RESET_PASSWORD_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много попыток. Попробуйте позже.' },

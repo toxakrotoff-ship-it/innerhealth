@@ -17,7 +17,7 @@ function isEmailVerificationServiceError(error: unknown): error is EmailVerifica
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'verify-email-confirm', VERIFY_EMAIL_CONFIRM_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'verify-email-confirm', VERIFY_EMAIL_CONFIRM_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many verification attempts. Try again later.' },

@@ -12,7 +12,7 @@ const RATE_LIMIT = 10
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'verify-initial-code', RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'verify-initial-code', RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много попыток. Попробуйте позже.' },

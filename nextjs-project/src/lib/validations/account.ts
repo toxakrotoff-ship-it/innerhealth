@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
 
 const PASSWORD_MIN = 8
 const PASSWORD_MAX = 128
@@ -15,9 +16,9 @@ export const accountOrderParamsSchema = z.object({
 export const registerBodySchema = z.object({
   email: z.string().email('Invalid email').trim().toLowerCase(),
   password: z.string().min(PASSWORD_MIN).max(PASSWORD_MAX),
-  name: z.string().max(120).trim().optional(),
-  lastName: z.string().max(120).trim().optional(),
-  phone: z.string().max(30).trim().optional(),
+  name: z.string().max(120).trim().optional().transform((v) => (v === undefined ? v : sanitizeHumanName(v))),
+  lastName: z.string().max(120).trim().optional().transform((v) => (v === undefined ? v : sanitizeHumanName(v))),
+  phone: z.string().max(30).trim().optional().transform((v) => (v === undefined ? v : sanitizePhone(v))),
 })
 
 export const verifyEmailRequestBodySchema = z.object({

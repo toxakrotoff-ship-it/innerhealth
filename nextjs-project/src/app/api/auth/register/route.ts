@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { getEmailRiskVerdict } from '@/lib/security/email-risk'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { getBaseUrlForEmails, sendEmailVerificationLinkEmail } from '@/lib/email'
 import { hashPassword } from '@/lib/password'
@@ -11,7 +12,7 @@ const REGISTER_RATE_LIMIT = 5
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'auth-register', REGISTER_RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'auth-register', REGISTER_RATE_LIMIT)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many registration attempts. Try again later.' },
@@ -26,6 +27,13 @@ export async function POST(request: Request) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
     return NextResponse.json({ error: message }, { status: 400 })
+  }
+
+  if (getEmailRiskVerdict(payload.email) === 'block') {
+    return NextResponse.json(
+      { error: 'Registration is not allowed for this email domain.' },
+      { status: 400 }
+    )
   }
 
   const existingUser = await userService.findUserByEmail(payload.email)

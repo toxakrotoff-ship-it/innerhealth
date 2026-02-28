@@ -19,7 +19,7 @@ const RATE_LIMIT_WINDOW_MS = 60 * 1000
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = checkRateLimit(clientId, 'verify-2fa', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
+  const rate = await checkRateLimit(clientId, 'verify-2fa', RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many attempts. Try again later.' },

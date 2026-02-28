@@ -35,4 +35,21 @@ export default [
       },
     },
   },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        vi: "readonly",
+      },
+    },
+  },
 ];
