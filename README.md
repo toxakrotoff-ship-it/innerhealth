@@ -9,7 +9,7 @@
 - **Frontend / Backend:** [Next.js](https://nextjs.org/) 16 (App Router), React 19, TypeScript
 - **Стили:** Tailwind CSS 4, Radix UI, Shadcn-подобные компоненты
 - **БД:** PostgreSQL, [Prisma](https://www.prisma.io/) 7 (в т.ч. `@prisma/adapter-pg`)
-- **Аутентификация:** NextAuth v4 (Credentials, JWT); в планах — переход на v5 и 2FA (см. [docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md))
+- **Аутентификация:** NextAuth v4 (Credentials, JWT), 2FA (TOTP и email-коды); в планах — переход на v5 (см. [docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md))
 - **Редактор контента:** TipTap
 - **Деплой:** Docker, Nginx; опционально Let's Encrypt
 
@@ -104,9 +104,11 @@ npm run dev
 
 ### Планы и roadmap
 
-- **[docs/plans/](docs/plans/)** — планы доработок (2FA, СДЭК, roadmap)
+- **[docs/plans/](docs/plans/)** — планы доработок (2FA, СДЭК, ЛК пользователя, партнёры, roadmap)
 - **[docs/plans/PROJECT-INDEX.md](docs/plans/PROJECT-INDEX.md)** — полный индекс проекта и навигация по коду
-- **[docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md)** — план внедрения 2FA
+- **[docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md)** — план внедрения 2FA (реализовано)
+- **[docs/plans/2026-02-28-partner-lk-implementation.md](docs/plans/2026-02-28-partner-lk-implementation.md)** — ЛК партнёра и управление партнёрами
+- **[docs/LK-users.md](docs/LK-users.md)** — ЛК пользователя (профиль, заказы, адреса)
 
 ### Дополнительно
 
@@ -118,10 +120,11 @@ npm run dev
 ## Основные маршруты приложения
 
 - **Публичная часть:** `/`, `/catalog`, `/catalog/[categorySlug]`, `/product/[slug]`, `/product/id/[id]`, `/cart`, `/news`, `/news/[slug]`, `/o-nas`, `/contacts`, `/sotrudnichestvo`, `/privacy`, `/oferta` и др.
+- **ЛК пользователя:** `/account` (профиль), `/account/orders`, `/account/orders/[id]`, `/account/addresses`, `/account/verify-email`; для партнёров — `/account/partner` (промокоды, статистика, доход).
 - **Вход:** `/login`, `/login/2fa`, `/login/forgot-password`, `/login/reset-password`, `/login/change-password`, `/login/set-initial-password`
-- **Админка:** `/admin` (редирект на каталог), `/admin/catalog`, `/admin/catalog/categories`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit`, `/admin/products/import`, `/admin/news`, `/admin/promo-codes`, `/admin/orders`, `/admin/orders-statistics`, `/admin/users`, `/admin/settings`, `/admin/profile`, `/admin/tilda-leads`, `/admin/partnership`
+- **Админка:** `/admin` (редирект на каталог), `/admin/catalog`, `/admin/catalog/categories`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit`, `/admin/products/import`, `/admin/news`, `/admin/promo-codes`, `/admin/orders`, `/admin/orders-statistics`, `/admin/users`, `/admin/partners`, `/admin/partners/[userId]`, `/admin/settings`, `/admin/profile`, `/admin/tilda-leads`, `/admin/partnership`, `/admin/faq`, `/admin/quick-orders`, `/admin/redirects`
 
-API: префикс `/api` (auth, admin, cart, orders, telegram и т.д.).
+API: префикс `/api` (auth, admin, cart, orders, telegram, partners и т.д.).
 
 ---
 

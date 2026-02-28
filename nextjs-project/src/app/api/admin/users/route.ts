@@ -12,16 +12,17 @@ import {
 import { Role } from '@prisma/client';
 import * as userService from '@/services/user.service';
 import * as authTokensService from '@/services/auth-tokens.service';
+import * as partnerService from '@/services/partner.service';
 
 const PASSWORD_LENGTH = 14;
 const PASSWORD_CHARS = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-const ROLE_VALUES: Role[] = ['USER', 'WRITER', 'ADMIN'];
+const VALID_ROLES = ['USER', 'WRITER', 'ADMIN', 'PARTNER'] as const;
 
 const postUserSchema = z.object({
   email: z.string().email().transform((s) => s.trim().toLowerCase()),
   name: z.string().max(255).transform((s) => s.trim() || null).nullable().optional(),
-  role: z.enum(['USER', 'WRITER', 'ADMIN']).default('USER'),
+  role: z.enum(VALID_ROLES).default('USER'),
 });
 
 function generatePassword(): string {
@@ -33,19 +34,49 @@ function generatePassword(): string {
   return result;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
+  const { searchParams } = new URL(request.url);
+  const roleParam = searchParams.get('role');
+  const role: Role | undefined =
+    roleParam && VALID_ROLES.includes(roleParam as (typeof VALID_ROLES)[number])
+      ? (roleParam as Role)
+      : undefined;
+
   try {
-    const users = await userService.getUsersForAdmin();
-    const formatted = users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      role: u.role,
-      createdAt: u.createdAt.toISOString(),
-    }));
+    const users = await userService.getUsersForAdmin(role);
+    const formatted = await Promise.all(
+      users.map(async (u) => {
+        const base = {
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          createdAt: u.createdAt.toISOString(),
+        };
+        if (u.role === Role.PARTNER) {
+          const [promoCodes, stats] = await Promise.all([
+            partnerService.getPartnerPromoCodes(u.id),
+            partnerService.getPartnerStatsByUserId(u.id),
+          ]);
+          const ordersCount = stats.reduce((s, x) => s + x.ordersCount, 0);
+          const totalRevenue = stats.reduce((s, x) => s + x.totalAmount, 0);
+          return {
+            ...base,
+            promoCodes: promoCodes.map((p) => ({
+              id: p.promoCodeId,
+              code: p.code,
+              commissionPercent: p.commissionPercent,
+            })),
+            ordersCount,
+            totalRevenue,
+          };
+        }
+        return base;
+      })
+    );
     return NextResponse.json(formatted);
   } catch (error) {
     console.error('Error fetching users:', error);

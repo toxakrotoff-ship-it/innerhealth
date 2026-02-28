@@ -96,6 +96,7 @@ const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
   { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
   { path: 'users', label: 'Пользователи', icon: icons.users },
+  { path: 'partners', label: 'Партнёры', icon: icons.partnership },
   { path: 'redirects', label: 'Редиректы', icon: icons.redirects },
   { path: 'settings', label: 'Настройки сайта', icon: icons.settings },
 ]
@@ -116,6 +117,8 @@ export default function AdminNav() {
           isActive = pathname === '/admin/news' && searchParams.get('type') !== 'article'
         } else if (item.path === 'catalog') {
           isActive = pathname === '/admin/catalog' || pathname.startsWith('/admin/catalog/')
+        } else if (item.path === 'partners') {
+          isActive = pathname === '/admin/partners' || pathname.startsWith('/admin/partners/')
         } else if (item.path === 'reviews') {
           isActive = pathname === '/admin/reviews'
         } else if (item.path === 'redirects') {

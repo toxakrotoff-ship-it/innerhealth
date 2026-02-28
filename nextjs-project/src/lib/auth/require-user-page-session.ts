@@ -14,7 +14,7 @@ export async function requireUserPageSession(options?: RequireUserPageSessionOpt
     redirect('/login')
   }
 
-  if (session.user.role !== 'USER') {
+  if (session.user.role !== 'USER' && session.user.role !== 'PARTNER') {
     redirect('/')
   }
 

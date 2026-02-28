@@ -21,6 +21,7 @@ export default async function AccountPage() {
           userEmail={userEmail}
           orderCount={dashboard.stats.orderCount}
           totalSpent={dashboard.stats.totalSpent}
+          userRole={session.user.role}
         />
       </div>
     </div>

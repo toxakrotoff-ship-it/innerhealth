@@ -25,6 +25,10 @@ export default async function AdminLayout({
     redirect('/login/change-password')
   }
 
+  if (session.user.role !== 'ADMIN') {
+    redirect('/')
+  }
+
   const adminBasePath = process.env.ADMIN_SECRET_PATH || 'admin'
 
   return (

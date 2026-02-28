@@ -1,7 +1,7 @@
 # Статус проекта InnerHealth.ru (по ТЗ adminv2.md)
 
-**Дата обновления:** 25.02.2026  
-**Реализовано:** админка (каталог, товары, категории, новости, промокоды, заказы, пользователи, настройки, модерация отзывов, Telegram), публичная часть (главная, каталог, карточка товара, корзина, новости, отзывы), **ЮKassa и СДЭК (API)**. В планах: NextAuth v5 + 2FA (план: [plans/2026-02-24-2fa.md](./plans/2026-02-24-2fa.md)), доработки СДЭК (виджет ПВЗ, авто-заказ при оплате).
+**Дата обновления:** 28.02.2026  
+**Реализовано:** админка (каталог, товары, категории, новости, промокоды, заказы, пользователи, **партнёры**, настройки, модерация отзывов, FAQ, быстрые заявки, редиректы, Telegram), публичная часть (главная, каталог, карточка товара, корзина, новости, отзывы), **ЛК пользователя** (профиль, заказы, адреса, верификация email), **ЛК партнёра** (промокоды, статистика, доход), **2FA** (TOTP и email-коды), **ЮKassa и СДЭК (API)**. В планах: переход на NextAuth v5, доработки СДЭК (виджет ПВЗ, авто-заказ при оплате).
 
 ---
 
@@ -18,7 +18,7 @@
 ### Инфраструктура
 - **Next.js** (App Router), **PostgreSQL**, **Prisma** — подключены. Синглтон Prisma в `src/lib/prisma.ts`.
 - **Tailwind CSS** — настроен. **Шрифт Montserrat** подключён в корневом `layout.tsx` через `next/font/google` (переменная `--font-montserrat`, `font-sans` на `body`).
-- **NextAuth** (v4) — Credentials, JWT, страницы `/login`, сброс пароля (forgot/reset), **завершение регистрации нового пользователя** (ссылка из письма → код на почту → установка пароля на `/login/set-initial-password`). 2FA нет.
+- **NextAuth** (v4) — Credentials, JWT, страницы `/login`, сброс пароля (forgot/reset), **завершение регистрации нового пользователя** (ссылка из письма → код на почту → установка пароля на `/login/set-initial-password`). **2FA реализовано:** TOTP и email-коды, страница `/login/2fa`, API `/api/auth/2fa/setup`, `/api/auth/2fa/send-code`, `/api/auth/verify-2fa`; настройка в админке (Профиль / Настройки).
 - **Middleware** — в `src/proxy.ts`: withAuth, проверка авторизации для путей админки и `/api/admin`; учёт `ADMIN_SECRET_PATH` в `authorized`; при кастомном пути — rewrite на `/admin`; все ссылки админки строятся от `adminBasePath` (контекст `AdminBasePathProvider` из layout). Matcher: `/admin/:path*`, `/api/admin/:path*`, `/api/orders`, `/api/promo/:path*`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/:segment/:path*`.
 
 ### Админка
@@ -26,14 +26,18 @@
   - Профиль
   - Каталог товаров
   - Модерация отзывов
+  - FAQ
   - Категории
   - Новости / Статьи (фильтр по `type`)
   - Промокоды
   - Заказы (CRM)
+  - Быстрые заявки
   - Заявки с Тильды
   - Сотрудничество
   - Статистика заказов
   - Пользователи
+  - Партнёры
+  - Редиректы
   - Настройки сайта
 - **Каталог** (`/admin/catalog`) — список товаров (таблица), поиск, сортировка, фильтр по категории (CategorySidebar). Кнопки «Ред.» и «Удалить» — переход на `/admin/products/[id]/edit` и вызов API удаления с обновлением списка.
 - **Товары:** создание/редактирование (`/admin/products/new`, `/admin/products/[id]/edit`), форма с полями схемы (табы tab1–tab4, заголовки табов, габариты для СДЭК, **блок SEO** — `seoTitle`, `seoDescr`, `seoKeywords`, **галерея изображений с D&D**). TipTap (RichTextEditor) для полей описание, основной текст и содержимое табов. В таблице каталога — **инлайн-редактирование цены и остатка** (двойной клик, PATCH). Просмотр товара `/admin/products/[id]` с кнопкой «Редактировать». **Импорт из CSV** (`/admin/products/import`): tildaUid, title, description, text, price, quantity, priceOld, photo, category, SEO, табы, характеристики; поиск по `tildaUid`, скачивание фото в `public/uploads/products/`.
@@ -45,11 +49,12 @@
 - **Настройки** — настройки сайта, почтовые ящики, **ЮKassa**, **СДЭК**, Telegram администраторов.
 - **Профиль** — редактирование профиля; блок «Уведомления Telegram»: генерация одноразового кода, ссылка на бота для привязки (вайтлист).
 - **Модерация отзывов** (`/admin/reviews`) — список отзывов, фильтр по статусу (все / на модерации / опубликованы / отклонённые), одобрение/отклонение. На сайте отображаются только отзывы со статусом APPROVED.
-- **Tilda-лиды** (`/admin/tilda-leads`) — просмотр лидов. **Партнёрство** (`/admin/partnership`) — заявки партнёров.
+- **Tilda-лиды** (`/admin/tilda-leads`) — просмотр лидов. **Партнёрство** (`/admin/partnership`) — заявки партнёров. **Партнёры** (`/admin/partners`, `/admin/partners/[userId]`) — управление партнёрами (роль PARTNER), привязка промокодов с процентом дохода, просмотр статистики. **FAQ** (`/admin/faq`), **Быстрые заявки** (`/admin/quick-orders`), **Редиректы** (`/admin/redirects`).
 - **UI** — компоненты в стиле Shadcn (Button, Input, Textarea и др.), таблицы, формы.
 
 ### Публичная часть
 - Маршруты (группа `(site)`): главная (`/`), каталог (`/catalog`, `/catalog/[categorySlug]`), карточка товара (`/product/[slug]`, `/product/id/[id]`), корзина (`/cart`), новости (`/news`, `/news/[slug]`), **отзывы** (`/otzyvy` — только одобренные), «О нас» (`/o-nas`), «Контакты» (`/contacts`), «Сотрудничество» (`/sotrudnichestvo`), «Информация» (`/informaciya`), «Отзывы»/«Политика» (`/privacy`), «Оферта» (`/oferta`), «Сертификаты» (`/sertifikaty-sootvetstviya`). Cookie consent, корзина (drawer).
+- **ЛК пользователя** (`/account`) — профиль, заказы (`/account/orders`, `/account/orders/[id]`), адреса доставки (`/account/addresses`), верификация email (`/account/verify-email`). Для партнёров (роль PARTNER) — раздел **ЛК партнёра** (`/account/partner`): промокоды, статистика заказов и доход по комиссии.
 - **Корзина и оформление заказа с промокодами:** расчёт скидок по правилам (Rule: скидка применяется только к товарам с `isPromoEligible`, не к «уже по акции»; при заданном `discountPrice` подставляется эта цена за единицу), привязка промокода к заказу, отображение скидки и итога с доставкой. Промокод не влияет на расчёт СДЭК: стоимость доставки считается по составу корзины (вес/габариты) и направлению.
 
 ### ЮKassa и СДЭК (реализовано)
@@ -57,8 +62,8 @@
 - **СДЭК:** OAuth, города (GET `/api/cdek/cities`), ПВЗ (GET `/api/cdek/deliverypoints`), калькулятор тарифов (POST `/api/cdek/calculator`). Габариты товара (weight, length, width, height) в форме товара; при отсутствии — дефолты в `src/lib/cdek.ts`.
 
 ### БД (Prisma)
-- **Модели:** Product (в т.ч. `photos` Json, `seoTitle`/`seoDescr`/`seoKeywords`, габариты weight/length/width/height, `discountPrice`, `isPromoEligible`), Category, ProductCategory, User, Order, OrderItem, CartItem, ShippingInfo, Post, PromoCode, Review (authorName, socialLink, text, imageUrl, status: PENDING | APPROVED | REJECTED), TildaLead, PartnershipLead, SiteSetting, TelegramWhitelist, TelegramLinkCode (одноразовые коды привязки), PasswordResetToken, SetInitialPasswordToken (завершение регистрации: токен ссылки + 6-значный код).
-- **Схема:** `nextjs-project/prisma/schema.prisma`. **Миграции:** `nextjs-project/prisma/migrations/` (init, product_category, promo_code, must_change_password, partnership_lead, tilda_lead, yookassa_payment_id, site_setting, product slug/tab_titles, product_photos, user_profile_columns, review_table, review_status_moderation, set_initial_password_token, add_product_promo_fields).
+- **Модели:** Product (в т.ч. `photos` Json, `seoTitle`/`seoDescr`/`seoKeywords`, габариты weight/length/width/height, `discountPrice`, `isPromoEligible`), Category, ProductCategory, User (роли USER, WRITER, ADMIN, **PARTNER**; связи orders, addresses, emailVerificationTokens), Order, OrderItem, CartItem, ShippingInfo, Post, PromoCode, **PartnerPromoCode** (связь партнёр–промокод, commissionPercent), Review (authorName, socialLink, text, imageUrl, status: PENDING | APPROVED | REJECTED), TildaLead, PartnershipLead, **UserAddress**, **EmailVerificationToken**, SiteSetting, TelegramWhitelist, TelegramLinkCode (одноразовые коды привязки), PasswordResetToken, SetInitialPasswordToken (завершение регистрации: токен ссылки + 6-значный код), **TwoFactorPending**, **TwoFactorGrant** (2FA).
+- **Схема:** `nextjs-project/prisma/schema.prisma`. **Миграции:** `nextjs-project/prisma/migrations/` (init, product_category, promo_code, must_change_password, partnership_lead, tilda_lead, yookassa_payment_id, site_setting, product slug/tab_titles, product_photos, user_profile_columns, review_table, review_status_moderation, set_initial_password_token, add_product_promo_fields, **add_2fa_tables**, **add_lk_users_models**, **add_partner_role_and_partner_promo**, redirect, category_parent, faq_quick_order и др.).
 
 ### Telegram-бот
 - Отдельный процесс (`npm run telegram-bot`), long polling. Подключение админов по коду из профиля, вайтлист, API для подтверждения и статистики по промокодам. В деплое — сервис в docker-compose. Документация: [tg_bot.md](./tg_bot.md).
@@ -67,21 +72,21 @@
 
 ## Что в админке не доделано (по ТЗ)
 
-1. **NextAuth v5 и 2FA**  
-   ТЗ: NextAuth v5 + 2FA. Сейчас NextAuth v4, 2FA нет.
+1. **NextAuth v5**  
+   ТЗ: переход на NextAuth v5. Сейчас используется NextAuth v4. 2FA (TOTP и email-коды) реализовано.
 
 ---
 
 ## Что не начато или в заделе (по ТЗ и roadmap)
 
-- **Matcher middleware** — в `src/proxy.ts` matcher задан массивом с жёстко `/admin/:path*` и общим `/:segment/:path*`. Рекомендация (см. plans): сделать matcher явно зависящим от `ADMIN_SECRET_PATH`, чтобы при смене переменной защищался один и тот же префикс. Остальное по желанию: NextAuth v5 и 2FA, виджет выбора ПВЗ СДЭК на корзине, авто-создание заказа в ЛК СДЭК при статусе PAID.
+- **Matcher middleware** — в `src/proxy.ts` matcher задан массивом с жёстко `/admin/:path*` и общим `/:segment/:path*`. Рекомендация (см. plans): сделать matcher явно зависящим от `ADMIN_SECRET_PATH`, чтобы при смене переменной защищался один и тот же префикс. По желанию: переход на NextAuth v5, виджет выбора ПВЗ СДЭК на корзине, авто-создание заказа в ЛК СДЭК при статусе PAID.
 
 ---
 
 ## Рекомендации по приоритету
 
 1. **Matcher middleware** — сделать зависимым от `ADMIN_SECRET_PATH` (или вынести защищаемый префикс в один конфиг), чтобы при смене переменной защищался нужный путь.
-2. Далее по желанию: NextAuth v5 и 2FA, доработки СДЭК (виджет ПВЗ, заказ в ЛК).
+2. Далее по желанию: переход на NextAuth v5, доработки СДЭК (виджет ПВЗ, заказ в ЛК).
 
 ---
 
@@ -93,6 +98,9 @@
 | [step_3_yokassa\|cdek.md](./step_3_yokassa%7Ccdek.md) | Настройка ЮKassa и СДЭК |
 | [categories.md](./categories.md) | Категории и разделы каталога |
 | [tg_bot.md](./tg_bot.md) | Telegram-бот |
-| [plans/](./plans/) | Планы доработок (2FA, СДЭК, roadmap, DAL) |
+| [LK-users.md](./LK-users.md) | ЛК пользователя (профиль, заказы, адреса, верификация email) |
+| [plans/](./plans/) | Планы доработок (2FA, СДЭК, roadmap, DAL, партнёры) |
 | [plans/PROJECT-INDEX.md](./plans/PROJECT-INDEX.md) | Полный индекс проекта и навигация по коду |
-| [plans/2026-02-24-2fa.md](./plans/2026-02-24-2fa.md) | План внедрения 2FA (email / TOTP) |
+| [plans/2026-02-24-2fa.md](./plans/2026-02-24-2fa.md) | План внедрения 2FA (реализовано: TOTP, email-коды) |
+| [plans/2026-02-28-partner-lk-implementation.md](./plans/2026-02-28-partner-lk-implementation.md) | ЛК партнёра и управление партнёрами в админке |
+| [plans/2026-02-26-user-branch-security-hardening-implementation.md](./plans/2026-02-26-user-branch-security-hardening-implementation.md) | Ужесточение безопасности ветки пользователей |

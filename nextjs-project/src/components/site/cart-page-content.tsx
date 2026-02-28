@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCartStore, type CartLine } from '@/store/cart-store'
@@ -72,28 +72,6 @@ export function CartPageContent() {
     return () => controller.abort()
   }, [items, mergeItemDetails])
 
-  useEffect(() => {
-    let isDisposed = false
-
-    async function loadSavedAddresses() {
-      try {
-        const response = await fetch('/api/account/addresses')
-        if (!response.ok) return
-        const data = (await response.json()) as UserAddressForCheckout[]
-        if (isDisposed) return
-        setSavedAddresses(data)
-        if (data.length > 0) setSelectedSavedAddressId(data[0].id)
-      } catch {
-        // Keep guest and unverified flows unchanged.
-      }
-    }
-
-    void loadSavedAddresses()
-    return () => {
-      isDisposed = true
-    }
-  }, [])
-
   const [promoCode, setPromoCode] = useState('')
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null)
   const [promoLoading, setPromoLoading] = useState(false)
@@ -132,6 +110,71 @@ export function CartPageContent() {
   const [savedAddresses, setSavedAddresses] = useState<UserAddressForCheckout[]>([])
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
   const [usingSavedAddress, setUsingSavedAddress] = useState(false)
+  const selectedSavedAddressIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    selectedSavedAddressIdRef.current = selectedSavedAddressId
+  }, [selectedSavedAddressId])
+
+  const loadSavedAddresses = useCallback(async () => {
+    try {
+      const response = await fetch('/api/account/addresses', {
+        credentials: 'include',
+        cache: 'no-store',
+      })
+      if (!response.ok) {
+        setSavedAddresses([])
+        setSelectedSavedAddressId(null)
+        setUsingSavedAddress(false)
+        return
+      }
+
+      const payload = (await response.json()) as
+        | UserAddressForCheckout[]
+        | { addresses?: UserAddressForCheckout[] }
+      const addresses = Array.isArray(payload) ? payload : payload.addresses ?? []
+      setSavedAddresses(addresses)
+
+      if (addresses.length === 0) {
+        setSelectedSavedAddressId(null)
+        setUsingSavedAddress(false)
+        return
+      }
+
+      const previousSelectedAddressId = selectedSavedAddressIdRef.current
+      const hasPreviousSelection = previousSelectedAddressId
+        ? addresses.some((address) => address.id === previousSelectedAddressId)
+        : false
+
+      setSelectedSavedAddressId(hasPreviousSelection ? previousSelectedAddressId : addresses[0].id)
+    } catch {
+      setSavedAddresses([])
+      setSelectedSavedAddressId(null)
+      setUsingSavedAddress(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadSavedAddresses()
+  }, [loadSavedAddresses])
+
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      void loadSavedAddresses()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+      void loadSavedAddresses()
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [loadSavedAddresses])
 
   const price = (i: { price?: number }) => i.price ?? 0
   const subtotalPromoPrice = items

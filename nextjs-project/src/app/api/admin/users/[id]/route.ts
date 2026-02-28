@@ -6,7 +6,7 @@ import * as userService from '@/services/user.service';
 
 const patchUserSchema = z.object({
   name: z.string().max(255).transform((s) => s.trim() || null).nullable().optional(),
-  role: z.enum(['USER', 'WRITER', 'ADMIN']).optional(),
+  role: z.enum(['USER', 'WRITER', 'ADMIN', 'PARTNER']).optional(),
 });
 
 export async function PATCH(

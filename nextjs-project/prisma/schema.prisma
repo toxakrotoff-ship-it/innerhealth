@@ -10,6 +10,7 @@ enum Role {
   USER
   WRITER
   ADMIN
+  PARTNER
 }
 model Product {
   id              String    @id @default(cuid())
@@ -187,6 +188,7 @@ model User {
   orders                    Order[]
   addresses                 UserAddress[]
   emailVerificationTokens   EmailVerificationToken[]
+  partnerPromoCodes         PartnerPromoCode[]
 }
 
 model UserAddress {
@@ -346,18 +348,32 @@ model Post {
 }
 
 model PromoCode {
-  id             String   @id @default(cuid())
-  code           String   @unique
-  discountType   String
-  discountValue  Float
-  isActive       Boolean  @default(true)
-  usageLimit     Int?
-  usedCount      Int      @default(0)
-  validFrom      DateTime?
-  validTo        DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  orders         Order[]
+  id               String           @id @default(cuid())
+  code             String           @unique
+  discountType     String
+  discountValue    Float
+  isActive         Boolean          @default(true)
+  usageLimit       Int?
+  usedCount        Int              @default(0)
+  validFrom        DateTime?
+  validTo          DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  orders           Order[]
+  partnerAssignment PartnerPromoCode?
+}
+
+/// Связь партнёр–промокод: один промокод привязан не более чем к одному партнёру; процент дохода по промокоду.
+model PartnerPromoCode {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promoCodeId      String    @unique
+  promoCode        PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  commissionPercent Float
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model PartnershipLead {

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createCdekOrder } from '@/lib/cdek'
+import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
+import * as settingsService from '@/services/settings.service'
 
 /**
  * Webhook ЮKassa: обновление статуса заказа по уведомлениям.
@@ -9,6 +11,7 @@ import * as orderService from '@/services/order.service'
  *   https://<ваш-домен>/api/webhooks/yookassa
  *
  * События: payment.succeeded (заказ → paid), payment.canceled (заказ → canceled).
+ * Перед установкой «оплачен» статус платежа верифицируется через GET /payments/{id}.
  * Документация: https://yookassa.ru/developers/using-api/webhooks
  */
 
@@ -38,7 +41,17 @@ function isLikelyYookassaRequest(request: Request): boolean {
   return YOOKASSA_IP_PREFIXES.some((prefix) => ip.startsWith(prefix))
 }
 
+/** In production, require HTTPS (e.g. behind reverse proxy). */
+function isSecureRequest(request: Request): boolean {
+  if (process.env.NODE_ENV !== 'production') return true
+  const proto = request.headers.get('x-forwarded-proto')
+  return proto === 'https'
+}
+
 export async function POST(request: Request) {
+  if (!isSecureRequest(request)) {
+    return NextResponse.json({ error: 'HTTPS required' }, { status: 403 })
+  }
   if (!isLikelyYookassaRequest(request)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -65,6 +78,24 @@ export async function POST(request: Request) {
   }
 
   if (body.event === 'payment.succeeded' && order.status !== 'paid') {
+    let payment: { status: string } | null = null
+    try {
+      const yookassaSettings = await settingsService.getYookassaSettingsMap()
+      const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
+      const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
+      const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
+      const credentials = hasFromAdmin
+        ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin }
+        : undefined
+      payment = await getYookassaPayment(body.object.id, credentials)
+    } catch (err) {
+      console.error('[webhook/yookassa] GET payment verification failed', orderId, err)
+      return NextResponse.json({ ok: true })
+    }
+    if (!payment || payment.status !== 'succeeded') {
+      return NextResponse.json({ ok: true })
+    }
+
     await orderService.updateOrderStatus(orderId, 'paid')
 
     const orderWithShipping = await orderService.findOrderWithShipping(orderId)

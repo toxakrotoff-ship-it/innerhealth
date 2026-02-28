@@ -1,5 +1,10 @@
-import 'server-only';
-import { prisma } from '@/lib/prisma';
+import 'server-only'
+import { prisma } from '@/lib/prisma'
+import {
+  decryptSettingValue,
+  encryptSettingValue,
+  isSensitiveSettingKey,
+} from '@/lib/settings-encryption'
 
 export const SETTING_KEYS = [
   'cdek_api_key',
@@ -15,41 +20,45 @@ export const SETTING_KEYS = [
   'site_name',
   'site_contact_email',
   'default_currency',
-] as const;
+] as const
 
-export type SettingKey = (typeof SETTING_KEYS)[number];
+export type SettingKey = (typeof SETTING_KEYS)[number]
 
-/** Get settings as key-value map. */
+/** Get settings as key-value map. Sensitive values are decrypted when read. */
 export async function getSettingsMap(keys: readonly string[] = SETTING_KEYS) {
   const rows = await prisma.siteSetting.findMany({
     where: { key: { in: [...keys] } },
-  });
-  const map: Record<string, string> = {};
+  })
+  const map: Record<string, string> = {}
   for (const k of keys) {
-    map[k] = '';
+    map[k] = ''
   }
   for (const row of rows) {
-    map[row.key] = row.value;
+    const value = isSensitiveSettingKey(row.key)
+      ? decryptSettingValue(row.value)
+      : row.value
+    map[row.key] = value
   }
-  return map;
+  return map
 }
 
-/** Upsert multiple settings. */
+/** Upsert multiple settings. Sensitive values are encrypted before storage when SETTINGS_ENCRYPTION_KEY is set. */
 export async function upsertSettings(
   body: Record<string, string>,
   keys: readonly string[] = SETTING_KEYS
 ) {
   for (const key of keys) {
-    const value = body[key];
-    if (value === undefined) continue;
-    const str = typeof value === 'string' ? value : String(value ?? '');
+    const value = body[key]
+    if (value === undefined) continue
+    const str = typeof value === 'string' ? value : String(value ?? '')
+    const stored = isSensitiveSettingKey(key) ? encryptSettingValue(str) : str
     await prisma.siteSetting.upsert({
       where: { key },
-      create: { key, value: str },
-      update: { value: str },
-    });
+      create: { key, value: stored },
+      update: { value: stored },
+    })
   }
-  return getSettingsMap(keys);
+  return getSettingsMap(keys)
 }
 
 /** Get Yookassa-related settings only. */

@@ -3,6 +3,7 @@ import 'next-auth'
 declare module 'next-auth' {
   interface User {
     id?: string
+    /** USER | WRITER | ADMIN | PARTNER */
     role?: string
     mustChangePassword?: boolean
     isEmailVerified?: boolean

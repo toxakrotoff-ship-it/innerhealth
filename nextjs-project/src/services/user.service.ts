@@ -76,9 +76,10 @@ export async function findUserByEmail(email: string) {
   });
 }
 
-/** Get all users for admin list. */
-export async function getUsersForAdmin() {
+/** Get all users for admin list, optionally filtered by role. */
+export async function getUsersForAdmin(role?: Role) {
   return prisma.user.findMany({
+    where: role ? { role } : undefined,
     select: {
       id: true,
       email: true,

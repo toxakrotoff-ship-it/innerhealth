@@ -77,6 +77,13 @@ export interface YookassaPaymentResponse {
   }
 }
 
+/** Ответ GET /payments/{id} — только нужные поля для верификации webhook. */
+export interface YookassaGetPaymentResponse {
+  id: string
+  status: string
+  metadata?: { orderId?: string }
+}
+
 /**
  * Создаёт платёж в ЮKassa и возвращает confirmation_url для редиректа.
  * Платёж в одну стадию (capture: true), с чеком 54-ФЗ.
@@ -143,6 +150,26 @@ export async function createYookassaPayment(
     throw new Error('YooKassa did not return confirmation_url')
   }
   return { paymentId: data.id, confirmationUrl: url }
+}
+
+/**
+ * Запрашивает текущий статус платежа в ЮKassa (GET /payments/{id}).
+ * Используется для верификации webhook перед установкой статуса заказа «оплачен».
+ * @returns Объект со статусом или null при ошибке/404.
+ */
+export async function getYookassaPayment(
+  paymentId: string,
+  credentials?: YookassaCredentials | null
+): Promise<{ status: string; metadata?: { orderId?: string } } | null> {
+  const creds = getCredentials(credentials)
+  const auth = buildAuthHeader(creds)
+  const res = await fetch(`${YOOKASSA_API}/payments/${paymentId}`, {
+    method: 'GET',
+    headers: { Authorization: auth },
+  })
+  if (!res.ok) return null
+  const data = (await res.json()) as YookassaGetPaymentResponse
+  return { status: data.status, metadata: data.metadata }
 }
 
 /**

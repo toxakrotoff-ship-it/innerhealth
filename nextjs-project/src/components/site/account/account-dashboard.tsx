@@ -5,6 +5,7 @@ export interface AccountDashboardProps {
   userEmail: string
   orderCount: number
   totalSpent: number
+  userRole?: string
 }
 
 export function AccountDashboard({
@@ -12,6 +13,7 @@ export function AccountDashboard({
   userEmail,
   orderCount,
   totalSpent,
+  userRole,
 }: AccountDashboardProps) {
   return (
     <section className="space-y-6">
@@ -45,6 +47,14 @@ export function AccountDashboard({
         >
           Мои адреса
         </Link>
+        {userRole === 'PARTNER' && (
+          <Link
+            href="/account/partner"
+            className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-medium text-text transition hover:border-action-blue"
+          >
+            Партнёрская программа
+          </Link>
+        )}
       </div>
     </section>
   )
