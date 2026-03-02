@@ -31,11 +31,11 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js/React need unsafe-inline/eval in dev; tighten for prod
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru", // Yandex Maps JS API
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru", // Yandex Maps API and tiles
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
