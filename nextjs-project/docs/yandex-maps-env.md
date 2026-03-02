@@ -89,17 +89,24 @@ docker compose up -d
 
 `NEXT_PUBLIC_*` подставляется в клиентский код **только при сборке** (`npm run build`). В Docker образ ключ попадает лишь если при `docker compose build` переменная была задана (из `.env` в каталоге сборки). Если образ собирали до добавления ключа или без него — в бандле окажется пустая строка, и карта не загрузится.
 
-**Решение:** пересобрать образ и перезапустить контейнеры (из каталога, где лежит `.env` с ключом):
+**Решение:** пересобрать образ и перезапустить контейнеры **из того же каталога, где лежит `.env` с ключом** (например `cd /opt/innerhealth/nextjs-project`):
+
 ```bash
+# Убедитесь, что в текущем каталоге есть .env с ключом
+grep NEXT_PUBLIC_YANDEX_MAPS_API_KEY .env
+
+# Сборка подхватывает переменные из .env в текущем каталоге
 docker compose build --no-cache app
 docker compose up -d
 ```
 
-После этого в браузере во вкладке Network запрос к `api-maps.yandex.ru` должен содержать в URL `apikey=ваш_ключ`.
+Если собираете из другого каталога (например родительского), переменная может не подставиться — тогда передайте явно: `NEXT_PUBLIC_YANDEX_MAPS_API_KEY=ваш_ключ docker compose build --no-cache app`.
+
+После пересборки в браузере во вкладке Network должен появиться запрос к `api-maps.yandex.ru` с параметром `apikey=ваш_ключ`. Если запроса нет — ключ в бандл не попал, проверьте путь и наличие переменной при сборке.
 
 ### Скрипт блокируется CSP (в Network — тип «CSP», 0 байт)
 
-В проекте включён Content-Security-Policy (middleware `src/proxy.ts`). Если в браузере запрос к `api-maps.yandex.ru` помечен как заблокированный CSP и объём 0 — в CSP добавлены источники для карты: `script-src` включает `https://api-maps.yandex.ru`, `connect-src` — `https://api-maps.yandex.ru` и `https://*.maps.yandex.ru`. После изменения пересоберите образ и перезапустите приложение.
+В проекте включён Content-Security-Policy (middleware `src/proxy.ts`). Для карты в CSP разрешены: `script-src` — `https://api-maps.yandex.ru` и `https://yastatic.net` (Яндекс подгружает бандл с yastatic.net; без него в консоли: «заблокировали выполнение сценария на …yastatic.net…» и «ymaps: Failed to bundle "full"»); `connect-src` — `https://api-maps.yandex.ru` и `https://*.maps.yandex.ru`. После изменения пересоберите образ и перезапустите приложение.
 
 ### Другие причины
 

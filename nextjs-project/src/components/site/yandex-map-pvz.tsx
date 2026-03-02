@@ -173,7 +173,7 @@ export function YandexMapPvz({
 
   const showPlaceholder = !hasKey || loadError
   const placeholderMessage = !hasKey
-    ? 'Для отображения карты пунктов выдачи укажите ключ API Яндекс.Карт (NEXT_PUBLIC_YANDEX_MAPS_API_KEY) в настройках проекта.'
+    ? 'Ключ API Яндекс.Карт не найден (NEXT_PUBLIC_YANDEX_MAPS_API_KEY). На VPS пересоберите образ из каталога с .env: docker compose build --no-cache app && docker compose up -d'
     : loadError ?? ''
 
   return (

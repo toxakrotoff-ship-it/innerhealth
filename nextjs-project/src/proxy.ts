@@ -31,7 +31,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru", // Yandex Maps JS API
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net", // Yandex Maps JS API (загрузка бандла с yastatic.net)
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
