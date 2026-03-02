@@ -18,7 +18,7 @@ export interface CategoryPageContent {
 
 export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
   collagen: {
-    heroImage: '/images/categories/collagen.jpg',
+    heroImage: '/images/categories/collagen.png',
     heroTitle: 'КОЛЛАГЕН',
     heroSubtitle: 'ПЕПТИДЫ',
     descriptionHeading: 'Коллаген Пептиды Inner Health:',

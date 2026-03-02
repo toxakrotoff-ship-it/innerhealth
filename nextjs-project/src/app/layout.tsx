@@ -15,6 +15,12 @@ const montserrat = localFont({
   display: 'swap',
 })
 
+const marckScript = localFont({
+  src: [{ path: './fonts/MarckScript-Regular.ttf', weight: '400', style: 'normal' }],
+  variable: '--font-marck-script',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Inner Health — Нутриенты и здоровое питание',
   description: 'Магазин нутриентов и продуктов для здоровья Inner Health',
@@ -26,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru" className={montserrat.variable}>
+    <html lang="ru" className={`${montserrat.variable} ${marckScript.variable}`}>
       <body className="min-h-screen bg-gray-50 font-sans antialiased text-gray-900">
         {children}
       </body>

@@ -69,7 +69,7 @@ export default function RegisterPage() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
         <div
           className="absolute -inset-[10px] will-change-transform
-            [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
+            [--aurora:repeating-linear-gradient(100deg,#88AFCB_8%,#7AA8C4_14%,#6B9BB5_20%,#E6F3FD_26%,#A8C4D4_32%)]
             [background-image:var(--aurora)]
             bg-size-[300%_200%]
             bg-position-[50%_50%]

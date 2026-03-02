@@ -173,7 +173,7 @@ export default async function HomePage() {
                   >
                     <TiltCard>
                       <div
-                        className={`relative flex min-h-[120px] flex-col justify-end p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
+                        className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
                       >
                         {bgImage && (
                           <>
@@ -191,7 +191,7 @@ export default async function HomePage() {
                           </>
                         )}
                         <span
-                          className={`relative z-10 font-medium drop-shadow-md block ${bgImage ? 'text-white' : 'text-text'}`}
+                          className={`relative z-10 font-medium drop-shadow-md block font-script text-lg ${bgImage ? 'text-white' : 'text-text'}`}
                         >
                           {cat.title}
                         </span>

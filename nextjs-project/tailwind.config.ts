@@ -9,9 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'action-blue': '#7EB8D9',
-        'soft-background': '#F9F9F9',
-        'highlight-blue': '#D9EFFF',
+        'action-blue': '#88AFCB',
+        'soft-background': '#F0F0F0',
+        'highlight-blue': '#E6F3FD',
         'text': '#222222',
         'destructive': '#EF4444',
         'success': '#10B981',

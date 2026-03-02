@@ -15,10 +15,10 @@ export type CatalogBlockSlug = (typeof CATALOG_BLOCK_SLUGS)[number]
 
 /** Local background image path for each category slug in the main catalog block */
 export const CATEGORY_BACKGROUND_IMAGES: Record<CatalogBlockSlug, string> = {
-  collagen: '/images/categories/collagen.jpg',
-  'gribnaya-kollekciya': '/images/categories/gribnaya-kollekciya.jpg',
+  collagen: '/images/categories/collagen.png',
+  'gribnaya-kollekciya': '/images/categories/gribnaya-kollekciya.png',
   nutrienty: '/images/categories/nutrienty.jpg',
-  bulony: '/images/categories/bulony.webp',
+  bulony: '/images/categories/bulony.png',
   aktsii: '/images/categories/aktsii.png',
   'podarkovye-nabory': '/images/categories/podarkovye-nabory.jpg',
 }

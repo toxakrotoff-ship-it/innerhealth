@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden>
         <div
           className="absolute -inset-[10px] will-change-transform
-            [--aurora:repeating-linear-gradient(100deg,#3B66F5_8%,#2563eb_14%,#1e3a5f_20%,#D9EFFF_26%,#475569_32%)]
+            [--aurora:repeating-linear-gradient(100deg,#88AFCB_8%,#7AA8C4_14%,#6B9BB5_20%,#E6F3FD_26%,#A8C4D4_32%)]
             [background-image:var(--aurora)]
             [background-size:300%_200%]
             [background-position:50%_50%]
@@ -130,7 +130,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="mt-4 text-center text-sm text-white/80">
-          <Link href="/login" className="text-[#D9EFFF] hover:underline">
+          <Link href="/login" className="text-[#E6F3FD] hover:underline">
             ← Вернуться к входу
           </Link>
         </p>

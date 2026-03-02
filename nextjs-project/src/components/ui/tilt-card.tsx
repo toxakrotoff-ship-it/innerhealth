@@ -24,7 +24,7 @@ export function TiltCard({ children, className }: TiltCardProps) {
     <div
       ref={ref}
       className={cn(
-        'group relative w-full min-h-[120px] [perspective:600px]',
+        'group relative w-full min-h-[180px] [perspective:600px]',
         className
       )}
       style={
