@@ -53,6 +53,7 @@ export function HeroBlock() {
                 className="object-contain object-bottom-right bg-transparent"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
+                unoptimized
               />
             </div>
           </div>
