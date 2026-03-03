@@ -52,12 +52,13 @@ export const authOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
+      if (user?.id) {
         token.id = user.id
         token.email = user.email
         token.role = user.role
         token.mustChangePassword = user.mustChangePassword
         token.isEmailVerified = Boolean(user.isEmailVerified)
+        await userService.updateLastLoginAt(user.id)
       }
       return token
     },

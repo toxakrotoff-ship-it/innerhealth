@@ -76,6 +76,14 @@ export async function findUserByEmail(email: string) {
   });
 }
 
+/** Update user's last login timestamp. Call after successful sign-in. */
+export async function updateLastLoginAt(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastLoginAt: new Date() },
+  });
+}
+
 /** Get all users for admin list, optionally filtered by role. */
 export async function getUsersForAdmin(role?: Role) {
   return prisma.user.findMany({
@@ -86,6 +94,7 @@ export async function getUsersForAdmin(role?: Role) {
       name: true,
       role: true,
       createdAt: true,
+      lastLoginAt: true,
     },
     orderBy: { createdAt: 'desc' },
   });

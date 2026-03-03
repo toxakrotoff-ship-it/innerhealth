@@ -55,6 +55,7 @@ export async function GET(request: Request) {
           name: u.name,
           role: u.role,
           createdAt: u.createdAt.toISOString(),
+          lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
         };
         if (u.role === Role.PARTNER) {
           const [promoCodes, stats] = await Promise.all([

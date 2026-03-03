@@ -22,6 +22,7 @@ interface AdminUser {
   name: string | null;
   role: string;
   createdAt: string;
+  lastLoginAt: string | null;
   promoCodes?: { id: string; code: string; commissionPercent: number }[];
   ordersCount?: number;
   totalRevenue?: number;
@@ -326,6 +327,9 @@ export default function AdminUsersPage() {
                     </>
                   )}
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Последний вход
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Дата регистрации
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -374,6 +378,17 @@ export default function AdminUsersPage() {
                         </td>
                       </>
                     )}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {user.lastLoginAt
+                        ? new Date(user.lastLoginAt).toLocaleString('ru-RU', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString('ru-RU')}
                     </td>
