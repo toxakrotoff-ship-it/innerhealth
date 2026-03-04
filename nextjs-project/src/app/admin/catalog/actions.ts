@@ -332,6 +332,28 @@ export async function updateCategory(id: string, data: Partial<CategoryInput>): 
   }
 }
 
+const categorySortUpdateSchema = z.array(
+  z.object({ id: z.string().min(1), sortOrder: z.number().int().min(0) })
+);
+
+/** Обновление порядка сортировки нескольких категорий (для drag-and-drop). */
+export async function updateCategoriesSortOrder(
+  updates: { id: string; sortOrder: number }[]
+): Promise<void> {
+  const parsed = categorySortUpdateSchema.parse(updates);
+  if (!prisma) throw new Error('Database connection is not initialized');
+
+  await prisma.$transaction(
+    parsed.map(({ id, sortOrder }) =>
+      prisma.category.update({
+        where: { id },
+        data: { sortOrder, updatedAt: new Date() },
+      })
+    )
+  );
+  revalidatePath('/admin/catalog');
+}
+
 // Удаление категории
 export async function deleteCategory(id: string): Promise<void> {
   try {

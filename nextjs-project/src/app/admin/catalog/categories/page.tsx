@@ -1,13 +1,24 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 import Button from '@/components/ui/button';
 import {
   getCategories,
   createCategory,
   updateCategory,
   deleteCategory,
-  Category
+  updateCategoriesSortOrder,
+  Category,
 } from '@/app/admin/catalog/actions';
 import {
   buildCategoryTree,
@@ -22,6 +33,73 @@ interface CategoryFormState {
   image: string;
   sortOrder: number;
   parentId: string;
+}
+
+interface CategoryRowProps {
+  category: Category;
+  categoryNode: FlatCategoryTreeNode;
+  onEdit: (category: Category) => void;
+  onDelete: (id: string) => void;
+}
+
+function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`px-4 py-3 transition ${isDragging ? 'opacity-50 bg-gray-100' : 'hover:bg-gray-50'}`}
+    >
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 flex items-center gap-2">
+          <button
+            type="button"
+            className="touch-none p-1 rounded text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing focus:outline-none"
+            {...listeners}
+            {...attributes}
+            aria-label="Перетащить для изменения порядка"
+          >
+            <GripVertical className="w-5 h-5" />
+          </button>
+          <div>
+            <div
+              className="text-sm font-medium text-gray-900 truncate"
+              style={{ paddingLeft: `${categoryNode.depth * 18}px` }}
+              title={category.title}
+            >
+              {categoryNode.depth > 0 && <span className="text-gray-400 mr-1">{'—'.repeat(categoryNode.depth)}</span>}
+              {category.title}
+            </div>
+            <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-3">
+              <span>slug: {category.slug}</span>
+              <span>сортировка: {category.sortOrder ?? 0}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex space-x-3">
+          <Button variant="secondary" size="sm" onClick={() => onEdit(category)}>
+            Ред.
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => onDelete(category.id)}>
+            Удалить
+          </Button>
+        </div>
+      </div>
+    </li>
+  );
 }
 
 export default function AdminCategoriesPage() {
@@ -162,6 +240,51 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
     setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
   };
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeNode = flattenedTree.find((n) => n.id === active.id);
+      const overNode = flattenedTree.find((n) => n.id === over.id);
+      if (!activeNode || !overNode || activeNode.parentId !== overNode.parentId) return;
+
+      const siblings = flattenedTree.filter((n) => n.parentId === activeNode.parentId);
+      const fromIndex = siblings.findIndex((s) => s.id === active.id);
+      const toIndex = siblings.findIndex((s) => s.id === over.id);
+      if (fromIndex === -1 || toIndex === -1) return;
+
+      const reordered = [...siblings];
+      const [removed] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, removed);
+
+      const updates = reordered.map((node, index) => ({
+        id: node.id,
+        sortOrder: index,
+      }));
+
+      try {
+        await updateCategoriesSortOrder(updates);
+        setCategories((prev) =>
+          prev.map((c) => {
+            const u = updates.find((x) => x.id === c.id);
+            return u ? { ...c, sortOrder: u.sortOrder } : c;
+          })
+        );
+      } catch (err) {
+        console.error('Error reordering categories:', err);
+        if (err instanceof Error) setError(`Ошибка сохранения порядка: ${err.message}`);
+      }
+    },
+    [flattenedTree]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
 
   const getIndentedLabel = (node: FlatCategoryTreeNode) => {
     if (node.depth === 0) return node.title;
@@ -339,45 +462,33 @@ export default function AdminCategoriesPage() {
           <div className="px-4 py-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-700">Дерево категорий</h3>
             <p className="text-xs text-gray-500 mt-1">
-              Вложенность отображается с отступами, действия доступны для каждого узла.
+              Вложенность отображается с отступами. Перетащите строку за иконку ≡ для изменения порядка среди элементов одного уровня.
             </p>
           </div>
 
-          <ul className="divide-y divide-gray-100">
-            {flattenedTree.map((categoryNode) => {
-              const category = categories.find((item) => item.id === categoryNode.id);
-              if (!category) return null;
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={flattenedTree.map((n) => n.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="divide-y divide-gray-100">
+                {flattenedTree.map((categoryNode) => {
+                  const category = categories.find((item) => item.id === categoryNode.id);
+                  if (!category) return null;
 
-              return (
-                <li key={category.id} className="px-4 py-3 hover:bg-gray-50 transition">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                      <div
-                        className="text-sm font-medium text-gray-900 truncate"
-                        style={{ paddingLeft: `${categoryNode.depth * 18}px` }}
-                        title={category.title}
-                      >
-                        {categoryNode.depth > 0 && <span className="text-gray-400 mr-1">{'—'.repeat(categoryNode.depth)}</span>}
-                        {category.title}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-3">
-                        <span>slug: {category.slug}</span>
-                        <span>сортировка: {category.sortOrder ?? 0}</span>
-                      </div>
-                    </div>
-                    <div className="flex space-x-3">
-                      <Button variant="secondary" size="sm" onClick={() => handleEditCategory(category)}>
-                        Ред.
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id)}>
-                        Удалить
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  return (
+                    <CategoryRow
+                      key={category.id}
+                      category={category}
+                      categoryNode={categoryNode}
+                      onEdit={handleEditCategory}
+                      onDelete={handleDeleteCategory}
+                    />
+                  );
+                })}
+              </ul>
+            </SortableContext>
+          </DndContext>
 
           {categories.length === 0 && !isCreating && !editingCategory && (
             <div className="text-center py-12">
