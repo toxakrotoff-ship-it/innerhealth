@@ -12,6 +12,7 @@ import { PostCard } from '@/components/site/post-card'
 import {
   filterCatalogBlockCategories,
   getCategoryBackgroundImage,
+  getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 
@@ -165,6 +166,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {filterCatalogBlockCategories(categories).map((cat) => {
                 const bgImage = getCategoryBackgroundImage(cat.slug)
+                const imagePosition = getCategoryImageObjectPosition(cat.slug)
                 return (
                   <Link
                     key={cat.id}
@@ -181,7 +183,7 @@ export default async function HomePage() {
                               src={bgImage}
                               alt=""
                               fill
-                              className="object-cover object-center"
+                              className={imagePosition}
                               sizes="(max-width: 768px) 50vw, 33vw"
                             />
                             <div

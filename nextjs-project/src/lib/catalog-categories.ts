@@ -17,7 +17,7 @@ export type CatalogBlockSlug = (typeof CATALOG_BLOCK_SLUGS)[number]
 export const CATEGORY_BACKGROUND_IMAGES: Record<CatalogBlockSlug, string> = {
   collagen: '/images/categories/collagen.png',
   'gribnaya-kollekciya': '/images/categories/gribnaya-kollekciya.png',
-  nutrienty: '/images/categories/nutrienty.jpg',
+  nutrienty: '/images/categories/nutrienty.png',
   bulony: '/images/categories/bulony.png',
   aktsii: '/images/categories/aktsii.png',
   'podarkovye-nabory': '/images/categories/podarkovye-nabory.jpg',
@@ -29,6 +29,12 @@ export function isCatalogBlockSlug(slug: string): slug is CatalogBlockSlug {
 
 export function getCategoryBackgroundImage(slug: string): string | undefined {
   return isCatalogBlockSlug(slug) ? CATEGORY_BACKGROUND_IMAGES[slug] : undefined
+}
+
+/** Object position for category card background (so key elements like dropper tip are visible). */
+export function getCategoryImageObjectPosition(slug: string): string {
+  if (slug === 'nutrienty') return 'object-cover object-[50%_28%]'
+  return 'object-cover object-center'
 }
 
 const SLUG_SET = new Set<string>(CATALOG_BLOCK_SLUGS)

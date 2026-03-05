@@ -7,7 +7,7 @@ const HERO_HEADLINE = 'Функциональные Продукты'
 export function HeroBlock() {
   return (
     <section
-      className="relative min-h-[520px] sm:min-h-[560px] lg:min-h-[520px] overflow-hidden bg-[#1a2332]"
+      className="relative min-h-[420px] sm:min-h-[520px] lg:min-h-[560px] overflow-hidden bg-[#1a2332]"
       aria-label="Главный блок"
     >
       {/* Aurora-фон в палитре бренда: приглушённые синие и мягкий голубой */}
@@ -26,7 +26,7 @@ export function HeroBlock() {
         />
       </div>
 
-      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 h-full min-h-[520px] sm:min-h-[560px] lg:min-h-[520px] flex flex-col">
+      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 h-full min-h-[420px] sm:min-h-[520px] lg:min-h-[560px] flex flex-col">
         <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-[auto_1fr] md:grid-rows-1 gap-8 lg:gap-12 flex-1 min-h-0 pt-12 lg:pt-16 pb-0">
           {/* Левая колонка: текст и CTA явно слева, компактный блок */}
           <div className="flex flex-col justify-center order-1 text-center md:text-left min-h-0 md:max-w-sm lg:max-w-md xl:max-w-lg w-full">
@@ -53,7 +53,6 @@ export function HeroBlock() {
                 className="object-contain object-bottom-right bg-transparent"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 priority
-                unoptimized
               />
             </div>
           </div>

@@ -9,6 +9,7 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import {
   filterCatalogBlockCategories,
   getCategoryBackgroundImage,
+  getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 
@@ -110,6 +111,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {catalogBlockCategories.map((cat) => {
           const bgImage = getCategoryBackgroundImage(cat.slug)
+          const imagePosition = getCategoryImageObjectPosition(cat.slug)
           return (
             <Link
               key={cat.id}
@@ -126,7 +128,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         src={bgImage}
                         alt=""
                         fill
-                        className="object-cover object-center"
+                        className={imagePosition}
                         sizes="(max-width: 768px) 50vw, 33vw"
                       />
                       <div
