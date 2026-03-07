@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { ResponsiveText } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 const IMAGE_FACE = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION = '/images/o-nas/nutrition.jpg'
@@ -20,24 +23,26 @@ export default function AboutPage() {
   return (
     <div className="bg-white">
       {/* Хлебные крошки */}
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
-        <nav className="text-sm text-gray-500" aria-label="Хлебные крошки">
+      <AdaptiveContainer maxWidth="default">
+        <nav className="text-sm text-gray-500 pt-6 pb-2" aria-label="Хлебные крошки">
           <Link href="/" className="hover:text-action-blue transition-colors">
             Главная
           </Link>
           <span className="mx-2">/</span>
           <span className="text-text font-medium">О нас</span>
         </nav>
-      </div>
+      </AdaptiveContainer>
 
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
-        <h1 className="text-3xl sm:text-4xl font-bold text-text mb-10">О нас</h1>
+      <AdaptiveContainer maxWidth="default">
+        <ResponsiveText variant="h1" className="mb-10">
+          О нас
+        </ResponsiveText>
 
         {/* Блок 1: Формула красоты и молодости */}
-        <section className="mb-14">
-          <h2 className="text-xl font-bold text-text mb-6 uppercase tracking-wide">
+        <section>
+          <ResponsiveText variant="h2" className="mb-6 uppercase tracking-wide">
             О НАС
-          </h2>
+          </ResponsiveText>
           <div className="space-y-4 text-gray-700 leading-relaxed">
             <p>
               Формула красоты и молодости существует. Главное в ней не дорогие
@@ -72,9 +77,13 @@ export default function AboutPage() {
           </div>
         </section>
 
+        <ScalableSpacing size="lg" />
+
         {/* Блок 2: На рынке с 2022, доверие, партнёры */}
-        <section className="mb-14">
-          <h2 className="text-xl font-bold text-text mb-6">Inner Health</h2>
+        <section>
+          <ResponsiveText variant="h2" className="mb-6">
+            Inner Health
+          </ResponsiveText>
           <div className="space-y-4 text-gray-700 leading-relaxed">
             <p>
               Inner Health на рынке с 2022 года, но уже сыскала доверие
@@ -104,6 +113,8 @@ export default function AboutPage() {
           </div>
         </section>
 
+        <ScalableSpacing size="lg" />
+
         {/* Призыв к действию */}
         <section className="bg-soft-background rounded-2xl border border-gray-200 p-8 text-center">
           <p className="text-text font-medium mb-4">
@@ -116,7 +127,7 @@ export default function AboutPage() {
             Перейти в каталог
           </Link>
         </section>
-      </div>
+      </AdaptiveContainer>
     </div>
   )
 }

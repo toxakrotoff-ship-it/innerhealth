@@ -27,18 +27,22 @@ const BANK = {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-sky-50/80 border-t border-gray-200 text-text mt-auto">
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <footer className="bg-slate-50 border-t border-slate-200 pt-20 pb-10 mt-auto">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Inner Health</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-3">
+              Inner Health
+            </h3>
+            <p className="text-sm text-slate-500 font-light leading-relaxed">
               Нутриенты и продукты для здоровья
             </p>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Информация</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
+              Информация
+            </h3>
+            <ul className="space-y-4 text-sm text-slate-500 font-light">
               {FOOTER_LINKS.slice(0, 3).map(({ label, href }) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-action-blue transition-colors">
@@ -49,8 +53,10 @@ export function SiteFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Покупателям</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
+              Покупателям
+            </h3>
+            <ul className="space-y-4 text-sm text-slate-500 font-light">
               {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-action-blue transition-colors">
@@ -61,8 +67,10 @@ export function SiteFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Юридическое</h3>
-            <ul className="space-y-2 text-sm text-gray-600">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
+              Юридическое
+            </h3>
+            <ul className="space-y-4 text-sm text-slate-500 font-light">
               {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
                 <li key={href}>
                   <Link href={href} className="hover:text-action-blue transition-colors">
@@ -75,40 +83,40 @@ export function SiteFooter() {
         </div>
 
         {/* Реквизиты */}
-        <div className="mt-10 pt-8 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+        <div className="mt-10 pt-8 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
           <div className="space-y-2">
             <p>
-              <span className="font-semibold text-gray-900">Название полное:</span>{' '}
-              <span className="text-gray-700">{LEGAL.fullName}</span>
+              <span className="font-semibold text-slate-900">Название полное:</span>{' '}
+              <span className="text-slate-600">{LEGAL.fullName}</span>
             </p>
             <p>
-              <span className="font-semibold text-gray-900">Юридический адрес:</span>{' '}
-              <span className="text-gray-700">{LEGAL.address}</span>
+              <span className="font-semibold text-slate-900">Юридический адрес:</span>{' '}
+              <span className="text-slate-600">{LEGAL.address}</span>
             </p>
           </div>
           <div className="space-y-2">
             <p>
-              <span className="font-semibold text-gray-900">Корреспондентский счёт:</span>{' '}
-              <span className="text-gray-700">{BANK.correspondentAccount}</span>
+              <span className="font-semibold text-slate-900">Корреспондентский счёт:</span>{' '}
+              <span className="text-slate-600">{BANK.correspondentAccount}</span>
             </p>
             <p>
-              <span className="font-semibold text-gray-900">БИК:</span>{' '}
-              <span className="text-gray-700">{BANK.bic}</span>
+              <span className="font-semibold text-slate-900">БИК:</span>{' '}
+              <span className="text-slate-600">{BANK.bic}</span>
             </p>
             <p>
-              <span className="font-semibold text-gray-900">ОГРНИП:</span>{' '}
-              <span className="text-gray-700">{BANK.ogrnip}</span>
+              <span className="font-semibold text-slate-900">ОГРНИП:</span>{' '}
+              <span className="text-slate-600">{BANK.ogrnip}</span>
             </p>
             <p>
-              <span className="font-semibold text-gray-900">ИНН:</span>{' '}
-              <span className="text-gray-700">{BANK.inn}</span>
+              <span className="font-semibold text-slate-900">ИНН:</span>{' '}
+              <span className="text-slate-600">{BANK.inn}</span>
             </p>
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-gray-200 flex flex-wrap items-center justify-center gap-2 text-sm text-gray-600">
-          <span>© 2022 INNER HEALTH</span>
-          <span className="text-gray-400">|</span>
+        <div className="mt-8 pt-8 border-t border-slate-200 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
+          <span className="text-slate-600">© 2022 INNER HEALTH</span>
+          <span className="text-slate-300" aria-hidden>|</span>
           <Link
             href="/privacy"
             className="text-orange-600 hover:text-orange-700 transition-colors"

@@ -1,0 +1,47 @@
+'use client'
+
+import { useMediaConflictDetection } from '@/hooks/use-overlap-detection'
+
+const NAV_LINKS = [
+  { label: 'Каталог', href: '/catalog' },
+  { label: 'О нас', href: '/o-nas' },
+  { label: 'Акции', href: '/catalog/aktsii' },
+  { label: 'Статьи', href: '/informaciya' },
+  { label: 'Контакты', href: '/contacts' },
+] as const
+
+interface AdaptiveNavProps {
+  /** Принудительно использовать мобильный вариант (переопределяет автоматическое определение) */
+  forceMobile?: boolean
+}
+
+/**
+ * Адаптивная навигация, которая автоматически переключается на мобильный вариант
+ * при обнаружении конфликта медиа-запросов (когда десктопное и мобильное меню видны одновременно).
+ */
+export function AdaptiveNav({ forceMobile = false }: AdaptiveNavProps) {
+  const hasConflict = useMediaConflictDetection()
+  const useMobile = forceMobile || hasConflict
+
+  // Если обнаружен конфликт, не рендерим десктопное меню вообще
+  if (useMobile) {
+    return null
+  }
+
+  return (
+    <nav
+      className="hidden xl:flex items-center gap-8 text-xs font-medium uppercase tracking-widest text-slate-500"
+      aria-label="Основное меню"
+    >
+      {NAV_LINKS.map(({ label, href }) => (
+        <a
+          key={href}
+          href={href}
+          className="hover:text-slate-900 transition-colors"
+        >
+          {label}
+        </a>
+      ))}
+    </nav>
+  )
+}

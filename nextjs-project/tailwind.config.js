@@ -3,6 +3,9 @@ module.exports = {
   content: [
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    'text-2xs',
+  ],
   theme: {
     extend: {
       fontFamily: {
@@ -36,6 +39,7 @@ module.exports = {
         'full': '9999px',
       },
       fontSize: {
+        '2xs': '10px',
         'base': '16px',
       },
       screens: {

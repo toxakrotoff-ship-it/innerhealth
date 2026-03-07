@@ -1,20 +1,17 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
 import { HeaderProfileMenu } from './header-profile-menu'
+import { AdaptiveNav } from './adaptive-nav'
 
 const NAV_LINKS = [
-  { label: 'О нас', href: '/o-nas' },
-  { label: 'Новости', href: '/news' },
-  { label: 'Статьи', href: '/informaciya' },
   { label: 'Каталог', href: '/catalog' },
-  { label: 'АКЦИИ', href: '/catalog/aktsii' },
-  { label: 'Сотрудничество', href: '/sotrudnichestvo' },
+  { label: 'О нас', href: '/o-nas' },
+  { label: 'Акции', href: '/catalog/aktsii' },
+  { label: 'Статьи', href: '/informaciya' },
   { label: 'Контакты', href: '/contacts' },
-  { label: 'FAQ', href: '/faq' },
 ] as const
 
 const PHONE = '+7 (989) 103-91-92'
@@ -23,95 +20,55 @@ const WHATSAPP_URL = 'https://wa.me/79891039192'
 const TELEGRAM_URL = 'https://t.me/innerhealth_ih'
 
 const headerIconLink =
-  'p-1.5 sm:p-2 rounded-full text-gray-300 hover:bg-white/10 hover:text-white transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center shrink-0'
+  'p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0'
 
 export async function SiteHeader() {
   const session = await getServerSession(authOptions)
   const isAuthenticated = Boolean(session?.user?.id)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-700 bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-gray-900/90">
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:gap-x-4 py-3 min-h-16">
-          {/* Бургер слева (до lg); лого только при полном меню (lg+) и внутри сайдбара */}
-          <HeaderNavMobile variant="dark" />
-
-          <div className="hidden lg:block shrink-0 relative h-8 w-[120px]">
-            <Link
-              href="/"
-              className="flex items-center gap-2 font-semibold text-white hover:opacity-90 transition-opacity"
-              aria-label="Inner Health — на главную"
-            >
-              <Image
-                src="/logo.png"
-                alt="Inner Health"
-                fill
-                className="object-contain object-left"
-                sizes="120px"
-                priority
-              />
-            </Link>
-          </div>
-
-          <nav
-            className="hidden lg:flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:gap-x-3 xl:gap-x-4 flex-1 min-w-0 px-2"
-            aria-label="Основное меню"
+    <header className="sticky top-0 z-100 w-full border-b border-slate-100 bg-white/70 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/70">
+      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-8 lg:gap-12">
+          <HeaderNavMobile variant="light" />
+          <Link
+            href="/"
+            className="font-semibold text-slate-900 tracking-tighter uppercase text-lg hover:opacity-90 transition-opacity shrink-0"
+            aria-label="Inner Health — на главную"
           >
-            {NAV_LINKS.map(({ label, href }) => (
-              <Link
-                key={href}
-                href={href}
-                className="text-sm font-medium text-gray-300 hover:text-white transition-colors py-2 whitespace-nowrap"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+            INNER HEALTH
+          </Link>
+          <AdaptiveNav />
+        </div>
 
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 shrink-0 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="hidden xl:flex flex-col items-end mr-1 sm:mr-4">
             <a
               href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
-              className="hidden xl:block text-sm font-medium text-gray-200 hover:text-white whitespace-nowrap transition-colors shrink-0"
+              className="text-xs font-medium text-slate-900 hover:text-slate-700"
             >
               {PHONE}
             </a>
-            <div className="flex items-center gap-0.5 sm:gap-1">
-              <a
-                href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
-                className={headerIconLink}
-                aria-label="Позвонить"
-              >
-                <PhoneIcon />
-              </a>
-              <a
-                href={`mailto:${EMAIL}`}
-                className={headerIconLink}
-                aria-label="Написать на почту"
-              >
-                <MailIcon />
-              </a>
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={headerIconLink}
-                aria-label="WhatsApp"
-              >
-                <WhatsAppIcon />
-              </a>
-              <a
-                href={TELEGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={headerIconLink}
-                aria-label="Telegram"
-              >
-                <TelegramIcon />
-              </a>
-            </div>
-            <HeaderCartButton variant="dark" />
-            <HeaderProfileMenu isAuthenticated={isAuthenticated} role={session?.user?.role} />
+            <span className="text-2xs text-slate-400 uppercase tracking-tighter">
+              Ежедневно 9:00 — 21:00
+            </span>
           </div>
+          <div className="hidden xl:flex items-center gap-0.5">
+            <a href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`} className={headerIconLink} aria-label="Позвонить">
+              <PhoneIcon />
+            </a>
+            <a href={`mailto:${EMAIL}`} className={headerIconLink} aria-label="Написать на почту">
+              <MailIcon />
+            </a>
+            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="WhatsApp">
+              <WhatsAppIcon />
+            </a>
+            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="Telegram">
+              <TelegramIcon />
+            </a>
+          </div>
+          <HeaderCartButton variant="light" />
+          <HeaderProfileMenu variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
         </div>
       </div>
     </header>

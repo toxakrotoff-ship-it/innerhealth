@@ -21,13 +21,13 @@ const PARTNERS = [
 export function PartnersBlock() {
   return (
     <section
-      className="py-16 lg:py-20 bg-white border-t border-gray-200"
+      className="py-16 sm:py-24 bg-white border-t border-slate-100"
       aria-labelledby="partners-heading"
     >
       <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
         <h2
           id="partners-heading"
-          className="text-2xl sm:text-3xl font-bold text-text mb-10 text-center"
+          className="text-3xl font-semibold tracking-tighter text-slate-900 mb-12 text-center"
         >
           Наши Партнёры
         </h2>

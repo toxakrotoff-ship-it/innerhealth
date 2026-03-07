@@ -15,6 +15,11 @@ import {
   getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
+import { ChevronRight } from 'lucide-react'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ResponsiveText, Heading2 } from '@/components/ui/responsive-text'
+import { ScalableSpacing, SpacingVertical } from '@/components/ui/scalable-spacing'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -29,6 +34,11 @@ const PartnersBlock = dynamic(
 const ReviewsCarousel = dynamic(
   () =>
     import('@/components/site/reviews-carousel').then((m) => ({ default: m.ReviewsCarousel })),
+  { ssr: true }
+)
+
+const ReviewCtaBlock = dynamic(
+  () => import('@/components/site/review-cta-block').then((m) => ({ default: m.ReviewCtaBlock })),
   { ssr: true }
 )
 
@@ -99,45 +109,61 @@ export default async function HomePage() {
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
+      <SpacingVertical size="lg" />
 
-      {/* Новинки */}
-      <section className="py-12 bg-white">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text">Новинки</h2>
-            <Link href="/catalog" className="text-action-blue font-medium hover:underline">
-              Весь каталог
+      {/* Новинки — фоны сохраняем */}
+      <section className="py-16 sm:py-24 bg-white">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">
+                Новинки ассортимента
+              </Heading2>
+              <p className="text-slate-500 text-sm font-light max-w-md">Самые актуальные разработки для вашего здоровья и энергии</p>
+            </div>
+            <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+              СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
-          <div className="flex flex-wrap justify-center gap-4">
+          <FluidGrid
+            cols={2}
+            colsTablet={3}
+            colsDesktop={4}
+            colsXl={4}
+            cols2xl={4}
+            cols3xl={4}
+            cols4xl={4}
+            gap={4}
+            adaptiveGap
+          >
             {newProducts.map((p, index) => (
-              <div
+              <ProductCard
                 key={p.id}
-                className="w-[calc((100%-1rem)/2)] max-w-[20rem] sm:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
-              >
-                <ProductCard
-                  id={p.id}
-                  title={p.title}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  priority={index < 2}
-                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                />
-              </div>
+                id={p.id}
+                title={p.title}
+                price={p.price}
+                priceOld={p.priceOld}
+                photo={p.photo}
+                slug={p.slug}
+                priority={index < 2}
+                blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+              />
             ))}
-          </div>
-        </div>
+          </FluidGrid>
+        </AdaptiveContainer>
       </section>
+      <SpacingVertical size="lg" />
 
-      {/* Новости */}
-      <section className="py-12 bg-soft-background">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text">Новости</h2>
-            <Link href="/news" className="text-action-blue font-medium hover:underline">
-              Все новости
+      {/* Новости — фоны сохраняем */}
+      <section className="py-16 sm:py-24 bg-slate-50">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
+              <p className="text-slate-500 text-sm font-light">Актуальные события и обновления</p>
+            </div>
+            <Link href="/news" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+              ВСЕ НОВОСТИ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {newsPosts.length > 0 ? (
@@ -156,14 +182,33 @@ export default async function HomePage() {
           ) : (
             <p className="text-gray-500">Пока нет новостей.</p>
           )}
-        </div>
+        </AdaptiveContainer>
       </section>
+      <SpacingVertical size="lg" />
 
-      {/* Разделы каталога */}
-      <section className="py-12 bg-white">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-text mb-6">Разделы каталога</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {/* Разделы каталога — фоны карточек сохраняем */}
+      <section className="py-16 sm:py-24 bg-white">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Разделы каталога</Heading2>
+              <p className="text-slate-500 text-sm font-light">Выберите категорию для быстрого поиска нужного продукта</p>
+            </div>
+            <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+              СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
+            </Link>
+          </div>
+          <FluidGrid
+            cols={2}
+            colsTablet={3}
+            colsDesktop={3}
+            colsXl={3}
+            cols2xl={3}
+            cols3xl={3}
+            cols4xl={3}
+            gap={4}
+            adaptiveGap
+          >
             {filterCatalogBlockCategories(categories).map((cat) => {
                 const bgImage = getCategoryBackgroundImage(cat.slug)
                 const imagePosition = getCategoryImageObjectPosition(cat.slug)
@@ -207,25 +252,29 @@ export default async function HomePage() {
                   </Link>
                 )
               })}
-          </div>
-          <div className="mt-6 text-center">
+          </FluidGrid>
+          <div className="mt-8 text-center">
             <Link
               href="/catalog"
-              className="inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 text-white font-semibold text-sm px-8 py-4 hover:bg-action-blue transition-colors"
             >
-              Смотреть весь каталог
+              СМОТРЕТЬ ВЕСЬ КАТАЛОГ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
-        </div>
+        </AdaptiveContainer>
       </section>
+      <SpacingVertical size="lg" />
 
       {/* Статьи */}
-      <section className="py-12 bg-soft-background">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text">Статьи</h2>
-            <Link href="/informaciya" className="text-action-blue font-medium hover:underline">
-              Все статьи
+      <section className="py-16 sm:py-24 bg-slate-50">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
+              <p className="text-slate-500 text-sm font-light">Полезные материалы о здоровье и нутриентах</p>
+            </div>
+            <Link href="/informaciya" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+              ВСЕ СТАТЬИ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {articlePosts.length > 0 ? (
@@ -244,47 +293,34 @@ export default async function HomePage() {
           ) : (
             <p className="text-gray-500">Пока нет статей.</p>
           )}
-        </div>
+        </AdaptiveContainer>
       </section>
+      <SpacingVertical size="lg" />
 
       {/* Отзывы */}
-      <section className="py-12 bg-soft-background">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text">Отзывы</h2>
-            <Link href="/otzyvy" className="text-action-blue font-medium hover:underline">
-              Все отзывы
+      <section className="py-16 sm:py-24 bg-slate-50">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
+              <p className="text-slate-500 text-sm font-light">Мнения наших клиентов</p>
+            </div>
+            <Link href="/otzyvy" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+              ВСЕ ОТЗЫВЫ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {reviews.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-10">
               <ReviewsCarousel reviews={reviews} />
-              <div className="text-center">
-                <Link
-                  href="/otzyvy#review-form"
-                  className="inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
-                >
-                  Оставить отзыв
-                </Link>
-              </div>
+              <ReviewCtaBlock />
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">
-                Нам важно ваше мнение. Оставьте отзыв — он появится на сайте после модерации.
-              </p>
-              <Link
-                href="/otzyvy#review-form"
-                className="mt-4 inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-2.5 min-h-[44px] hover:bg-action-blue/90 transition-colors"
-              >
-                Оставить отзыв
-              </Link>
-            </div>
+            <ReviewCtaBlock />
           )}
-        </div>
+        </AdaptiveContainer>
       </section>
 
-      {/* Блок Sprint Power (текст + мокап iPhone) */}
+      {/* Блок Sprint Power */}
       <SprintPowerBlock />
 
       {/* Наши Партнёры */}

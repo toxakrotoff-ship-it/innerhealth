@@ -1,25 +1,53 @@
 import Link from 'next/link'
+import { Star } from 'lucide-react'
 
 const BANNER_URL = 'https://sprintpower.ru'
-const BANNER_TEXT = 'Переходи на sprintpower.ru — наша линейка спортивного питания нового поколения'
+
+const MARQUEE_ITEMS = [
+  'Sprint Power — линейка спортивного питания',
+  'Высококачественное сырье',
+  'Инновационные формулы',
+  'Биодоступная форма',
+]
+
+function MarqueeContent() {
+  return (
+    <>
+      <div className="flex items-center gap-12 text-sm font-medium tracking-widest text-white/40 uppercase shrink-0">
+        {MARQUEE_ITEMS.map((text, i) => (
+          <span key={`${i}-${text}`} className="flex items-center gap-12">
+            <span>{text}</span>
+            <Star className="w-4 h-4 text-action-blue shrink-0" aria-hidden />
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-12 text-sm font-medium tracking-widest text-white/40 uppercase shrink-0 ml-12">
+        {MARQUEE_ITEMS.map((text, i) => (
+          <span key={`dup-${i}-${text}`} className="flex items-center gap-12">
+            <span>{text}</span>
+            <Star className="w-4 h-4 text-action-blue shrink-0" aria-hidden />
+          </span>
+        ))}
+      </div>
+    </>
+  )
+}
 
 export function SprintPowerBanner() {
   return (
-    <section className="bg-text text-white py-3 overflow-hidden" aria-label="Баннер Sprint Power">
-      <div className="flex w-max animate-marquee gap-8 whitespace-nowrap">
-        {[1, 2, 3].map((i) => (
-          <Link
-            key={i}
-            href={BANNER_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-8 text-sm sm:text-base font-medium hover:underline shrink-0"
-          >
-            <span>{BANNER_TEXT}</span>
-            <span className="text-action-blue">sprintpower.ru</span>
-          </Link>
-        ))}
-      </div>
+    <section
+      className="bg-slate-900 py-6 border-y border-white/5 overflow-hidden"
+      aria-label="Баннер Sprint Power"
+    >
+      <Link
+        href={BANNER_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex w-max animate-marquee-sprint gap-8 whitespace-nowrap hover:[&_span]:text-white/60 transition-colors"
+      >
+        <MarqueeContent />
+        <MarqueeContent />
+      </Link>
     </section>
   )
 }

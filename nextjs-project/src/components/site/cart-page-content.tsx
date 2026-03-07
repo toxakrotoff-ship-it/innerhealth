@@ -17,6 +17,9 @@ import {
   mapUserAddressToShipping,
   type UserAddressForCheckout,
 } from '@/lib/mappers/user-address-to-shipping'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { Heading2, Heading3 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 interface PromoResult {
   valid: boolean
@@ -467,9 +470,11 @@ export function CartPageContent() {
         ))}
       </div>
 
+      <ScalableSpacing size="lg" />
+
       {/* Промокод на всю ширину */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h2 className="font-semibold text-text mb-4">Промокод</h2>
+        <Heading2 className="mb-4">Промокод</Heading2>
         <div className="flex gap-2 flex-wrap">
           <input
             type="text"
@@ -494,6 +499,8 @@ export function CartPageContent() {
         )}
       </div>
 
+      <ScalableSpacing size="lg" />
+
       {/* Остальная форма: доставка, контакты, итого */}
       <div className="space-y-6">
         {savedAddresses.length > 0 ? (
@@ -516,7 +523,7 @@ export function CartPageContent() {
 
         {usingSavedAddress ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-text mb-2">Доставка</h2>
+            <Heading2 className="mb-2">Доставка</Heading2>
             <p className="text-sm text-gray-600">
               Используется сохранённый адрес. Чтобы заполнить поля вручную, выберите
               {' '}«Использовать другой адрес».
@@ -548,7 +555,7 @@ export function CartPageContent() {
         )}
 
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-text mb-4">Контактные данные</h2>
+            <Heading2 className="mb-4">Контактные данные</Heading2>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
@@ -575,7 +582,7 @@ export function CartPageContent() {
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h2 className="font-semibold text-text mb-4">Итого</h2>
+            <Heading2 className="mb-4">Итого</Heading2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Товары</span>

@@ -1,61 +1,64 @@
-import Image from "next/image"
-import Link from "next/link"
-import { LiquidButton } from "@/components/ui/liquid-glass-button"
-
-const HERO_HEADLINE = 'Функциональные Продукты'
+import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowUpRight } from 'lucide-react'
 
 export function HeroBlock() {
   return (
     <section
-      className="relative min-h-[420px] sm:min-h-[520px] lg:min-h-[560px] overflow-hidden bg-[#1a2332]"
+      className="relative min-h-[85vh] flex items-center overflow-hidden text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
       aria-label="Главный блок"
     >
-      {/* Aurora-фон в палитре бренда: приглушённые синие и мягкий голубой */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div
-          className="absolute -inset-[10px]
-            [--aurora:repeating-linear-gradient(100deg,#88AFCB_8%,#7AA8C4_14%,#6B9BB5_20%,#E6F3FD_26%,#A8C4D4_32%)]
-            [background-image:var(--aurora)]
-            bg-size-[300%_200%]
-            bg-position-[50%_50%]
-            blur-md
-            opacity-[0.48]
-            animate-aurora
-            mask-[radial-gradient(ellipse_80%_80%_at_50%_50%,black_25%,transparent_65%)]"
-          style={{ contain: 'layout paint' }}
-        />
+      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-12 items-center z-10">
+        {/* Левая колонка: референс — бейдж, заголовок, подзаголовок, кнопки */}
+        <div className="max-w-xl space-y-8 py-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium tracking-wide">
+            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
+            НОВЫЙ СТАНДАРТ БИОДОБАВОК
+          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tighter leading-[1.05]">
+            Функциональное <br /> питание для <span className="text-blue-300">твоего</span> баланса.
+          </h1>
+          <p className="text-base text-slate-300 font-light leading-relaxed max-w-md">
+            Мы объединили чистоту натуральных ингредиентов и высокие технологии для поддержания вашего здоровья на клеточном уровне.
+          </p>
+          <div className="flex flex-wrap gap-4 pt-4">
+            <Link
+              href="/catalog"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-full text-sm font-semibold hover:bg-blue-50 transition-all"
+            >
+              ПЕРЕЙТИ В КАТАЛОГ
+              <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
+            </Link>
+            <Link
+              href="/informaciya"
+              className="px-8 py-4 bg-transparent border border-white/20 rounded-full text-sm font-semibold hover:bg-white/5 transition-all"
+            >
+              НАШИ СЕРТИФИКАТЫ
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 h-full min-h-[420px] sm:min-h-[520px] lg:min-h-[560px] flex flex-col">
-        <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-[auto_1fr] md:grid-rows-1 gap-8 lg:gap-12 flex-1 min-h-0 pt-12 lg:pt-16 pb-0">
-          {/* Левая колонка: текст и CTA явно слева, компактный блок */}
-          <div className="flex flex-col justify-center order-1 text-center md:text-left min-h-0 md:max-w-sm lg:max-w-md xl:max-w-lg w-full">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-[2.75rem] font-bold text-white tracking-tight leading-tight">
-              {HERO_HEADLINE}
-            </h1>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <LiquidButton asChild variant="heroPrimary" size="xl">
-                <Link href="/catalog">КАТАЛОГ</Link>
-              </LiquidButton>
-              <LiquidButton asChild variant="heroOutline" size="xl">
-                <Link href="/contacts">КОНТАКТЫ</Link>
-              </LiquidButton>
-            </div>
+      {/* Правая колонка: hero-portrait.png без замены + маска и декоративное размытие */}
+      <div className="absolute right-0 bottom-0 w-full lg:w-1/2 h-[70vh] lg:h-full pointer-events-none" aria-hidden>
+        <div className="relative w-full h-full">
+          <div
+            className="absolute inset-0 w-full h-full"
+            style={{
+              maskImage: 'linear-gradient(to left, black 60%, transparent)',
+              WebkitMaskImage: 'linear-gradient(to left, black 60%, transparent)',
+            }}
+          >
+            <Image
+              src="/hero-portrait.png"
+              alt=""
+              fill
+              className="object-contain object-bottom-right opacity-90 mix-blend-lighten"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
           </div>
-
-          {/* Правая колонка: контейнер на всю высоту, картинка жёстко привязана к низу (absolute bottom-0) */}
-          <div className="relative order-2 min-h-[280px] md:min-h-0 w-full">
-            <div className="absolute bottom-0 right-0 w-full max-w-md md:max-w-xl lg:max-w-2xl xl:max-w-3xl aspect-1680/904 md:aspect-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] xl:h-[480px] bg-transparent">
-              <Image
-                src="/hero-portrait.png"
-                alt=""
-                fill
-                className="object-contain object-bottom-right bg-transparent"
-                sizes="(max-width: 768px) 100vw, 50vw"
-                priority
-              />
-            </div>
-          </div>
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/20 blur-[120px] rounded-full" aria-hidden />
         </div>
       </div>
     </section>

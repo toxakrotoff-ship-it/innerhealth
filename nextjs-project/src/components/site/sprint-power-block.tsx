@@ -1,47 +1,69 @@
 import Image from 'next/image'
 import Link from 'next/link'
-
-const SPRINT_POWER_TEXT = `С удовольствием представляем второй наш проект – Sprint Power. Спортивное питание нового поколения. Не уступает, а во многом и превосходит многие дорогие импортные аналоги. Инновационные формулы, правильные пропорции, высококачественное сырье в биодоступной форме. Добавки Sprint Power сделают ваши тренировки эффективнее, тело красивее, победы ярче. Дизайн упаковки – брутален и изыскан, идеально передает гармоничное соотношение внутренней силы и внешней красоты. Пробуйте. Делитесь впечатлениями и результатами. Они – главная оценка нашего труда.`
+import { ArrowUpRight, CheckCircle } from 'lucide-react'
 
 const SPRINT_POWER_URL = 'https://sprintpower.ru'
 
 export function SprintPowerBlock() {
   return (
-    <section className="py-16 lg:py-20 bg-soft-background" aria-labelledby="sprint-power-heading">
+    <section
+      className="py-24 border-t border-slate-100"
+      aria-labelledby="sprint-power-heading"
+    >
       <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Мокап слева — до 500px, без апскейла (исходник 500×500) */}
-          <div className="order-1 flex justify-center lg:justify-start">
-            <div
-              className="relative w-[200px] sm:w-[280px] md:w-[320px] lg:w-[360px] xl:w-[400px] xl:max-w-[400px]"
-              aria-hidden
-            >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+          {/* Слева: изображение + плавающая карточка как в референсе */}
+          <div className="relative">
+            <div className="aspect-square bg-slate-100 rounded-[40px] overflow-hidden">
               <Image
                 src="/sprint-power-mockup.png"
                 alt=""
-                width={500}
-                height={500}
-                className="w-full h-auto object-contain"
-                sizes="(max-width: 640px) 200px, (max-width: 768px) 280px, (max-width: 1024px) 360px, (max-width: 1280px) 420px, 500px"
+                width={1000}
+                height={1000}
+                className="w-full h-full object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
+            </div>
+            <div className="absolute -bottom-6 -right-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-100 max-w-[240px] z-10">
+              <h3 className="text-sm font-semibold mb-2 tracking-tight uppercase text-slate-900">
+                Sprint Power
+              </h3>
+              <p className="text-xs text-slate-500 font-light leading-relaxed">
+                Спортивное питание нового поколения. Брутальный дизайн и научный подход.
+              </p>
             </div>
           </div>
 
-          {/* Текст справа */}
-          <div className="order-2">
-            <h2 id="sprint-power-heading" className="text-2xl sm:text-3xl font-bold text-text mb-6">
-              Sprint Power
+          {/* Справа: заголовок, текст, список, ссылка */}
+          <div className="space-y-8">
+            <h2
+              id="sprint-power-heading"
+              className="text-3xl sm:text-4xl font-semibold tracking-tighter text-slate-900"
+            >
+              Больше чем спорт. <br />
+              Чистая энергия.
             </h2>
-            <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-              {SPRINT_POWER_TEXT}
+            <p className="text-slate-600 font-light leading-relaxed">
+              Sprint Power — это инновационные формулы, правильные пропорции и высококачественное сырье в биодоступной форме. Добавки, которые сделают ваши тренировки эффективнее, а победы — ярче.
             </p>
+            <ul className="space-y-4" role="list">
+              <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <CheckCircle className="w-5 h-5 shrink-0 text-action-blue" aria-hidden />
+                Европейские стандарты качества
+              </li>
+              <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <CheckCircle className="w-5 h-5 shrink-0 text-action-blue" aria-hidden />
+                Без искусственных красителей
+              </li>
+            </ul>
             <Link
               href={SPRINT_POWER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-3 min-h-[44px] hover:bg-action-blue/90 transition-colors"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-action-blue transition-colors"
             >
-              Перейти на сайт
+              ПЕРЕЙТИ НА SPRINTPOWER.RU
+              <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
             </Link>
           </div>
         </div>

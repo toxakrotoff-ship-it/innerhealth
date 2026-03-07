@@ -21,7 +21,7 @@ export default function SiteLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-soft-background">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
