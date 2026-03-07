@@ -73,7 +73,7 @@ export function PartnershipForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6 2xl:space-y-7 3xl:space-y-8">
       <div>
         <label htmlFor="partnership-name" className="mb-1.5 block text-sm font-medium text-gray-700">
           Имя <span className="text-red-500">*</span>

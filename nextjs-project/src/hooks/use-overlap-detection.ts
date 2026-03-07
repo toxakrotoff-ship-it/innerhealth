@@ -101,24 +101,19 @@ export function useMediaConflictDetection(): boolean {
 
   useEffect(() => {
     const checkConflict = () => {
-      // Проверка на проблемные диапазоны ширины экрана
       const width = window.innerWidth
       const dpr = window.devicePixelRatio || 1
 
-      // Диапазон 1024-1279px - показываем мобильное меню
-      if (width >= 1024 && width < 1280) {
-        setConflict(true)
-        return
-      }
-
-      // DPI масштабирование 133-150% при ширине до 1400px
-      if (dpr >= 1.3 && width < 1400) {
+      // DPI масштабирование: учитываем только на очень маленьких экранах с высоким DPI
+      // (например, мобильные устройства с масштабированием)
+      if (dpr >= 1.5 && width < 768) {
         setConflict(true)
         return
       }
 
       // Стандартная проверка конфликта медиа-запросов
-      const desktopMenu = document.querySelector('nav.hidden.xl\\:flex') // Десктопное меню (скрыто на мобильных)
+      // Используем более надежные селекторы с data-атрибутами или классам компонентов
+      const desktopMenu = document.querySelector('nav[aria-label="Основное меню"]') // Десктопное меню из AdaptiveNav
       const mobileMenu = document.querySelector('.xl\\:hidden') // Контейнер мобильного меню
 
       if (!desktopMenu || !mobileMenu) {

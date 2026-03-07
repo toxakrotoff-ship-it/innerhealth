@@ -8,17 +8,17 @@ export function HeroBlock() {
       className="relative min-h-[85vh] flex items-center overflow-hidden text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
       aria-label="Главный блок"
     >
-      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-12 items-center z-10">
+      <div className="relative max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 items-center z-10">
         {/* Левая колонка: референс — бейдж, заголовок, подзаголовок, кнопки */}
-        <div className="max-w-xl space-y-8 py-12">
+        <div className="max-w-xl 2xl:max-w-2xl 3xl:max-w-3xl space-y-8 py-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium tracking-wide">
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
             НОВЫЙ СТАНДАРТ БИОДОБАВОК
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tighter leading-[1.05]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl 3xl:text-9xl font-semibold tracking-tighter leading-[1.05]">
             Функциональное <br /> питание для <span className="text-blue-300">твоего</span> баланса.
           </h1>
-          <p className="text-base text-slate-300 font-light leading-relaxed max-w-md">
+          <p className="text-base text-slate-300 font-light leading-relaxed max-w-md 2xl:max-w-lg 3xl:max-w-xl">
             Мы объединили чистоту натуральных ингредиентов и высокие технологии для поддержания вашего здоровья на клеточном уровне.
           </p>
           <div className="flex flex-wrap gap-4 pt-4">

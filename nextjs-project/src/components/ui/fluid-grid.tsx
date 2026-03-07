@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { adaptiveTokens } from '@/lib/adaptive-tokens'
+import { adaptiveTokens, getGridGap, getGridColumns } from '@/lib/adaptive-tokens'
 
 export interface FluidGridProps extends HTMLAttributes<HTMLDivElement> {
   /**
@@ -32,6 +32,14 @@ export interface FluidGridProps extends HTMLAttributes<HTMLDivElement> {
    * Количество колонок на экранах 4xl (>= 2560px)
    */
   cols4xl?: number
+  /**
+   * Количество колонок на экранах 5xl (>= 3840px) - 4K мониторы
+   */
+  cols5xl?: number
+  /**
+   * Количество колонок на экранах 6xl (>= 5120px) - 5K мониторы
+   */
+  cols6xl?: number
   /**
    * Промежуток между элементами (в пикселях или Tailwind-классе)
    * @default 4
@@ -70,6 +78,7 @@ export interface FluidGridProps extends HTMLAttributes<HTMLDivElement> {
  * Адаптивная сетка, которая плавно меняет количество колонок и промежутки
  * в зависимости от брейкпоинтов больших экранов.
  *
+ * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт).
  * Использует CSS Grid с медиа-запросами, основанными на системе токенов.
  */
 export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
@@ -82,6 +91,8 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
       cols2xl,
       cols3xl,
       cols4xl,
+      cols5xl,
+      cols6xl,
       gap = 4,
       adaptiveGap = true,
       align = 'stretch',
@@ -94,7 +105,7 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
     },
     ref
   ) => {
-    // Генерация классов для колонок
+    // Генерация классов для колонок с поддержкой 5xl и 6xl
     const gridColsClasses = cn(
       // Базовое количество колонок
       `grid-cols-${cols}`,
@@ -110,11 +121,15 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
       cols3xl && `3xl:grid-cols-${cols3xl}`,
       // 4XL
       cols4xl && `4xl:grid-cols-${cols4xl}`,
+      // 5XL (4K)
+      cols5xl && `5xl:grid-cols-${cols5xl}`,
+      // 6XL (5K)
+      cols6xl && `6xl:grid-cols-${cols6xl}`,
       // Auto-fit режим
       autoFit && `grid-cols-[repeat(auto-fit,minmax(${minItemWidth}px,1fr))]`
     )
 
-    // Генерация классов для промежутков
+    // Генерация классов для промежутков с поддержкой 5xl и 6xl
     const gapValue = typeof gap === 'number' ? `${gap * 0.25}rem` : gap
     const gapClasses = cn(
       // Базовый промежуток
@@ -125,6 +140,8 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
         '2xl:gap-8',
         '3xl:gap-10',
         '4xl:gap-12',
+        '5xl:gap-16',
+        '6xl:gap-20',
       ]
     )
 
@@ -177,7 +194,7 @@ export const GridAutoFit = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'auto
 )
 GridAutoFit.displayName = 'GridAutoFit'
 
-export const GridResponsive = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols' | 'colsTablet' | 'colsDesktop' | 'colsXl' | 'cols2xl' | 'cols3xl' | 'cols4xl'>>(
+export const GridResponsive = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols' | 'colsTablet' | 'colsDesktop' | 'colsXl' | 'cols2xl' | 'cols3xl' | 'cols4xl' | 'cols5xl' | 'cols6xl'>>(
   (props, ref) => (
     <FluidGrid
       ref={ref}
@@ -188,8 +205,70 @@ export const GridResponsive = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'c
       cols2xl={5}
       cols3xl={6}
       cols4xl={8}
+      cols5xl={10}
+      cols6xl={12}
       {...props}
     />
   )
 )
 GridResponsive.displayName = 'GridResponsive'
+
+/**
+ * Сетка для карточек товаров
+ */
+export const GridProducts = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols' | 'colsTablet' | 'colsDesktop' | 'colsXl' | 'cols2xl' | 'cols3xl' | 'cols4xl' | 'cols5xl' | 'cols6xl'>>(
+  (props, ref) => (
+    <FluidGrid
+      ref={ref}
+      cols={1}
+      colsTablet={2}
+      colsDesktop={3}
+      colsXl={4}
+      cols2xl={4}
+      cols3xl={5}
+      cols4xl={6}
+      cols5xl={8}
+      cols6xl={10}
+      gap={6}
+      {...props}
+    />
+  )
+)
+GridProducts.displayName = 'GridProducts'
+
+/**
+ * Сетка для карточек контента (статьи, посты)
+ */
+export const GridContent = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols' | 'colsTablet' | 'colsDesktop' | 'colsXl' | 'cols2xl' | 'cols3xl' | 'cols4xl' | 'cols5xl' | 'cols6xl'>>(
+  (props, ref) => (
+    <FluidGrid
+      ref={ref}
+      cols={1}
+      colsTablet={2}
+      colsDesktop={2}
+      colsXl={3}
+      cols2xl={3}
+      cols3xl={4}
+      cols4xl={5}
+      cols5xl={6}
+      cols6xl={8}
+      gap={8}
+      {...props}
+    />
+  )
+)
+GridContent.displayName = 'GridContent'
+
+/**
+ * Хук для получения адаптивных параметров сетки
+ */
+export function useFluidGridConfig(
+  breakpoint: keyof typeof adaptiveTokens.grid.gapMultipliers = 'base'
+) {
+  return {
+    columns: getGridColumns(breakpoint === 'base' ? 'default' : breakpoint as keyof typeof adaptiveTokens.grid.columns),
+    gap: getGridGap(breakpoint),
+  }
+}
+
+export default FluidGrid

@@ -112,7 +112,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Новинки — фоны сохраняем */}
-      <section className="py-16 sm:py-24 bg-white">
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
@@ -129,10 +129,10 @@ export default async function HomePage() {
             cols={2}
             colsTablet={3}
             colsDesktop={4}
-            colsXl={4}
-            cols2xl={4}
-            cols3xl={4}
-            cols4xl={4}
+            colsXl={5}
+            cols2xl={6}
+            cols3xl={7}
+            cols4xl={8}
             gap={4}
             adaptiveGap
           >
@@ -155,7 +155,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Новости — фоны сохраняем */}
-      <section className="py-16 sm:py-24 bg-slate-50">
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
@@ -187,7 +187,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Разделы каталога — фоны карточек сохраняем */}
-      <section className="py-16 sm:py-24 bg-white">
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
@@ -202,10 +202,10 @@ export default async function HomePage() {
             cols={2}
             colsTablet={3}
             colsDesktop={3}
-            colsXl={3}
-            cols2xl={3}
-            cols3xl={3}
-            cols4xl={3}
+            colsXl={4}
+            cols2xl={5}
+            cols3xl={6}
+            cols4xl={7}
             gap={4}
             adaptiveGap
           >
@@ -266,7 +266,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Статьи */}
-      <section className="py-16 sm:py-24 bg-slate-50">
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
@@ -298,7 +298,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Отзывы */}
-      <section className="py-16 sm:py-24 bg-slate-50">
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">

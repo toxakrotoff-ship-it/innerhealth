@@ -1,11 +1,11 @@
 import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { adaptiveTokens } from '@/lib/adaptive-tokens'
+import { adaptiveTokens, getAdaptiveSpacing } from '@/lib/adaptive-tokens'
 
 type SpacingDirection = 'vertical' | 'horizontal' | 'all' | 'top' | 'right' | 'bottom' | 'left'
 type SpacingSize = 
-  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 | 16 | 20 | 24 | 32 | 40 | 48 | 56 | 64
-  | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl'
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 | 16 | 20 | 24 | 32 | 40 | 48 | 56 | 64 | 72 | 80 | 96
+  | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl'
 
 export interface ScalableSpacingProps extends HTMLAttributes<HTMLDivElement> {
   /**
@@ -42,7 +42,8 @@ export interface ScalableSpacingProps extends HTMLAttributes<HTMLDivElement> {
  * Компонент для адаптивных отступов, которые масштабируются
  * на больших экранах согласно системе токенов.
  *
- * Автоматически увеличивает отступы на экранах 1920px+ и 2560px+.
+ * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт).
+ * Автоматически увеличивает отступы на экранах 1920px+, 2560px+, 3840px+ и 5120px+.
  */
 export const ScalableSpacing = forwardRef<HTMLDivElement, ScalableSpacingProps>(
   (
@@ -62,7 +63,7 @@ export const ScalableSpacing = forwardRef<HTMLDivElement, ScalableSpacingProps>(
       if (typeof size === 'number') {
         return `${prefix}-${size}`
       }
-      // Именованные размеры
+      // Именованные размеры с поддержкой 5xl и 6xl
       const sizeMap: Record<string, string> = {
         xs: `${prefix}-2`,
         sm: `${prefix}-4`,
@@ -72,6 +73,8 @@ export const ScalableSpacing = forwardRef<HTMLDivElement, ScalableSpacingProps>(
         '2xl': `${prefix}-16`,
         '3xl': `${prefix}-24`,
         '4xl': `${prefix}-32`,
+        '5xl': `${prefix}-48`,
+        '6xl': `${prefix}-64`,
       }
       return sizeMap[size] || `${prefix}-4`
     }
@@ -105,13 +108,15 @@ export const ScalableSpacing = forwardRef<HTMLDivElement, ScalableSpacingProps>(
         break
     }
 
-    // Адаптивные классы для больших экранов
+    // Адаптивные классы для больших экранов с поддержкой 5xl и 6xl
     const adaptiveClasses = adaptive
       ? [
           'xl:[&]:my-6',
           '2xl:[&]:my-8',
           '3xl:[&]:my-10',
           '4xl:[&]:my-12',
+          '5xl:[&]:my-16',
+          '6xl:[&]:my-20',
         ].join(' ')
       : ''
 
@@ -183,3 +188,40 @@ export const SpacingXL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, '
   (props, ref) => <ScalableSpacing ref={ref} size="xl" {...props} />
 )
 SpacingXL.displayName = 'SpacingXL'
+
+export const Spacing2XL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, 'size'>>(
+  (props, ref) => <ScalableSpacing ref={ref} size="2xl" {...props} />
+)
+Spacing2XL.displayName = 'Spacing2XL'
+
+export const Spacing3XL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, 'size'>>(
+  (props, ref) => <ScalableSpacing ref={ref} size="3xl" {...props} />
+)
+Spacing3XL.displayName = 'Spacing3XL'
+
+export const Spacing4XL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, 'size'>>(
+  (props, ref) => <ScalableSpacing ref={ref} size="4xl" {...props} />
+)
+Spacing4XL.displayName = 'Spacing4XL'
+
+export const Spacing5XL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, 'size'>>(
+  (props, ref) => <ScalableSpacing ref={ref} size="5xl" {...props} />
+)
+Spacing5XL.displayName = 'Spacing5XL'
+
+export const Spacing6XL = forwardRef<HTMLDivElement, Omit<ScalableSpacingProps, 'size'>>(
+  (props, ref) => <ScalableSpacing ref={ref} size="6xl" {...props} />
+)
+Spacing6XL.displayName = 'Spacing6XL'
+
+/**
+ * Хук для получения адаптивного отступа
+ */
+export function useAdaptiveSpacingValue(
+  baseSpacing: number,
+  breakpoint?: keyof typeof adaptiveTokens.spacing.adaptiveIncrements | null
+) {
+  return getAdaptiveSpacing(baseSpacing, breakpoint)
+}
+
+export default ScalableSpacing

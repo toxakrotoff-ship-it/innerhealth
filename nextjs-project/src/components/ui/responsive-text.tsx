@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { adaptiveTokens } from '@/lib/adaptive-tokens'
+import { adaptiveTokens, getScaledSize } from '@/lib/adaptive-tokens'
 
 type TextVariant =
   | 'xs'
@@ -94,6 +94,7 @@ export interface ResponsiveTextProps extends HTMLAttributes<HTMLParagraphElement
  * Адаптивный текстовый компонент, который масштабирует размер шрифта
  * и другие типографические свойства на больших экранах.
  *
+ * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт).
  * Использует коэффициенты масштабирования из системы токенов.
  */
 export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextProps>(
@@ -148,13 +149,15 @@ export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextPro
           ? 'text-gray-600'
           : ''
 
-    // Адаптивные классы для больших экранов
+    // Адаптивные классы для больших экранов с поддержкой 5xl и 6xl
     const adaptiveClasses = adaptive
       ? [
           'xl:text-[calc(var(--scale-xl)*1em)]',
           '2xl:text-[calc(var(--scale-2xl)*1em)]',
           '3xl:text-[calc(var(--scale-3xl)*1em)]',
           '4xl:text-[calc(var(--scale-4xl)*1em)]',
+          '5xl:text-[calc(var(--scale-5xl)*1em)]',
+          '6xl:text-[calc(var(--scale-6xl)*1em)]',
         ].join(' ')
       : ''
 
@@ -236,8 +239,18 @@ export const Text4XL = forwardRef<HTMLParagraphElement, Omit<ResponsiveTextProps
 )
 Text4XL.displayName = 'Text4XL'
 
+export const Text5XL = forwardRef<HTMLParagraphElement, Omit<ResponsiveTextProps, 'variant'>>(
+  (props, ref) => <ResponsiveText ref={ref} variant="5xl" {...props} />
+)
+Text5XL.displayName = 'Text5XL'
+
+export const Text6XL = forwardRef<HTMLParagraphElement, Omit<ResponsiveTextProps, 'variant'>>(
+  (props, ref) => <ResponsiveText ref={ref} variant="6xl" {...props} />
+)
+Text6XL.displayName = 'Text6XL'
+
 /**
- * Заголовочные компоненты
+ * Заголовочные компоненты с адаптивным масштабированием для 4K/5K экранов
  */
 export const Heading1 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
   (props, ref) => <ResponsiveText ref={ref} as="h1" variant="4xl" weight="bold" {...props} />
@@ -258,3 +271,15 @@ export const Heading4 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps,
   (props, ref) => <ResponsiveText ref={ref} as="h4" variant="xl" weight="medium" {...props} />
 )
 Heading4.displayName = 'Heading4'
+
+/**
+ * Хук для получения адаптивного размера шрифта
+ */
+export function useAdaptiveFontSize(
+  baseSize: number,
+  breakpoint: keyof typeof adaptiveTokens.scaleFactors = 'base'
+) {
+  return getScaledSize(baseSize, breakpoint)
+}
+
+export default ResponsiveText

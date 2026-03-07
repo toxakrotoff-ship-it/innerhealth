@@ -31,7 +31,7 @@ export function PartnersBlock() {
         >
           Наши Партнёры
         </h2>
-        <div className="grid gap-8 sm:gap-12 sm:grid-cols-2">
+        <div className="grid gap-8 sm:gap-12 sm:grid-cols-2 lg:grid-cols-2 xl:gap-14 2xl:gap-16 3xl:gap-18 4xl:gap-20">
           {PARTNERS.map((partner) => (
             <Link
               key={partner.url}
@@ -40,7 +40,7 @@ export function PartnersBlock() {
               rel="noopener noreferrer"
               className="group flex flex-col sm:flex-row gap-4 p-6 rounded-2xl border border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
-              <div className="relative shrink-0 w-full sm:w-40 h-32 bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="relative shrink-0 w-full sm:w-40 lg:w-48 2xl:w-56 3xl:w-64 h-32 lg:h-36 2xl:h-40 3xl:h-44 bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <Image
                   src={partner.imageUrl}
                   alt={partner.name}

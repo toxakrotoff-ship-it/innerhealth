@@ -76,7 +76,7 @@ export function ProductQuickView({
     open && isMounted
       ? createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4" role="dialog" aria-modal="true">
-            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+            <div className="w-full max-w-2xl xl:max-w-3xl 2xl:max-w-4xl 3xl:max-w-5xl rounded-2xl bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
                 <h3 className="text-base font-semibold text-text">Быстрый просмотр</h3>
                 <button
@@ -88,7 +88,7 @@ export function ProductQuickView({
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-[180px_minmax(0,1fr)]">
+              <div className="grid grid-cols-1 gap-5 p-5 sm:grid-cols-[180px_minmax(0,1fr)] lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
                 <div className="relative aspect-square rounded-xl bg-highlight-blue overflow-hidden">
                   {photo ? (
                     <Image
@@ -109,7 +109,7 @@ export function ProductQuickView({
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-lg font-semibold text-text">{title}</p>
+                  <p className="text-lg lg:text-xl 2xl:text-2xl 3xl:text-3xl font-semibold text-text">{title}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-xl font-semibold text-text">{price.toLocaleString('ru-RU')} ₽</span>
                     {priceOld != null && priceOld > price && (

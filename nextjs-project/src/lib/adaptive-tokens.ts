@@ -2,11 +2,15 @@
  * Система токенов для адаптивного масштабирования на больших экранах
  * 
  * Токены определяют значения для различных брейкпоинтов, позволяя
- * единообразно масштабировать интерфейс на экранах 1920px+ и 2560px+
+ * единообразно масштабировать интерфейс на экранах 1920px+, 2560px+, 3840px+ и 5120px+
+ * 
+ * Поддержка сверхбольших экранов (5K+): 5143px × 3086px и выше
  */
 
 export const adaptiveTokens = {
   // Брейкпоинты (в пикселях)
+  // 5xl (3840px) - 4K UHD мониторы
+  // 6xl (5120px) - 5K мониторы и сверхбольшие экраны
   breakpoints: {
     sm: 640,
     md: 768,
@@ -15,33 +19,44 @@ export const adaptiveTokens = {
     '2xl': 1536,
     '3xl': 1920,
     '4xl': 2560,
+    '5xl': 3840, // Новый: 4K UHD
+    '6xl': 5120, // Новый: 5K и сверхбольшие экраны
   },
 
   // Максимальные ширины контейнеров для каждого брейкпоинта
+  // Используют CSS min() для адаптивности
   containerWidths: {
     default: 'min(90rem, 92vw)',      // ~1440px на 1600px экране
     xl: 'min(100rem, 90vw)',          // ~1600px на 1920px экране
     '2xl': 'min(110rem, 85vw)',       // ~1760px на 2560px экране
     '3xl': 'min(120rem, 80vw)',       // ~1920px на 2560px экране
     '4xl': 'min(140rem, 75vw)',       // ~2240px на 3840px экране
+    '5xl': 'min(180rem, 70vw)',       // ~2880px на 4K экране (3840px)
+    '6xl': 'min(240rem, 65vw)',       // ~3840px на 5K экране (5120px)
   },
 
   // Фиксированные ширины контейнеров (в пикселях) согласно стратегии
+  // Оптимальная ширина контента для комфортного чтения
   containerFixedWidths: {
     default: 1440,
     xl: 1440,
     '2xl': 1600,
     '3xl': 1920,
     '4xl': 2240,
+    '5xl': 2880,  // Оптимально для 4K (3840px)
+    '6xl': 3840,  // Оптимально для 5K (5120px)
   },
 
   // Коэффициенты масштабирования для типографики и отступов
+  // Прогрессивное увеличение для сохранения пропорций
   scaleFactors: {
     base: 1,
     xl: 1.05,
     '2xl': 1.1,
     '3xl': 1.15,
     '4xl': 1.2,
+    '5xl': 1.3,  // +30% на 4K экранах
+    '6xl': 1.4,  // +40% на 5K экранах
   },
 
   // Адаптивные значения для типографики
@@ -56,6 +71,8 @@ export const adaptiveTokens = {
       '2xl': 1.5,  // 24px
       '3xl': 1.875, // 30px
       '4xl': 2.25,  // 36px
+      '5xl': 3,     // 48px - для заголовков на 4K+
+      '6xl': 3.75,  // 60px - для заголовков на 5K+
     },
 
     // Линейные высоты
@@ -93,18 +110,23 @@ export const adaptiveTokens = {
       48: 12,    // 48px
       56: 14,    // 56px
       64: 16,    // 64px
+      72: 18,    // 72px -新增 для больших экранов
+      80: 20,    // 80px -新增 для 4K+
+      96: 24,    // 96px -新增 для 5K+
     },
 
-    // Адаптивные увеличения для больших экранов
+    // Адаптивные увеличения для больших экранов (в пикселях)
     adaptiveIncrements: {
       xl: 1,
       '2xl': 2,
       '3xl': 4,
       '4xl': 8,
+      '5xl': 16,  // +16px на 4K
+      '6xl': 24,  // +24px на 5K
     },
   },
 
-  // Цвета для адаптивных состояний (если нужны)
+  // Цвета для адаптивных состояний
   colors: {
     background: {
       light: '#FFFFFF',
@@ -124,6 +146,32 @@ export const adaptiveTokens = {
     xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
     '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
+    '4xl': '0 45px 80px -20px rgba(0, 0, 0, 0.35)', //新增 для 4K+
+    '5xl': '0 60px 100px -25px rgba(0, 0, 0, 0.4)', //新增 для 5K+
+  },
+
+  // Параметры сетки для больших экранов
+  grid: {
+    // Количество колонок для разных брейкпоинтов
+    columns: {
+      default: 12,
+      '3xl': 12,
+      '4xl': 16,  // Больше колонок на 4K+
+      '5xl': 20,  // Еще больше на 5K+
+      '6xl': 24,  // Максимум на сверхбольших
+    },
+    // Базовый gap для сетки
+    baseGap: 24,
+    // Множители gap для брейкпоинтов
+    gapMultipliers: {
+      base: 1,
+      xl: 1.1,
+      '2xl': 1.2,
+      '3xl': 1.3,
+      '4xl': 1.4,
+      '5xl': 1.5,
+      '6xl': 1.6,
+    },
   },
 } as const
 
@@ -139,11 +187,47 @@ export function getContainerWidth(breakpoint: keyof typeof adaptiveTokens.contai
 }
 
 /**
+ * Возвращает фиксированную ширину контейнера для текущего брейкпоинта
+ */
+export function getContainerFixedWidth(breakpoint: keyof typeof adaptiveTokens.containerFixedWidths = 'default'): number {
+  return adaptiveTokens.containerFixedWidths[breakpoint]
+}
+
+/**
  * Рассчитывает адаптивный размер с учетом коэффициента масштабирования
  */
 export function getScaledSize(baseSize: number, breakpoint: keyof typeof adaptiveTokens.scaleFactors = 'base'): number {
   const factor = adaptiveTokens.scaleFactors[breakpoint]
   return Math.round(baseSize * factor)
+}
+
+/**
+ * Рассчитывает адаптивный отступ с учетом инкремента для брейкпоинта
+ * @param baseSpacing - базовый отступ в пикселях
+ * @param breakpoint - брейкпоинт (null или undefined для base)
+ */
+export function getAdaptiveSpacing(
+  baseSpacing: number,
+  breakpoint?: keyof typeof adaptiveTokens.spacing.adaptiveIncrements | null
+): number {
+  if (!breakpoint) return baseSpacing
+  const increment = adaptiveTokens.spacing.adaptiveIncrements[breakpoint]
+  return baseSpacing + increment
+}
+
+/**
+ * Возвращает gap для сетки на указанном брейкпоинте
+ */
+export function getGridGap(breakpoint: keyof typeof adaptiveTokens.grid.gapMultipliers = 'base'): number {
+  const multiplier = adaptiveTokens.grid.gapMultipliers[breakpoint]
+  return Math.round(adaptiveTokens.grid.baseGap * multiplier)
+}
+
+/**
+ * Возвращает количество колонок для сетки на указанном брейкпоинте
+ */
+export function getGridColumns(breakpoint: keyof typeof adaptiveTokens.grid.columns = 'default'): number {
+  return adaptiveTokens.grid.columns[breakpoint]
 }
 
 /**
@@ -155,6 +239,11 @@ export function generateCSSVariables(): Record<string, string> {
   // Контейнеры
   Object.entries(adaptiveTokens.containerWidths).forEach(([key, value]) => {
     variables[`--container-${key}`] = value
+  })
+
+  // Фиксированные ширины контейнеров
+  Object.entries(adaptiveTokens.containerFixedWidths).forEach(([key, value]) => {
+    variables[`--container-fixed-${key}`] = `${value}px`
   })
 
   // Коэффициенты масштабирования
@@ -171,6 +260,16 @@ export function generateCSSVariables(): Record<string, string> {
     variables[`--color-text-${key}`] = value
   })
 
+  // Адаптивные отступы
+  Object.entries(adaptiveTokens.spacing.adaptiveIncrements).forEach(([key, value]) => {
+    variables[`--spacing-adaptive-${key}`] = `${value}px`
+  })
+
+  // Параметры сетки
+  Object.entries(adaptiveTokens.grid.columns).forEach(([key, value]) => {
+    variables[`--grid-columns-${key}`] = value.toString()
+  })
+
   return variables
 }
 
@@ -181,7 +280,11 @@ export function useAdaptiveTokens() {
   return {
     tokens: adaptiveTokens,
     getContainerWidth,
+    getContainerFixedWidth,
     getScaledSize,
+    getAdaptiveSpacing,
+    getGridGap,
+    getGridColumns,
   }
 }
 
@@ -190,6 +293,9 @@ export function useAdaptiveTokens() {
  */
 export type Breakpoint = keyof typeof adaptiveTokens.breakpoints
 export type ContainerWidth = keyof typeof adaptiveTokens.containerWidths
+export type ContainerFixedWidth = keyof typeof adaptiveTokens.containerFixedWidths
 export type ScaleFactor = keyof typeof adaptiveTokens.scaleFactors
+export type SpacingScale = keyof typeof adaptiveTokens.spacing.scale
+export type GridColumns = keyof typeof adaptiveTokens.grid.columns
 
 // Экспорт типов для использования в других модулях

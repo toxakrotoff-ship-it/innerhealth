@@ -10,6 +10,8 @@ export interface AdaptiveContainerProps extends HTMLAttributes<HTMLDivElement> {
    * - '2xl' (1600px)
    * - '3xl' (1920px)
    * - '4xl' (2240px)
+   * - '5xl' (2880px) - для 4K экранов (3840px)
+   * - '6xl' (3840px) - для 5K экранов (5120px)
    * - 'full' (100% ширины)
    */
   maxWidth?: keyof typeof adaptiveTokens.containerFixedWidths | 'full'
@@ -33,6 +35,7 @@ export interface AdaptiveContainerProps extends HTMLAttributes<HTMLDivElement> {
  * Адаптивный контейнер, который масштабирует свою максимальную ширину
  * в зависимости от брейкпоинтов больших экранов.
  *
+ * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт).
  * Использует CSS-переменные из системы токенов для плавного перехода.
  */
 export const AdaptiveContainer = forwardRef<HTMLDivElement, AdaptiveContainerProps>(
@@ -47,24 +50,33 @@ export const AdaptiveContainer = forwardRef<HTMLDivElement, AdaptiveContainerPro
     },
     ref
   ) => {
+    // Получаем фиксированную ширину из токенов
+    const maxWidthValue = maxWidth === 'full' 
+      ? '100%' 
+      : `${adaptiveTokens.containerFixedWidths[maxWidth]}px`
+
     const containerClasses = cn(
       // Базовые стили
       'w-full',
       // Центрирование
       center && 'mx-auto',
-      // Адаптивные отступы
-      adaptivePadding && 'px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 3xl:px-16 4xl:px-20',
-      // Максимальная ширина
-      maxWidth === 'full'
-        ? 'max-w-full'
-        : `max-w-[${adaptiveTokens.containerFixedWidths[maxWidth]}px]`,
-      // Плавные переходы при изменении ширины
-      'transition-all duration-300 ease-in-out',
+      // Адаптивные отступы с поддержкой 5xl и 6xl
+      adaptivePadding && [
+        'px-4 sm:px-6 lg:px-8',
+        'xl:px-10 2xl:px-12 3xl:px-16 4xl:px-20',
+        '5xl:px-24 6xl:px-32',
+      ],
+      // Максимальная ширина через inline-стиль для корректной работы
       className
     )
 
     return (
-      <div ref={ref} className={containerClasses} {...props}>
+      <div 
+        ref={ref} 
+        className={containerClasses} 
+        style={{ maxWidth: maxWidthValue }}
+        {...props}
+      >
         {children}
       </div>
     )
@@ -74,8 +86,9 @@ export const AdaptiveContainer = forwardRef<HTMLDivElement, AdaptiveContainerPro
 AdaptiveContainer.displayName = 'AdaptiveContainer'
 
 /**
- * Утилитарный компонент для быстрого использования контейнеров с фиксированной шириной
+ * Утилитарные компоненты для быстрого использования контейнеров с фиксированной шириной
  */
+
 export const ContainerXL = forwardRef<HTMLDivElement, Omit<AdaptiveContainerProps, 'maxWidth'>>(
   (props, ref) => <AdaptiveContainer ref={ref} maxWidth="xl" {...props} />
 )
@@ -95,3 +108,30 @@ export const Container4XL = forwardRef<HTMLDivElement, Omit<AdaptiveContainerPro
   (props, ref) => <AdaptiveContainer ref={ref} maxWidth="4xl" {...props} />
 )
 Container4XL.displayName = 'Container4XL'
+
+export const Container5XL = forwardRef<HTMLDivElement, Omit<AdaptiveContainerProps, 'maxWidth'>>(
+  (props, ref) => <AdaptiveContainer ref={ref} maxWidth="5xl" {...props} />
+)
+Container5XL.displayName = 'Container5XL'
+
+export const Container6XL = forwardRef<HTMLDivElement, Omit<AdaptiveContainerProps, 'maxWidth'>>(
+  (props, ref) => <AdaptiveContainer ref={ref} maxWidth="6xl" {...props} />
+)
+Container6XL.displayName = 'Container6XL'
+
+/**
+ * Контейнер с полной шириной
+ */
+export const ContainerFull = forwardRef<HTMLDivElement, Omit<AdaptiveContainerProps, 'maxWidth'>>(
+  (props, ref) => <AdaptiveContainer ref={ref} maxWidth="full" {...props} />
+)
+ContainerFull.displayName = 'ContainerFull'
+
+/**
+ * Хук для получения адаптивной ширины контейнера
+ */
+export function useContainerWidth(breakpoint: keyof typeof adaptiveTokens.containerFixedWidths = 'default') {
+  return adaptiveTokens.containerFixedWidths[breakpoint]
+}
+
+export default AdaptiveContainer

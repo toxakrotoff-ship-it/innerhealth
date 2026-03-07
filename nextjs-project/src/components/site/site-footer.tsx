@@ -29,7 +29,7 @@ export function SiteFooter() {
   return (
     <footer className="bg-slate-50 border-t border-slate-200 pt-20 pb-10 mt-auto">
       <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-4 4xl:grid-cols-4 gap-8 lg:gap-10 xl:gap-12 2xl:gap-14 3xl:gap-16 4xl:gap-20">
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-3">
               Inner Health
@@ -83,7 +83,7 @@ export function SiteFooter() {
         </div>
 
         {/* Реквизиты */}
-        <div className="mt-10 pt-8 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+        <div className="mt-10 pt-8 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 3xl:grid-cols-2 4xl:grid-cols-2 gap-8 lg:gap-10 xl:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 text-sm">
           <div className="space-y-2">
             <p>
               <span className="font-semibold text-slate-900">Название полное:</span>{' '}
