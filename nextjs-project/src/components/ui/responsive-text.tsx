@@ -20,6 +20,7 @@ type TextVariant =
 type TextWeight = 'light' | 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold'
 type TextAlign = 'left' | 'center' | 'right' | 'justify'
 type TextColor = keyof typeof adaptiveTokens.colors.text | 'inherit' | 'current'
+type FontFamily = 'sans' | 'display' | 'script'
 
 export interface ResponsiveTextProps extends HTMLAttributes<HTMLParagraphElement> {
   /**
@@ -47,6 +48,11 @@ export interface ResponsiveTextProps extends HTMLAttributes<HTMLParagraphElement
    * @default 'primary'
    */
   color?: TextColor
+  /**
+   * Семейство шрифтов
+   * @default 'sans'
+   */
+  fontFamily?: FontFamily
   /**
    * Включить адаптивное масштабирование на больших экранах
    * @default true
@@ -105,6 +111,7 @@ export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextPro
       weight = 'normal',
       align = 'left',
       color = 'primary',
+      fontFamily = 'sans',
       adaptive = true,
       lineClamp,
       noWrap = false,
@@ -149,6 +156,13 @@ export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextPro
           ? 'text-gray-600'
           : ''
 
+    // Классы для семейства шрифтов
+    const fontFamilyClasses = {
+      sans: 'font-sans',
+      display: 'font-display',
+      script: 'font-script',
+    }[fontFamily]
+
     // Адаптивные классы для больших экранов с поддержкой 5xl и 6xl
     const adaptiveClasses = adaptive
       ? [
@@ -177,6 +191,7 @@ export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextPro
       weightClasses,
       alignClasses,
       colorClasses,
+      fontFamilyClasses,
       adaptiveClasses,
       extraClasses,
       // Плавные переходы для адаптивных изменений
@@ -253,22 +268,22 @@ Text6XL.displayName = 'Text6XL'
  * Заголовочные компоненты с адаптивным масштабированием для 4K/5K экранов
  */
 export const Heading1 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h1" variant="4xl" weight="bold" {...props} />
+  (props, ref) => <ResponsiveText ref={ref} as="h1" variant="4xl" weight="bold" fontFamily="display" {...props} />
 )
 Heading1.displayName = 'Heading1'
 
 export const Heading2 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h2" variant="3xl" weight="semibold" {...props} />
+  (props, ref) => <ResponsiveText ref={ref} as="h2" variant="3xl" weight="semibold" fontFamily="display" {...props} />
 )
 Heading2.displayName = 'Heading2'
 
 export const Heading3 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h3" variant="2xl" weight="semibold" {...props} />
+  (props, ref) => <ResponsiveText ref={ref} as="h3" variant="2xl" weight="semibold" fontFamily="display" {...props} />
 )
 Heading3.displayName = 'Heading3'
 
 export const Heading4 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h4" variant="xl" weight="medium" {...props} />
+  (props, ref) => <ResponsiveText ref={ref} as="h4" variant="xl" weight="medium" fontFamily="display" {...props} />
 )
 Heading4.displayName = 'Heading4'
 

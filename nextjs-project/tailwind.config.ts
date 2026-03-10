@@ -6,9 +6,6 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  safelist: [
-    'text-2xs',
-  ],
   theme: {
     extend: {
       colors: {
@@ -34,6 +31,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-montserrat)', 'Montserrat', 'sans-serif'],
+        display: ['var(--font-unbounded)', 'Unbounded', 'sans-serif'],
       },
       borderRadius: {
         'full': '9999px',

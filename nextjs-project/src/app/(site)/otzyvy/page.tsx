@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { ReviewsSection } from './reviews-section';
 import { AdaptiveContainer } from '@/components/ui/adaptive-container';
-import { ResponsiveText } from '@/components/ui/responsive-text';
+import { Heading1 } from '@/components/ui/responsive-text';
 import { ScalableSpacing } from '@/components/ui/scalable-spacing';
 
 type ReviewRow = {
@@ -31,9 +31,9 @@ export default async function ReviewsPage() {
   return (
     <AdaptiveContainer maxWidth="default">
       <ScalableSpacing size="lg" />
-      <ResponsiveText variant="h1" className="text-slate-900 mb-10">
+      <Heading1 className="text-slate-900 mb-10">
         Отзывы
-      </ResponsiveText>
+      </Heading1>
       <ReviewsSection initialReviews={serialized} />
     </AdaptiveContainer>
   );

@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
+import { Unbounded } from 'next/font/google'
 
 const montserrat = localFont({
   src: [
@@ -21,6 +22,12 @@ const marckScript = localFont({
   display: 'swap',
 })
 
+const unbounded = Unbounded({
+  subsets: ['cyrillic', 'latin'],
+  variable: '--font-unbounded',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: 'Inner Health — Нутриенты и здоровое питание',
   description: 'Магазин нутриентов и продуктов для здоровья Inner Health',
@@ -32,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru" className={`${montserrat.variable} ${marckScript.variable}`}>
+    <html lang="ru" className={`${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}>
       <body className="min-h-screen bg-gray-50 font-sans antialiased text-gray-900">
         {children}
       </body>

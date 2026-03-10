@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ReviewsCarousel, type ReviewItem } from '@/components/site/reviews-carousel';
 import { ReviewForm } from '@/components/site/review-form';
-import { ResponsiveText } from '@/components/ui/responsive-text';
+import { Heading2 } from '@/components/ui/responsive-text';
 import { ScalableSpacing } from '@/components/ui/scalable-spacing';
 
 interface ReviewsSectionProps {
@@ -16,9 +16,9 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
   return (
     <>
       <section>
-        <ResponsiveText variant="h2" className="text-slate-900 mb-6">
+        <Heading2 className="text-slate-900 mb-6">
           Отзывы наших клиентов
-        </ResponsiveText>
+        </Heading2>
         <ReviewsCarousel reviews={initialReviews} />
       </section>
       <ScalableSpacing size="lg" />
@@ -27,9 +27,9 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
           <div className="absolute top-0 left-0 w-1/3 h-full bg-action-blue/10 blur-[100px] rounded-full pointer-events-none" aria-hidden />
           <div className="relative z-10 space-y-8">
             <div>
-              <ResponsiveText variant="h2" className="text-white">
+              <Heading2 className="text-white">
                 Оставить отзыв
-              </ResponsiveText>
+              </Heading2>
               <p className="mt-2 text-slate-400 font-light">
                 Ваш отзыв появится на странице после модерации.
               </p>

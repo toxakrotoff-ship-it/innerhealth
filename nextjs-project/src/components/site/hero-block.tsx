@@ -15,7 +15,7 @@ export function HeroBlock() {
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
             НОВЫЙ СТАНДАРТ БИОДОБАВОК
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl 3xl:text-9xl font-semibold tracking-tighter leading-[1.05]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl 2xl:text-8xl 3xl:text-9xl font-display font-semibold tracking-tighter leading-[1.05]">
             Функциональное <br /> питание для <span className="text-blue-300">твоего</span> баланса.
           </h1>
           <p className="text-base text-slate-300 font-light leading-relaxed max-w-md 2xl:max-w-lg 3xl:max-w-xl">

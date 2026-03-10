@@ -10,6 +10,7 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['Montserrat', 'sans-serif'],
+        display: ['Unbounded', 'sans-serif'],
       },
       colors: {
         'action-blue': '#88AFCB',

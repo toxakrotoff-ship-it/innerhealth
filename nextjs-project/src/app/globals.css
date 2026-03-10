@@ -58,6 +58,7 @@
   --color-gray-900: #111827;
   --font-sans: var(--font-montserrat), "Montserrat", ui-sans-serif, sans-serif;
   --font-script: var(--font-marck-script), "Marck Script", cursive;
+  --font-display: var(--font-unbounded), "Unbounded", ui-sans-serif, sans-serif;
   --radius-full: 9999px;
 }
 

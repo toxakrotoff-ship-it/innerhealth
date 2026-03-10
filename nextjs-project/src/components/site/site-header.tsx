@@ -84,7 +84,7 @@ export async function SiteHeader() {
           <Link
             href="/"
             className={`
-              font-semibold text-slate-900 tracking-tighter uppercase 
+              font-display font-semibold text-slate-900 tracking-tighter uppercase
               text-lg 2xl:text-xl 3xl:text-2xl 4xl:text-3xl 5xl:text-4xl 6xl:text-5xl
               hover:opacity-90 transition-opacity shrink-0
             `}
