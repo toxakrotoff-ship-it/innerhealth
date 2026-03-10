@@ -8,6 +8,8 @@
   --container-2xl: min(110rem, 85vw);
   --container-3xl: min(120rem, 80vw);
   --container-4xl: min(140rem, 75vw);
+  --container-5xl: min(180rem, 70vw);
+  --container-6xl: min(240rem, 65vw);
 
   /* Коэффициенты масштабирования */
   --scale-base: 1;
@@ -15,6 +17,8 @@
   --scale-2xl: 1.1;
   --scale-3xl: 1.15;
   --scale-4xl: 1.2;
+  --scale-5xl: 1.3;
+  --scale-6xl: 1.4;
 
   /* Цвета для адаптивных состояний */
   --color-background-light: #FFFFFF;
@@ -24,6 +28,8 @@
 
   /* Тени для больших экранов */
   --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+  --shadow-4xl: 0 45px 80px -20px rgba(0, 0, 0, 0.35);
+  --shadow-5xl: 0 60px 100px -25px rgba(0, 0, 0, 0.4);
 }
 
 @theme {

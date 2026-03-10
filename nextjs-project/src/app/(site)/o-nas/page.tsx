@@ -34,13 +34,13 @@ export default function AboutPage() {
       </AdaptiveContainer>
 
       <AdaptiveContainer maxWidth="default">
-        <ResponsiveText variant="h1" className="mb-10">
+        <ResponsiveText as="h1" variant="4xl" weight="bold" className="mb-10">
           О нас
         </ResponsiveText>
 
         {/* Блок 1: Формула красоты и молодости */}
         <section>
-          <ResponsiveText variant="h2" className="mb-6 uppercase tracking-wide">
+          <ResponsiveText as="h2" variant="3xl" weight="semibold" className="mb-6 uppercase tracking-wide">
             О НАС
           </ResponsiveText>
           <div className="space-y-4 text-gray-700 leading-relaxed">
@@ -81,7 +81,7 @@ export default function AboutPage() {
 
         {/* Блок 2: На рынке с 2022, доверие, партнёры */}
         <section>
-          <ResponsiveText variant="h2" className="mb-6">
+          <ResponsiveText as="h2" variant="3xl" weight="semibold" className="mb-6">
             Inner Health
           </ResponsiveText>
           <div className="space-y-4 text-gray-700 leading-relaxed">

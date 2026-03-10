@@ -37,25 +37,28 @@ function renderMarks(children: React.ReactNode, marks: { type: string }[] | unde
 function renderNode(node: TipTapNode, key: number): React.ReactNode {
   if (!node) return null
 
+  // Generate a more stable key using node type and index
+  const stableKey = `node-${key}-${node.type || 'unknown'}`
+
   if (node.type === 'text') {
-    return <span key={key}>{renderMarks(node.text ?? '', node.marks)}</span>
+    return <span key={stableKey}>{renderMarks(node.text ?? '', node.marks)}</span>
   }
 
   const children = node.content?.map((n, i) => renderNode(n, i))
 
   switch (node.type) {
     case 'paragraph':
-      return <p key={key} className="mb-4">{children}</p>
+      return <p key={stableKey} className="mb-4">{children}</p>
     case 'heading': {
       const level = node.attrs?.level ?? 1
       const Tag = `h${Math.min(3, Math.max(1, level))}` as 'h1' | 'h2' | 'h3'
       const classMap = { h1: 'text-2xl font-bold mt-8 mb-4', h2: 'text-xl font-bold mt-6 mb-3', h3: 'text-lg font-semibold mt-4 mb-2' }
-      return <Tag key={key} className={classMap[Tag]}>{children}</Tag>
+      return <Tag key={stableKey} className={classMap[Tag]}>{children}</Tag>
     }
     case 'bulletList': {
       const styleType = node.attrs?.listStyleType || 'disc'
       return (
-        <ul key={key} className="mb-4 space-y-1 pl-6 news-list-bullet" data-list-style-type={styleType}>
+        <ul key={stableKey} className="mb-4 space-y-1 pl-6 news-list-bullet" data-list-style-type={styleType}>
           {children}
         </ul>
       )
@@ -65,7 +68,7 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
       const start = node.attrs?.start
       return (
         <ol
-          key={key}
+          key={stableKey}
           className="mb-4 space-y-1 pl-6 news-list-ordered"
           data-marker-style={markerStyle}
           {...(start !== undefined && start !== 1 ? { start } : {})}
@@ -75,13 +78,13 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
       )
     }
     case 'listItem':
-      return <li key={key} className="ml-2">{children}</li>
+      return <li key={stableKey} className="ml-2">{children}</li>
     case 'image': {
       const src = node.attrs?.src
       if (!src) return null
       const isLocal = typeof src === 'string' && src.startsWith('/')
       return (
-        <figure key={key} className="my-6">
+        <figure key={stableKey} className="my-6">
           <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
             <Image
               src={src}
@@ -96,9 +99,9 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
       )
     }
     case 'blockquote':
-      return <blockquote key={key} className="border-l-4 border-gray-300 pl-4 my-4 italic text-gray-700">{children}</blockquote>
+      return <blockquote key={stableKey} className="border-l-4 border-gray-300 pl-4 my-4 italic text-gray-700">{children}</blockquote>
     default:
-      return <span key={key}>{children}</span>
+      return <span key={stableKey}>{children}</span>
   }
 }
 
@@ -118,10 +121,25 @@ export default async function NewsPostPage({ params }: PageProps) {
   if (!post) notFound()
 
   const raw = post.content as TipTapNode | string | null
-  const tipTapContent = raw && typeof raw === 'object' && raw.type === 'doc'
-    ? renderTipTapContent(raw)
+  
+  // Normalize raw to ensure consistent type between server and client
+  let normalizedRaw: TipTapNode | string | null = raw
+  if (typeof raw === 'string') {
+    try {
+      // Attempt to parse string as JSON
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') {
+        normalizedRaw = parsed
+      }
+    } catch {
+      // Keep as string if not valid JSON
+    }
+  }
+
+  const tipTapContent = normalizedRaw && typeof normalizedRaw === 'object' && normalizedRaw.type === 'doc'
+    ? renderTipTapContent(normalizedRaw)
     : null
-  const fallback = typeof raw === 'string' ? <p>{raw}</p> : <p className="text-gray-500">Содержимое публикации</p>
+  const fallback = typeof normalizedRaw === 'string' ? <p>{normalizedRaw}</p> : <p className="text-gray-500">Содержимое публикации</p>
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 sm:px-6 lg:px-8">

@@ -1,4 +1,8 @@
 import Link from 'next/link'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ResponsiveText } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 const FOOTER_LINKS = [
   { label: 'О нас', href: '/o-nas' },
@@ -27,104 +31,251 @@ const BANK = {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 pt-20 pb-10 mt-auto">
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-4 4xl:grid-cols-4 gap-8 lg:gap-10 xl:gap-12 2xl:gap-14 3xl:gap-16 4xl:gap-20">
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-3">
-              Inner Health
-            </h3>
-            <p className="text-sm text-slate-500 font-light leading-relaxed">
-              Нутриенты и продукты для здоровья
-            </p>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
-              Информация
-            </h3>
-            <ul className="space-y-4 text-sm text-slate-500 font-light">
-              {FOOTER_LINKS.slice(0, 3).map(({ label, href }) => (
-                <li key={href}>
-                  <Link href={href} className="hover:text-action-blue transition-colors">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
-              Покупателям
-            </h3>
-            <ul className="space-y-4 text-sm text-slate-500 font-light">
-              {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
-                <li key={href}>
-                  <Link href={href} className="hover:text-action-blue transition-colors">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-900 mb-6">
-              Юридическое
-            </h3>
-            <ul className="space-y-4 text-sm text-slate-500 font-light">
-              {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
-                <li key={href}>
-                  <Link href={href} className="hover:text-action-blue transition-colors">
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Реквизиты */}
-        <div className="mt-10 pt-8 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2 3xl:grid-cols-2 4xl:grid-cols-2 gap-8 lg:gap-10 xl:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 text-sm">
-          <div className="space-y-2">
-            <p>
-              <span className="font-semibold text-slate-900">Название полное:</span>{' '}
-              <span className="text-slate-600">{LEGAL.fullName}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">Юридический адрес:</span>{' '}
-              <span className="text-slate-600">{LEGAL.address}</span>
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p>
-              <span className="font-semibold text-slate-900">Корреспондентский счёт:</span>{' '}
-              <span className="text-slate-600">{BANK.correspondentAccount}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">БИК:</span>{' '}
-              <span className="text-slate-600">{BANK.bic}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">ОГРНИП:</span>{' '}
-              <span className="text-slate-600">{BANK.ogrnip}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">ИНН:</span>{' '}
-              <span className="text-slate-600">{BANK.inn}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-8 pt-8 border-t border-slate-200 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
-          <span className="text-slate-600">© 2022 INNER HEALTH</span>
-          <span className="text-slate-300" aria-hidden>|</span>
-          <Link
-            href="/privacy"
-            className="text-orange-600 hover:text-orange-700 transition-colors"
+    <footer className="bg-slate-50 border-t border-slate-200 mt-auto">
+      <ScalableSpacing direction="vertical" size={80} usePadding adaptive>
+        <AdaptiveContainer maxWidth="6xl" adaptivePadding>
+          {/* Основная сетка с 4 колонками на десктопе и выше */}
+          <FluidGrid
+            cols={1}
+            colsTablet={2}
+            colsDesktop={4}
+            colsXl={4}
+            cols2xl={4}
+            cols3xl={4}
+            cols4xl={4}
+            cols5xl={4}
+            cols6xl={4}
+            gap={8}
+            adaptiveGap
+            align="start"
+            justify="between"
           >
-            Политика конфиденциальности
-          </Link>
-        </div>
-      </div>
+            {/* Колонка 1: Бренд */}
+            <div>
+              <ResponsiveText
+                as="h3"
+                variant="xs"
+                weight="semibold"
+                uppercase
+                tracking="widest"
+                color="primary"
+                className="mb-3"
+                adaptive
+              >
+                Inner Health
+              </ResponsiveText>
+              <ResponsiveText
+                as="p"
+                variant="sm"
+                weight="light"
+                color="secondary"
+                leading="relaxed"
+                adaptive
+              >
+                Нутриенты и продукты для здоровья
+              </ResponsiveText>
+            </div>
+
+            {/* Колонка 2: Информация */}
+            <div>
+              <ResponsiveText
+                as="h3"
+                variant="xs"
+                weight="semibold"
+                uppercase
+                tracking="widest"
+                color="primary"
+                className="mb-6"
+                adaptive
+              >
+                Информация
+              </ResponsiveText>
+              <ul className="space-y-4">
+                {FOOTER_LINKS.slice(0, 3).map(({ label, href }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="hover:text-action-blue transition-colors"
+                    >
+                      <ResponsiveText
+                        as="span"
+                        variant="sm"
+                        weight="light"
+                        color="secondary"
+                        adaptive
+                      >
+                        {label}
+                      </ResponsiveText>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Колонка 3: Покупателям */}
+            <div>
+              <ResponsiveText
+                as="h3"
+                variant="xs"
+                weight="semibold"
+                uppercase
+                tracking="widest"
+                color="primary"
+                className="mb-6"
+                adaptive
+              >
+                Покупателям
+              </ResponsiveText>
+              <ul className="space-y-4">
+                {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="hover:text-action-blue transition-colors"
+                    >
+                      <ResponsiveText
+                        as="span"
+                        variant="sm"
+                        weight="light"
+                        color="secondary"
+                        adaptive
+                      >
+                        {label}
+                      </ResponsiveText>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Колонка 4: Юридическое */}
+            <div>
+              <ResponsiveText
+                as="h3"
+                variant="xs"
+                weight="semibold"
+                uppercase
+                tracking="widest"
+                color="primary"
+                className="mb-6"
+                adaptive
+              >
+                Юридическое
+              </ResponsiveText>
+              <ul className="space-y-4">
+                {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="hover:text-action-blue transition-colors"
+                    >
+                      <ResponsiveText
+                        as="span"
+                        variant="sm"
+                        weight="light"
+                        color="secondary"
+                        adaptive
+                      >
+                        {label}
+                      </ResponsiveText>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </FluidGrid>
+
+          {/* Реквизиты */}
+          <ScalableSpacing direction="vertical" size={80} adaptive>
+            <div className="border-t border-slate-200 pt-8">
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={2}
+                colsXl={2}
+                cols2xl={2}
+                cols3xl={2}
+                cols4xl={2}
+                cols5xl={2}
+                cols6xl={2}
+                gap={8}
+                adaptiveGap
+                align="start"
+                justify="between"
+              >
+                <div className="space-y-2">
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">
+                      Название полное:
+                    </span>{' '}
+                    <span className="text-slate-600">{LEGAL.fullName}</span>
+                  </ResponsiveText>
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">
+                      Юридический адрес:
+                    </span>{' '}
+                    <span className="text-slate-600">{LEGAL.address}</span>
+                  </ResponsiveText>
+                </div>
+                <div className="space-y-2">
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">
+                      Корреспондентский счёт:
+                    </span>{' '}
+                    <span className="text-slate-600">
+                      {BANK.correspondentAccount}
+                    </span>
+                  </ResponsiveText>
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">БИК:</span>{' '}
+                    <span className="text-slate-600">{BANK.bic}</span>
+                  </ResponsiveText>
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">
+                      ОГРНИП:
+                    </span>{' '}
+                    <span className="text-slate-600">{BANK.ogrnip}</span>
+                  </ResponsiveText>
+                  <ResponsiveText as="p" variant="sm" adaptive>
+                    <span className="font-semibold text-slate-900">ИНН:</span>{' '}
+                    <span className="text-slate-600">{BANK.inn}</span>
+                  </ResponsiveText>
+                </div>
+              </FluidGrid>
+            </div>
+          </ScalableSpacing>
+
+          {/* Копирайт */}
+          <ScalableSpacing direction="vertical" size={80} adaptive>
+            <div className="border-t border-slate-200 pt-8 flex flex-wrap items-center justify-center gap-2">
+              <ResponsiveText
+                as="span"
+                variant="sm"
+                color="secondary"
+                adaptive
+              >
+                © 2022 INNER HEALTH
+              </ResponsiveText>
+              <span className="text-slate-300" aria-hidden>
+                |
+              </span>
+              <Link
+                href="/privacy"
+                className="text-orange-600 hover:text-orange-700 transition-colors"
+              >
+                <ResponsiveText
+                  as="span"
+                  variant="sm"
+                  weight="medium"
+                  adaptive
+                >
+                  Политика конфиденциальности
+                </ResponsiveText>
+              </Link>
+            </div>
+          </ScalableSpacing>
+        </AdaptiveContainer>
+      </ScalableSpacing>
     </footer>
   )
 }

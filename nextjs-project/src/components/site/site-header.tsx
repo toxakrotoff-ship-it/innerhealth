@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { adaptiveTokens } from '@/lib/adaptive-tokens'
@@ -6,6 +7,7 @@ import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
 import { HeaderProfileMenu } from './header-profile-menu'
 import { AdaptiveNav } from './adaptive-nav'
+import { ClearInvalidSession } from './clear-invalid-session'
 
 const NAV_LINKS = [
   { label: 'Каталог', href: '/catalog' },
@@ -32,10 +34,41 @@ const headerIconLink =
  * - Масштабирование типографики
  */
 export async function SiteHeader() {
-  const session = await getServerSession(authOptions)
+  let session = null
+  let hasInvalidSession = false
+  
+  try {
+    console.log('[SiteHeader] Calling getServerSession...')
+    session = await getServerSession(authOptions)
+    console.log('[SiteHeader] getServerSession result:', session ? 'session exists' : 'null')
+  } catch (error) {
+    // Ошибка декодирования JWT - токен зашифрован другим ключом
+    console.error('[SiteHeader] Failed to decode session token:', error instanceof Error ? error.message : String(error))
+    hasInvalidSession = true
+  }
+  
+  // Если сессия null, проверяем наличие cookies NextAuth
+  // Если cookies есть - они повреждены и должны быть очищены через API
+  if (!session) {
+    try {
+      const cookieStore = await cookies()
+      const hasSessionCookie = cookieStore.get('next-auth.session-token') ||
+                               cookieStore.get('__Secure-next-auth.session-token')
+      if (hasSessionCookie) {
+        console.log('[SiteHeader] Session is null but session cookie exists - marking for cleanup')
+        hasInvalidSession = true
+      }
+    } catch (checkError) {
+      console.warn('[SiteHeader] Could not check cookies:', checkError)
+    }
+  }
+  
   const isAuthenticated = Boolean(session?.user?.id)
 
   return (
+    <>
+    {/* Клиентский компонент для очистки поврежденных cookies */}
+    <ClearInvalidSession hasInvalidSession={hasInvalidSession} />
     <header className="sticky top-0 z-100 w-full border-b border-slate-100 bg-white/70 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/70">
       <div 
         className={`
@@ -96,6 +129,7 @@ export async function SiteHeader() {
         </div>
       </div>
     </header>
+    </>
   )
 }
 

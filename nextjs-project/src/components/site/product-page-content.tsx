@@ -12,7 +12,7 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
-import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
+import { ResponsiveText, Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 interface ProductPageContentProps {
@@ -70,7 +70,20 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
         ]}
       />
       <RecentlyViewedTracker productId={product.id} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <FluidGrid
+        cols={1}
+        colsTablet={1}
+        colsDesktop={2}
+        colsXl={2}
+        cols2xl={2}
+        cols3xl={2}
+        cols4xl={2}
+        cols5xl={2}
+        cols6xl={2}
+        gap={10}
+        adaptiveGap={false}
+        className="gap-10"
+      >
         <ProductMediaGallery title={product.title} photos={photos} />
         <div>
           <Heading1>{product.title}</Heading1>
@@ -124,7 +137,7 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
             </div>
           )}
         </div>
-      </div>
+      </FluidGrid>
 
       {product.text && (
         <ScalableSpacing size="lg">
@@ -154,7 +167,7 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
       {relatedProducts.length > 0 && (
         <ScalableSpacing size="lg">
           <section className="pt-8 border-t border-gray-200">
-            <h2 className="text-xl font-bold text-text mb-4">С этим товаром покупают</h2>
+            <Heading2 className="mb-4">С этим товаром покупают</Heading2>
             <FluidGrid
               cols={2}
               colsTablet={3}
@@ -163,6 +176,8 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
               cols2xl={4}
               cols3xl={4}
               cols4xl={4}
+              cols5xl={4}
+              cols6xl={4}
               gap={4}
               adaptiveGap
             >
