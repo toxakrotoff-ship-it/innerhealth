@@ -1,5 +1,37 @@
 @import "tailwindcss";
 
+/* Адаптивные CSS-переменные из системы токенов */
+:root {
+  /* Контейнеры */
+  --container-default: min(90rem, 92vw);
+  --container-xl: min(100rem, 90vw);
+  --container-2xl: min(110rem, 85vw);
+  --container-3xl: min(120rem, 80vw);
+  --container-4xl: min(140rem, 75vw);
+  --container-5xl: min(180rem, 70vw);
+  --container-6xl: min(240rem, 65vw);
+
+  /* Коэффициенты масштабирования */
+  --scale-base: 1;
+  --scale-xl: 1.05;
+  --scale-2xl: 1.1;
+  --scale-3xl: 1.15;
+  --scale-4xl: 1.2;
+  --scale-5xl: 1.3;
+  --scale-6xl: 1.4;
+
+  /* Цвета для адаптивных состояний */
+  --color-background-light: #FFFFFF;
+  --color-background-dark: #0F172A;
+  --color-text-primary: #222222;
+  --color-text-secondary: #6B7280;
+
+  /* Тени для больших экранов */
+  --shadow-3xl: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+  --shadow-4xl: 0 45px 80px -20px rgba(0, 0, 0, 0.35);
+  --shadow-5xl: 0 60px 100px -25px rgba(0, 0, 0, 0.4);
+}
+
 @theme {
   /* shadcn-style tokens for UI components */
   --color-background: #ffffff;
@@ -26,13 +58,22 @@
   --color-gray-900: #111827;
   --font-sans: var(--font-montserrat), "Montserrat", ui-sans-serif, sans-serif;
   --font-script: var(--font-marck-script), "Marck Script", cursive;
+  --font-display: var(--font-unbounded), "Unbounded", ui-sans-serif, sans-serif;
   --radius-full: 9999px;
 }
 
 @layer base {
-  /* Масштабирование контента: шрифт и rem растут с шириной viewport (не раздвигаем контейнер). */
+  /* Фиксированный базовый размер шрифта для предотвращения конфликтов адаптивного clamp.
+     Адаптивное масштабирование реализуется через медиа-запросы и tailwind config. */
   html {
-    font-size: clamp(16px, 1rem + 0.25vw, 22px);
+    font-size: 16px;
+  }
+
+  /* Масштабирование для очень больших экранов (выше 1920px) */
+  @media (min-width: 1920px) {
+    html {
+      font-size: 18px;
+    }
   }
 
   :root {
@@ -305,6 +346,25 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .animate-marquee {
+      animation-duration: 45s;
+    }
+  }
+
+  /* Sprint Power banner: две копии контента, сдвиг на 50% для бесшовного цикла */
+  .animate-marquee-sprint {
+    contain: layout style paint;
+    animation: marquee-sprint 30s linear infinite;
+  }
+  @keyframes marquee-sprint {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-marquee-sprint {
       animation-duration: 45s;
     }
   }
@@ -1237,5 +1297,9 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
+  }
+
+  .text-2xs {
+    font-size: 10px;
   }
 }

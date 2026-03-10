@@ -5,11 +5,22 @@ import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 
 interface HeaderProfileMenuProps {
+  variant?: 'light' | 'dark'
   isAuthenticated: boolean
   role?: string
 }
 
-export function HeaderProfileMenu({ isAuthenticated, role }: HeaderProfileMenuProps) {
+const loginLinkClass = {
+  light: 'text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors whitespace-nowrap min-h-[44px] flex items-center shrink-0',
+  dark: 'text-sm font-medium text-gray-300 hover:text-white transition-colors whitespace-nowrap min-h-[40px] sm:min-h-[44px] flex items-center shrink-0',
+} as const
+
+const profileButtonClass = {
+  light: 'p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0',
+  dark: 'text-gray-300 hover:text-white transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center shrink-0',
+} as const
+
+export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role }: HeaderProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const isAdminUser = role === 'ADMIN' || role === 'WRITER'
@@ -39,7 +50,7 @@ export function HeaderProfileMenu({ isAuthenticated, role }: HeaderProfileMenuPr
     return (
       <Link
         href="/login"
-        className="text-sm font-medium text-gray-300 hover:text-white transition-colors whitespace-nowrap min-h-[40px] sm:min-h-[44px] flex items-center shrink-0"
+        className={loginLinkClass[variant]}
         aria-label="Войти"
         title="Войти"
       >
@@ -53,7 +64,7 @@ export function HeaderProfileMenu({ isAuthenticated, role }: HeaderProfileMenuPr
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="text-gray-300 hover:text-white transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center shrink-0"
+        className={profileButtonClass[variant]}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={isAdminUser ? 'Управление сайтом' : 'Личный кабинет'}

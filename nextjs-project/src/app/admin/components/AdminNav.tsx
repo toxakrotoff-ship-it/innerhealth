@@ -79,6 +79,11 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75h6.75m-6.75 3h4.5m-8.625 6A2.625 2.625 0 012.625 16.125V5.25A2.625 2.625 0 015.25 2.625h13.5A2.625 2.625 0 0121.375 5.25v10.875a2.625 2.625 0 01-2.625 2.625H9.375l-3.75 2.625V18.75z" />
     </svg>
   ),
+  leadsExport: (
+    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+  ),
 }
 
 const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
@@ -94,6 +99,7 @@ const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
   { path: 'quick-orders', label: 'Быстрые заявки', icon: icons.orders },
   { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
+  { path: 'leads-export', label: 'Выгрузка лидов', icon: icons.leadsExport },
   { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
   { path: 'users', label: 'Пользователи', icon: icons.users },
   { path: 'partners', label: 'Партнёры', icon: icons.partnership },
@@ -125,6 +131,8 @@ export default function AdminNav() {
           isActive = pathname === '/admin/redirects'
         } else if (item.path === 'faq') {
           isActive = pathname === '/admin/faq'
+        } else if (item.path === 'leads-export') {
+          isActive = pathname === '/admin/leads-export'
         } else if (item.path === 'quick-orders') {
           isActive = pathname === '/admin/quick-orders'
         } else {

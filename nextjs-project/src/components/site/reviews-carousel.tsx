@@ -59,7 +59,7 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
           <article
             key={review.id}
             data-index={index}
-            className="min-w-[280px] max-w-[340px] shrink-0 snap-center rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+            className="min-w-[280px] lg:min-w-[320px] 2xl:min-w-[360px] 3xl:min-w-[400px] max-w-[340px] lg:max-w-[400px] 2xl:max-w-[460px] 3xl:max-w-[520px] shrink-0 snap-center rounded-2xl border border-gray-200 bg-white p-6 lg:p-7 2xl:p-8 shadow-sm"
           >
             <div className="mb-4 flex items-center gap-3">
               {review.socialLink ? (
@@ -67,15 +67,15 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
                   href={review.socialLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-action-blue hover:underline"
+                  className="font-semibold text-action-blue hover:underline text-sm lg:text-base 2xl:text-lg"
                 >
                   {review.authorName}
                 </a>
               ) : (
-                <span className="font-semibold text-gray-900">{review.authorName}</span>
+                <span className="font-semibold text-gray-900 text-sm lg:text-base 2xl:text-lg">{review.authorName}</span>
               )}
             </div>
-            <p className="whitespace-pre-wrap text-gray-700">{review.text}</p>
+            <p className="whitespace-pre-wrap text-gray-700 text-sm lg:text-base 2xl:text-lg">{review.text}</p>
             {review.imageUrl && (
               <div className="mt-4 overflow-hidden rounded-xl">
                 <Image

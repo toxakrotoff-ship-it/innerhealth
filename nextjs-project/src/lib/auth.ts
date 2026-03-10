@@ -4,7 +4,28 @@ import { verifyPassword, isBcryptHash } from '@/lib/password'
 import { consumeGrant } from '@/lib/two-factor'
 import * as userService from '@/services/user.service'
 
+// Debug logging for NEXTAUTH_SECRET
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET
+if (!NEXTAUTH_SECRET || NEXTAUTH_SECRET.length < 32) {
+  console.warn('[NextAuth Debug] NEXTAUTH_SECRET is missing or too short:', NEXTAUTH_SECRET ? `length=${NEXTAUTH_SECRET.length}` : 'undefined')
+  console.warn('[NextAuth Debug] Ensure NEXTAUTH_SECRET is set in .env.local and restart dev server')
+} else {
+  console.log('[NextAuth Debug] NEXTAUTH_SECRET is set, length:', NEXTAUTH_SECRET.length, 'first 4 chars:', NEXTAUTH_SECRET.substring(0, 4))
+}
+
 export const authOptions = {
+  debug: process.env.NODE_ENV === 'development',
+  logger: {
+    error(code, metadata) {
+      console.error('[NextAuth Error]', code, metadata)
+    },
+    warn(code) {
+      console.warn('[NextAuth Warn]', code)
+    },
+    debug(code, metadata) {
+      console.log('[NextAuth Debug]', code, metadata)
+    }
+  },
   providers: [
     CredentialsProvider({
       name: 'Credentials',

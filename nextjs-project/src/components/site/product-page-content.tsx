@@ -10,6 +10,10 @@ import { ProductMediaGallery } from '@/components/site/product-media-gallery'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ResponsiveText, Heading1, Heading2 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 interface ProductPageContentProps {
   product: {
@@ -57,7 +61,7 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
   const stock = getStockBadge(product.quantity)
 
   return (
-    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <AdaptiveContainer maxWidth="default" className="py-10">
       <Breadcrumbs
         items={[
           { label: 'Главная', href: '/' },
@@ -66,10 +70,23 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
         ]}
       />
       <RecentlyViewedTracker productId={product.id} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <FluidGrid
+        cols={1}
+        colsTablet={1}
+        colsDesktop={2}
+        colsXl={2}
+        cols2xl={2}
+        cols3xl={2}
+        cols4xl={2}
+        cols5xl={2}
+        cols6xl={2}
+        gap={10}
+        adaptiveGap={false}
+        className="gap-10"
+      >
         <ProductMediaGallery title={product.title} photos={photos} />
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-text">{product.title}</h1>
+          <Heading1>{product.title}</Heading1>
           {product.brand && (
             <p className="mt-2 text-gray-600">{product.brand}</p>
           )}
@@ -120,50 +137,70 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
             </div>
           )}
         </div>
-      </div>
+      </FluidGrid>
 
       {product.text && (
-        <section className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-          <div
-            className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
-            dangerouslySetInnerHTML={
-              /<[a-z][\s\S]*>/i.test(product.text.trim())
-                ? { __html: product.text }
-                : undefined
-            }
-          >
-            {!/<[a-z][\s\S]*>/i.test(product.text.trim()) && (
-              <span className="whitespace-pre-line">{product.text}</span>
-            )}
-          </div>
-        </section>
+        <ScalableSpacing size="lg">
+          <section className="border-t border-gray-200 dark:border-gray-700 pt-8">
+            <div
+              className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
+              dangerouslySetInnerHTML={
+                /<[a-z][\s\S]*>/i.test(product.text.trim())
+                  ? { __html: product.text }
+                  : undefined
+              }
+            >
+              {!/<[a-z][\s\S]*>/i.test(product.text.trim()) && (
+                <span className="whitespace-pre-line">{product.text}</span>
+              )}
+            </div>
+          </section>
+        </ScalableSpacing>
       )}
 
-      {tabs.length > 0 && <ProductTabs tabs={tabs} />}
+      {tabs.length > 0 && (
+        <ScalableSpacing size="lg">
+          <ProductTabs tabs={tabs} />
+        </ScalableSpacing>
+      )}
 
       {relatedProducts.length > 0 && (
-        <section className="mt-12 pt-8 border-t border-gray-200">
-          <h2 className="text-xl font-bold text-text mb-4">С этим товаром покупают</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {relatedProducts.map((item) => (
-              <ProductCard
-                key={item.id}
-                id={item.id}
-                title={item.title}
-                price={item.price}
-                priceOld={item.priceOld}
-                photo={item.photo}
-                slug={item.slug}
-                isPromoEligible={item.isPromoEligible}
-                discountPrice={item.discountPrice}
-                blurDataURL={getFirstPhotoBlurDataURL(item.photos)}
-              />
-            ))}
-          </div>
-        </section>
+        <ScalableSpacing size="lg">
+          <section className="pt-8 border-t border-gray-200">
+            <Heading2 className="mb-4">С этим товаром покупают</Heading2>
+            <FluidGrid
+              cols={2}
+              colsTablet={3}
+              colsDesktop={4}
+              colsXl={4}
+              cols2xl={4}
+              cols3xl={4}
+              cols4xl={4}
+              cols5xl={4}
+              cols6xl={4}
+              gap={4}
+              adaptiveGap
+            >
+              {relatedProducts.map((item) => (
+                <ProductCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  price={item.price}
+                  priceOld={item.priceOld}
+                  photo={item.photo}
+                  slug={item.slug}
+                  isPromoEligible={item.isPromoEligible}
+                  discountPrice={item.discountPrice}
+                  blurDataURL={getFirstPhotoBlurDataURL(item.photos)}
+                />
+              ))}
+            </FluidGrid>
+          </section>
+        </ScalableSpacing>
       )}
 
       <RecentlyViewedProducts excludeProductId={product.id} />
-    </div>
+    </AdaptiveContainer>
   )
 }

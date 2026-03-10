@@ -52,7 +52,7 @@ export function GalleryBlock() {
     <>
       <section className="py-12 bg-white" aria-label="Галерея">
         <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 gap-4 sm:gap-6">
             {GALLERY_IMAGES.map((img, index) => (
               <button
                 type="button"
@@ -98,7 +98,7 @@ export function GalleryBlock() {
           </button>
 
           <div
-            className="relative max-w-[90vw] max-h-[90vh] w-full flex items-center justify-center"
+            className="relative max-w-[90vw] lg:max-w-[85vw] 2xl:max-w-[80vw] 3xl:max-w-[75vw] 4xl:max-w-[70vw] max-h-[90vh] w-full flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
             <Image

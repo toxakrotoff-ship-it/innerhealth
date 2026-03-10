@@ -31,11 +31,13 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-montserrat)', 'Montserrat', 'sans-serif'],
+        display: ['var(--font-unbounded)', 'Unbounded', 'sans-serif'],
       },
       borderRadius: {
         'full': '9999px',
       },
       fontSize: {
+        '2xs': '10px',
         '16': '16px',
       },
       spacing: {
@@ -49,6 +51,38 @@ const config: Config = {
       },
       animation: {
         marquee: 'marquee 25s linear infinite',
+      },
+      // Адаптивные брейкпоинты для больших экранов
+      screens: {
+        'mobile': '320px',
+        'tablet': '768px',
+        'desktop': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+        '3xl': '1920px',
+        '4xl': '2560px',
+      },
+      // Адаптивные контейнеры
+      container: {
+        center: true,
+        padding: {
+          DEFAULT: '1rem',
+          sm: '2rem',
+          lg: '4rem',
+          xl: '5rem',
+          '2xl': '6rem',
+          '3xl': '8rem',
+          '4xl': '10rem',
+        },
+        screens: {
+          sm: '640px',
+          md: '768px',
+          lg: '1024px',
+          xl: '1280px',
+          '2xl': '1536px',
+          '3xl': '1920px',
+          '4xl': '2560px',
+        },
       },
     },
   },

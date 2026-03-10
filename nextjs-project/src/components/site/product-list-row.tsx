@@ -32,8 +32,8 @@ export function ProductListRow({
   const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`;
 
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white p-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[120px_minmax(0,1fr)]">
+    <article className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 2xl:p-6 3xl:p-7">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[120px_minmax(0,1fr)] lg:grid-cols-[140px_minmax(0,1fr)] 2xl:grid-cols-[160px_minmax(0,1fr)] 3xl:grid-cols-[180px_minmax(0,1fr)]">
         <div className="relative aspect-square rounded-xl bg-highlight-blue overflow-hidden">
           {photo ? (
             <Image

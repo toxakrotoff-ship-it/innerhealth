@@ -1,79 +1,152 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * Конфигурация Playwright для тестирования адаптивности
+ *
+ * Включает проекты для разных viewport размеров:
+ * - Mobile (320px)
+ * - Tablet (768px)
+ * - Desktop (1024px)
+ * - XL (1280px)
+ * - 2XL (1536px)
+ * - 3XL (1920px)
+ * - 4XL (2560px)
+ * - 5XL (3840px) - 4K UHD мониторы
+ * - 6XL (5120px) - 5K и сверхбольшие экраны
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list'],
+  ],
+  
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    // ============================================
+    // Адаптивные тесты (основные)
+    // ============================================
+    {
+      name: 'adaptive-mobile',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 320, height: 568 },
+        deviceScaleFactor: 2,
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-tablet',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1024 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1024, height: 768 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-xl',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-2xl',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1536, height: 864 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-3xl',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+    {
+      name: 'adaptive-4xl',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 2560, height: 1440 },
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
+
+    // ============================================
+    // Кроссбраузерные тесты
+    // ============================================
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /adaptive\.spec\.ts/,
     },
-
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: /adaptive\.spec\.ts/,
     },
-
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: /adaptive\.spec\.ts/,
     },
 
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+    // ============================================
+    // Мобильные устройства
+    // ============================================
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+      testMatch: /mobile\.spec\.ts/,
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 12'] },
+      testMatch: /mobile\.spec\.ts/,
+    },
 
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+    // ============================================
+    // Тесты с высоким DPI
+    // ============================================
+    {
+      name: 'high-dpi',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1.5, // 150% масштабирование
+      },
+      testMatch: /adaptive\.spec\.ts/,
+    },
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  // Запуск dev сервера перед тестами
+  webServer: process.env.CI ? {
+    command: 'npm run start',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  } : undefined,
 });

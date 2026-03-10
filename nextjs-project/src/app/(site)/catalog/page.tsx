@@ -12,6 +12,10 @@ import {
   getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ResponsiveText, Heading1, Heading2 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 /** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
 export const revalidate = 3600
@@ -96,8 +100,10 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   }
 
   return (
-    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-text mb-6">Каталог</h1>
+    <AdaptiveContainer maxWidth="default">
+      <Heading1 className="mb-6">
+        Каталог
+      </Heading1>
       <CatalogControls
         initialQuery={q}
         brandOptions={brandOptions}
@@ -108,59 +114,65 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         sort={sort}
         view={view}
       />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {catalogBlockCategories.map((cat) => {
-          const bgImage = getCategoryBackgroundImage(cat.slug)
-          const imagePosition = getCategoryImageObjectPosition(cat.slug)
-          return (
-            <Link
-              key={cat.id}
-              href={`/catalog/${cat.slug}`}
-              className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-            >
-              <TiltCard>
-                <div
-                  className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
-                >
-                  {bgImage && (
-                    <>
-                      <Image
-                        src={bgImage}
-                        alt=""
-                        fill
-                        className={imagePosition}
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                      />
-                      <div
-                        className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
-                        aria-hidden
-                      />
-                    </>
-                  )}
-                  <span
-                    className={`relative z-10 font-medium drop-shadow-md block font-script text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+      <ScalableSpacing size="lg">
+        <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
+          {catalogBlockCategories.map((cat) => {
+            const bgImage = getCategoryBackgroundImage(cat.slug)
+            const imagePosition = getCategoryImageObjectPosition(cat.slug)
+            return (
+              <Link
+                key={cat.id}
+                href={`/catalog/${cat.slug}`}
+                className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+              >
+                <TiltCard>
+                  <div
+                    className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
                   >
-                    {cat.title}
-                  </span>
-                  <span
-                    className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
-                  >
-                    {cat._count.products} товаров
-                  </span>
-                </div>
-              </TiltCard>
-            </Link>
-          )
-        })}
-      </div>
+                    {bgImage && (
+                      <>
+                        <Image
+                          src={bgImage}
+                          alt=""
+                          fill
+                          className={imagePosition}
+                          sizes="(max-width: 768px) 50vw, 33vw"
+                        />
+                        <div
+                          className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
+                          aria-hidden
+                        />
+                      </>
+                    )}
+                    <span
+                      className={`relative z-10 font-medium drop-shadow-md block font-script text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                    >
+                      {cat.title}
+                    </span>
+                    <span
+                      className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                    >
+                      {cat._count.products} товаров
+                    </span>
+                  </div>
+                </TiltCard>
+              </Link>
+            )
+          })}
+        </FluidGrid>
+      </ScalableSpacing>
 
-      <h2 className="text-xl font-bold text-text mt-12 mb-6">Все товары</h2>
+      <ScalableSpacing size="lg">
+        <Heading2 className="mb-6">
+          Все товары
+        </Heading2>
+      </ScalableSpacing>
       {products.length === 0 ? (
         <p className="text-gray-500">Товары появятся после добавления в админке.</p>
       ) : (
         <>
           {view === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <FluidGrid cols={2} colsTablet={3} colsDesktop={4} colsXl={4} cols2xl={4} cols3xl={4} cols4xl={4} gap={4} adaptiveGap>
               {products.map((p, index) => (
                 <ProductCard
                   key={p.id}
@@ -178,7 +190,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                   blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />
               ))}
-            </div>
+            </FluidGrid>
           ) : (
             <div className="space-y-3">
               {products.map((p) => (
@@ -226,6 +238,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           )}
         </>
       )}
-    </div>
+    </AdaptiveContainer>
   )
 }
