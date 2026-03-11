@@ -125,37 +125,56 @@ export default async function HomePage() {
               СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
-          <div className={newProducts.length < 2 ? 'flex justify-center' : undefined}>
-            <div className={newProducts.length < 2 ? 'inline-block max-w-md' : undefined}>
-              <FluidGrid
-                cols={Math.min(2, newProducts.length || 1)}
-                colsTablet={Math.min(3, newProducts.length || 1)}
-                colsDesktop={Math.min(4, newProducts.length || 1)}
-                colsXl={4}
-                cols2xl={4}
-                cols3xl={4}
-                cols4xl={4}
-                gap={4}
-                adaptiveGap
-                justify={newProducts.length < 4 ? 'center' : 'start'}
-                className={newProducts.length < 2 ? 'inline-grid w-max' : undefined}
-              >
-              {newProducts.map((p, index) => (
-              <ProductCard
-                key={p.id}
-                id={p.id}
-                title={p.title}
-                price={p.price}
-                priceOld={p.priceOld}
-                photo={p.photo}
-                slug={p.slug}
-                priority={index < 2}
-                blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-              />
-            ))}
-              </FluidGrid>
+          {newProducts.length <= 1 ? (
+            <div className="flex justify-center">
+              {newProducts[0] && (
+                <div className="w-full max-w-sm md:max-w-md">
+                  <ProductCard
+                    key={newProducts[0].id}
+                    id={newProducts[0].id}
+                    title={newProducts[0].title}
+                    price={newProducts[0].price}
+                    priceOld={newProducts[0].priceOld}
+                    photo={newProducts[0].photo}
+                    slug={newProducts[0].slug}
+                    priority
+                    blurDataURL={
+                      'photos' in newProducts[0]
+                        ? getFirstPhotoBlurDataURL(newProducts[0].photos)
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <FluidGrid
+              cols={Math.min(2, newProducts.length || 1)}
+              colsTablet={Math.min(3, newProducts.length || 1)}
+              colsDesktop={Math.min(4, newProducts.length || 1)}
+              colsXl={4}
+              cols2xl={4}
+              cols3xl={4}
+              cols4xl={4}
+              gap={4}
+              adaptiveGap
+              justify={newProducts.length < 4 ? 'center' : 'start'}
+            >
+              {newProducts.map((p, index) => (
+                <ProductCard
+                  key={p.id}
+                  id={p.id}
+                  title={p.title}
+                  price={p.price}
+                  priceOld={p.priceOld}
+                  photo={p.photo}
+                  slug={p.slug}
+                  priority={index < 2}
+                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                />
+              ))}
+            </FluidGrid>
+          )}
         </AdaptiveContainer>
       </section>
       <SpacingVertical size="lg" />
