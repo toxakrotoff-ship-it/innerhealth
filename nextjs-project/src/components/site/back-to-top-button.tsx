@@ -23,7 +23,7 @@ export function BackToTopButton() {
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Наверх"
       title="Наверх"
-      className={`fixed bottom-8 right-8 z-50 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-xl transition-all hover:text-action-blue hover:-translate-y-1 ${
+      className={`fixed bottom-6 right-3 sm:bottom-8 sm:right-4 md:right-8 z-50 inline-flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-xl transition-all hover:text-action-blue hover:-translate-y-1 ${
         isVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'
       }`}
     >

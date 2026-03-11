@@ -32,7 +32,7 @@ const BANK = {
 export function SiteFooter() {
   return (
     <footer className="bg-slate-50 border-t border-slate-200 mt-auto">
-      <ScalableSpacing direction="vertical" size={80} usePadding adaptive>
+      <ScalableSpacing direction="vertical" size={96} usePadding adaptive>
         <AdaptiveContainer maxWidth="6xl" adaptivePadding>
           {/* Основная сетка с 4 колонками на десктопе и выше */}
           <FluidGrid
@@ -186,7 +186,7 @@ export function SiteFooter() {
           </FluidGrid>
 
           {/* Реквизиты */}
-          <ScalableSpacing direction="vertical" size={80} adaptive>
+          <ScalableSpacing direction="vertical" size={96} adaptive>
             <div className="border-t border-slate-200 pt-8">
               <FluidGrid
                 cols={1}
@@ -246,7 +246,7 @@ export function SiteFooter() {
           </ScalableSpacing>
 
           {/* Копирайт */}
-          <ScalableSpacing direction="vertical" size={80} adaptive>
+          <ScalableSpacing direction="vertical" size={96} adaptive>
             <div className="border-t border-slate-200 pt-8 flex flex-wrap items-center justify-center gap-2">
               <ResponsiveText
                 as="span"

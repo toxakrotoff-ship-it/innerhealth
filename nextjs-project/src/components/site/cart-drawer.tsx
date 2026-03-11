@@ -77,12 +77,15 @@ export function CartDrawer() {
         aria-hidden={!isDrawerOpen}
         aria-label="Корзина"
         className={cn(
-          'fixed right-0 top-0 z-50 h-full w-full max-w-md lg:max-w-lg xl:max-w-2xl 2xl:max-w-3xl 3xl:max-w-4xl bg-white shadow-xl flex flex-col',
+          // На мобильных: полноэкранная панель без горизонтального скролла
+          'fixed inset-y-0 right-0 z-50 h-svh max-h-svh w-full max-w-none bg-white shadow-xl flex flex-col overflow-x-hidden',
+          // На широких экранах — ограниченная ширина
+          'sm:max-w-md lg:max-w-lg xl:max-w-2xl 2xl:max-w-3xl 3xl:max-w-4xl',
           'transition-transform duration-300 ease-out',
           isDrawerOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-text">Корзина</h2>
           <button
             type="button"
@@ -95,13 +98,13 @@ export function CartDrawer() {
             </svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 max-w-full">
           {items.length === 0 ? (
             <p className="text-gray-500 text-center py-8">Корзина пуста</p>
           ) : (
-            <ul className="space-y-4">
+            <ul className="space-y-4 max-w-full">
               {items.map((line) => (
-                <li key={line.productId} className="flex gap-3 border-b border-gray-100 pb-4">
+                <li key={line.productId} className="flex gap-3 border-b border-gray-100 pb-4 w-full overflow-hidden">
                   <div className="relative w-16 h-16 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
                     {line.photo ? (
                       <Image
@@ -143,7 +146,7 @@ export function CartDrawer() {
           )}
         </div>
         {items.length > 0 && (
-          <div className="p-4 border-t border-gray-200 space-y-3">
+          <div className="px-3 pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 border-t border-gray-200 space-y-3">
             <div className="flex justify-between text-lg font-semibold text-text">
               <span>Итого:</span>
               <span>{total.toLocaleString('ru-RU')} ₽</span>
@@ -151,7 +154,7 @@ export function CartDrawer() {
             <Link
               href="/cart"
               onClick={closeDrawer}
-              className="flex w-full py-3 px-4 rounded-full bg-action-blue text-gray-800 text-center font-medium hover:bg-action-blue/90 transition-colors min-h-[44px] items-center justify-center"
+              className="flex w-full py-3 px-4 rounded-full bg-action-blue text-gray-800 text-center font-medium hover:bg-action-blue/90 transition-colors min-h-[40px] sm:min-h-[44px] items-center justify-center"
             >
               Оформить заказ
             </Link>

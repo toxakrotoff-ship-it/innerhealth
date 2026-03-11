@@ -125,18 +125,22 @@ export default async function HomePage() {
               СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
-          <FluidGrid
-            cols={2}
-            colsTablet={3}
-            colsDesktop={4}
-            colsXl={5}
-            cols2xl={6}
-            cols3xl={7}
-            cols4xl={8}
-            gap={4}
-            adaptiveGap
-          >
-            {newProducts.map((p, index) => (
+          <div className={newProducts.length < 2 ? 'flex justify-center' : undefined}>
+            <div className={newProducts.length < 2 ? 'inline-block max-w-md' : undefined}>
+              <FluidGrid
+                cols={Math.min(2, newProducts.length || 1)}
+                colsTablet={Math.min(3, newProducts.length || 1)}
+                colsDesktop={Math.min(4, newProducts.length || 1)}
+                colsXl={4}
+                cols2xl={4}
+                cols3xl={4}
+                cols4xl={4}
+                gap={4}
+                adaptiveGap
+                justify={newProducts.length < 4 ? 'center' : 'start'}
+                className={newProducts.length < 2 ? 'inline-grid w-max' : undefined}
+              >
+              {newProducts.map((p, index) => (
               <ProductCard
                 key={p.id}
                 id={p.id}
@@ -149,7 +153,9 @@ export default async function HomePage() {
                 blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
               />
             ))}
-          </FluidGrid>
+              </FluidGrid>
+            </div>
+          </div>
         </AdaptiveContainer>
       </section>
       <SpacingVertical size="lg" />
@@ -202,10 +208,6 @@ export default async function HomePage() {
             cols={2}
             colsTablet={3}
             colsDesktop={3}
-            colsXl={4}
-            cols2xl={5}
-            cols3xl={6}
-            cols4xl={7}
             gap={4}
             adaptiveGap
           >

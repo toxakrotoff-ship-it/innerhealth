@@ -23,7 +23,9 @@ export default function SiteLayout({
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <SiteHeader />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pt-16 2xl:pt-18 3xl:pt-20 4xl:pt-24 5xl:pt-28 6xl:pt-32">
+        {children}
+      </main>
       <SiteFooter />
       <BackToTopButton />
       <CartDrawer />

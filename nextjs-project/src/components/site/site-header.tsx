@@ -69,7 +69,9 @@ export async function SiteHeader() {
     <>
     {/* Клиентский компонент для очистки поврежденных cookies */}
     <ClearInvalidSession hasInvalidSession={hasInvalidSession} />
-    <header className="sticky top-0 z-100 w-full border-b border-slate-100 bg-white/70 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/70">
+    <header
+      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/80"
+    >
       <div 
         className={`
           mx-auto px-4 sm:px-6 lg:px-8
@@ -125,7 +127,9 @@ export async function SiteHeader() {
             </a>
           </div>
           <HeaderCartButton variant="light" />
-          <HeaderProfileMenu variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
+          <div className="hidden xl:block">
+            <HeaderProfileMenu variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
+          </div>
         </div>
       </div>
     </header>

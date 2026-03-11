@@ -2,6 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight, CheckCircle } from 'lucide-react'
 
+import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
+
 const SPRINT_POWER_URL = 'https://sprintpower.ru'
 
 export function SprintPowerBlock() {
@@ -14,13 +16,12 @@ export function SprintPowerBlock() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           {/* Слева: изображение + плавающая карточка как в референсе */}
           <div className="relative">
-            <div className="aspect-square bg-slate-100 rounded-[40px] overflow-hidden">
+            <div className="relative aspect-square bg-slate-100 rounded-[40px] overflow-hidden">
               <Image
-                src="/sprint-power-mockup.png"
+                src={sprintPowerMockup}
                 alt=""
-                width={1000}
-                height={1000}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
