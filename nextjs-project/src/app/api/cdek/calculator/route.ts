@@ -25,7 +25,15 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       const first = parsed.error.flatten().fieldErrors
       const message = Object.values(first)[0]?.[0] ?? parsed.error.message
-      return NextResponse.json({ error: message }, { status: 400 })
+      return NextResponse.json(
+        { error: message },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     const { items, toLocation, deliveryKind } = parsed.data
 
@@ -52,7 +60,12 @@ export async function POST(request: Request) {
     if (packages.length === 0) {
       return NextResponse.json(
         { error: 'Не удалось сформировать посылки по выбранным товарам' },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
       )
     }
 
@@ -79,19 +92,34 @@ export async function POST(request: Request) {
 
     const tariffs = filterTariffsByDeliveryKind(allTariffs, deliveryKind)
 
-    return NextResponse.json({
-      deliveryKind,
-      tariffs: tariffs.map((t) => ({
-        tariffCode: t.tariff_code,
-        tariffName: t.tariff_name,
-        deliverySum: t.delivery_sum,
-        periodMin: t.period_min,
-        periodMax: t.period_max,
-      })),
-    })
+    return NextResponse.json(
+      {
+        deliveryKind,
+        tariffs: tariffs.map((t) => ({
+          tariffCode: t.tariff_code,
+          tariffName: t.tariff_name,
+          deliverySum: t.delivery_sum,
+          periodMin: t.period_min,
+          periodMax: t.period_max,
+        })),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Ошибка расчёта доставки СДЭК'
     console.error('CDEK calculator error:', e)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

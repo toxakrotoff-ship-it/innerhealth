@@ -7,5 +7,9 @@ export const revalidate = 120
 
 export async function GET() {
   const stock = await productService.getStockMap()
-  return NextResponse.json(stock)
+  return NextResponse.json(stock, {
+    headers: {
+      'Cache-Control': 'no-store',
+    },
+  })
 }

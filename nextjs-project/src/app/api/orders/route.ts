@@ -43,7 +43,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много заказов. Попробуйте позже.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -53,7 +59,15 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       const first = parsed.error.flatten().fieldErrors
       const message = Object.values(first)[0]?.[0] ?? parsed.error.message
-      return NextResponse.json({ error: message }, { status: 400 })
+      return NextResponse.json(
+        { error: message },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     const { items, promoCodeId, deliverySum = 0, shipping } = parsed.data
 
@@ -68,7 +82,15 @@ export async function POST(request: Request) {
     for (const item of items) {
       const product = productMap.get(item.productId)
       if (!product) {
-        return NextResponse.json({ error: `Товар не найден: ${item.productId}` }, { status: 400 })
+        return NextResponse.json(
+          { error: `Товар не найден: ${item.productId}` },
+          {
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       }
       const hasPromoPrice = product.priceOld != null && product.priceOld > product.price
       const isEligible = product.isPromoEligible !== false
@@ -229,24 +251,51 @@ export async function POST(request: Request) {
           credentials,
         })
         await orderService.updateOrder(order.id, { yookassaPaymentId: paymentId })
-        return NextResponse.json({
-          id: order.id,
-          success: true,
-          confirmationUrl,
-          paymentId,
-        })
+        return NextResponse.json(
+          {
+            id: order.id,
+            success: true,
+            confirmationUrl,
+            paymentId,
+          },
+          {
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       } catch (yooErr) {
         console.error('YooKassa create payment error:', yooErr)
         return NextResponse.json(
           { error: 'Заказ создан, но не удалось создать платёж. Мы свяжемся с вами.' },
-          { status: 502 }
+          {
+            status: 502,
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
         )
       }
     }
 
-    return NextResponse.json({ id: order.id, success: true })
+    return NextResponse.json(
+      { id: order.id, success: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch (e) {
     console.error('Order create error:', e)
-    return NextResponse.json({ error: 'Ошибка создания заказа' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Ошибка создания заказа' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

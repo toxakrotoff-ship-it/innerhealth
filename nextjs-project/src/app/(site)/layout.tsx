@@ -15,7 +15,6 @@ const CookieConsent = nextDynamic(
 
 /** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
 export const dynamic = 'force-dynamic'
-export const revalidate = 60
 
 export default async function SiteLayout({
   children,

@@ -6,7 +6,7 @@ import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 import { getSettingsMap } from '@/services/settings.service'
 import { buildProductJsonLd } from '@/lib/schema-org'
 
-export const revalidate = 60
+export const revalidate = 300
 
 const DEFAULT_TAB_TITLES = ['Преимущества', 'Состав', 'Способ применения и дозировка', 'Характеристики'] as const
 

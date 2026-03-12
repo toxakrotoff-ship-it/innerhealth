@@ -16,6 +16,8 @@ const breadcrumbItems = [
 const PRIVACY_URL = 'https://www.innerhealth.ru/privacy'
 const SITE_URL = 'https://innerhealth.ru/'
 
+export const revalidate = 86400
+
 export default function PublichnayaOfertaPage() {
   return (
     <div className="bg-white min-h-screen">

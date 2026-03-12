@@ -7,8 +7,16 @@ export async function GET(request: NextRequest) {
   const idsParam = searchParams.get('ids')
   const ids = idsParam ? idsParam.split(',').filter(Boolean) : []
   if (ids.length === 0) {
-    return NextResponse.json([])
+    return NextResponse.json([], {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   }
   const products = await productService.getProductsForCart(ids)
-  return NextResponse.json(products)
+  return NextResponse.json(products, {
+    headers: {
+      'Cache-Control': 'no-store',
+    },
+  })
 }

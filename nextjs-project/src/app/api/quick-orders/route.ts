@@ -34,7 +34,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много заявок. Попробуйте позже.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -44,7 +50,15 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       const firstErrors = parsed.error.flatten().fieldErrors
       const message = Object.values(firstErrors)[0]?.[0] ?? 'Некорректные данные формы'
-      return NextResponse.json({ error: message }, { status: 400 })
+      return NextResponse.json(
+        { error: message },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
 
     const result = parsed.data
@@ -56,9 +70,24 @@ export async function POST(request: Request) {
       comment: result.comment?.trim() ? result.comment.trim() : undefined,
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      { success: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch (error) {
     console.error('Quick order create error:', error)
-    return NextResponse.json({ error: 'Не удалось отправить заявку' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Не удалось отправить заявку' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

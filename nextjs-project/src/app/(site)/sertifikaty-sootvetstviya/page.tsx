@@ -14,6 +14,8 @@ const breadcrumbItems = [
   { label: 'Сертификаты соответствия' },
 ]
 
+export const revalidate = 86400
+
 export default function CertificatesPage() {
   return (
     <div className="bg-white min-h-screen">

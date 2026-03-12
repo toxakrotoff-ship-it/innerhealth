@@ -46,7 +46,7 @@ const ReviewCtaBlock = dynamic(
   { ssr: true }
 )
 
-export const revalidate = 60
+export const revalidate = 300
 
 type HomeReview = {
   id: string

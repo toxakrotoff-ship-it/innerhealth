@@ -6,79 +6,73 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  USER
-  WRITER
-  ADMIN
-  PARTNER
-}
 model Product {
-  id              String    @id @default(cuid())
-  tildaUid        String    @unique
-  slug            String?   @unique
-  brand           String?
-  sku             String?
-  mark            String?
-  category        String?
-  title           String
-  description     String?
-  text            String?
-  photo           String?
-  /// Упорядоченный список URL изображений галереи (первое = основное)
-  photos          Json?
-  price           Float
-  quantity        Int?
-  priceOld        Float?
-  /// Цена при применении промокода (если задана — используется для строки заказа при скидке)
-  discountPrice   Float?
-  /// Участвует в скидке по промокоду (Rule: скидка применяется только к eligible и не к «уже по акции»)
-  isPromoEligible Boolean  @default(true)
-  editions        String?
-  modifications   String?
-  externalId      String?
-  parentUid       String?
-  characteristicsNutrition100g String?
-  characteristicsKkal String?
-  characteristicsContraindications String?
-  characteristicsShelfLife String?
-  characteristicsShelfLife2 String?
-  characteristicsNutrition100gProduct String?
-  characteristicsEnergyValue100g String?
-  characteristicsNutrition100g2 String?
+  id                                   String            @id @default(cuid())
+  tildaUid                             String            @unique
+  brand                                String?
+  sku                                  String?
+  mark                                 String?
+  category                             String?
+  title                                String
+  description                          String?
+  text                                 String?
+  photo                                String?
+  price                                Float
+  quantity                             Int?
+  priceOld                             Float?
+  editions                             String?
+  modifications                        String?
+  externalId                           String?
+  parentUid                            String?
+  characteristicsNutrition100g         String?
+  characteristicsKkal                  String?
+  characteristicsContraindications     String?
+  characteristicsShelfLife             String?
+  characteristicsShelfLife2            String?
+  characteristicsNutrition100gProduct  String?
+  characteristicsEnergyValue100g       String?
+  characteristicsNutrition100g2        String?
   characteristicsNutritionPerPortion5g String?
-  characteristicsComposition String?
-  characteristicsKkal100gDailyDose String?
-  characteristicsFormulation String?
-  characteristicsCalorie String?
-  characteristicsFlacon200ml String?
-  characteristicsStorage String?
+  characteristicsComposition           String?
+  characteristicsKkal100gDailyDose     String?
+  characteristicsFormulation           String?
+  characteristicsCalorie               String?
+  characteristicsFlacon200ml           String?
+  characteristicsStorage               String?
   /// Вес в граммах (для СДЭК и расчёта доставки)
-  weight          Int?
+  weight                               Int?
   /// Длина в мм (для СДЭК: L)
-  length          Int?
+  length                               Int?
   /// Ширина в мм (для СДЭК: W)
-  width           Int?
+  width                                Int?
   /// Высота в мм (для СДЭК: H)
-  height          Int?
-  seoTitle        String?
-  seoDescr        String?
-  seoKeywords     String?
-  fbTitle         String?
-  fbDescr         String?
-  tab1            String?
-  tab2            String?
-  tab3            String?
-  tab4            String?
-  tab1Title       String?
-  tab2Title       String?
-  tab3Title       String?
-  tab4Title       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  cartItems       CartItem[]
-  orderItems      OrderItem[]
-  quickOrders     QuickOrder[]
-  categories      ProductCategory[]
+  height                               Int?
+  seoTitle                             String?
+  seoDescr                             String?
+  seoKeywords                          String?
+  fbTitle                              String?
+  fbDescr                              String?
+  tab1                                 String?
+  tab2                                 String?
+  tab3                                 String?
+  tab4                                 String?
+  createdAt                            DateTime          @default(now())
+  updatedAt                            DateTime          @updatedAt
+  slug                                 String?           @unique
+  tab1Title                            String?
+  tab2Title                            String?
+  tab3Title                            String?
+  tab4Title                            String?
+  /// Упорядоченный список URL изображений галереи (первое = основное)
+  photos                               Json?
+  /// Цена при применении промокода (если задана — используется для строки заказа при скидке)
+  discountPrice                        Float?
+  /// Участвует в скидке по промокоду (Rule: скидка применяется только к eligible и не к «уже по акции»)
+  isPromoEligible                      Boolean           @default(true)
+  cartItems                            CartItem[]
+  orderItems                           OrderItem[]
+  categories                           ProductCategory[]
+  quickOrders                          QuickOrder[]
 
   @@index([slug])
   @@index([createdAt])
@@ -86,117 +80,117 @@ model Product {
 }
 
 model Category {
-  id              String    @id @default(cuid())
-  title           String
-  slug            String    @unique
-  image           String?
-  sortOrder       Int?
-  parentId        String?
-  parent          Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children        Category[] @relation("CategoryHierarchy")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  products        ProductCategory[]
+  id        String            @id @default(cuid())
+  title     String
+  slug      String            @unique
+  image     String?
+  sortOrder Int?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  parentId  String?
+  parent    Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[]        @relation("CategoryHierarchy")
+  products  ProductCategory[]
 
   @@index([parentId])
 }
 
 model ProductCategory {
-  productId String
+  productId  String
   categoryId String
-  product    Product    @relation(fields: [productId], references: [id])
-  category   Category   @relation(fields: [categoryId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+
   @@id([productId, categoryId])
 }
 
 model CartItem {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 model OrderItem {
   id        String   @id @default(cuid())
   orderId   String
-  product   Product  @relation(fields: [productId], references: [id])
   productId String
   quantity  Int
   price     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 model Order {
-  id               String   @id @default(cuid())
-  userId           String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  items            OrderItem[]
-  total            Float
-  status           String   @default("pending")
-  /** ID платежа ЮKassa (для связки с webhook и return_url) */
-  yookassaPaymentId String?  @unique
+  id                String        @id @default(cuid())
+  userId            String?
+  total             Float
+  status            String        @default("pending")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  promoCodeId       String?
+  /// * ID платежа ЮKassa (для связки с webhook и return_url)
+  yookassaPaymentId String?       @unique
   /// UUID заказа в СДЭК после успешного создания
-  cdekOrderUuid    String?  @unique
-  /// Трек-номер СДЭК (если предоставлен)
-  cdekTrackNumber  String?
+  cdekOrderUuid     String?       @unique
   /// Последнее сообщение об ошибке СДЭК (для админки и повтора)
-  cdekOrderError   String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  shippingInfo     ShippingInfo?
-  promoCodeId      String?
-  promoCode        PromoCode? @relation(fields: [promoCodeId], references: [id])
+  cdekOrderError    String?
+  /// Трек-номер СДЭК (если предоставлен)
+  cdekTrackNumber   String?
+  promoCode         PromoCode?    @relation(fields: [promoCodeId], references: [id])
+  user              User?         @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  shippingInfo      ShippingInfo?
 
   @@index([status])
   @@index([userId, createdAt])
 }
 
 model User {
-  id                   String   @id @default(cuid())
-  email                String   @unique
-  password             String
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  password                 String
   /// Имя
-  name                 String?
+  name                     String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  role                     Role                      @default(USER)
+  mustChangePassword       Boolean                   @default(false)
   /// Фамилия
-  lastName             String?
+  lastName                 String?
   /// Телефон (для связи и отображения в профиле)
-  phone                String?
+  phone                    String?
   /// Ящик для уведомлений о заказах (если задан — письма идут сюда, иначе на email)
-  notificationEmail    String?
-  /// Дата подтверждения email (null = не подтвержден)
-  emailVerifiedAt      DateTime?
-  role                 Role     @default(USER)
-  mustChangePassword   Boolean  @default(false)
+  notificationEmail        String?
   /// Включена ли двухфакторная аутентификация
-  twoFactorEnabled     Boolean  @default(false)
+  twoFactorEnabled         Boolean                   @default(false)
   /// Способ 2FA: 'email' | 'totp'
-  twoFactorMethod      String?
+  twoFactorMethod          String?
   /// Секрет TOTP (зашифрован), только при method = totp
-  totpSecretEncrypted  String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  totpSecretEncrypted      String?
+  /// Дата подтверждения email (null = не подтвержден)
+  emailVerifiedAt          DateTime?
   /// Дата и время последнего входа в систему
-  lastLoginAt          DateTime?
-  passwordResetTokens       PasswordResetToken[]
-  setInitialPasswordTokens  SetInitialPasswordToken[]
-  telegramWhitelist         TelegramWhitelist?
-  telegramLinkCodes         TelegramLinkCode[]
-  twoFactorPending          TwoFactorPending?
-  twoFactorGrants           TwoFactorGrant[]
-  orders                    Order[]
-  addresses                 UserAddress[]
-  emailVerificationTokens   EmailVerificationToken[]
-  partnerPromoCodes         PartnerPromoCode[]
+  lastLoginAt              DateTime?
+  emailVerificationTokens  EmailVerificationToken[]
+  orders                   Order[]
+  partnerPromoCodes        PartnerPromoCode[]
+  passwordResetTokens      PasswordResetToken[]
+  setInitialPasswordTokens SetInitialPasswordToken[]
+  telegramLinkCodes        TelegramLinkCode[]
+  telegramWhitelist        TelegramWhitelist?
+  twoFactorGrants          TwoFactorGrant[]
+  twoFactorPending         TwoFactorPending?
+  addresses                UserAddress[]
 }
 
 model UserAddress {
   id             String   @id @default(cuid())
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   label          String
   city           String
   postalCode     String?
@@ -213,18 +207,19 @@ model UserAddress {
   intercom       String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, updatedAt])
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@index([expiresAt])
@@ -234,9 +229,10 @@ model EmailVerificationToken {
 model TelegramWhitelist {
   id             String   @id @default(cuid())
   userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  telegramUserId String   @unique // Telegram user ID (числовой, храним как строку)
+  telegramUserId String   @unique
   linkedAt       DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([telegramUserId])
 }
 
@@ -245,38 +241,41 @@ model TelegramLinkCode {
   id        String   @id @default(cuid())
   code      String   @unique
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([code])
   @@index([userId])
   @@index([expiresAt])
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   // bcrypt hash of the token sent by email
+  tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
 }
 
 /// Токен завершения регистрации: ссылка + 6-значный код на почту. Одноразовый, с ограничением по времени.
 model SetInitialPasswordToken {
-  id                String    @id @default(cuid())
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash         String    // bcrypt hash of secret from URL
-  expiresAt         DateTime
-  usedAt            DateTime?
-  emailCodeHash     String?   // bcrypt hash of 6-digit code
+  id                 String    @id @default(cuid())
+  userId             String
+  tokenHash          String
+  expiresAt          DateTime
+  usedAt             DateTime?
+  emailCodeHash      String?
   emailCodeExpiresAt DateTime?
-  codeVerifiedAt    DateTime?
-  createdAt         DateTime  @default(now())
+  codeVerifiedAt     DateTime?
+  createdAt          DateTime  @default(now())
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
 }
@@ -285,12 +284,13 @@ model SetInitialPasswordToken {
 model TwoFactorPending {
   id                 String    @id @default(cuid())
   userId             String    @unique
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash          String
   expiresAt          DateTime
   emailCodeHash      String?
   emailCodeExpiresAt DateTime?
   createdAt          DateTime  @default(now())
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
 }
@@ -299,94 +299,95 @@ model TwoFactorPending {
 model TwoFactorGrant {
   id        String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   usedAt    DateTime?
   expiresAt DateTime
   createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
 }
 
 model ShippingInfo {
-  id        String   @id @default(cuid())
-  orderId   String   @unique
-  order     Order    @relation(fields: [orderId], references: [id])
-  fullName  String
-  phone     String
-  email     String
-  address   String
-  city      String
-  zipCode   String
-  country   String
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  fullName       String
+  phone          String
+  email          String
+  address        String
+  city           String
+  zipCode        String
+  country        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   /// 'cdek_pvz' | 'cdek_door' | null
-  deliveryMethod  String?
+  deliveryMethod String?
   /// Код города СДЭК получателя
-  cdekCityCode    Int?
+  cdekCityCode   Int?
   /// Код ПВЗ (для cdek_pvz)
-  cdekPvzCode     String?
+  cdekPvzCode    String?
   /// Код тарифа СДЭК (136, 139, 234 и т.д.)
-  cdekTariffCode  Int?
+  cdekTariffCode Int?
   /// Адрес до двери (структурированный)
-  street          String?
-  house           String?
-  apartment       String?
-  entrance        String?
-  floor           String?
-  intercom        String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  street         String?
+  house          String?
+  apartment      String?
+  entrance       String?
+  floor          String?
+  intercom       String?
+  order          Order    @relation(fields: [orderId], references: [id])
 }
 
 model Post {
   id           String   @id @default(cuid())
   title        String
   slug         String   @unique
-  type         String   @default("news")  // "news" | "article"
-  excerpt      String?  // краткое описание
   content      Json
   previewImage String?
   published    Boolean  @default(false)
   createdAt    DateTime @default(now())
+  excerpt      String?
+  type         String   @default("news")
 }
 
 model PromoCode {
-  id               String           @id @default(cuid())
-  code             String           @unique
-  discountType     String
-  discountValue    Float
-  isActive         Boolean          @default(true)
-  usageLimit       Int?
-  usedCount        Int              @default(0)
-  validFrom        DateTime?
-  validTo          DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  orders           Order[]
+  id                String            @id @default(cuid())
+  code              String            @unique
+  discountType      String
+  discountValue     Float
+  isActive          Boolean           @default(true)
+  usageLimit        Int?
+  usedCount         Int               @default(0)
+  validFrom         DateTime?
+  validTo           DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  orders            Order[]
   partnerAssignment PartnerPromoCode?
 }
 
 /// Связь партнёр–промокод: один промокод привязан не более чем к одному партнёру; процент дохода по промокоду.
 model PartnerPromoCode {
-  id               String    @id @default(cuid())
-  userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  promoCodeId      String    @unique
-  promoCode        PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  userId            String
+  promoCodeId       String    @unique
   commissionPercent Float
-  createdAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  promoCode         PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model PartnershipLead {
-  id            String   @id @default(cuid())
-  name          String
-  email         String
-  phone         String
-  role          String?  // врач, нутрициолог, health-coach и т.д.
-  socialLinks   String?  // ссылки на соцсети для анализа
-  message       String?
-  createdAt     DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  phone       String
+  role        String?
+  socialLinks String?
+  message     String?
+  createdAt   DateTime @default(now())
 }
 
 /// Глобальный FAQ для страницы /faq.
@@ -404,16 +405,16 @@ model Faq {
 
 /// Быстрые заявки "Купить в 1 клик".
 model QuickOrder {
-  id          String   @id @default(cuid())
-  name        String?
-  phone       String
-  comment     String?
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  quantity    Int      @default(1)
-  status      String   @default("new")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String?
+  phone     String
+  comment   String?
+  productId String
+  quantity  Int      @default(1)
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@index([status, createdAt])
   @@index([productId, createdAt])
@@ -437,10 +438,10 @@ model ContentBlock {
   colorToken  String?
   /// Вариант шрифта / семейство (sans, display, script)
   fontVariant String?
-  /// Жирность шрифта: thin, light, normal, medium, semibold, bold, extrabold
-  fontWeight  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  /// Жирность шрифта: thin, light, normal, medium, semibold, bold, extrabold
+  fontWeight  String?
 
   @@unique([page, key])
 }
@@ -451,57 +452,71 @@ model SiteSetting {
   value String
 }
 
-/// Статус модерации отзыва: ожидает модерации, одобрен (показывается на сайте), отклонён.
-enum ReviewStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 /// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото. На сайте показываются только со статусом APPROVED.
 model Review {
-  id          String       @id @default(cuid())
-  authorName  String
-  socialLink  String?      // ссылка на профиль автора в соцсети
-  text        String
-  imageUrl    String?      // загруженное фото
-  status      ReviewStatus @default(PENDING)
-  createdAt   DateTime     @default(now())
+  id         String       @id @default(cuid())
+  authorName String
+  socialLink String?
+  text       String
+  imageUrl   String?
+  createdAt  DateTime     @default(now())
+  status     ReviewStatus @default(PENDING)
+
   @@index([status])
 }
 
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.
 model TildaLead {
-  id             String    @id @default(cuid())
-  email          String?
-  name           String?
-  phone          String?
-  tildaDate      DateTime  // Date из CSV
-  tildaTranId    String    @unique // tranid — уникальный ID заявки в Тильде
-  input          String?   // Input
-  input2         String?   // Input_2
-  comment        String?   // Комментарии
-  deliveryAddress String?  // Адрес_доставки
-  review         String?   // Отзыв
-  delivery       String?   // Доставка
-  promoCode      String?   // Промокод
-  createdAt      DateTime  @default(now()) // когда импортировали
+  id              String   @id @default(cuid())
+  email           String?
+  name            String?
+  phone           String?
+  tildaDate       DateTime
+  tildaTranId     String   @unique
+  input           String?
+  input2          String?
+  comment         String?
+  deliveryAddress String?
+  review          String?
+  delivery        String?
+  promoCode       String?
+  createdAt       DateTime @default(now())
+
   @@index([tildaDate])
   @@index([email])
 }
 
 /// Редиректы со старых URL (Tilda и др.) на текущий сайт. statusCode: 301 (по умолчанию), 302, 307, 308.
 model Redirect {
-  id           String   @id @default(cuid())
-  sourcePath   String   /// Путь-источник (например /page12345), без query
-  destination  String   /// Куда редиректить (например / или /product/slug)
-  statusCode   Int      @default(301) /// 301 | 302 | 307 | 308
-  entityType   String?  /// PRODUCT | PAGE | CUSTOM — для привязки к сущности в админке
-  entityId     String?  /// id товара или slug страницы
-  note         String?  /// Комментарий (старый URL с Тильды и т.д.)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  /// Путь-источник (например /page12345), без query
+  sourcePath  String   @unique
+  /// Куда редиректить (например / или /product/slug)
+  destination String
+  /// 301 | 302 | 307 | 308
+  statusCode  Int      @default(301)
+  /// PRODUCT | PAGE | CUSTOM — для привязки к сущности в админке
+  entityType  String?
+  /// id товара или slug страницы
+  entityId    String?
+  /// Комментарий (старый URL с Тильды и т.д.)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@unique([sourcePath])
   @@index([sourcePath])
+}
+
+enum Role {
+  USER
+  WRITER
+  ADMIN
+  PARTNER
+}
+
+/// Статус модерации отзыва: ожидает модерации, одобрен (показывается на сайте), отклонён.
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

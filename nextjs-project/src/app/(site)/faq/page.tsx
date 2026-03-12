@@ -3,7 +3,7 @@ import { FaqAccordion } from '@/components/site/faq-accordion'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 
-export const revalidate = 300
+export const revalidate = 86400
 
 export default async function FaqPage() {
   const faqItems = await faqService.getPublishedFaqItems()

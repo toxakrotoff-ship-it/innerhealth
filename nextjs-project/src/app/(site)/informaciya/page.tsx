@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 
-export const revalidate = 60
+export const revalidate = 3600
 
 async function getArticlesList() {
   try {

@@ -16,8 +16,8 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { getResolvedBlock } from '@/services/content-block.service'
 
-/** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
-export const revalidate = 3600
+/** Статический рендер каталога, ревалидация раз в 10 минут. */
+export const revalidate = 600
 
 const PRODUCTS_PER_PAGE = 24
 

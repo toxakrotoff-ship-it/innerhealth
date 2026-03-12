@@ -11,7 +11,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { valid: false, error: 'Слишком много попыток. Подождите минуту.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -20,14 +26,29 @@ export async function POST(request: Request) {
     const parsed = validatePromoBodySchema.safeParse(raw)
     if (!parsed.success) {
       const msg = parsed.error.flatten().fieldErrors.code?.[0] ?? 'Введите промокод'
-      return NextResponse.json({ valid: false, error: msg }, { status: 400 })
+      return NextResponse.json(
+        { valid: false, error: msg },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     const code = parsed.data.code
 
     const promo = await promoService.findPromoByCode(code)
 
     if (!promo || !promo.isActive) {
-      return NextResponse.json({ valid: false, error: 'Промокод не найден или недействителен' })
+      return NextResponse.json(
+        { valid: false, error: 'Промокод не найден или недействителен' },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
 
     const now = new Date()
@@ -41,14 +62,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ valid: false, error: 'Промокод исчерпан' })
     }
 
-    return NextResponse.json({
-      valid: true,
-      id: promo.id,
-      code: promo.code,
-      discountType: promo.discountType,
-      discountValue: promo.discountValue,
-    })
+    return NextResponse.json(
+      {
+        valid: true,
+        id: promo.id,
+        code: promo.code,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch {
-    return NextResponse.json({ valid: false, error: 'Ошибка проверки' }, { status: 500 })
+    return NextResponse.json(
+      { valid: false, error: 'Ошибка проверки' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

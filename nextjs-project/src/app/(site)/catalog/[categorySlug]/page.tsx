@@ -9,8 +9,8 @@ import { getCategoryPageContent } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
-/** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
-export const revalidate = 3600
+/** Статический рендер категории, ревалидация раз в 10 минут. */
+export const revalidate = 600
 
 interface PageProps {
   params: Promise<{ categorySlug: string }>

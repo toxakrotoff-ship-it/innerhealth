@@ -26,6 +26,8 @@ const DEFAULT_WORKING_WEEKDAYS = 'Будние дни: с 10 до 22'
 const DEFAULT_WORKING_WEEKENDS = 'Выходные: с 12 до 18'
 const DEFAULT_WORKING_NOTE = '*по предварительному звонку'
 
+export const revalidate = 86400
+
 function getText(block: { text: string | null } | undefined, fallback: string): string {
   const t = block?.text?.trim()
   return t ?? fallback

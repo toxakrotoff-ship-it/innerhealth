@@ -7,7 +7,7 @@ import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
-export const revalidate = 60
+export const revalidate = 900
 
 async function getNewsList() {
   try {

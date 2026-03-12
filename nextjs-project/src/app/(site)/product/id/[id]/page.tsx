@@ -5,7 +5,7 @@ import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 
-export const revalidate = 60
+export const revalidate = 300
 
 const DEFAULT_TAB_TITLES = ['Преимущества', 'Состав', 'Способ применения и дозировка', 'Характеристики'] as const
 

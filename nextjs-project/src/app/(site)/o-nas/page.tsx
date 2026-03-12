@@ -8,6 +8,8 @@ import { getResolvedBlocksForPage } from '@/services/content-block.service'
 const IMAGE_FACE_DEFAULT = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
 
+export const revalidate = 86400
+
 const PARTNERS = [
   'Международным институтом PreventAge',
   'Университетом образовательной медицины (UOM)',
