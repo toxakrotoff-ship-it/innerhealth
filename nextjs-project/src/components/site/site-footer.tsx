@@ -3,6 +3,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { getResolvedBlocksForPage } from '@/services/content-block.service'
 
 const FOOTER_LINKS = [
   { label: 'О нас', href: '/o-nas' },
@@ -16,24 +17,25 @@ const FOOTER_LINKS = [
   { label: 'Публичная оферта', href: '/oferta' },
 ] as const
 
-const LEGAL = {
-  fullName: 'ИП Кудимов Валерий Валерьевич',
-  address:
-    '196140, г. Санкт-Петербург, Пулковское шоссе, д. 73, корп. 2, стр. 1, кв. 85',
-} as const
+export async function SiteFooter() {
+  const blocks = await getResolvedBlocksForPage('footer')
+  const fullName = blocks.find((b) => b.key === 'footer.legal.fullName')
+  const address = blocks.find((b) => b.key === 'footer.legal.address')
+  const correspondentAccount = blocks.find(
+    (b) => b.key === 'footer.bank.correspondentAccount'
+  )
+  const bic = blocks.find((b) => b.key === 'footer.bank.bic')
+  const ogrnip = blocks.find((b) => b.key === 'footer.bank.ogrnip')
+  const inn = blocks.find((b) => b.key === 'footer.bank.inn')
 
-const BANK = {
-  correspondentAccount: '30101 810 4 0000 0000225',
-  bic: '044525225',
-  ogrnip: '322784700221371',
-  inn: '550622300904',
-} as const
-
-export function SiteFooter() {
   return (
     <footer className="bg-slate-50 border-t border-slate-200 mt-auto">
       <ScalableSpacing direction="vertical" size={96} usePadding adaptive>
-        <AdaptiveContainer maxWidth="6xl" adaptivePadding>
+        <AdaptiveContainer
+          maxWidth="6xl"
+          adaptivePadding
+          className="py-6 sm:py-8 lg:py-10"
+        >
           {/* Основная сетка с 4 колонками на десктопе и выше */}
           <FluidGrid
             cols={1}
@@ -208,13 +210,18 @@ export function SiteFooter() {
                     <span className="font-semibold text-slate-900">
                       Название полное:
                     </span>{' '}
-                    <span className="text-slate-600">{LEGAL.fullName}</span>
+                    <span className="text-slate-600">
+                      {fullName?.text ?? 'ИП Кудимов Валерий Валерьевич'}
+                    </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">
                       Юридический адрес:
                     </span>{' '}
-                    <span className="text-slate-600">{LEGAL.address}</span>
+                    <span className="text-slate-600">
+                      {address?.text ??
+                        '196140, г. Санкт-Петербург, Пулковское шоссе, д. 73, корп. 2, стр. 1, кв. 85'}
+                    </span>
                   </ResponsiveText>
                 </div>
                 <div className="space-y-2">
@@ -223,22 +230,28 @@ export function SiteFooter() {
                       Корреспондентский счёт:
                     </span>{' '}
                     <span className="text-slate-600">
-                      {BANK.correspondentAccount}
+                      {correspondentAccount?.text ?? '30101 810 4 0000 0000225'}
                     </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">БИК:</span>{' '}
-                    <span className="text-slate-600">{BANK.bic}</span>
+                    <span className="text-slate-600">
+                      {bic?.text ?? '044525225'}
+                    </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">
                       ОГРНИП:
                     </span>{' '}
-                    <span className="text-slate-600">{BANK.ogrnip}</span>
+                    <span className="text-slate-600">
+                      {ogrnip?.text ?? '322784700221371'}
+                    </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">ИНН:</span>{' '}
-                    <span className="text-slate-600">{BANK.inn}</span>
+                    <span className="text-slate-600">
+                      {inn?.text ?? '550622300904'}
+                    </span>
                   </ResponsiveText>
                 </div>
               </FluidGrid>

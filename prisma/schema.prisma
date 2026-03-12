@@ -173,6 +173,32 @@ model PromoCode {
   orders       Order[]
 }
 
+model ContentBlock {
+  id          String   @id @default(cuid())
+  /// Идентификатор страницы: 'home', 'about', 'contacts', 'footer' и т.п.
+  page        String
+  /// Ключ блока: 'hero.badge', 'hero.title', 'home.news.subtitle' и т.п.
+  key         String
+  /// Человекочитаемое название для админки
+  label       String
+  /// Тип блока: 'short' | 'rich'
+  type        String
+  /// Короткий текст (для type = 'short')
+  text        String?
+  /// Rich-text содержимое в формате TipTap JSON (для type = 'rich')
+  richJson    Json?
+  /// Токен цвета Tailwind / дизайн-системы
+  colorToken  String?
+  /// Вариант шрифта / семейство (sans, display, script)
+  fontVariant String?
+  /// Жирность шрифта: thin, light, normal, medium, semibold, bold, extrabold
+  fontWeight  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([page, key])
+}
+
 model SiteSetting {
   id        String   @id @default(cuid())
   key       String   @unique

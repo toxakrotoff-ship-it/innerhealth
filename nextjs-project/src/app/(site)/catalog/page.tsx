@@ -17,6 +17,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText, Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { getResolvedBlock } from '@/services/content-block.service'
 
 /** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
 export const revalidate = 3600
@@ -86,6 +87,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const hasNextPage = catalogResult.hasNextPage
   const products = catalogResult.items
 
+  const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant')
+  const categoryTitleFont =
+    categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
+      ? 'font-sans'
+      : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
+        ? 'font-script'
+        : 'font-display'
+
   const buildPageHref = (nextPage: number) => {
     const params = new URLSearchParams()
     if (nextPage > 1) params.set('page', String(nextPage))
@@ -152,7 +161,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       </>
                     )}
                     <span
-                      className={`relative z-10 font-medium drop-shadow-md block font-display text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                      className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${bgImage ? 'text-white' : 'text-text'}`}
                     >
                       {cat.title}
                     </span>

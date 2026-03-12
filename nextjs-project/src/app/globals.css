@@ -783,6 +783,74 @@
     background: rgba(59, 102, 245, 0.25);
   }
 
+  .admin-nav-group-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .admin-nav-group-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .admin-nav-group-link:hover {
+    color: #f1f5f9;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .admin-nav-group-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 0.5rem;
+    margin: 0 0.25rem 0 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+
+  .admin-nav-group-chevron svg {
+    display: block;
+  }
+
+  .admin-nav-group-chevron:hover {
+    background: rgba(255,255,255,0.06);
+  }
+
+  .admin-nav-group-expandable .admin-nav-group-chevron {
+    opacity: 0.85;
+    min-width: 2rem;
+  }
+
+  .admin-nav-group-expandable:hover .admin-nav-group-chevron,
+  .admin-nav-group-expandable .admin-nav-group-chevron:hover {
+    opacity: 1;
+  }
+
+  .admin-nav-sublist {
+    margin-top: 2px;
+    padding-left: 1.5rem;
+    gap: 2px;
+  }
+
+  .admin-nav-subitem {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
   .admin-main {
     flex: 1;
     margin-left: 260px;
@@ -1023,6 +1091,40 @@
     color: var(--color-gray-600);
     margin-top: 0.25rem;
     margin-bottom: 0;
+  }
+
+  .crm-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .crm-dashboard-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1.25rem;
+    border-radius: 12px;
+    background: var(--color-bg-elevated, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
+    text-decoration: none;
+    color: var(--color-text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .crm-dashboard-card:hover {
+    border-color: rgba(59, 102, 245, 0.4);
+    box-shadow: 0 4px 12px rgba(59, 102, 245, 0.1);
+  }
+
+  .crm-dashboard-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .crm-dashboard-card-desc {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
   }
 
   .admin-btn-add {

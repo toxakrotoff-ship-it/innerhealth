@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
           <div className="mb-4 w-full rounded-md bg-green-500/20 px-4 py-3 text-sm text-green-100 space-y-1">
             <p>{message}</p>
             <p className="text-xs text-white/70">
-              Проверьте папку «Спам». Если письма нет — настройте SMTP в .env.local (см. docs/password-reset-env.md) и смотрите логи в терминале.
+              Проверьте папку «Спам». Если письма нет, попробуйте ещё раз через несколько минут.
             </p>
           </div>
         )}

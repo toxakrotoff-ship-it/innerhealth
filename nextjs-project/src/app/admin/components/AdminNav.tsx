@@ -3,6 +3,7 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
+import { useCallback, useMemo, useState } from 'react'
 
 const iconClass = 'admin-nav-icon'
 
@@ -84,68 +85,232 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
     </svg>
   ),
+  content: (
+    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 6.75h15M4.5 12h15M4.5 17.25h9"
+      />
+    </svg>
+  ),
+  chevronDown: (
+    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+  ),
+  chevronRight: (
+    <svg className={iconClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  ),
 }
 
-const navItems: { path: string; label: string; icon: React.ReactNode }[] = [
-  { path: 'profile', label: 'Профиль', icon: icons.profile },
-  { path: 'catalog', label: 'Каталог товаров', icon: icons.catalog },
-  { path: 'reviews', label: 'Модерация отзывов', icon: icons.reviews },
-  { path: 'faq', label: 'FAQ', icon: icons.faq },
-  { path: 'catalog/categories', label: 'Категории', icon: icons.categories },
-  { path: 'news', label: 'Новости', icon: icons.news },
-  { path: 'news?type=article', label: 'Статьи', icon: icons.news },
-  { path: 'promo-codes', label: 'Промокоды', icon: icons.promo },
+interface NavItemEntry {
+  path: string
+  label: string
+  icon: React.ReactNode
+}
+
+interface NavGroupEntry {
+  path: string
+  label: string
+  icon: React.ReactNode
+  children: NavItemEntry[]
+}
+
+type NavEntry = NavItemEntry | NavGroupEntry
+
+function isNavGroup(entry: NavEntry): entry is NavGroupEntry {
+  return 'children' in entry && Array.isArray((entry as NavGroupEntry).children)
+}
+
+const crmChildren: NavItemEntry[] = [
   { path: 'orders', label: 'Заказы (CRM)', icon: icons.orders },
   { path: 'quick-orders', label: 'Быстрые заявки', icon: icons.orders },
   { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
   { path: 'leads-export', label: 'Выгрузка лидов', icon: icons.leadsExport },
   { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
+]
+
+const settingsChildren: NavItemEntry[] = [
+  { path: 'settings', label: 'API и интеграции', icon: icons.settings },
+  { path: 'content', label: 'Тексты страниц', icon: icons.content },
+  { path: 'faq', label: 'FAQ', icon: icons.faq },
+  { path: 'redirects', label: 'Редиректы', icon: icons.redirects },
+]
+
+const navConfig: NavEntry[] = [
+  { path: 'profile', label: 'Профиль', icon: icons.profile },
+  { path: 'catalog', label: 'Каталог товаров', icon: icons.catalog },
+  { path: 'reviews', label: 'Модерация отзывов', icon: icons.reviews },
+  { path: 'catalog/categories', label: 'Категории', icon: icons.categories },
+  { path: 'news', label: 'Новости', icon: icons.news },
+  { path: 'news?type=article', label: 'Статьи', icon: icons.news },
+  { path: 'promo-codes', label: 'Промокоды', icon: icons.promo },
+  {
+    path: 'crm',
+    label: 'CRM / Заявки и заказы',
+    icon: icons.orders,
+    children: crmChildren,
+  },
   { path: 'users', label: 'Пользователи', icon: icons.users },
   { path: 'partners', label: 'Партнёры', icon: icons.partnership },
-  { path: 'redirects', label: 'Редиректы', icon: icons.redirects },
-  { path: 'settings', label: 'Настройки сайта', icon: icons.settings },
+  {
+    path: 'settings',
+    label: 'Настройки',
+    icon: icons.settings,
+    children: settingsChildren,
+  },
 ]
+
+const CRM_CHILD_PATHS = new Set(crmChildren.map((c) => c.path))
+const SETTINGS_CHILD_PATHS = new Set(settingsChildren.map((c) => c.path))
+
+function getItemIsActive(
+  itemPath: string,
+  pathname: string,
+  searchParams: URLSearchParams,
+  base: string
+): boolean {
+  const prefix = `/${base}/`
+  if (itemPath === 'news?type=article') {
+    return pathname === `${prefix}news` && searchParams.get('type') === 'article'
+  }
+  if (itemPath === 'news') {
+    return pathname === `${prefix}news` && searchParams.get('type') !== 'article'
+  }
+  if (itemPath === 'catalog') {
+    return pathname === `${prefix}catalog` || pathname.startsWith(`${prefix}catalog/`)
+  }
+  if (itemPath === 'partners') {
+    return pathname === `${prefix}partners` || pathname.startsWith(`${prefix}partners/`)
+  }
+  if (itemPath === 'reviews') return pathname === `${prefix}reviews`
+  if (itemPath === 'redirects') return pathname === `${prefix}redirects`
+  if (itemPath === 'faq') return pathname === `${prefix}faq`
+  if (itemPath === 'leads-export') return pathname === `${prefix}leads-export`
+  if (itemPath === 'quick-orders') return pathname === `${prefix}quick-orders`
+  if (itemPath === 'content') return pathname === `${prefix}content`
+  if (itemPath === 'settings') return pathname === `${prefix}settings`
+  return pathname === `${prefix}${itemPath}`
+}
+
+function isCrmSectionActive(pathname: string, base: string): boolean {
+  const prefix = `/${base}/`
+  if (pathname === `${prefix}crm`) return true
+  const segment = pathname.replace(new RegExp(`^\\/${base}\\/?`), '').split('/')[0]
+  return CRM_CHILD_PATHS.has(segment)
+}
+
+function isSettingsSectionActive(pathname: string, base: string): boolean {
+  const prefix = `/${base}/`
+  if (pathname === `${prefix}settings`) return true
+  const segment = pathname.replace(new RegExp(`^\\/${base}\\/?`), '').split('/')[0]
+  return SETTINGS_CHILD_PATHS.has(segment)
+}
 
 export default function AdminNav() {
   const base = useAdminBasePath()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  const crmExpandedByRoute = useMemo(
+    () => isCrmSectionActive(pathname, base),
+    [pathname, base]
+  )
+
+  const [crmExpandedManual, setCrmExpandedManual] = useState<boolean | null>(null)
+  const crmExpanded = crmExpandedManual ?? crmExpandedByRoute
+
+  const toggleCrm = useCallback(() => {
+    setCrmExpandedManual((prev) => !(prev ?? crmExpandedByRoute))
+  }, [crmExpandedByRoute])
+
+  const crmIsActive = useMemo(
+    () => pathname === `/${base}/crm` || isCrmSectionActive(pathname, base),
+    [pathname, base]
+  )
+
+  const settingsExpandedByRoute = useMemo(
+    () => isSettingsSectionActive(pathname, base),
+    [pathname, base]
+  )
+
+  const [settingsExpandedManual, setSettingsExpandedManual] = useState<boolean | null>(null)
+  const settingsExpanded = settingsExpandedManual ?? settingsExpandedByRoute
+
+  const toggleSettings = useCallback(() => {
+    setSettingsExpandedManual((prev) => !(prev ?? settingsExpandedByRoute))
+  }, [settingsExpandedByRoute])
+
+  const settingsIsActive = useMemo(
+    () => pathname === `/${base}/settings` || isSettingsSectionActive(pathname, base),
+    [pathname, base]
+  )
+
   return (
     <ul className="admin-nav-list">
-      {navItems.map((item) => {
-        const href = `/${base}/${item.path}`
-        let isActive: boolean
-        if (item.path === 'news?type=article') {
-          isActive = pathname === '/admin/news' && searchParams.get('type') === 'article'
-        } else if (item.path === 'news') {
-          isActive = pathname === '/admin/news' && searchParams.get('type') !== 'article'
-        } else if (item.path === 'catalog') {
-          isActive = pathname === '/admin/catalog' || pathname.startsWith('/admin/catalog/')
-        } else if (item.path === 'partners') {
-          isActive = pathname === '/admin/partners' || pathname.startsWith('/admin/partners/')
-        } else if (item.path === 'reviews') {
-          isActive = pathname === '/admin/reviews'
-        } else if (item.path === 'redirects') {
-          isActive = pathname === '/admin/redirects'
-        } else if (item.path === 'faq') {
-          isActive = pathname === '/admin/faq'
-        } else if (item.path === 'leads-export') {
-          isActive = pathname === '/admin/leads-export'
-        } else if (item.path === 'quick-orders') {
-          isActive = pathname === '/admin/quick-orders'
-        } else {
-          isActive = pathname === `/admin/${item.path}`
+      {navConfig.map((entry) => {
+        if (isNavGroup(entry)) {
+          const isCrmGroup = entry.path === 'crm'
+          const isSettingsGroup = entry.path === 'settings'
+          const href = `/${base}/${entry.path}`
+          const isActive = isCrmGroup ? crmIsActive : isSettingsGroup ? settingsIsActive : false
+          const expanded = isCrmGroup ? crmExpanded : isSettingsGroup ? settingsExpanded : false
+          return (
+            <li key={entry.path}>
+              <div
+                className={`admin-nav-item admin-nav-group-trigger admin-nav-group-expandable ${isActive ? 'admin-nav-item-active' : ''}`}
+              >
+                <Link href={href} className="admin-nav-group-link" aria-label={`${entry.label}, открыть подменю`}>
+                  {entry.icon}
+                  <span>{entry.label}</span>
+                </Link>
+                <button
+                  type="button"
+                  className="admin-nav-group-chevron"
+                  onClick={isCrmGroup ? toggleCrm : toggleSettings}
+                  aria-expanded={expanded}
+                  aria-label={expanded ? 'Свернуть' : 'Развернуть'}
+                >
+                  {expanded ? icons.chevronDown : icons.chevronRight}
+                </button>
+              </div>
+              {expanded && (
+                <ul className="admin-nav-list admin-nav-sublist">
+                  {entry.children.map((child) => {
+                    const childHref = `/${base}/${child.path}`
+                    const childActive = getItemIsActive(child.path, pathname, searchParams, base)
+                    return (
+                      <li key={child.path}>
+                        <Link
+                          href={childHref}
+                          className={`admin-nav-item admin-nav-subitem ${childActive ? 'admin-nav-item-active' : ''}`}
+                        >
+                          {child.icon}
+                          <span>{child.label}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </li>
+          )
         }
+
+        const href = `/${base}/${entry.path}`
+        const isActive = getItemIsActive(entry.path, pathname, searchParams, base)
         return (
-          <li key={href}>
+          <li key={entry.path}>
             <Link
               href={href}
               className={`admin-nav-item ${isActive ? 'admin-nav-item-active' : ''}`}
             >
-              {item.icon}
-              <span>{item.label}</span>
+              {entry.icon}
+              <span>{entry.label}</span>
             </Link>
           </li>
         )

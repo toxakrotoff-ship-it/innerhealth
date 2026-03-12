@@ -273,7 +273,7 @@ export const Heading1 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps,
 Heading1.displayName = 'Heading1'
 
 export const Heading2 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h2" variant="3xl" weight="semibold" fontFamily="display" {...props} />
+  (props, ref) => <ResponsiveText ref={ref} as="h2" variant="9xl" weight="semibold" fontFamily="display" {...props} />
 )
 Heading2.displayName = 'Heading2'
 

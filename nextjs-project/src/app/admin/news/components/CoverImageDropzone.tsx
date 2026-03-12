@@ -9,6 +9,8 @@ interface CoverImageDropzoneProps {
   onChange: (url: string) => void;
   disabled?: boolean;
   className?: string;
+  /** Папка в public/uploads (posts | content | products). По умолчанию posts. */
+  folder?: string;
 }
 
 export function CoverImageDropzone({
@@ -16,6 +18,7 @@ export function CoverImageDropzone({
   onChange,
   disabled,
   className = '',
+  folder = 'posts',
 }: CoverImageDropzoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,7 +35,7 @@ export function CoverImageDropzone({
       try {
         const formData = new FormData();
         formData.set('file', file);
-        formData.set('folder', 'posts');
+        formData.set('folder', folder);
         const res = await fetch('/api/admin/upload', {
           method: 'POST',
           credentials: 'include',

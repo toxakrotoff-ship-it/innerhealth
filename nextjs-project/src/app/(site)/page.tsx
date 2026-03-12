@@ -20,6 +20,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing, SpacingVertical } from '@/components/ui/scalable-spacing'
+import { getResolvedBlock } from '@/services/content-block.service'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -102,6 +103,27 @@ async function getHomeData() {
 
 export default async function HomePage() {
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
+  const [
+    newSubtitle,
+    newsSubtitle,
+    catalogSubtitle,
+    articlesSubtitle,
+    reviewsSubtitle,
+    categoriesFontBlock,
+  ] = await Promise.all([
+    getResolvedBlock('home', 'home.new.subtitle'),
+    getResolvedBlock('home', 'home.news.subtitle'),
+    getResolvedBlock('home', 'home.catalog.subtitle'),
+    getResolvedBlock('home', 'home.articles.subtitle'),
+    getResolvedBlock('home', 'home.reviews.subtitle'),
+    getResolvedBlock('catalog', 'categories.fontVariant'),
+  ])
+  const categoryTitleFont =
+    categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
+      ? 'font-sans'
+      : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
+        ? 'font-script'
+        : 'font-display'
 
   return (
     <div>
@@ -119,7 +141,10 @@ export default async function HomePage() {
               <Heading2 className="font-semibold tracking-tighter text-slate-900">
                 Новинки ассортимента
               </Heading2>
-              <p className="text-slate-500 text-sm font-light max-w-md">Самые актуальные разработки для вашего здоровья и энергии</p>
+              <p className="text-slate-500 text-sm font-semibold max-w-md">
+                {newSubtitle?.text ??
+                  'Самые актуальные разработки для вашего здоровья и энергии'}
+              </p>
             </div>
             <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
               СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
@@ -185,7 +210,9 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-              <p className="text-slate-500 text-sm font-light">Актуальные события и обновления</p>
+              <p className="text-slate-500 text-sm font-light">
+                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
+              </p>
             </div>
             <Link href="/news" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
               ВСЕ НОВОСТИ <ChevronRight className="w-4 h-4" aria-hidden />
@@ -217,7 +244,10 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Разделы каталога</Heading2>
-              <p className="text-slate-500 text-sm font-light">Выберите категорию для быстрого поиска нужного продукта</p>
+              <p className="text-slate-500 text-sm font-light">
+                {catalogSubtitle?.text ??
+                  'Выберите категорию для быстрого поиска нужного продукта'}
+              </p>
             </div>
             <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
               СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
@@ -259,7 +289,7 @@ export default async function HomePage() {
                           </>
                         )}
                         <span
-                          className={`relative z-10 font-medium drop-shadow-md block font-display text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                          className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${bgImage ? 'text-white' : 'text-text'}`}
                         >
                           {cat.title}
                         </span>
@@ -292,7 +322,9 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
-              <p className="text-slate-500 text-sm font-light">Полезные материалы о здоровье и нутриентах</p>
+              <p className="text-slate-500 text-sm font-light">
+                {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
+              </p>
             </div>
             <Link href="/informaciya" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
               ВСЕ СТАТЬИ <ChevronRight className="w-4 h-4" aria-hidden />
@@ -324,7 +356,9 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
-              <p className="text-slate-500 text-sm font-light">Мнения наших клиентов</p>
+              <p className="text-slate-500 text-sm font-light">
+                {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
+              </p>
             </div>
             <Link href="/otzyvy" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
               ВСЕ ОТЗЫВЫ <ChevronRight className="w-4 h-4" aria-hidden />
