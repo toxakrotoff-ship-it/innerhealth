@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { Mail, Phone } from 'lucide-react'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 /**
  * Блок призыва оставить отзыв в стиле тёмной карточки (как «Присоединяйтесь к сообществу»).
  */
 export function ReviewCtaBlock() {
   return (
-    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
+    <AdaptiveContainer maxWidth="default">
       <div className="bg-[#151C2C] rounded-[40px] p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1/3 h-full bg-action-blue/10 blur-[100px] rounded-full pointer-events-none" aria-hidden />
         <div className="max-w-lg space-y-6 relative z-10">
@@ -40,6 +41,6 @@ export function ReviewCtaBlock() {
           </a>
         </div>
       </div>
-    </div>
+    </AdaptiveContainer>
   )
 }

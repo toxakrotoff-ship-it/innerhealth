@@ -74,12 +74,12 @@ export async function SiteHeader() {
     >
       <div 
         className={`
-          mx-auto px-4 sm:px-6 lg:px-8
+          w-full mx-auto px-4 sm:px-6 lg:px-8
           xl:px-10 2xl:px-12 3xl:px-16 4xl:px-20 5xl:px-24 6xl:px-32
           h-16 2xl:h-18 3xl:h-20 4xl:h-24 5xl:h-28 6xl:h-32
           flex items-center justify-between
         `}
-        style={{ maxWidth: `min(${adaptiveTokens.containerFixedWidths['6xl']}px, 92vw)` }}
+        style={{ maxWidth: `${adaptiveTokens.containerFixedWidths['default']}px` }}
       >
         <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
           <HeaderNavMobile variant="light" />

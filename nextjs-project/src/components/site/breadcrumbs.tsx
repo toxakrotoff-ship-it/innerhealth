@@ -20,12 +20,12 @@ interface BreadcrumbsProps {
 
 /**
  * Breadcrumb navigation. Last item is current page (no link).
- * Uses shadcn-style UI with ChevronRight separators and clearer typography.
+ * Link: hover:text-action-blue transition-colors. Current: text-text font-medium. Separator: / with mx-2.
  */
 export function Breadcrumbs({ items }: BreadcrumbsProps) {
   return (
-    <Breadcrumb className="py-4">
-      <BreadcrumbList className="text-gray-600">
+    <Breadcrumb className="text-sm text-gray-500 pt-4 pb-1">
+      <BreadcrumbList className="text-inherit">
         {items.map((item, index) => {
           const isLast = index === items.length - 1
           return (
@@ -33,15 +33,24 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
               <BreadcrumbItem>
                 {item.href && !isLast ? (
                   <BreadcrumbLink asChild>
-                    <Link href={item.href}>{item.label}</Link>
+                    <Link
+                      href={item.href}
+                      className="hover:text-action-blue transition-colors hover:no-underline"
+                    >
+                      {item.label}
+                    </Link>
                   </BreadcrumbLink>
                 ) : (
-                  <BreadcrumbPage className="text-gray-800">
+                  <BreadcrumbPage className="text-text font-medium">
                     {item.label}
                   </BreadcrumbPage>
                 )}
               </BreadcrumbItem>
-              {index < items.length - 1 && <BreadcrumbSeparator />}
+              {index < items.length - 1 && (
+                <BreadcrumbSeparator className="mx-2 [&>svg]:hidden">
+                  /
+                </BreadcrumbSeparator>
+              )}
             </React.Fragment>
           )
         })}

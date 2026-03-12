@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowUpRight, CheckCircle } from 'lucide-react'
 
 import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 const SPRINT_POWER_URL = 'https://sprintpower.ru'
 
@@ -12,7 +13,7 @@ export function SprintPowerBlock() {
       className="py-24 border-t border-slate-100"
       aria-labelledby="sprint-power-heading"
     >
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
+      <AdaptiveContainer maxWidth="default">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           {/* Слева: изображение + плавающая карточка как в референсе */}
           <div className="relative">
@@ -68,7 +69,7 @@ export function SprintPowerBlock() {
             </Link>
           </div>
         </div>
-      </div>
+      </AdaptiveContainer>
     </section>
   )
 }

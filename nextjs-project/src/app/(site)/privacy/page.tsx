@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 export const metadata = {
   title: 'Политика конфиденциальности | Inner Health',
@@ -15,12 +16,12 @@ const breadcrumbItems = [
 export default function PrivacyPage() {
   return (
     <div className="bg-white min-h-screen">
-      {/* Хлебные крошки */}
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
         <Breadcrumbs items={breadcrumbItems} />
-      </div>
+      </AdaptiveContainer>
 
-      <article className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <AdaptiveContainer maxWidth="default" className="py-8 pb-16">
+        <article>
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
             Политика конфиденциальности
@@ -678,6 +679,7 @@ export default function PrivacyPage() {
           </Link>
         </nav>
       </article>
+      </AdaptiveContainer>
     </div>
   )
 }

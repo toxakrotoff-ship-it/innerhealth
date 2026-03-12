@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 const PARTNERS = [
   {
@@ -24,7 +25,7 @@ export function PartnersBlock() {
       className="py-16 sm:py-24 bg-white border-t border-slate-100"
       aria-labelledby="partners-heading"
     >
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
+      <AdaptiveContainer maxWidth="default">
         <h2
           id="partners-heading"
           className="text-3xl font-semibold tracking-tighter text-slate-900 mb-12 text-center"
@@ -63,7 +64,7 @@ export function PartnersBlock() {
             </Link>
           ))}
         </div>
-      </div>
+      </AdaptiveContainer>
     </section>
   )
 }

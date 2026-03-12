@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -20,29 +21,27 @@ export const metadata = {
 }
 
 export default function AboutPage() {
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: 'О нас' },
+  ]
+
   return (
     <div className="bg-white">
-      {/* Хлебные крошки */}
-      <AdaptiveContainer maxWidth="default">
-        <nav className="text-sm text-gray-500 pt-6 pb-2" aria-label="Хлебные крошки">
-          <Link href="/" className="hover:text-action-blue transition-colors">
-            Главная
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-text font-medium">О нас</span>
-        </nav>
-      </AdaptiveContainer>
+      <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3">
+        <Breadcrumbs items={breadcrumbItems} />
 
-      <AdaptiveContainer maxWidth="default">
-        <ResponsiveText as="h1" variant="4xl" weight="bold" className="mb-10">
+        <ResponsiveText
+          as="h1"
+          variant="4xl"
+          weight="bold"
+          className="mb-10 mt-0 font-display"
+        >
           О нас
         </ResponsiveText>
 
         {/* Блок 1: Формула красоты и молодости */}
         <section>
-          <ResponsiveText as="h2" variant="3xl" weight="semibold" className="mb-6 uppercase tracking-wide">
-            О НАС
-          </ResponsiveText>
           <div className="space-y-4 text-gray-700 leading-relaxed">
             <p>
               Формула красоты и молодости существует. Главное в ней не дорогие

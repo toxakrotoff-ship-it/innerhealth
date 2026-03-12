@@ -7,6 +7,7 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 /** Статический рендер, ревалидация раз в час (проверка соответствия товар–категория). */
 export const revalidate = 3600
@@ -123,15 +124,15 @@ export default async function CategoryPage({ params }: PageProps) {
 
       {/* Хлебные крошки */}
       <section className="bg-highlight-blue border-b border-gray-200/70">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
+        <AdaptiveContainer maxWidth="default">
           <Breadcrumbs
             items={breadcrumbItems}
           />
-        </div>
+        </AdaptiveContainer>
       </section>
 
       <section className="py-12 bg-white">
-        <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
+        <AdaptiveContainer maxWidth="default">
           <h1 className="text-2xl font-bold text-text mb-6">{category.title}</h1>
           {category.children.length > 0 && (
             <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4">
@@ -195,7 +196,7 @@ export default async function CategoryPage({ params }: PageProps) {
               )}
             </div>
           )}
-        </div>
+        </AdaptiveContainer>
       </section>
     </>
   )

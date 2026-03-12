@@ -1,10 +1,12 @@
-import { ComparePageContent } from '@/components/site/compare-page-content';
+import { ComparePageContent } from '@/components/site/compare-page-content'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 
 export default function ComparePage() {
   return (
-    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-text mb-6">Сравнение товаров</h1>
+    <AdaptiveContainer maxWidth="default" className="py-10">
+      <Heading1 className="text-text mb-6">Сравнение товаров</Heading1>
       <ComparePageContent />
-    </div>
-  );
+    </AdaptiveContainer>
+  )
 }

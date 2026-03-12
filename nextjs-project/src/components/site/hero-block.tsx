@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 export function HeroBlock() {
   return (
@@ -8,14 +9,17 @@ export function HeroBlock() {
       className="relative min-h-[calc(100vh-65px)] flex items-center overflow-hidden text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
       aria-label="Главный блок"
     >
-      <div className="relative max-w-[min(90rem,100vw)] mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center z-10 overflow-x-hidden">
+      <AdaptiveContainer
+        maxWidth="default"
+        className="relative w-full grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center z-10 overflow-x-hidden"
+      >
         {/* Левая колонка: референс — бейдж, заголовок, подзаголовок, кнопки */}
         <div className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 overflow-hidden max-h-[calc(100vh-65px)] overflow-y-hidden">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium tracking-wide">
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
             НОВЫЙ СТАНДАРТ БИОДОБАВОК
           </div>
-          <h1 className="text-fluid-hero font-display font-semibold tracking-tighter max-w-full w-full">
+          <h1 className="text-fluid-hero font-display font-thin tracking-tighter max-w-full w-full">
             <span className="block">Функциональное</span>
             <span className="block">питание для</span>
             <span className="block text-blue-300">твоего</span>
@@ -40,7 +44,7 @@ export function HeroBlock() {
             </Link>
           </div>
         </div>
-      </div>
+      </AdaptiveContainer>
 
       {/* Правая колонка: hero-portrait.png без замены + маска и декоративное размытие */}
       <div className="absolute right-0 bottom-0 w-full lg:w-1/2 h-[60vh] sm:h-[70vh] lg:h-full pointer-events-none" aria-hidden>

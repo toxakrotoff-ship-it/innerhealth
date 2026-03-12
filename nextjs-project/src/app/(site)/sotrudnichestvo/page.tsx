@@ -1,5 +1,6 @@
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { PartnershipForm } from '@/components/site/partnership-form'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 export const metadata = {
   title: 'Сотрудничество | Inner Health',
@@ -15,11 +16,11 @@ const breadcrumbItems = [
 export default function SotrudnichestvoPage() {
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
         <Breadcrumbs items={breadcrumbItems} />
-      </div>
+      </AdaptiveContainer>
 
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <AdaptiveContainer maxWidth="default" className="py-8 pb-16">
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text mb-4">
             Сотрудничество
@@ -103,7 +104,7 @@ export default function SotrudnichestvoPage() {
             <PartnershipForm />
           </div>
         </section>
-      </div>
+      </AdaptiveContainer>
     </div>
   )
 }

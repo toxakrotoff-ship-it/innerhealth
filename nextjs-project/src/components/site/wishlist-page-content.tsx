@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useWishlistStore } from '@/store/wishlist-store'
 import { ProductCard } from '@/components/site/product-card'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 
 interface WishlistProduct {
   id: string
@@ -45,11 +47,11 @@ export function WishlistPageContent() {
   }, [productIds])
 
   return (
-    <div className="max-w-[min(90rem,92vw)] mx-auto px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-text mb-2">Избранное</h1>
-      <p className="text-gray-600 mb-8">
+    <AdaptiveContainer maxWidth="default" className="py-10">
+      <Heading1 className="text-text mb-2">Избранное</Heading1>
+      <ResponsiveText as="p" variant="base" color="secondary" className="mb-8">
         Сохраняйте товары в избранное и возвращайтесь к ним позже.
-      </p>
+      </ResponsiveText>
 
       {isLoading ? (
         <p className="text-gray-500">Загрузка...</p>
@@ -74,6 +76,6 @@ export function WishlistPageContent() {
           ))}
         </div>
       )}
-    </div>
+    </AdaptiveContainer>
   )
 }

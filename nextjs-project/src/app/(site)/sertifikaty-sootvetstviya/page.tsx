@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { GalleryBlock } from '@/components/site/gallery-block'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 export const metadata = {
   title: 'Сертификаты соответствия | Inner Health',
@@ -16,11 +17,12 @@ const breadcrumbItems = [
 export default function CertificatesPage() {
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 pt-6 pb-2 sm:px-6 lg:px-8">
+      <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
         <Breadcrumbs items={breadcrumbItems} />
-      </div>
+      </AdaptiveContainer>
 
-      <article className="max-w-[min(90rem,92vw)] mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-16">
+      <AdaptiveContainer maxWidth="default" className="py-8 pb-16">
+        <article>
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
             Сертификаты соответствия
@@ -126,6 +128,7 @@ export default function CertificatesPage() {
           </Link>
         </nav>
       </article>
+      </AdaptiveContainer>
     </div>
   )
 }

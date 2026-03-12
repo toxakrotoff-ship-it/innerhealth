@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -142,7 +143,8 @@ export default async function NewsPostPage({ params }: PageProps) {
   const fallback = typeof normalizedRaw === 'string' ? <p>{normalizedRaw}</p> : <p className="text-gray-500">Содержимое публикации</p>
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
+    <AdaptiveContainer maxWidth="default" className="py-10">
+      <div className="mx-auto max-w-3xl">
       <style dangerouslySetInnerHTML={{ __html: `
         .news-list-bullet[data-list-style-type="disc"] { list-style-type: disc; }
         .news-list-bullet[data-list-style-type="circle"] { list-style-type: circle; }
@@ -181,6 +183,7 @@ export default async function NewsPostPage({ params }: PageProps) {
           {tipTapContent ?? fallback}
         </div>
       </article>
-    </div>
+      </div>
+    </AdaptiveContainer>
   )
 }

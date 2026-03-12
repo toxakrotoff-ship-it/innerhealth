@@ -5,6 +5,7 @@ import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
 import { ProductListRow } from '@/components/site/product-list-row'
 import { CatalogControls } from '@/components/site/catalog-controls'
+import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import {
   filterCatalogBlockCategories,
@@ -99,9 +100,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     return query ? `/catalog?${query}` : '/catalog'
   }
 
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: 'Каталог' },
+  ]
+
   return (
-    <AdaptiveContainer maxWidth="default">
-      <Heading1 className="mb-6">
+    <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3">
+      <Breadcrumbs items={breadcrumbItems} />
+      <Heading1 className="mb-6 mt-0">
         Каталог
       </Heading1>
       <CatalogControls
@@ -145,7 +152,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       </>
                     )}
                     <span
-                      className={`relative z-10 font-medium drop-shadow-md block font-script text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                      className={`relative z-10 font-medium drop-shadow-md block font-display text-lg ${bgImage ? 'text-white' : 'text-text'}`}
                     >
                       {cat.title}
                     </span>

@@ -259,7 +259,7 @@ export default async function HomePage() {
                           </>
                         )}
                         <span
-                          className={`relative z-10 font-medium drop-shadow-md block font-script text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                          className={`relative z-10 font-medium drop-shadow-md block font-display text-lg ${bgImage ? 'text-white' : 'text-text'}`}
                         >
                           {cat.title}
                         </span>

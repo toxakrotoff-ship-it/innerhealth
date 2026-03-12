@@ -2,6 +2,7 @@ import { AccountDashboard } from '@/components/site/account/account-dashboard'
 import { VerifyEmailBanner } from '@/components/site/account/verify-email-banner'
 import { requireUserPageSession } from '@/lib/auth/require-user-page-session'
 import { getAccountDashboard } from '@/services/account.service'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,8 +14,8 @@ export default async function AccountPage() {
   const userEmail = session.user.email ?? dashboard.user?.email ?? ''
 
   return (
-    <div className="mx-auto max-w-[min(70rem,92vw)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="space-y-6">
+    <AdaptiveContainer maxWidth="default" className="py-10">
+      <div className="mx-auto max-w-280 space-y-6">
         {!session.user.isEmailVerified ? <VerifyEmailBanner /> : null}
         <AccountDashboard
           userName={userDisplayName}
@@ -24,6 +25,6 @@ export default async function AccountPage() {
           userRole={session.user.role}
         />
       </div>
-    </div>
+    </AdaptiveContainer>
   )
 }
