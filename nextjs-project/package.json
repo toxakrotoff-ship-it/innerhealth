@@ -35,10 +35,14 @@
     "redirects:compare": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/compare-sites-redirects.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
+    "db:status": "prisma migrate status",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:fix-history": "ts-node scripts/fix-migration-history.ts",
-    "db:mark-applied": "ts-node scripts/mark-migrations-applied.ts"
+    "db:mark-applied": "ts-node scripts/mark-migrations-applied.ts",
+    "deploy:preflight": "prisma generate && prisma migrate status",
+    "start:with-migrate": "prisma migrate deploy && next start",
+    "maintenance:cleanup-auth": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/cleanup-auth-tokens.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

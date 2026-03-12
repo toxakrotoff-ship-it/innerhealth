@@ -48,12 +48,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 # typescript нужен ts-node в рантайме (в production иначе только --omit=dev)
 RUN npm install typescript --no-save
 
-RUN chown -R nextjs:nodejs /app
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-RUN printf '%s\n' '#!/bin/sh' 'set -e' \
-  'if [ "$RUN_MIGRATE" = "1" ]; then' \
-  '  npx prisma migrate deploy; fi' \
-  'exec "$@"' > /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
+RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 

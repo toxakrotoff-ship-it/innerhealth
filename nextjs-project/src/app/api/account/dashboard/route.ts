@@ -8,9 +8,21 @@ export async function GET() {
 
   try {
     const dashboard = await accountService.getAccountDashboard(session.user.id as string)
-    return NextResponse.json(dashboard)
+    return NextResponse.json(dashboard, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     console.error('[account/dashboard] Failed to fetch dashboard:', error)
-    return NextResponse.json({ error: 'Failed to fetch dashboard' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch dashboard' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

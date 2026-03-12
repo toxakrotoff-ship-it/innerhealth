@@ -10,16 +10,19 @@ cd "$DEPLOY_DIR"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 cd "$GIT_ROOT"
 
-echo "==> Pulling latest code..."
+echo "==> Pulling latest from repo (code + prisma/migrations)..."
 git fetch origin
 git reset --hard "origin/$(git branch --show-current)"
 
 cd "$DEPLOY_DIR"
 
-echo "==> Building app (with cache)..."
+echo "==> Building app from repo (with cache)..."
 docker compose build app
 
-echo "==> Applying migrations..."
+echo "==> Migration status (before deploy)..."
+docker compose run --rm app npx prisma migrate status || true
+
+echo "==> Applying migrations from repo..."
 docker compose run --rm app npx prisma migrate deploy
 
 echo "==> Restarting app..."
@@ -31,6 +34,10 @@ docker compose up -d telegram-bot
 
 echo "==> Перезапуск контейнеров app и telegram-bot..."
 docker compose restart app telegram-bot
+
+echo "==> Cleaning up (dangling images, build cache)..."
+docker image prune -f
+docker builder prune -f 2>/dev/null || true
 
 echo "==> Done."
 docker compose ps
