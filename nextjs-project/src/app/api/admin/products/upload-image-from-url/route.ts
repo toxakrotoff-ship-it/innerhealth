@@ -103,18 +103,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Получаем расширение файла из content-type
-    let fileExtension = 'jpg';
-    if (contentType.includes('jpeg') || contentType.includes('jpg')) {
-      fileExtension = 'jpg';
-    } else if (contentType.includes('png')) {
-      fileExtension = 'png';
-    } else if (contentType.includes('gif')) {
-      fileExtension = 'gif';
-    } else if (contentType.includes('webp')) {
-      fileExtension = 'webp';
-    }
-
     // Создаем директорию для загрузки файлов, если её нет
     const productName = existingProduct.title.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\-_]/g, '_');
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products', productName);
@@ -122,10 +110,6 @@ export async function POST(request: Request) {
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-
-    // Генерируем уникальное имя файла
-    const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExtension}`;
-    const filePath = path.join(uploadDir, fileName);
 
     const arrayBuffer = await response.arrayBuffer();
     const originalBuffer = Buffer.from(arrayBuffer);
@@ -145,9 +129,9 @@ export async function POST(request: Request) {
       : basePipeline;
 
     const webpFileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webp`;
-    const filePath = path.join(uploadDir, webpFileName);
+    const webpFilePath = path.join(uploadDir, webpFileName);
 
-    await resized.webp({ quality: 85 }).toFile(filePath);
+    await resized.webp({ quality: 85 }).toFile(webpFilePath);
 
     const photoUrl = `/uploads/products/${productName}/${webpFileName}`;
 
