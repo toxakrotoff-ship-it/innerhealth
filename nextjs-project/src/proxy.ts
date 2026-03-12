@@ -1,4 +1,3 @@
-import NextAuth from 'next-auth'
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 

@@ -1,9 +1,8 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
-import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
+import { Heading1 } from '@/components/ui/responsive-text'
 
 export const revalidate = 60
 

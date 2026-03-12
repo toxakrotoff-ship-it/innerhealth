@@ -55,6 +55,14 @@ const FIELDS: Array<{
   { key: 'site_name', label: 'Название сайта', type: 'text', placeholder: 'Inner Health', group: 'site' },
   { key: 'site_contact_email', label: 'Email для связи', type: 'text', placeholder: 'info@example.com', group: 'site' },
   { key: 'default_currency', label: 'Валюта по умолчанию', type: 'text', placeholder: 'RUB', group: 'site' },
+  { key: 'schema_org_enabled', label: 'Включить schema.org (1 = да)', type: 'text', placeholder: '1', group: 'site' },
+  { key: 'schema_org_organization_type', label: 'Тип организации (Organization, LocalBusiness...)', type: 'text', placeholder: 'Organization', group: 'site' },
+  { key: 'schema_org_legal_name', label: 'Юридическое название для schema.org', type: 'text', group: 'site' },
+  { key: 'schema_org_url', label: 'URL сайта (канонический)', type: 'text', placeholder: 'https://innerhealth.ru', group: 'site' },
+  { key: 'schema_org_logo_url', label: 'URL логотипа (абсолютный)', type: 'text', group: 'site' },
+  { key: 'schema_org_phone', label: 'Телефон для schema.org', type: 'text', group: 'site' },
+  { key: 'schema_org_address', label: 'Адрес (одной строкой)', type: 'text', group: 'site' },
+  { key: 'schema_org_social_links', label: 'Ссылки для sameAs (через запятую)', type: 'text', group: 'site' },
 ];
 
 const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site'; title: string }> = [

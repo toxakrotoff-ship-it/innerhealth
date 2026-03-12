@@ -19,7 +19,7 @@ function SetInitialPasswordForm() {
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [codeSent, setCodeSent] = useState(false)
+  const [, setCodeSent] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const sentCodeOnceRef = useRef(false)

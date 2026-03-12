@@ -58,27 +58,6 @@ export const ScalableSpacing = forwardRef<HTMLDivElement, ScalableSpacingProps>(
     },
     ref
   ) => {
-    // Преобразование размера в Tailwind-класс
-    const getSizeClass = (size: SpacingSize, prefix: string) => {
-      if (typeof size === 'number') {
-        return `${prefix}-${size}`
-      }
-      // Именованные размеры с поддержкой 5xl и 6xl
-      const sizeMap: Record<string, string> = {
-        xs: `${prefix}-2`,
-        sm: `${prefix}-4`,
-        md: `${prefix}-6`,
-        lg: `${prefix}-8`,
-        xl: `${prefix}-12`,
-        '2xl': `${prefix}-16`,
-        '3xl': `${prefix}-24`,
-        '4xl': `${prefix}-32`,
-        '5xl': `${prefix}-48`,
-        '6xl': `${prefix}-64`,
-      }
-      return sizeMap[size] || `${prefix}-4`
-    }
-
     // Определение префикса (margin или padding)
     const prefix = usePadding ? 'p' : 'm'
 

@@ -199,9 +199,8 @@ export const ResponsiveText = forwardRef<HTMLParagraphElement, ResponsiveTextPro
       className
     )
 
-    // Приведение типа ref для разных элементов (p, span, div, h1...)
-    // Используем any, так как типы React не позволяют легко полиморфный ref
     return (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- полиморфный ref для разных HTML-элементов
       <Component ref={ref as any} className={textClasses} {...props}>
         {children}
       </Component>

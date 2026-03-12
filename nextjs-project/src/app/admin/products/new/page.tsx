@@ -202,7 +202,7 @@ export default function NewProductPage() {
         throw new Error(errorData.error || 'Failed to create product');
       }
 
-      const newProduct = await response.json();
+      await response.json();
       alert('Продукт успешно создан!');
       router.push(`/${base}/catalog`);
     } catch (err) {

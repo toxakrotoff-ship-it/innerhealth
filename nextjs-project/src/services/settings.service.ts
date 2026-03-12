@@ -22,6 +22,17 @@ export const SETTING_KEYS = [
   'default_currency',
 ] as const
 
+export const SCHEMA_ORG_KEYS = [
+  'schema_org_enabled',
+  'schema_org_organization_type',
+  'schema_org_legal_name',
+  'schema_org_url',
+  'schema_org_logo_url',
+  'schema_org_phone',
+  'schema_org_address',
+  'schema_org_social_links',
+] as const
+
 export type SettingKey = (typeof SETTING_KEYS)[number]
 
 /** Get settings as key-value map. Sensitive values are decrypted when read. */
@@ -45,7 +56,7 @@ export async function getSettingsMap(keys: readonly string[] = SETTING_KEYS) {
 /** Upsert multiple settings. Sensitive values are encrypted before storage when SETTINGS_ENCRYPTION_KEY is set. */
 export async function upsertSettings(
   body: Record<string, string>,
-  keys: readonly string[] = SETTING_KEYS
+  keys: readonly string[] = [...SETTING_KEYS, ...SCHEMA_ORG_KEYS]
 ) {
   for (const key of keys) {
     const value = body[key]

@@ -119,7 +119,7 @@ export function ProductQuickView({
                   <div className="mt-3 text-sm text-gray-600">
                     {loadingDescription ? 'Загрузка описания...' : descriptionPreview || 'Краткое описание отсутствует.'}
                   </div>
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-5 flex flex-col gap-2">
                     <AddToCartButton
                       productId={id}
                       title={title}
@@ -130,11 +130,12 @@ export function ProductQuickView({
                       isPromoEligible={isPromoEligible}
                       discountPrice={discountPrice}
                       size="sm"
+                      className="w-full"
                     />
                     <Link
                       href={detailHref}
                       onClick={() => setOpen(false)}
-                      className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text hover:border-action-blue hover:text-action-blue transition-colors"
+                      className="inline-flex w-full items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text hover:border-action-blue hover:text-action-blue transition-colors"
                     >
                       Подробнее
                     </Link>

@@ -94,7 +94,7 @@ export function YandexMapPvz({
             ? coords.reduce(
                 (a, c) => [a[0] + c[0], a[1] + c[1]],
                 [0, 0]
-              ).map((v, i) => v / coords.length) as [number, number]
+              ).map((v) => v / coords.length) as [number, number]
             : DEFAULT_CENTER
         const myMap = new window.ymaps!.Map(containerRef.current, {
           center,
@@ -102,13 +102,13 @@ export function YandexMapPvz({
         })
         mapRef.current = myMap
         placemarksRef.current = []
-        points.forEach((p, i) => {
+        points.forEach((p) => {
           const lat = p.location?.latitude
           const lon = p.location?.longitude
           if (lat == null || lon == null) return
           const placemark = new window.ymaps!.Placemark(
             [lat, lon],
-            { hintContent: p.code ?? String(i), balloonContent: p.code ?? '' },
+            { hintContent: p.code ?? '', balloonContent: p.code ?? '' },
             { preset: selectedCode === p.code ? 'islands#redIcon' : 'islands#blueIcon' }
           )
           if (p.code && onSelect) {

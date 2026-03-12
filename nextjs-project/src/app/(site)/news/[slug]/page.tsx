@@ -3,6 +3,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { getSettingsMap } from '@/services/settings.service'
+import { buildArticleJsonLd } from '@/lib/schema-org'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -142,6 +144,21 @@ export default async function NewsPostPage({ params }: PageProps) {
     : null
   const fallback = typeof normalizedRaw === 'string' ? <p>{normalizedRaw}</p> : <p className="text-gray-500">Содержимое публикации</p>
 
+  const settings = await getSettingsMap()
+  const baseUrl = settings.schema_org_url?.trim() || ''
+  const url = baseUrl ? `${baseUrl}/news/${post.slug}` : `/news/${post.slug}`
+  const postJsonLd = buildArticleJsonLd({
+    settings,
+    post: {
+      title: post.title,
+      type: post.type,
+      createdAt: post.createdAt,
+      excerpt: (post as unknown as { excerpt?: string | null }).excerpt ?? null,
+    },
+    url,
+    imageUrl: post.previewImage ?? null,
+  })
+
   return (
     <AdaptiveContainer maxWidth="default" className="py-10">
       <div className="mx-auto max-w-3xl">
@@ -182,6 +199,13 @@ export default async function NewsPostPage({ params }: PageProps) {
         <div className="prose prose-gray max-w-none">
           {tipTapContent ?? fallback}
         </div>
+        {postJsonLd && (
+          <script
+            type="application/ld+json"
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(postJsonLd) }}
+          />
+        )}
       </article>
       </div>
     </AdaptiveContainer>

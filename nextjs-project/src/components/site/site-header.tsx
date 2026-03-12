@@ -2,20 +2,11 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { adaptiveTokens } from '@/lib/adaptive-tokens'
 import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
 import { HeaderProfileMenu } from './header-profile-menu'
 import { AdaptiveNav } from './adaptive-nav'
 import { ClearInvalidSession } from './clear-invalid-session'
-
-const NAV_LINKS = [
-  { label: 'Каталог', href: '/catalog' },
-  { label: 'О нас', href: '/o-nas' },
-  { label: 'Акции', href: '/catalog/aktsii' },
-  { label: 'Статьи', href: '/informaciya' },
-  { label: 'Контакты', href: '/contacts' },
-] as const
 
 const PHONE = '+7 (989) 103-91-92'
 const EMAIL = 'innerhealth@mail.ru'
@@ -38,12 +29,12 @@ export async function SiteHeader() {
   let hasInvalidSession = false
   
   try {
-    console.log('[SiteHeader] Calling getServerSession...')
     session = await getServerSession(authOptions)
-    console.log('[SiteHeader] getServerSession result:', session ? 'session exists' : 'null')
   } catch (error) {
-    // Ошибка декодирования JWT - токен зашифрован другим ключом
-    console.error('[SiteHeader] Failed to decode session token:', error instanceof Error ? error.message : String(error))
+    // Ошибка декодирования JWT — токен зашифрован другим ключом
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[SiteHeader] Failed to decode session token:', error instanceof Error ? error.message : String(error))
+    }
     hasInvalidSession = true
   }
   
@@ -55,11 +46,10 @@ export async function SiteHeader() {
       const hasSessionCookie = cookieStore.get('next-auth.session-token') ||
                                cookieStore.get('__Secure-next-auth.session-token')
       if (hasSessionCookie) {
-        console.log('[SiteHeader] Session is null but session cookie exists - marking for cleanup')
         hasInvalidSession = true
       }
-    } catch (checkError) {
-      console.warn('[SiteHeader] Could not check cookies:', checkError)
+    } catch {
+      // Ignore cookie read errors
     }
   }
   
@@ -79,7 +69,6 @@ export async function SiteHeader() {
           h-16 2xl:h-18 3xl:h-20 4xl:h-24 5xl:h-28 6xl:h-32
           flex items-center justify-between
         `}
-        style={{ maxWidth: `${adaptiveTokens.containerFixedWidths['default']}px` }}
       >
         <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
           <HeaderNavMobile variant="light" />

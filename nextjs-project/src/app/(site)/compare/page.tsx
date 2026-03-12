@@ -1,6 +1,6 @@
 import { ComparePageContent } from '@/components/site/compare-page-content'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
-import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
+import { Heading1 } from '@/components/ui/responsive-text'
 
 export default function ComparePage() {
   return (

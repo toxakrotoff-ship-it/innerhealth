@@ -3,7 +3,6 @@
 import { AdaptiveContainer } from './adaptive-container'
 import { FluidGrid } from './fluid-grid'
 import { ResponsiveText, Heading1, Heading2, Heading3, TextBase, TextLG } from './responsive-text'
-import { ScalableSpacing, SpacingVertical } from './scalable-spacing'
 
 export function AdaptiveDemo() {
   return (

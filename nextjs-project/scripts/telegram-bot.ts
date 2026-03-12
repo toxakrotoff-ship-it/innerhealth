@@ -72,7 +72,7 @@ async function getWhitelistIds(): Promise<Set<string>> {
     let data: { telegramUserIds?: string[] };
     try {
       data = JSON.parse(raw) as { telegramUserIds?: string[] };
-    } catch (parseErr) {
+    } catch {
       console.error('[bot] whitelist API invalid JSON:', raw.slice(0, 300));
       return new Set();
     }

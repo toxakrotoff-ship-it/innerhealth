@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { sanitizeProductText } from '@/lib/sanitize-text';
 
@@ -100,29 +99,11 @@ function extractPrice(priceString: string): number {
   }
 }
 
-// Функция для извлечения ID из строки
-function extractId(idString: string): string {
-  if (!idString) return '0';
-  try {
-    const id = parseInt(idString, 10);
-    return isNaN(id) ? '0' : id.toString();
-  } catch (error) {
-    console.error('Ошибка при извлечении ID:', error);
-    return '0';
-  }
-}
-
 /** Парсит целое число из строки; для веса и габаритов (СДЭК). Возвращает null если не число или ≤ 0. */
 function parseOptionalInt(value: string | undefined): number | null {
   if (value == null || String(value).trim() === '') return null;
   const n = parseInt(String(value).replace(/\s/g, ''), 10);
   return Number.isNaN(n) || n < 0 ? null : n;
-}
-
-// Функция для обработки категорий
-function extractCategories(categoryString: string): string[] {
-  if (!categoryString) return [];
-  return categoryString.split(';').map(cat => cat.trim()).filter(cat => cat.length > 0);
 }
 
 // Функция для обработки изображений
@@ -181,10 +162,10 @@ export async function importProductsFromCSV(csvContent: string) {
           price,
           quantity,
           priceOld,
-          editions,
-          modifications,
-          externalId,
-          parentUid,
+          , // editions (не используется)
+          , // modifications (не используется)
+          , // externalId (не используется)
+          , // parentUid (не используется)
           characteristics1,
           characteristics2,
           characteristics3,
@@ -200,101 +181,17 @@ export async function importProductsFromCSV(csvContent: string) {
           characteristics13,
           characteristics14,
           characteristics15,
-          characteristics16,
-          characteristics17,
-          characteristics18,
-          characteristics19,
-          characteristics20,
-          characteristics21,
-          characteristics22,
-          characteristics23,
-          characteristics24,
-          characteristics25,
-          characteristics26,
-          characteristics27,
-          characteristics28,
-          characteristics29,
-          characteristics30,
-          characteristics31,
-          characteristics32,
-          characteristics33,
-          characteristics34,
-          characteristics35,
-          characteristics36,
-          characteristics37,
-          characteristics38,
-          characteristics39,
-          characteristics40,
-          characteristics41,
-          characteristics42,
-          characteristics43,
-          characteristics44,
-          characteristics45,
-          characteristics46,
-          characteristics47,
-          characteristics48,
-          characteristics49,
-          characteristics50,
-          characteristics51,
-          characteristics52,
-          characteristics53,
-          characteristics54,
-          characteristics55,
-          characteristics56,
-          characteristics57,
-          characteristics58,
-          characteristics59,
-          characteristics60,
-          characteristics61,
-          characteristics62,
-          characteristics63,
-          characteristics64,
-          characteristics65,
-          characteristics66,
-          characteristics67,
-          characteristics68,
-          characteristics69,
-          characteristics70,
-          characteristics71,
-          characteristics72,
-          characteristics73,
-          characteristics74,
-          characteristics75,
-          characteristics76,
-          characteristics77,
-          characteristics78,
-          characteristics79,
-          characteristics80,
-          characteristics81,
-          characteristics82,
-          characteristics83,
-          characteristics84,
-          characteristics85,
-          characteristics86,
-          characteristics87,
-          characteristics88,
-          characteristics89,
-          characteristics90,
-          characteristics91,
-          characteristics92,
-          characteristics93,
-          characteristics94,
-          characteristics95,
-          characteristics96,
-          characteristics97,
-          characteristics98,
-          characteristics99,
-          characteristics100,
-          seoTitle,
-          seoDescr,
-          seoKeywords,
-          fbTitle,
-          fbDescr,
-          tab1,
-          tab2,
-          tab3,
-          tab4
         ] = fields;
+
+        const seoTitle = fields[288];
+        const seoDescr = fields[289];
+        const seoKeywords = fields[290];
+        const fbTitle = fields[291];
+        const fbDescr = fields[292];
+        const tab1 = fields[293];
+        const tab2 = fields[294];
+        const tab3 = fields[295];
+        const tab4 = fields[296];
         
         console.log(`[DEBUG] Извлеченные данные - ID: ${tildaUid}, Title: ${title}`);
         

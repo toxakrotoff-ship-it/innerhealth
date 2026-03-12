@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   // Проверяем аутентификацию на сервере
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         },
         // Используем правильный способ подключения промокода
         promoCode: true
-      } as any,
+      },
       orderBy: {
         createdAt: 'desc'
       }

@@ -179,7 +179,7 @@ const mockProducts: Product[] = [
 ];
 
 export default function DebugTablePage() {
-  const [products, setProducts] = useState(mockProducts);
+  const [products] = useState(mockProducts);
 
   const handleRefresh = () => {
     console.log('Refreshing products...');

@@ -89,7 +89,7 @@ export default function AdminContentPage() {
       if (!res.ok) {
         throw new Error('Не удалось загрузить блоки')
       }
-      const data = (await res.json()) as any[]
+      const data = (await res.json()) as Array<Record<string, unknown>>
 
       const mapped: ContentBlockAdmin[] = data.map((b) => ({
         id: 'id' in b ? (b.id as string | undefined) : undefined,

@@ -144,7 +144,7 @@ export function ProductCard({
               )}
             </div>
           </div>
-          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+          <div className="mt-3 flex min-w-0 flex-col gap-2">
             <AddToCartButton
               productId={id}
               title={title}
@@ -155,10 +155,11 @@ export function ProductCard({
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
               size="sm"
+              className="w-full"
             />
             <Link
               href={detailHref}
-              className="inline-flex shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
+              className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
             >
               Подробнее
             </Link>

@@ -17,9 +17,6 @@ import {
   mapUserAddressToShipping,
   type UserAddressForCheckout,
 } from '@/lib/mappers/user-address-to-shipping'
-import { FluidGrid } from '@/components/ui/fluid-grid'
-import { Heading2, Heading3 } from '@/components/ui/responsive-text'
-import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 interface PromoResult {
   valid: boolean

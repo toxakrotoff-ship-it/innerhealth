@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
+import react from "eslint-plugin-react";
 
 export default [
   { ignores: [".next/**", "node_modules/**", "**/*.config.js", "**/*.config.mjs", "**/*.config.ts", "src/generated/**"] },
@@ -18,6 +19,9 @@ export default [
         ...globals.node,
       },
     },
+    plugins: {
+      react,
+    },
     rules: {
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
@@ -25,6 +29,9 @@ export default [
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-unused-expressions": "off",
+      "react/no-danger": "off",
+      "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
     },
   },
   {

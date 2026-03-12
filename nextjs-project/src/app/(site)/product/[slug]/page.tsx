@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
+import { getSettingsMap } from '@/services/settings.service'
+import { buildProductJsonLd } from '@/lib/schema-org'
 
 export const revalidate = 60
 
@@ -43,12 +45,39 @@ export default async function ProductPage({ params }: PageProps) {
   const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
+  const settings = await getSettingsMap()
+  const baseUrl = settings.schema_org_url?.trim() || ''
+  const url = baseUrl ? `${baseUrl}/product/${slug}` : `/product/${slug}`
+  const imageUrls = photos.map((p) => p.url)
+  const productJsonLd = buildProductJsonLd({
+    settings,
+    product: {
+      title: product.title,
+      description: product.description ?? null,
+      price: product.price,
+      quantity: product.quantity,
+      brand: product.brand ?? null,
+      sku: product.sku ?? null,
+    },
+    url,
+    images: imageUrls,
+  })
+
   return (
-    <ProductPageContent
-      product={product}
-      tabs={buildTabs(product)}
-      photos={photos}
-      relatedProducts={relatedProducts}
-    />
+    <>
+      <ProductPageContent
+        product={product}
+        tabs={buildTabs(product)}
+        photos={photos}
+        relatedProducts={relatedProducts}
+      />
+      {productJsonLd && (
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        />
+      )}
+    </>
   )
 }

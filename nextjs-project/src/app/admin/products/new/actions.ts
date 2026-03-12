@@ -3,7 +3,6 @@
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
-import { revalidatePath } from 'next/cache';
 
 // Инициализация Prisma Client
 // const prisma = new PrismaClient();

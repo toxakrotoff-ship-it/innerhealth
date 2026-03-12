@@ -85,10 +85,6 @@ function check(condition, successMsg, failMsg, warnMsg = null) {
   return condition;
 }
 
-function fileExists(filePath) {
-  return fs.existsSync(path.join(__dirname, filePath));
-}
-
 function readFile(filePath) {
   const fullPath = path.join(__dirname, filePath);
   if (!fs.existsSync(fullPath)) return null;

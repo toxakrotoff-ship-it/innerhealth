@@ -3,7 +3,7 @@
  * Доступна по адресу: /test/adaptive
  */
 
-import { adaptiveTokens, getScaledSize, getContainerWidth } from '@/lib/adaptive-tokens'
+import { adaptiveTokens, getScaledSize } from '@/lib/adaptive-tokens'
 
 export default function AdaptiveTestPage() {
   return (
@@ -217,13 +217,10 @@ function ScaleFactorsDemo() {
       <div className="mt-6 p-4 bg-gray-100 rounded-lg">
         <div className="text-sm font-medium mb-2">Пример масштабирования (база 16px):</div>
         <div className="flex flex-wrap gap-4">
-          {factors.map(([name, factor]) => (
+          {factors.map(([name]) => (
             <div key={name} className="text-center">
-              <div
-                className="font-bold text-gray-900"
-                style={{ fontSize: `${getScaledSize(16, name as any)}px` }}
-              >
-                {name}: {getScaledSize(16, name as any)}px
+              <div className="font-bold text-gray-900">
+                {name}: {getScaledSize(16, name as 'base')}px
               </div>
             </div>
           ))}

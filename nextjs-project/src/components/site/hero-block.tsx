@@ -2,17 +2,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
-import { getResolvedBlock } from '@/services/content-block.service'
+import type { ContentBlockResolved } from '@/services/content-block.service'
 
-const HERO_PAGE_ID = 'home'
+interface HeroBlockProps {
+  badge: ContentBlockResolved | null
+  title: ContentBlockResolved | null
+  subtitle: ContentBlockResolved | null
+  highlight: ContentBlockResolved | null
+}
 
-export async function HeroBlock() {
-  const [badge, title, subtitle, highlight] = await Promise.all([
-    getResolvedBlock(HERO_PAGE_ID, 'hero.badge'),
-    getResolvedBlock(HERO_PAGE_ID, 'hero.title'),
-    getResolvedBlock(HERO_PAGE_ID, 'hero.subtitle'),
-    getResolvedBlock(HERO_PAGE_ID, 'hero.title.highlight'),
-  ])
+export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps) {
 
   const badgeText = badge?.text ?? 'НОВЫЙ СТАНДАРТ БИОДОБАВОК'
   const titleText = title?.text ?? 'Функциональное\nпитание для\nтвоего\nбаланса.'

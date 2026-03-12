@@ -2,7 +2,6 @@ import * as faqService from '@/services/faq.service'
 import { FaqAccordion } from '@/components/site/faq-accordion'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
-import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 export const revalidate = 300
 

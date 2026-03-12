@@ -1,7 +1,6 @@
 'use client'
 
 import { useMediaConflictDetection } from '@/hooks/use-overlap-detection'
-import { adaptiveTokens } from '@/lib/adaptive-tokens'
 
 const NAV_LINKS = [
   { label: 'Каталог', href: '/catalog' },

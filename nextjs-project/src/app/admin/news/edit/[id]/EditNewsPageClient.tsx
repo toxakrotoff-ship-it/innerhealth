@@ -42,7 +42,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
   const base = useAdminBasePath();
   const id = postId;
 
-  const [post, setPost] = useState<Post | null>(null);
+  const [, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<{

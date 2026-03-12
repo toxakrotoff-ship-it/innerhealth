@@ -130,7 +130,6 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
     )
 
     // Генерация классов для промежутков с поддержкой 5xl и 6xl
-    const gapValue = typeof gap === 'number' ? `${gap * 0.25}rem` : gap
     const gapClasses = cn(
       // Базовый промежуток
       `gap-${gap}`,

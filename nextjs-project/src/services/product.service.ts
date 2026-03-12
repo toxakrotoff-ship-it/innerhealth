@@ -37,7 +37,7 @@ export async function getProductsWithCategories() {
   });
 }
 
-/** Fields for catalog/home product cards — include photos for blur placeholder. */
+/** Fields for catalog/home product cards — no photos JSON to reduce payload (use `photo` for image). */
 export const productCardSelect = {
   id: true,
   title: true,
@@ -46,7 +46,6 @@ export const productCardSelect = {
   price: true,
   priceOld: true,
   photo: true,
-  photos: true,
   slug: true,
   isPromoEligible: true,
   discountPrice: true,

@@ -17,10 +17,13 @@ import {
 import { TiltCard } from '@/components/ui/tilt-card'
 import { ChevronRight } from 'lucide-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import {
+  getResolvedBlocksForPage,
+  type ContentBlockResolved,
+} from '@/services/content-block.service'
+import { Heading2 } from '@/components/ui/responsive-text'
+import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
-import { ResponsiveText, Heading2 } from '@/components/ui/responsive-text'
-import { ScalableSpacing, SpacingVertical } from '@/components/ui/scalable-spacing'
-import { getResolvedBlock } from '@/services/content-block.service'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -52,6 +55,10 @@ type HomeReview = {
   text: string
   imageUrl: string | null
   createdAt: string
+}
+
+function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBlockResolved | null {
+  return blocks.find((block) => block.key === key) ?? null
 }
 
 async function getHomeData() {
@@ -103,21 +110,22 @@ async function getHomeData() {
 
 export default async function HomePage() {
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
-  const [
-    newSubtitle,
-    newsSubtitle,
-    catalogSubtitle,
-    articlesSubtitle,
-    reviewsSubtitle,
-    categoriesFontBlock,
-  ] = await Promise.all([
-    getResolvedBlock('home', 'home.new.subtitle'),
-    getResolvedBlock('home', 'home.news.subtitle'),
-    getResolvedBlock('home', 'home.catalog.subtitle'),
-    getResolvedBlock('home', 'home.articles.subtitle'),
-    getResolvedBlock('home', 'home.reviews.subtitle'),
-    getResolvedBlock('catalog', 'categories.fontVariant'),
+  const [homeBlocks, catalogBlocks] = await Promise.all([
+    getResolvedBlocksForPage('home'),
+    getResolvedBlocksForPage('catalog'),
   ])
+
+  const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
+  const newsSubtitle = getBlockByKey(homeBlocks, 'home.news.subtitle')
+  const catalogSubtitle = getBlockByKey(homeBlocks, 'home.catalog.subtitle')
+  const articlesSubtitle = getBlockByKey(homeBlocks, 'home.articles.subtitle')
+  const reviewsSubtitle = getBlockByKey(homeBlocks, 'home.reviews.subtitle')
+  const categoriesFontBlock = getBlockByKey(catalogBlocks, 'categories.fontVariant')
+
+  const heroBadge = getBlockByKey(homeBlocks, 'hero.badge')
+  const heroTitle = getBlockByKey(homeBlocks, 'hero.title')
+  const heroSubtitle = getBlockByKey(homeBlocks, 'hero.subtitle')
+  const heroHighlight = getBlockByKey(homeBlocks, 'hero.title.highlight')
   const categoryTitleFont =
     categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
       ? 'font-sans'
@@ -127,7 +135,12 @@ export default async function HomePage() {
 
   return (
     <div>
-      <HeroBlock />
+      <HeroBlock
+        badge={heroBadge}
+        title={heroTitle}
+        subtitle={heroSubtitle}
+        highlight={heroHighlight}
+      />
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />

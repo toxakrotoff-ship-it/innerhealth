@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       const message = Object.values(first)[0]?.[0] ?? parsed.error.message
       return NextResponse.json({ error: message }, { status: 400 })
     }
-    const { items, total: clientTotal, promoCodeId, deliverySum = 0, shipping } = parsed.data
+    const { items, promoCodeId, deliverySum = 0, shipping } = parsed.data
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = await productService.getProductsForOrder(productIds)

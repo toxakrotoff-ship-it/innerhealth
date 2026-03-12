@@ -68,7 +68,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const updated = await upsertBlocks(
+    await upsertBlocks(
       body.blocks.map((b) => ({
         ...b,
         richJson: (b.richJson ?? null) as Prisma.JsonValue | null,

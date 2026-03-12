@@ -97,7 +97,7 @@ function ensureManifests() {
       path.join(serverDir, 'next-font-manifest.json'),
       JSON.stringify(MINIMAL_NEXT_FONT_MANIFEST, null, 2)
     );
-  } catch (_) {
+  } catch {
     // ignore
   }
 }

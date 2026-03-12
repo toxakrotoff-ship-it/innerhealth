@@ -1,4 +1,6 @@
 import nextDynamic from 'next/dynamic'
+import { getSettingsMap } from '@/services/settings.service'
+import { buildOrganizationJsonLd } from '@/lib/schema-org'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
@@ -15,11 +17,14 @@ const CookieConsent = nextDynamic(
 export const dynamic = 'force-dynamic'
 export const revalidate = 60
 
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const settings = await getSettingsMap()
+  const organizationJsonLd = buildOrganizationJsonLd(settings)
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <SiteHeader />
@@ -28,6 +33,13 @@ export default function SiteLayout({
       </main>
       <SiteFooter />
       <BackToTopButton />
+      {organizationJsonLd && (
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+      )}
       <CartDrawer />
       <CookieConsent />
     </div>

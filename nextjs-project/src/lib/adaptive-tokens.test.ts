@@ -551,19 +551,20 @@ describe('Интеграционные тесты', () => {
     expect(ultraPadding).toBe(40)
   })
 
-  it('проверяет консистентность токенов', () => {
-    // Все брейкпоинты должны иметь соответствующие scale factors
-    const breakpointKeys = Object.keys(adaptiveTokens.breakpoints)
-    const scaleFactorKeys = Object.keys(adaptiveTokens.scaleFactors)
-    
-    // scale factors должны быть подмножеством брейкпоинтов + base
-    expect(scaleFactorKeys).toContain('base')
-    
-    // Проверяем что xl, 2xl, 3xl, 4xl, 5xl, 6xl есть в обоих наборах
-    ;['xl', '2xl', '3xl', '4xl', '5xl', '6xl'].forEach(key => {
-      expect(scaleFactorKeys).toContain(key)
+    it('проверяет консистентность токенов', () => {
+      // Все брейкпоинты должны иметь соответствующие scale factors
+      const breakpointKeys = Object.keys(adaptiveTokens.breakpoints)
+      const scaleFactorKeys = Object.keys(adaptiveTokens.scaleFactors)
+      
+      // scale factors должны быть подмножеством брейкпоинтов + base
+      expect(scaleFactorKeys).toContain('base')
+      
+      // Проверяем что xl, 2xl, 3xl, 4xl, 5xl, 6xl есть в обоих наборах
+      ;['xl', '2xl', '3xl', '4xl', '5xl', '6xl'].forEach(key => {
+        expect(scaleFactorKeys).toContain(key)
+        expect(breakpointKeys).toContain(key)
+      })
     })
-  })
 
   it('проверяет поддержку экрана 5143px × 3086px', () => {
     // Для экрана 5143px должен использоваться брейкпоинт 6xl
