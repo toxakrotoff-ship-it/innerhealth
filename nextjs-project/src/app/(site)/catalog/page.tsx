@@ -15,6 +15,7 @@ import {
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { TiltCard } from '@/components/ui/tilt-card'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { getResolvedBlock } from '@/services/content-block.service'
 
