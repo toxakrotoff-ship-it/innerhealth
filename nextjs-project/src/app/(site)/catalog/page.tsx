@@ -13,6 +13,8 @@ import {
   getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { getResolvedBlock } from '@/services/content-block.service'
 
