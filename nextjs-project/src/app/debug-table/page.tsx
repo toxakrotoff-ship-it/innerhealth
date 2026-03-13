@@ -61,6 +61,7 @@ const mockProducts: Product[] = [
     characteristicsCalorie: null,
     characteristicsFlacon200ml: null,
     characteristicsStorage: null,
+    isDraft: false,
   },
   {
     id: '2',
@@ -118,6 +119,7 @@ const mockProducts: Product[] = [
     characteristicsCalorie: null,
     characteristicsFlacon200ml: null,
     characteristicsStorage: null,
+    isDraft: false,
   },
   {
     id: '3',
@@ -175,6 +177,7 @@ const mockProducts: Product[] = [
     characteristicsCalorie: null,
     characteristicsFlacon200ml: null,
     characteristicsStorage: null,
+    isDraft: false,
   },
 ];
 
