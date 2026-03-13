@@ -21,7 +21,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many verification attempts. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -31,16 +37,38 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   try {
     await confirmEmailVerificationToken(payload.token)
-    return NextResponse.json({ ok: true, isEmailVerified: true })
+    return NextResponse.json(
+      { ok: true, isEmailVerified: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch (error) {
     if (isEmailVerificationServiceError(error)) {
       if (error.code === EMAIL_VERIFICATION_ERROR_CODES.alreadyVerified) {
-        return NextResponse.json({ ok: true, isEmailVerified: true })
+        return NextResponse.json(
+          { ok: true, isEmailVerified: true },
+          {
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       }
 
       if (
@@ -48,11 +76,27 @@ export async function POST(request: Request) {
         error.code === EMAIL_VERIFICATION_ERROR_CODES.expiredToken ||
         error.code === EMAIL_VERIFICATION_ERROR_CODES.usedToken
       ) {
-        return NextResponse.json({ error: 'Verification token is invalid or expired' }, { status: 400 })
+        return NextResponse.json(
+          { error: 'Verification token is invalid or expired' },
+          {
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       }
     }
 
     console.error('[auth/verify-email/confirm] Failed to confirm verification:', error)
-    return NextResponse.json({ error: 'Failed to verify email' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to verify email' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

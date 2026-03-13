@@ -24,6 +24,7 @@ import {
 import { Heading2 } from '@/components/ui/responsive-text'
 import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -254,25 +255,32 @@ export default async function HomePage() {
       {/* Разделы каталога — фоны карточек сохраняем */}
       <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
         <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
+          <ScrollReveal
+            as="div"
+            variant="fade-up"
+            className="flex justify-between items-end mb-10 sm:mb-12"
+          >
             <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Разделы каталога</Heading2>
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">
+                Разделы каталога
+              </Heading2>
               <p className="text-slate-500 text-sm font-light">
                 {catalogSubtitle?.text ??
                   'Выберите категорию для быстрого поиска нужного продукта'}
               </p>
             </div>
-            <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
-              СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          <FluidGrid
-            cols={2}
-            colsTablet={3}
-            colsDesktop={3}
-            gap={4}
-            adaptiveGap
+          </ScrollReveal>
+          <ScrollReveal
+            as="div"
+            variant="fade-up"
           >
+            <FluidGrid
+              cols={2}
+              colsTablet={3}
+              colsDesktop={3}
+              gap={4}
+              adaptiveGap
+            >
             {filterCatalogBlockCategories(categories).map((cat) => {
                 const bgImage = getCategoryBackgroundImage(cat.slug)
                 const imagePosition = getCategoryImageObjectPosition(cat.slug)
@@ -316,7 +324,8 @@ export default async function HomePage() {
                   </Link>
                 )
               })}
-          </FluidGrid>
+            </FluidGrid>
+          </ScrollReveal>
           <div className="mt-8 text-center">
             <Link
               href="/catalog"

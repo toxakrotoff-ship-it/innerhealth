@@ -209,6 +209,15 @@ export default function AdminUsersPage() {
             {r.label}
           </button>
         ))}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => fetchUsers()}
+          className="ml-auto"
+          disabled={loading}
+        >
+          Обновить
+        </Button>
       </div>
 
       {showForm && (
@@ -378,7 +387,10 @@ export default function AdminUsersPage() {
                         </td>
                       </>
                     )}
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    <td
+                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
+                      title={user.lastLoginAt ? new Date(user.lastLoginAt).toISOString() : undefined}
+                    >
                       {user.lastLoginAt
                         ? new Date(user.lastLoginAt).toLocaleString('ru-RU', {
                             day: '2-digit',

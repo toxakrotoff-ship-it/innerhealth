@@ -17,22 +17,17 @@ interface OrderItem {
   product: OrderProduct;
 }
 
-interface ShippingInfo {
-  id: string;
+interface ShippingInfoSummary {
   fullName: string;
-  phone: string;
-  email: string;
-  address: string;
+  phoneMasked: string;
+  phoneRaw: string;
   city: string;
-  zipCode: string;
-  country: string;
+  addressShort: string;
   deliveryMethod?: string | null;
 }
 
 interface PromoCodeInfo {
   code: string;
-  discountType: string;
-  discountValue: number;
 }
 
 interface Order {
@@ -41,9 +36,9 @@ interface Order {
   total: number;
   status: string;
   createdAt: string;
-  promoCodeId: string | null;
-  items: OrderItem[];
-  shippingInfo: ShippingInfo | null;
+  promoCodeId?: string | null;
+  items?: OrderItem[];
+  shippingInfo: ShippingInfoSummary | null;
   promoCode: PromoCodeInfo | null;
   cdekOrderUuid?: string | null;
   cdekOrderError?: string | null;
@@ -125,13 +120,19 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.shippingInfo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.shippingInfo?.phone?.includes(searchTerm) ||
-      o.shippingInfo?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOrders = orders.filter((o) => {
+    const term = searchTerm.trim();
+    const termLower = term.toLowerCase();
+    const termDigits = term.replace(/\D+/g, '');
+    const phoneDigits = o.shippingInfo?.phoneRaw?.replace(/\D+/g, '') ?? '';
+
+    return (
+      o.id.toLowerCase().includes(termLower) ||
+      (termDigits !== '' && phoneDigits.includes(termDigits)) ||
+      o.shippingInfo?.phoneMasked?.includes(term) ||
+      o.shippingInfo?.fullName?.toLowerCase().includes(termLower)
+    );
+  });
 
   if (loading) {
     return (
@@ -200,7 +201,7 @@ export default function AdminOrdersPage() {
                             {order.shippingInfo?.fullName ?? '—'}
                           </div>
                           <div className="text-gray-600 mt-0.5">
-                            {order.shippingInfo?.phone ?? '—'}
+                            {order.shippingInfo?.phoneMasked ?? '—'}
                           </div>
                           <div className="text-xs text-gray-400 mt-1" title="ID заказа">
                             {order.id}
@@ -237,41 +238,20 @@ export default function AdminOrdersPage() {
                             <div className="grid gap-6 sm:grid-cols-2">
                               <div>
                                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Состав заказа</h3>
-                                <ul className="space-y-2">
-                                  {order.items.map((item) => (
-                                    <li
-                                      key={item.id}
-                                      className="flex justify-between text-sm text-gray-600"
-                                    >
-                                      <span>
-                                        {item.product.title} × {item.quantity}
-                                      </span>
-                                      <span>{item.price * item.quantity} ₽</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                                {order.promoCode && (
-                                  <p className="mt-2 text-sm text-gray-500">
-                                    Промокод: {order.promoCode.code} (
-                                    {order.promoCode.discountType === 'percentage'
-                                      ? `${order.promoCode.discountValue}%`
-                                      : `${order.promoCode.discountValue} ₽`}
-                                    )
-                                  </p>
-                                )}
+                                <p className="text-sm text-gray-500">
+                                  Детали состава доступны в отдельной карточке заказа.
+                                </p>
                               </div>
                               <div>
                                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Доставка</h3>
                                 {order.shippingInfo ? (
                                   <div className="text-sm text-gray-600 space-y-1">
                                     <p><strong>{order.shippingInfo.fullName}</strong></p>
-                                    <p>{order.shippingInfo.phone}</p>
-                                    <p>{order.shippingInfo.email}</p>
+                                    <p>{order.shippingInfo.phoneMasked}</p>
                                     <p>
-                                      {order.shippingInfo.country}, {order.shippingInfo.city},{' '}
-                                      {order.shippingInfo.zipCode}
+                                      {order.shippingInfo.city}
                                     </p>
-                                    <p>{order.shippingInfo.address}</p>
+                                    <p>{order.shippingInfo.addressShort}</p>
                                   </div>
                                 ) : (
                                   <p className="text-gray-400 text-sm">Адрес доставки не указан</p>

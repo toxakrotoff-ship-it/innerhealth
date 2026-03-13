@@ -20,19 +20,40 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много запросов. Попробуйте позже.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   const parsed = bodySchema.safeParse(await request.json())
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Укажите корректный email' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Укажите корректный email' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const { email } = parsed.data
 
   const user = await userService.findUserByEmail(email)
   if (!user) {
-    return NextResponse.json({ message: 'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля.' })
+    return NextResponse.json(
+      { message: 'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля.' },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const secret = generateSecureToken()
@@ -56,12 +77,24 @@ export async function POST(request: Request) {
             ? 'Не удалось отправить письмо. Проверьте SMTP настройки и логи сервера.'
             : 'Отправка писем не настроена. Добавьте SMTP_HOST, SMTP_USER, SMTP_PASS в .env.local (см. docs/password-reset-env.md).',
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   console.log('[forgot-password] Reset email sent to', user.email)
-  return NextResponse.json({
-    message: 'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля.',
-  })
+  return NextResponse.json(
+    {
+      message: 'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля.',
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }

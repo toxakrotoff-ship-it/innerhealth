@@ -23,7 +23,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many attempts. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -31,7 +37,15 @@ export async function POST(request: Request) {
   const pendingId = getPendingIdFromCookie(cookieHeader)
 
   if (!pendingId) {
-    return NextResponse.json({ error: 'Invalid or missing 2FA session' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid or missing 2FA session' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   let body: z.infer<typeof bodySchema>
@@ -39,13 +53,29 @@ export async function POST(request: Request) {
     const raw = await request.json()
     body = bodySchema.parse(raw)
   } catch {
-    return NextResponse.json({ error: 'Invalid code' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid code' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const pending = await auth2faService.findTwoFactorPendingWithUser(pendingId)
 
   if (!pending || pending.expiresAt <= new Date()) {
-    return NextResponse.json({ error: 'Invalid or expired 2FA session' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid or expired 2FA session' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const { user } = pending
@@ -53,24 +83,55 @@ export async function POST(request: Request) {
 
   if (user.twoFactorMethod === 'email') {
     if (!pending.emailCodeHash || !pending.emailCodeExpiresAt || pending.emailCodeExpiresAt <= new Date()) {
-      return NextResponse.json({ error: 'Code expired' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Code expired' },
+        {
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     valid = await verifyCodeHash(body.code, pending.emailCodeHash)
   } else if (user.twoFactorMethod === 'totp' && user.totpSecretEncrypted) {
     valid = await verifyTotpCode(user.totpSecretEncrypted, body.code)
   } else {
-    return NextResponse.json({ error: 'Invalid 2FA method' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid 2FA method' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (!valid) {
-    return NextResponse.json({ error: 'Invalid code' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid code' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const { grantId } = await createGrant(user.id)
 
   await auth2faService.deleteTwoFactorPending(pendingId)
 
-  const response = NextResponse.json({ grantToken: grantId })
+  const response = NextResponse.json(
+    { grantToken: grantId },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
   response.headers.append('Set-Cookie', clearPendingCookieHeader())
   return response
 }

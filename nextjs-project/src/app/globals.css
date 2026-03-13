@@ -112,14 +112,120 @@
 
 @layer components {
 
+  /* Scroll reveal animations */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    will-change: opacity, transform;
+  }
+
+  .scroll-reveal--fade-up {
+    transform: translateY(16px);
+  }
+
+  .scroll-reveal--fade-right {
+    transform: translateX(-16px);
+  }
+
+  .scroll-reveal--fade-left {
+    transform: translateX(16px);
+  }
+
+  .scroll-reveal--scale {
+    transform: scale(0.96);
+  }
+
+  .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    animation-duration: 600ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+  }
+
+  .scroll-reveal--fade-up.is-visible {
+    animation-name: scroll-fade-up;
+  }
+
+  .scroll-reveal--fade-right.is-visible {
+    animation-name: scroll-fade-right;
+  }
+
+  .scroll-reveal--fade-left.is-visible {
+    animation-name: scroll-fade-left;
+  }
+
+  .scroll-reveal--scale.is-visible {
+    animation-name: scroll-scale-in;
+  }
+
+  @keyframes scroll-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scroll-fade-right {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scroll-fade-left {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scroll-scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-reveal,
+    .scroll-reveal.is-visible,
+    .scroll-reveal--fade-up.is-visible,
+    .scroll-reveal--fade-right.is-visible,
+    .scroll-reveal--fade-left.is-visible,
+    .scroll-reveal--scale.is-visible {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
   /* Fluid Typography для адаптивного масштабирования текста */
   .text-fluid-hero {
     /* Формула: clamp(MIN_SIZE, SCALING_VALUE, MAX_SIZE)
        Каждое слово на новой строке
        Гарантирует, что текст всегда помещается в родительский блок без переносов
+       (упор на игру размером шрифта, а не переносы)
     */
-    font-size: clamp(1.2rem, 4vw + 0.5rem, 3.5rem);
-    line-height: 1.1;
+    font-size: clamp(1.1rem, 3vw + 0.6rem, 3rem);
+    line-height: 1.05;
     display: flex;
     flex-direction: column;
     align-items: flex-start;

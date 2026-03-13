@@ -1,7 +1,7 @@
 /**
  * AES-256-GCM encryption for sensitive site settings (e.g. YooKassa secret, CDEK API key).
- * Optional: set SETTINGS_ENCRYPTION_KEY (32 bytes, base64) in env to enable encryption at rest.
- * If unset, values are stored and returned as plain text (backward compatible).
+ * In production, SETTINGS_ENCRYPTION_KEY (32 bytes, base64) MUST be set and valid.
+ * In non-production environments, encryption is optional for developer convenience.
  */
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
@@ -11,6 +11,10 @@ const AUTH_TAG_LENGTH = 16
 const KEY_LENGTH = 32
 
 const ENCRYPTION_PREFIX = '__enc:v1:'
+
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production'
+}
 
 /** Setting keys that must be stored encrypted when SETTINGS_ENCRYPTION_KEY is set. */
 export const SENSITIVE_SETTING_KEYS = [
@@ -22,9 +26,21 @@ export type SensitiveSettingKey = (typeof SENSITIVE_SETTING_KEYS)[number]
 
 function getSettingsEncryptionKey(): Buffer | null {
   const raw = process.env.SETTINGS_ENCRYPTION_KEY?.trim()
-  if (!raw) return null
+  if (!raw) {
+    if (isProduction()) {
+      throw new Error('SETTINGS_ENCRYPTION_KEY is required in production')
+    }
+    return null
+  }
   const key = Buffer.from(raw, 'base64')
-  if (key.length !== KEY_LENGTH) return null
+  if (key.length !== KEY_LENGTH) {
+    if (isProduction()) {
+      throw new Error(
+        `SETTINGS_ENCRYPTION_KEY must be ${KEY_LENGTH} bytes (base64 decoded), got ${key.length}`
+      )
+    }
+    return null
+  }
   return key
 }
 

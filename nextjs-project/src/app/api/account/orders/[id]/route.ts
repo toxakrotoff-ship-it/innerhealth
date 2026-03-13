@@ -26,17 +26,45 @@ export async function GET(
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid params'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   try {
     const order = await getUserOrderById(session.user.id as string, parsedParams.id)
-    return NextResponse.json(order)
+    return NextResponse.json(order, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     if (isAccountServiceError(error) && error.code === ACCOUNT_SERVICE_ERROR_CODES.orderNotFound) {
-      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Order not found' },
+        {
+          status: 404,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     console.error('[account/orders/:id] Failed to fetch order:', error)
-    return NextResponse.json({ error: 'Failed to fetch order' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch order' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

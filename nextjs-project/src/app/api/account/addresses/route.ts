@@ -20,10 +20,22 @@ export async function GET() {
 
   try {
     const addresses = await listUserAddresses(session.user.id as string)
-    return NextResponse.json(addresses)
+    return NextResponse.json(addresses, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     console.error('[account/addresses] Failed to fetch addresses:', error)
-    return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch addresses' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }
 
@@ -37,20 +49,49 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   try {
     const address = await createUserAddress(session.user.id as string, payload)
-    return NextResponse.json(address, { status: 201 })
+    return NextResponse.json(address, {
+      status: 201,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     if (
       isUserAddressServiceError(error) &&
       error.code === USER_ADDRESS_ERROR_CODES.addressLimitExceeded
     ) {
-      return NextResponse.json({ error: 'Address limit exceeded' }, { status: 409 })
+      return NextResponse.json(
+        { error: 'Address limit exceeded' },
+        {
+          status: 409,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     console.error('[account/addresses] Failed to create address:', error)
-    return NextResponse.json({ error: 'Failed to create address' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to create address' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

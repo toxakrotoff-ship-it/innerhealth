@@ -10,20 +10,45 @@ import * as partnerService from '@/services/partner.service';
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
   }
   if (session.user.role !== 'PARTNER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Forbidden' },
+      {
+        status: 403,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
   }
 
   try {
     const stats = await partnerService.getPartnerStatsForPartner(session.user.id);
-    return NextResponse.json(stats);
+    return NextResponse.json(stats, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   } catch (error) {
     console.error('[account/partner-stats] Failed to fetch stats:', error);
     return NextResponse.json(
       { error: 'Failed to fetch partner stats' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     );
   }
 }

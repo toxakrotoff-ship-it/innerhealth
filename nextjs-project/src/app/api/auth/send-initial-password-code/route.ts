@@ -19,40 +19,91 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много запросов. Попробуйте позже.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   const parsed = bodySchema.safeParse(await request.json())
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Укажите токен' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Укажите токен' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const { token } = parsed.data
 
   const parts = token.split('.')
   if (parts.length !== 2) {
-    return NextResponse.json({ error: 'Недействительная ссылка' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Недействительная ссылка' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const [recordId, secret] = parts
 
   const record = await authTokensService.findSetInitialPasswordTokenById(recordId)
   if (!record || record.usedAt) {
-    return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Ссылка недействительна или уже использована' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   if (record.expiresAt < new Date()) {
-    return NextResponse.json({ error: 'Срок действия ссылки истёк.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Срок действия ссылки истёк.' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const valid = await verifyTokenHash(secret, record.tokenHash)
   if (!valid) {
-    return NextResponse.json({ error: 'Недействительная ссылка' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Недействительная ссылка' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const now = new Date()
   if (record.emailCodeHash && record.emailCodeExpiresAt && record.emailCodeExpiresAt > now) {
     return NextResponse.json(
       { error: 'Код уже отправлен на почту. Проверьте письмо или запросите новый код после истечения текущего.' },
-      { status: 400 }
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -68,9 +119,21 @@ export async function POST(request: Request) {
   if (!sendResult.ok) {
     return NextResponse.json(
       { error: sendResult.error ?? 'Не удалось отправить код на почту.' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(
+    { ok: true },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }

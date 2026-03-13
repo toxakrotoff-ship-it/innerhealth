@@ -16,7 +16,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many code requests. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -24,19 +30,40 @@ export async function POST(request: Request) {
   const pendingId = getPendingIdFromCookie(cookieHeader)
 
   if (!pendingId) {
-    return NextResponse.json({ error: 'Invalid or missing 2FA session' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid or missing 2FA session' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const pending = await auth2faService.findTwoFactorPendingWithUser(pendingId)
 
   if (!pending || pending.expiresAt <= new Date()) {
-    return NextResponse.json({ error: 'Invalid or expired 2FA session' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid or expired 2FA session' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (pending.user.twoFactorMethod !== 'email') {
     return NextResponse.json(
       { error: 'Send code only available for email 2FA' },
-      { status: 400 }
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -46,7 +73,12 @@ export async function POST(request: Request) {
     if (Date.now() < cooldownUntil) {
       return NextResponse.json(
         { error: 'Please wait before requesting another code' },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
       )
     }
   }
@@ -63,5 +95,12 @@ export async function POST(request: Request) {
 
   await send2FACodeEmail(pending.user.email, code)
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(
+    { ok: true },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }

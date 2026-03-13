@@ -1,12 +1,13 @@
-"use client"
+'use client'
 
-import Image from "next/image"
-import { useCallback, useEffect, useState } from "react"
+import Image from 'next/image'
+import { useCallback, useEffect, useState } from 'react'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
 const GALLERY_IMAGES = [
-  { src: "/images/gallery/gallery-1.png", alt: "Фото 1" },
-  { src: "/images/gallery/gallery-2.png", alt: "Фото 2" },
-  { src: "/images/gallery/gallery-3.png", alt: "Фото 3" },
+  { src: '/images/gallery/gallery-1.png', alt: 'Фото 1' },
+  { src: '/images/gallery/gallery-2.png', alt: 'Фото 2' },
+  { src: '/images/gallery/gallery-3.png', alt: 'Фото 3' },
 ] as const
 
 export function GalleryBlock() {
@@ -31,18 +32,18 @@ export function GalleryBlock() {
   useEffect(() => {
     if (!lightboxOpen) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close()
-      if (e.key === "ArrowLeft") goPrev()
-      if (e.key === "ArrowRight") goNext()
+      if (e.key === 'Escape') close()
+      if (e.key === 'ArrowLeft') goPrev()
+      if (e.key === 'ArrowRight') goNext()
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [lightboxOpen, close, goPrev, goNext])
 
   useEffect(() => {
-    if (lightboxOpen) document.body.style.overflow = "hidden"
+    if (lightboxOpen) document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = ""
+      document.body.style.overflow = ''
     }
   }, [lightboxOpen])
 
@@ -52,13 +53,17 @@ export function GalleryBlock() {
     <>
       <section className="py-12 bg-white" aria-label="Галерея">
         <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 gap-4 sm:gap-6">
+          <ScrollReveal
+            as="div"
+            variant="fade-up"
+            className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 gap-4 sm:gap-6"
+          >
             {GALLERY_IMAGES.map((img, index) => (
               <button
                 type="button"
                 key={img.src}
                 onClick={() => openAt(index)}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 bg-soft-background cursor-zoom-in text-left focus:outline-none focus:ring-2 focus:ring-action-blue focus:ring-offset-2"
+                className="relative aspect-4/3 rounded-2xl overflow-hidden border border-gray-200 bg-soft-background cursor-zoom-in text-left focus:outline-none focus:ring-2 focus:ring-action-blue focus:ring-offset-2"
                 aria-label={`Открыть ${img.alt} в полном размере`}
               >
                 <Image
@@ -71,7 +76,7 @@ export function GalleryBlock() {
                 />
               </button>
             ))}
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 

@@ -79,7 +79,11 @@ export const authOptions = {
         token.role = user.role
         token.mustChangePassword = user.mustChangePassword
         token.isEmailVerified = Boolean(user.isEmailVerified)
-        await userService.updateLastLoginAt(user.id)
+        try {
+          await userService.updateLastLoginAt(user.id)
+        } catch (err) {
+          console.error('[NextAuth] updateLastLoginAt failed:', err)
+        }
       }
       return token
     },

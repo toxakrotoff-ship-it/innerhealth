@@ -16,7 +16,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many registration attempts. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -26,19 +32,40 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (getEmailRiskVerdict(payload.email) === 'block') {
     return NextResponse.json(
       { error: 'Registration is not allowed for this email domain.' },
-      { status: 400 }
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   const existingUser = await userService.findUserByEmail(payload.email)
   if (existingUser) {
-    return NextResponse.json({ error: 'Email is already in use' }, { status: 409 })
+    return NextResponse.json(
+      { error: 'Email is already in use' },
+      {
+        status: 409,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const passwordHash = await hashPassword(payload.password)
@@ -62,12 +89,25 @@ export async function POST(request: Request) {
     if (!emailResult.ok) {
       return NextResponse.json(
         { error: emailResult.error ?? 'Failed to send verification email' },
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
       )
     }
   } catch (error) {
     console.error('[auth/register] Failed to generate verification token:', error)
-    return NextResponse.json({ error: 'Failed to create verification flow' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to create verification flow' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   return NextResponse.json(
@@ -78,6 +118,11 @@ export async function POST(request: Request) {
       isEmailVerified: false,
       nextStep: 'verify_email',
     },
-    { status: 201 }
+    {
+      status: 201,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
   )
 }

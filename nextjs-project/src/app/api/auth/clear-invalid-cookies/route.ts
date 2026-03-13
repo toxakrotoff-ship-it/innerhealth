@@ -90,13 +90,20 @@ export async function GET(request: NextRequest) {
       duration: `${duration}ms`
     })
     
-    const response = NextResponse.json({
-      success: true,
-      message: 'Invalid session cookies cleared',
-      clearedCookies,
-      timestamp: new Date().toISOString(),
-      duration
-    })
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: 'Invalid session cookies cleared',
+        clearedCookies,
+        timestamp: new Date().toISOString(),
+        duration
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
     
     // Добавляем CORS заголовки для кросс-доменных запросов
     response.headers.set('Access-Control-Allow-Origin', origin || '*')
@@ -117,7 +124,12 @@ export async function GET(request: NextRequest) {
         error: 'Failed to clear cookies',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 }

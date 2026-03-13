@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
 const PARTNERS = [
   {
@@ -26,13 +27,19 @@ export function PartnersBlock() {
       aria-labelledby="partners-heading"
     >
       <AdaptiveContainer maxWidth="default">
-        <h2
+        <ScrollReveal
+          as="h2"
+          variant="fade-up"
           id="partners-heading"
           className="text-3xl font-semibold tracking-tighter text-slate-900 mb-12 text-center"
         >
           Наши Партнёры
-        </h2>
-        <div className="grid gap-8 sm:gap-12 sm:grid-cols-2 lg:grid-cols-2 xl:gap-14 2xl:gap-16 3xl:gap-18 4xl:gap-20">
+        </ScrollReveal>
+        <ScrollReveal
+          as="div"
+          variant="fade-up"
+          className="grid gap-8 sm:gap-12 sm:grid-cols-2 lg:grid-cols-2 xl:gap-14 2xl:gap-16 3xl:gap-18 4xl:gap-20"
+        >
           {PARTNERS.map((partner) => (
             <Link
               key={partner.url}
@@ -63,7 +70,7 @@ export function PartnersBlock() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScrollReveal>
       </AdaptiveContainer>
     </section>
   )

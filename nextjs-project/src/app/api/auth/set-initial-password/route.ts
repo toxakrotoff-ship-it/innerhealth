@@ -17,37 +17,91 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много попыток. Попробуйте позже.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   const parsed = bodySchema.safeParse(await request.json())
   if (!parsed.success) {
     const msg = parsed.error.flatten().fieldErrors.password?.[0] ?? 'Некорректные данные'
-    return NextResponse.json({ error: msg }, { status: 400 })
+    return NextResponse.json(
+      { error: msg },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const { token, password } = parsed.data
 
   const parts = token.split('.')
   if (parts.length !== 2) {
-    return NextResponse.json({ error: 'Недействительная ссылка' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Недействительная ссылка' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const [recordId, secret] = parts
 
   const record = await authTokensService.findSetInitialPasswordTokenById(recordId)
   if (!record || record.usedAt) {
-    return NextResponse.json({ error: 'Ссылка недействительна или уже использована' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Ссылка недействительна или уже использована' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   if (record.expiresAt < new Date()) {
-    return NextResponse.json({ error: 'Срок действия ссылки истёк.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Срок действия ссылки истёк.' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   if (!record.codeVerifiedAt) {
-    return NextResponse.json({ error: 'Сначала введите код из письма.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Сначала введите код из письма.' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const valid = await verifyTokenHash(secret, record.tokenHash)
   if (!valid) {
-    return NextResponse.json({ error: 'Недействительная ссылка' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Недействительная ссылка' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const hashedPassword = await hashPassword(password)
@@ -56,5 +110,12 @@ export async function POST(request: Request) {
     mustChangePassword: false,
   })
 
-  return NextResponse.json({ message: 'Пароль успешно установлен. Войдите с новым паролем.' })
+  return NextResponse.json(
+    { message: 'Пароль успешно установлен. Войдите с новым паролем.' },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }

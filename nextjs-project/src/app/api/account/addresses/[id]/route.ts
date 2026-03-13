@@ -30,18 +30,46 @@ export async function PATCH(
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid request'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   try {
     const address = await updateUserAddress(session.user.id as string, parsedParams.id, payload)
-    return NextResponse.json(address)
+    return NextResponse.json(address, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     if (isUserAddressServiceError(error) && error.code === USER_ADDRESS_ERROR_CODES.addressNotFound) {
-      return NextResponse.json({ error: 'Address not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Address not found' },
+        {
+          status: 404,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     console.error('[account/addresses/:id] Failed to update address:', error)
-    return NextResponse.json({ error: 'Failed to update address' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to update address' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }
 
@@ -63,12 +91,33 @@ export async function DELETE(
 
   try {
     await deleteUserAddress(session.user.id as string, parsedParams.id)
-    return new NextResponse(null, { status: 204 })
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (error) {
     if (isUserAddressServiceError(error) && error.code === USER_ADDRESS_ERROR_CODES.addressNotFound) {
-      return NextResponse.json({ error: 'Address not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Address not found' },
+        {
+          status: 404,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
     console.error('[account/addresses/:id] Failed to delete address:', error)
-    return NextResponse.json({ error: 'Failed to delete address' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to delete address' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

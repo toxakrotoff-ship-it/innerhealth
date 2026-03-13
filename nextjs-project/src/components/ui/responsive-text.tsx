@@ -264,15 +264,41 @@ export const Text6XL = forwardRef<HTMLParagraphElement, Omit<ResponsiveTextProps
 Text6XL.displayName = 'Text6XL'
 
 /**
- * Заголовочные компоненты с адаптивным масштабированием для 4K/5K экранов
+ * Заголовочные компоненты.
+ *
+ * Для них используем Tailwind‑брейкпоинты вместо общих адаптивных токенов,
+ * чтобы на ≥1280px заголовки не становились меньше, а на более узких
+ * экранах плавно уменьшались.
  */
 export const Heading1 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h1" variant="4xl" weight="bold" fontFamily="display" {...props} />
+  ({ className, ...props }, ref) => (
+    <ResponsiveText
+      ref={ref}
+      as="h1"
+      variant="3xl"
+      weight="bold"
+      fontFamily="display"
+      adaptive={false}
+      className={cn('sm:text-4xl', className)}
+      {...props}
+    />
+  )
 )
 Heading1.displayName = 'Heading1'
 
 export const Heading2 = forwardRef<HTMLHeadingElement, Omit<ResponsiveTextProps, 'as' | 'variant'>>(
-  (props, ref) => <ResponsiveText ref={ref} as="h2" variant="9xl" weight="semibold" fontFamily="display" {...props} />
+  ({ className, ...props }, ref) => (
+    <ResponsiveText
+      ref={ref}
+      as="h2"
+      variant="3xl"
+      weight="semibold"
+      fontFamily="display"
+      adaptive={false}
+      className={cn('sm:text-4xl', className)}
+      {...props}
+    />
+  )
 )
 Heading2.displayName = 'Heading2'
 

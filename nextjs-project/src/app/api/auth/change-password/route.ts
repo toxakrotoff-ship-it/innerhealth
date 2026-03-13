@@ -13,7 +13,15 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Необходимо войти' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Необходимо войти' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const parsed = bodySchema.safeParse(await request.json())
@@ -22,20 +30,44 @@ export async function POST(request: Request) {
       parsed.error.flatten().fieldErrors.newPassword?.[0] ??
       parsed.error.flatten().fieldErrors.currentPassword?.[0] ??
       'Некорректные данные'
-    return NextResponse.json({ error: msg }, { status: 400 })
+    return NextResponse.json(
+      { error: msg },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const { currentPassword, newPassword } = parsed.data
 
   const user = await userService.findUserByIdFor2fa(session.user.id as string)
   if (!user) {
-    return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Пользователь не найден' },
+      {
+        status: 404,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const valid = isBcryptHash(user.password)
     ? await verifyPassword(currentPassword, user.password)
     : user.password === currentPassword
   if (!valid) {
-    return NextResponse.json({ error: 'Неверный текущий пароль' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Неверный текущий пароль' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const hashedPassword = await hashPassword(newPassword)
@@ -44,5 +76,12 @@ export async function POST(request: Request) {
     mustChangePassword: false,
   })
 
-  return NextResponse.json({ message: 'Пароль успешно изменён.' })
+  return NextResponse.json(
+    { message: 'Пароль успешно изменён.' },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }

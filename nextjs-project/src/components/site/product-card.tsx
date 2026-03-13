@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ProductQuickView } from '@/components/site/product-quick-view'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 
 interface ProductCardProps {
   id: string
@@ -52,30 +53,31 @@ export function ProductCard({
   }
 
   return (
-    <div
-      ref={ref}
-      className="group block h-full w-full perspective-[600px]"
-      style={
-        {
-          '--r-x': '0deg',
-          '--r-y': '0deg',
-        } as React.CSSProperties
-      }
-      onPointerMove={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        const x = (e.clientX - rect.left) / rect.width
-        const y = (e.clientY - rect.top) / rect.height
-        const factor = 4
-        state.current.rotateX = (0.5 - y) * factor
-        state.current.rotateY = (x - 0.5) * factor
-        updateStyles()
-      }}
-      onPointerLeave={() => {
-        state.current.rotateX = 0
-        state.current.rotateY = 0
-        updateStyles()
-      }}
-    >
+    <ScrollReveal as="div" variant="fade-up">
+      <div
+        ref={ref}
+        className="group block h-full w-full perspective-[600px]"
+        style={
+          {
+            '--r-x': '0deg',
+            '--r-y': '0deg',
+          } as React.CSSProperties
+        }
+        onPointerMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const x = (e.clientX - rect.left) / rect.width
+          const y = (e.clientY - rect.top) / rect.height
+          const factor = 4
+          state.current.rotateX = (0.5 - y) * factor
+          state.current.rotateY = (x - 0.5) * factor
+          updateStyles()
+        }}
+        onPointerLeave={() => {
+          state.current.rotateX = 0
+          state.current.rotateY = 0
+          updateStyles()
+        }}
+      >
       <article
         className={cn(
           'relative flex h-full w-full flex-col rounded-2xl border border-gray-200 overflow-hidden',
@@ -171,6 +173,7 @@ export function ProductCard({
           aria-hidden
         />
       </article>
-    </div>
+      </div>
+    </ScrollReveal>
   )
 }

@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { maskPhone, shortAddress } from '@/lib/pii-masking';
 
 const orderAdminInclude = {
   items: { include: { product: true } },
@@ -55,12 +56,50 @@ export async function findOrderForCdekShipment(orderId: string) {
   });
 }
 
-/** Get all orders for admin list. */
-export async function getOrdersForAdmin() {
-  return prisma.order.findMany({
+export interface AdminOrderDto {
+  id: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  userId: string | null;
+  promoCode?: {
+    code: string;
+  } | null;
+  shippingInfo: {
+    fullName: string;
+    phoneMasked: string;
+    phoneRaw: string;
+    city: string;
+    addressShort: string;
+    deliveryMethod?: string | null;
+  } | null;
+}
+
+/** Get all orders for admin list with masked PII. */
+export async function getOrdersForAdmin(): Promise<AdminOrderDto[]> {
+  const orders = await prisma.order.findMany({
     include: orderAdminInclude,
     orderBy: { createdAt: 'desc' },
   });
+
+  return orders.map((order) => ({
+    id: order.id,
+    total: order.total,
+    status: order.status,
+    createdAt: order.createdAt.toISOString(),
+    userId: order.userId ?? null,
+    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    shippingInfo: order.shippingInfo
+      ? {
+          fullName: order.shippingInfo.fullName,
+          phoneMasked: maskPhone(order.shippingInfo.phone),
+          phoneRaw: order.shippingInfo.phone,
+          city: order.shippingInfo.city,
+          addressShort: shortAddress(order.shippingInfo.address, order.shippingInfo.city),
+          deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
+        }
+      : null,
+  }));
 }
 
 /** Update order status. */

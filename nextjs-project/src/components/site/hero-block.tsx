@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import type { ContentBlockResolved } from '@/services/content-block.service'
 
 interface HeroBlockProps {
@@ -92,7 +93,11 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
         maxWidth="default"
         className="relative w-full grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center z-10 overflow-x-hidden"
       >
-        <div className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 overflow-hidden max-h-[calc(100vh-65px)] overflow-y-hidden">
+        <ScrollReveal
+          as="div"
+          variant="fade-up"
+          className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 overflow-hidden max-h-[calc(100vh-65px)] overflow-y-hidden"
+        >
           <div className={badgeClassName}>
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
             {badgeText}
@@ -126,7 +131,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
               НАШИ СЕРТИФИКАТЫ
             </Link>
           </div>
-        </div>
+        </ScrollReveal>
       </AdaptiveContainer>
 
       <div
@@ -148,6 +153,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
               className="object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten"
               sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
               priority
+              fetchPriority="high"
             />
           </div>
           <div

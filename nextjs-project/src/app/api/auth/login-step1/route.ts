@@ -24,7 +24,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many attempts. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -33,7 +39,15 @@ export async function POST(request: Request) {
     const raw = await request.json()
     body = bodySchema.parse(raw)
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const email = body.email.trim().toLowerCase()
@@ -49,7 +63,15 @@ export async function POST(request: Request) {
     : null
 
   if (!userFor2fa) {
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid credentials' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const valid = isBcryptHash(userFor2fa.password)
@@ -57,11 +79,26 @@ export async function POST(request: Request) {
     : userFor2fa.password === body.password
 
   if (!valid) {
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Invalid credentials' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (!userFor2fa.twoFactorEnabled) {
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      { success: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const { hash: tokenHash } = await createPendingToken()
@@ -87,10 +124,17 @@ export async function POST(request: Request) {
     emailCodeExpiresAt,
   })
 
-  const response = NextResponse.json({
-    need2FA: true,
-    method: userFor2fa.twoFactorMethod ?? 'email',
-  })
+  const response = NextResponse.json(
+    {
+      need2FA: true,
+      method: userFor2fa.twoFactorMethod ?? 'email',
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
   response.headers.append('Set-Cookie', buildPendingCookieValue(pending.id))
   return response
 }

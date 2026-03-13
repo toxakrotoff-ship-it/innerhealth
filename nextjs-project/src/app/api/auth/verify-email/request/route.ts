@@ -26,7 +26,13 @@ export async function POST(request: Request) {
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many verification requests. Try again later.' },
-      { status: 429, headers: { 'Retry-After': String(rate.resetIn) } }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
@@ -36,11 +42,26 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof z.ZodError ? error.issues.map((issue) => issue.message).join('; ') : 'Invalid payload'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json(
+      { error: message },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (payload.email && getEmailRiskVerdict(payload.email) === 'block') {
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(
+      { ok: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const session = await getServerSession(authOptions)
@@ -53,7 +74,14 @@ export async function POST(request: Request) {
   }
 
   if (!targetUser || targetUser.role !== 'USER' || targetUser.emailVerifiedAt) {
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(
+      { ok: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   try {
@@ -62,16 +90,38 @@ export async function POST(request: Request) {
     const verificationLink =
       `${baseUrl}/account/verify-email?token=${encodeURIComponent(verification.token)}`
     await sendEmailVerificationLinkEmail(verification.email, verificationLink)
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(
+      { ok: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   } catch (error) {
     if (
       isEmailVerificationServiceError(error) &&
       error.code === EMAIL_VERIFICATION_ERROR_CODES.alreadyVerified
     ) {
-      return NextResponse.json({ ok: true })
+      return NextResponse.json(
+        { ok: true },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
 
     console.error('[auth/verify-email/request] Failed to request verification:', error)
-    return NextResponse.json({ error: 'Failed to request email verification' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to request email verification' },
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 }

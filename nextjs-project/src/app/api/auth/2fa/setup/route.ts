@@ -21,22 +21,53 @@ const bodySchema = z.object({
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
   const user2fa = await userService.findUserByIdFor2fa(session.user.id as string)
   if (!user2fa) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'User not found' },
+      {
+        status: 404,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
-  return NextResponse.json({
-    twoFactorEnabled: user2fa.twoFactorEnabled,
-    twoFactorMethod: user2fa.twoFactorMethod,
-  })
+  return NextResponse.json(
+    {
+      twoFactorEnabled: user2fa.twoFactorEnabled,
+      twoFactorMethod: user2fa.twoFactorMethod,
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      {
+        status: 401,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   let body: z.infer<typeof bodySchema>
@@ -44,14 +75,30 @@ export async function POST(request: Request) {
     const raw = await request.json()
     body = bodySchema.parse(raw)
   } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      {
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   const userId = session.user.id as string
   const user = await userService.findUserByIdFor2fa(userId)
 
   if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'User not found' },
+      {
+        status: 404,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (body.action === 'disable') {
@@ -68,7 +115,12 @@ export async function POST(request: Request) {
     if (!verified) {
       return NextResponse.json(
         { error: 'Invalid password or code' },
-        { status: 401 }
+        {
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
       )
     }
 
@@ -77,14 +129,26 @@ export async function POST(request: Request) {
       twoFactorMethod: null,
       totpSecretEncrypted: null,
     })
-    return NextResponse.json({ ok: true })
+    return NextResponse.json(
+      { ok: true },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
   }
 
   if (body.action === 'enable') {
     if (!body.method) {
       return NextResponse.json(
         { error: 'method is required for enable' },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
       )
     }
 
@@ -94,7 +158,14 @@ export async function POST(request: Request) {
         twoFactorMethod: 'email',
         totpSecretEncrypted: null,
       })
-      return NextResponse.json({ ok: true })
+      return NextResponse.json(
+        { ok: true },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
 
     if (body.method === 'totp') {
@@ -107,23 +178,58 @@ export async function POST(request: Request) {
           twoFactorEnabled: false,
         })
         const uri = getTotpUri(secret, user.email, 'Inner Health')
-        return NextResponse.json({ uri })
+        return NextResponse.json(
+          { uri },
+          {
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       }
 
       if (!user.totpSecretEncrypted) {
         return NextResponse.json(
           { error: 'Start TOTP setup first (request without code)' },
-          { status: 400 }
+          {
+            status: 400,
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
         )
       }
       const valid = await verifyTotpCode(user.totpSecretEncrypted, body.code)
       if (!valid) {
-        return NextResponse.json({ error: 'Invalid code' }, { status: 401 })
+        return NextResponse.json(
+          { error: 'Invalid code' },
+          {
+            status: 401,
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
       }
       await userService.updateUser(userId, { twoFactorEnabled: true })
-      return NextResponse.json({ ok: true })
+      return NextResponse.json(
+        { ok: true },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
     }
   }
 
-  return NextResponse.json({ error: 'Bad request' }, { status: 400 })
+  return NextResponse.json(
+    { error: 'Bad request' },
+    {
+      status: 400,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    }
+  )
 }
