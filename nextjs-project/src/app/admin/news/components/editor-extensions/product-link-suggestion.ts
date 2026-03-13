@@ -149,7 +149,9 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
                 return true
               }
               if (keyProps.event.key === 'Escape') {
-                keyProps.command({ exit: true })
+                ;(keyProps as unknown as { command?: (options: { exit: boolean }) => void }).command?.({
+                  exit: true,
+                })
                 return true
               }
               return false
