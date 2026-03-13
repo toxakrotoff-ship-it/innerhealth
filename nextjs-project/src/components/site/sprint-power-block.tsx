@@ -26,7 +26,7 @@ export function SprintPowerBlock() {
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
-            <div className="absolute -bottom-6 -right-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-100 max-w-[240px] z-10">
+            <div className="absolute right-4 bottom-4 md:-bottom-6 md:-right-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-100 max-w-[240px] z-10">
               <h3 className="text-sm font-semibold mb-2 tracking-tight uppercase text-slate-900">
                 Sprint Power
               </h3>

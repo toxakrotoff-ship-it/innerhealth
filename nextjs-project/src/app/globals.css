@@ -112,6 +112,12 @@
 
 @layer components {
 
+  /* Hero: отключаем авто-поворот по EXIF для одинаковой ориентации на всех устройствах */
+  .hero-portrait-image {
+    image-orientation: none;
+    -webkit-image-orientation: none;
+  }
+
   /* 404 page */
   .not-found-root {
     min-height: 100vh;

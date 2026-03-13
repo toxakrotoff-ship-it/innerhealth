@@ -150,10 +150,11 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
               src="/hero-portrait.png"
               alt=""
               fill
-              className="object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten"
+              className="object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
               sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
               priority
               fetchPriority="high"
+              style={{ imageOrientation: 'none' }}
             />
           </div>
           <div
