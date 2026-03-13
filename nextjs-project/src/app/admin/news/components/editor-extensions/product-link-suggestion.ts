@@ -83,7 +83,10 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
               items = updateProps.items
               if (selectedIndex >= items.length) selectedIndex = 0
 
-              const { clientRect } = updateProps.clientRect ?? {}
+              const clientRect =
+                typeof updateProps.clientRect === 'function'
+                  ? updateProps.clientRect()
+                  : undefined
               if (clientRect) {
                 element.style.position = 'absolute'
                 element.style.left = `${clientRect.left + window.scrollX}px`
