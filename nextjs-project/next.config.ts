@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+    unoptimized: true,
   },
   experimental: {
     /** Client-side Router Cache: keep cached page payload this long before refetching on navigation */
