@@ -67,6 +67,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
   const [categories, brandOptions, catalogResult] = await Promise.all([
     prisma.category.findMany({
+      where: { showInCategoriesBlock: true },
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { products: true } } },
     }),

@@ -67,6 +67,7 @@ async function getHomeData() {
     const [categories, newProducts, newsPosts, articlePosts, approvedReviews] =
       await Promise.all([
         prisma.category.findMany({
+          where: { showInCategoriesBlock: true },
           orderBy: { sortOrder: 'asc' },
           include: { _count: { select: { products: true } } },
         }),
@@ -218,7 +219,7 @@ export default async function HomePage() {
       </section>
       <SpacingVertical size="lg" />
 
-      {/* Новости — фоны сохраняем */}
+      {/* Новости — делаем карточки в стиле категорий */}
       <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
@@ -229,22 +230,56 @@ export default async function HomePage() {
               </p>
             </div>
             <Link href="/news" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
-              ВСЕ НОВОСТИ <ChevronRight className="w-4 h-4" aria-hidden />
+              ВСЕ НОВОСТИ
+              <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {newsPosts.length > 0 ? (
-            <ul className="space-y-4">
-              {newsPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  id={post.id}
-                  title={post.title}
-                  slug={post.slug}
-                  previewImage={post.previewImage}
-                  typeLabel="Новость"
-                />
-              ))}
-            </ul>
+            <ScrollReveal as="div" variant="fade-up">
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={3}
+                gap={4}
+                adaptiveGap
+              >
+                {newsPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/news/${post.slug}`}
+                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                  >
+                    <TiltCard>
+                      <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                        {post.previewImage && (
+                          <>
+                            <Image
+                              src={post.previewImage}
+                              alt={post.title}
+                              fill
+                              className="object-cover object-center"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                              aria-hidden
+                            />
+                          </>
+                        )}
+                        <div className="relative z-10 space-y-2 max-w-xs">
+                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900">
+                            Новость
+                          </span>
+                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                            {post.title}
+                          </span>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Link>
+                ))}
+              </FluidGrid>
+            </ScrollReveal>
           ) : (
             <p className="text-gray-500">Пока нет новостей.</p>
           )}
@@ -282,7 +317,7 @@ export default async function HomePage() {
               adaptiveGap
             >
             {filterCatalogBlockCategories(categories).map((cat) => {
-                const bgImage = getCategoryBackgroundImage(cat.slug)
+                const bgImage = cat.image ?? getCategoryBackgroundImage(cat.slug)
                 const imagePosition = getCategoryImageObjectPosition(cat.slug)
                 return (
                   <Link
@@ -349,22 +384,56 @@ export default async function HomePage() {
               </p>
             </div>
             <Link href="/informaciya" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
-              ВСЕ СТАТЬИ <ChevronRight className="w-4 h-4" aria-hidden />
+              ВСЕ СТАТЬИ
+              <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {articlePosts.length > 0 ? (
-            <ul className="space-y-4">
-              {articlePosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  id={post.id}
-                  title={post.title}
-                  slug={post.slug}
-                  previewImage={post.previewImage}
-                  typeLabel="Статья"
-                />
-              ))}
-            </ul>
+            <ScrollReveal as="div" variant="fade-up">
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={3}
+                gap={4}
+                adaptiveGap
+              >
+                {articlePosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/informaciya/${post.slug}`}
+                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                  >
+                    <TiltCard>
+                      <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                        {post.previewImage && (
+                          <>
+                            <Image
+                              src={post.previewImage}
+                              alt={post.title}
+                              fill
+                              className="object-cover object-center"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                              aria-hidden
+                            />
+                          </>
+                        )}
+                        <div className="relative z-10 space-y-2 max-w-xs">
+                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900">
+                            Статья
+                          </span>
+                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                            {post.title}
+                          </span>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Link>
+                ))}
+              </FluidGrid>
+            </ScrollReveal>
           ) : (
             <p className="text-gray-500">Пока нет статей.</p>
           )}

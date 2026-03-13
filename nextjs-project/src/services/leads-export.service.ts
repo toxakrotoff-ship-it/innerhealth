@@ -20,6 +20,11 @@ export interface LeadExportRow {
   id: string
 }
 
+export interface LeadExportFilter {
+  from?: Date
+  to?: Date
+}
+
 const CSV_HEADERS: (keyof LeadExportRow)[] = [
   'source',
   'name',
@@ -102,11 +107,48 @@ export function buildLeadsCsv(rows: LeadExportRow[]): string {
 }
 
 /** Fetch all leads from PartnershipLead, TildaLead, QuickOrder and map to unified export rows. */
-export async function getAllLeadsForExport(): Promise<LeadExportRow[]> {
+export async function getAllLeadsForExport(filter?: LeadExportFilter): Promise<LeadExportRow[]> {
+  const partnershipWhere =
+    filter && (filter.from || filter.to)
+      ? {
+          createdAt: {
+            ...(filter.from ? { gte: filter.from } : {}),
+            ...(filter.to ? { lte: filter.to } : {}),
+          },
+        }
+      : undefined
+
+  const tildaWhere =
+    filter && (filter.from || filter.to)
+      ? {
+          tildaDate: {
+            ...(filter.from ? { gte: filter.from } : {}),
+            ...(filter.to ? { lte: filter.to } : {}),
+          },
+        }
+      : undefined
+
+  const quickOrderWhere =
+    filter && (filter.from || filter.to)
+      ? {
+          createdAt: {
+            ...(filter.from ? { gte: filter.from } : {}),
+            ...(filter.to ? { lte: filter.to } : {}),
+          },
+        }
+      : undefined
+
   const [partnershipLeads, tildaLeads, quickOrders] = await Promise.all([
-    prisma.partnershipLead.findMany({ orderBy: { createdAt: 'desc' } }),
-    prisma.tildaLead.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.partnershipLead.findMany({
+      where: partnershipWhere,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.tildaLead.findMany({
+      where: tildaWhere,
+      orderBy: { createdAt: 'desc' },
+    }),
     prisma.quickOrder.findMany({
+      where: quickOrderWhere,
       orderBy: { createdAt: 'desc' },
       include: {
         product: { select: { title: true, slug: true } },

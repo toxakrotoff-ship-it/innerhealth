@@ -8,14 +8,17 @@ const adminListSelect = {
   tildaUid: true,
   slug: true,
   title: true,
+  quantity: true,
   price: true,
   priceOld: true,
   photo: true,
   category: true,
   createdAt: true,
+  isDraft: true,
   categories: {
     select: {
       categoryId: true,
+      sortOrder: true,
       category: { select: { id: true, title: true, slug: true } },
     },
   },
@@ -71,7 +74,9 @@ function buildCatalogOrderBy(sort: CatalogQueryOptions['sort']): Prisma.ProductO
 
 function buildCatalogWhere(options: CatalogQueryOptions): Prisma.ProductWhereInput {
   const q = options.q?.trim();
-  const where: Prisma.ProductWhereInput = {};
+  const where: Prisma.ProductWhereInput = {
+    isDraft: false,
+  };
 
   if (q) {
     where.OR = [
@@ -126,6 +131,7 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
 export async function getCatalogBrandOptions(): Promise<string[]> {
   const rows = await prisma.product.findMany({
     where: {
+      isDraft: false,
       brand: {
         not: null,
       },
@@ -146,6 +152,7 @@ export async function suggestProducts(query: string, limit = 8) {
 
   return prisma.product.findMany({
     where: {
+      isDraft: false,
       OR: [
         { title: { contains: q, mode: 'insensitive' } },
         { sku: { contains: q, mode: 'insensitive' } },
@@ -206,6 +213,7 @@ export async function getProductQuickViewSummary(productId: string) {
 /** Get products for catalog page (paginated). Does not fetch photos Json. */
 export async function getProductsForCatalog(skip: number, take: number) {
   return prisma.product.findMany({
+    where: { isDraft: false },
     orderBy: { createdAt: 'desc' },
     skip,
     take,
@@ -216,7 +224,7 @@ export async function getProductsForCatalog(skip: number, take: number) {
 /** Get products for home "new products" block. Does not fetch photos Json. */
 export async function getProductsForHome(take: number) {
   return prisma.product.findMany({
-    where: { slug: { not: null } },
+    where: { slug: { not: null }, isDraft: false },
     orderBy: { createdAt: 'desc' },
     take,
     select: productCardSelect,
@@ -279,6 +287,7 @@ export async function getRelatedProductsByCategory(
   return prisma.product.findMany({
     where: {
       id: { not: productId },
+      isDraft: false,
       categories: {
         some: {
           categoryId: { in: categoryIds },
@@ -318,7 +327,11 @@ export async function updateProduct(
     await prisma.productCategory.deleteMany({ where: { productId: id } });
     if (categoryIds.length > 0) {
       await prisma.productCategory.createMany({
-        data: categoryIds.map((categoryId) => ({ productId: id, categoryId })),
+        data: categoryIds.map((categoryId, index) => ({
+          productId: id,
+          categoryId,
+          sortOrder: index,
+        })),
       });
     }
   }
@@ -348,6 +361,7 @@ export async function createProduct(
       data: categoryIds.map((categoryId: string) => ({
         productId: newProduct.id,
         categoryId,
+        sortOrder: 0,
       })),
     });
   }
@@ -366,4 +380,33 @@ export async function findProductById(id: string) {
   return prisma.product.findUnique({
     where: { id },
   });
+}
+
+interface ReorderItemInput {
+  productId: string;
+  sortOrder: number;
+}
+
+/** Обновить порядок товаров внутри одной категории. */
+export async function reorderProductsInCategory(
+  categoryId: string,
+  items: ReorderItemInput[]
+) {
+  if (!items.length) return;
+
+  await prisma.$transaction(
+    items.map((item) =>
+      prisma.productCategory.update({
+        where: {
+          productId_categoryId: {
+            productId: item.productId,
+            categoryId,
+          },
+        },
+        data: {
+          sortOrder: item.sortOrder,
+        },
+      })
+    )
+  );
 }

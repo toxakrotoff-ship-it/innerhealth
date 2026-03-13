@@ -26,6 +26,7 @@ import {
   getDescendantCategoryIds,
   type FlatCategoryTreeNode,
 } from '@/lib/category-tree';
+import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 
 interface CategoryFormState {
   title: string;
@@ -33,6 +34,7 @@ interface CategoryFormState {
   image: string;
   sortOrder: number;
   parentId: string;
+  showInCategoriesBlock: boolean;
 }
 
 interface CategoryRowProps {
@@ -86,6 +88,9 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
             <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-3">
               <span>slug: {category.slug}</span>
               <span>сортировка: {category.sortOrder ?? 0}</span>
+              <span title="Показывать в блоке категорий на главной">
+                {category.showInCategoriesBlock ? 'В блоке на главной' : 'Скрыта из блока'}
+              </span>
             </div>
           </div>
         </div>
@@ -113,6 +118,7 @@ export default function AdminCategoriesPage() {
     image: '',
     sortOrder: 0,
     parentId: '',
+    showInCategoriesBlock: true,
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -165,10 +171,11 @@ export default function AdminCategoriesPage() {
         image: formData.image,
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
+        showInCategoriesBlock: formData.showInCategoriesBlock,
       });
       
       setCategories([...categories, newCategory]);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
+      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
       setIsCreating(false);
     } catch (error) {
       console.error('Error creating category:', error);
@@ -191,6 +198,7 @@ export default function AdminCategoriesPage() {
         image: formData.image,
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
+        showInCategoriesBlock: formData.showInCategoriesBlock,
       });
       
       const updatedCategories = categories.map(cat =>
@@ -199,7 +207,7 @@ export default function AdminCategoriesPage() {
       
       setCategories(updatedCategories);
       setEditingCategory(null);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
+      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
     } catch (error) {
       console.error('Error updating category:', error);
       if (error instanceof Error) {
@@ -233,12 +241,13 @@ export default function AdminCategoriesPage() {
       image: category.image || '',
       sortOrder: category.sortOrder || 0,
       parentId: category.parentId || '',
+      showInCategoriesBlock: category.showInCategoriesBlock ?? true,
     });
   };
 
   const handleCancelEdit = () => {
     setEditingCategory(null);
-    setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '' });
+    setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
   };
 
   const handleDragEnd = useCallback(
@@ -392,15 +401,16 @@ export default function AdminCategoriesPage() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Изображение (URL)
+                  Фото для карточки на главной
                 </label>
-                <input
-                  type="text"
+                <CoverImageDropzone
                   value={formData.image}
-                  onChange={(e) => setFormData({...formData, image: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                  className="form-input"
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  folder="categories"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Перетащите файл с компьютера или нажмите для выбора. Без фото карточка отобразится без фона.
+                </p>
               </div>
               
               <div>
@@ -415,6 +425,18 @@ export default function AdminCategoriesPage() {
                 />
               </div>
 
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="showInCategoriesBlock"
+                  checked={formData.showInCategoriesBlock ?? true}
+                  onChange={(e) => setFormData({ ...formData, showInCategoriesBlock: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="showInCategoriesBlock" className="text-sm font-medium text-gray-700">
+                  Показывать в блоке «Разделы каталога» на главной
+                </label>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Родительская категория

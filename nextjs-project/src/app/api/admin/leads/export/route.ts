@@ -1,13 +1,134 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
-import { getAllLeadsForExport, buildLeadsCsv } from '@/services/leads-export.service'
+import { getAllLeadsForExport, buildLeadsCsv, LeadExportFilter } from '@/services/leads-export.service'
 
-export async function GET() {
+const presetSchema = z
+  .enum(['all', 'today', 'last7', 'last30', 'thisMonth', 'prevMonth'])
+  .optional()
+
+const querySchema = z.object({
+  preset: presetSchema,
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid from date format')
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid to date format')
+    .optional(),
+})
+
+interface ParsedQuery {
+  preset?: z.infer<typeof presetSchema>
+  from?: string
+  to?: string
+}
+
+function buildFilterFromQuery(data: ParsedQuery): LeadExportFilter | undefined {
+  const now = new Date()
+
+  const setDayBounds = (date: Date, isStart: boolean): Date => {
+    const result = new Date(date)
+    if (isStart) {
+      result.setHours(0, 0, 0, 0)
+    } else {
+      result.setHours(23, 59, 59, 999)
+    }
+    return result
+  }
+
+  if (data.preset && data.preset !== 'all') {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    switch (data.preset) {
+      case 'today': {
+        const from = setDayBounds(today, true)
+        const to = setDayBounds(today, false)
+        return { from, to }
+      }
+      case 'last7': {
+        const from = new Date(today)
+        from.setDate(from.getDate() - 6)
+        return {
+          from: setDayBounds(from, true),
+          to: setDayBounds(today, false),
+        }
+      }
+      case 'last30': {
+        const from = new Date(today)
+        from.setDate(from.getDate() - 29)
+        return {
+          from: setDayBounds(from, true),
+          to: setDayBounds(today, false),
+        }
+      }
+      case 'thisMonth': {
+        const from = new Date(today.getFullYear(), today.getMonth(), 1)
+        const to = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        return {
+          from: setDayBounds(from, true),
+          to: setDayBounds(to, false),
+        }
+      }
+      case 'prevMonth': {
+        const from = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        const to = new Date(today.getFullYear(), today.getMonth(), 0)
+        return {
+          from: setDayBounds(from, true),
+          to: setDayBounds(to, false),
+        }
+      }
+      default:
+        return undefined
+    }
+  }
+
+  if (data.from || data.to) {
+    const filter: LeadExportFilter = {}
+    if (data.from) {
+      const fromDate = new Date(`${data.from}T00:00:00`)
+      filter.from = setDayBounds(fromDate, true)
+    }
+    if (data.to) {
+      const toDate = new Date(`${data.to}T00:00:00`)
+      filter.to = setDayBounds(toDate, false)
+    }
+    if (filter.from && filter.to && filter.from > filter.to) {
+      throw new Error('from date is after to date')
+    }
+    return filter
+  }
+
+  if (data.preset === 'all' || (!data.preset && !data.from && !data.to)) {
+    return undefined
+  }
+
+  return undefined
+}
+
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
   try {
-    const rows = await getAllLeadsForExport()
+    const url = new URL(request.url)
+    const rawQuery = Object.fromEntries(url.searchParams.entries())
+    const parseResult = querySchema.safeParse(rawQuery)
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Неверные параметры фильтра периода' }, { status: 400 })
+    }
+
+    let filter: LeadExportFilter | undefined
+    try {
+      filter = buildFilterFromQuery(parseResult.data)
+    } catch (e) {
+      return NextResponse.json({ error: 'Неверный диапазон дат' }, { status: 400 })
+    }
+
+    const rows = await getAllLeadsForExport(filter)
     const csv = buildLeadsCsv(rows)
     const date = new Date().toISOString().slice(0, 10)
     const filename = `leads-${date}.csv`

@@ -77,10 +77,10 @@ export function CartDrawer() {
         aria-hidden={!isDrawerOpen}
         aria-label="Корзина"
         className={cn(
-          // На мобильных: полноэкранная панель без горизонтального скролла
+          // На мобильных (< 640px): полноэкранная панель
           'fixed inset-y-0 right-0 z-50 h-svh max-h-svh w-full max-w-none bg-white shadow-xl flex flex-col overflow-x-hidden',
-          // На широких экранах — ограниченная ширина
-          'sm:max-w-md lg:max-w-lg xl:max-w-2xl 2xl:max-w-3xl 3xl:max-w-4xl',
+          // На десктопе 640px+: 35% ширины экрана (диапазон 30–40%)
+          'sm:w-[35vw] sm:max-w-[40vw]',
           'transition-transform duration-300 ease-out',
           isDrawerOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         )}

@@ -6,9 +6,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
 import type { JSONContent } from '@tiptap/core';
 import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
+import { ProductLink } from './editor-extensions/product-link-suggestion';
 import { EditorMediaPanel, type UploadedImage } from './EditorMediaPanel';
 
 interface RichTextEditorProps {
@@ -314,6 +316,46 @@ export function RichTextEditor({
       Underline,
       Image.configure({ inline: false }),
       Placeholder.configure({ placeholder }),
+      Link.configure({
+        openOnClick: false,
+        autolink: false,
+        linkOnPaste: false,
+        HTMLAttributes: {
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      ProductLink.configure({
+        HTMLAttributes: {
+          class: 'text-blue-700 underline decoration-blue-300 hover:text-blue-800',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+        suggestion: {
+          char: '@',
+          items: async ({ query }) => {
+            const trimmed = query.trim();
+            if (!trimmed) return [];
+            try {
+              const controller = new AbortController();
+              const res = await fetch(`/api/catalog/suggest?q=${encodeURIComponent(trimmed)}&limit=8`, {
+                signal: controller.signal,
+                credentials: 'include',
+              });
+              if (!res.ok) return [];
+              const data = (await res.json()) as {
+                id: string;
+                title: string;
+                slug: string | null;
+                sku: string | null;
+              }[];
+              return data;
+            } catch {
+              return [];
+            }
+          },
+        },
+      }),
     ],
     content: value ?? undefined,
     editable: !disabled,

@@ -12,6 +12,7 @@ export interface Category {
   image?: string | null;
   sortOrder?: number | null;
   parentId?: string | null;
+  showInCategoriesBlock: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ interface CategoryInput {
   image?: string | null;
   sortOrder?: number | null;
   parentId?: string | null;
+  showInCategoriesBlock?: boolean;
 }
 
 const categoryInputSchema = z.object({
@@ -30,6 +32,7 @@ const categoryInputSchema = z.object({
   image: z.string().trim().nullable().optional(),
   sortOrder: z.number().int().nullable().optional(),
   parentId: z.string().trim().nullable().optional(),
+  showInCategoriesBlock: z.boolean().optional(),
 });
 
 const categoryUpdateSchema = categoryInputSchema.partial();
@@ -102,6 +105,7 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
         image: true,
         sortOrder: true,
         parentId: true,
+        showInCategoriesBlock: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -261,6 +265,7 @@ export async function createCategory(data: CategoryInput): Promise<Category> {
       image: data.image?.trim() ? data.image.trim() : null,
       parentId: data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
+      showInCategoriesBlock: data.showInCategoriesBlock ?? true,
     });
 
     await ensureCategoryParentExists(parsed.parentId);
@@ -274,12 +279,15 @@ export async function createCategory(data: CategoryInput): Promise<Category> {
         image: parsed.image,
         sortOrder: parsed.sortOrder,
         parentId: parsed.parentId,
+        showInCategoriesBlock: parsed.showInCategoriesBlock ?? true,
         createdAt: new Date(),
         updatedAt: new Date()
       }
     });
     
     revalidatePath('/admin/catalog');
+    revalidatePath('/');
+    revalidatePath('/catalog');
     return category;
   } catch (error) {
     console.error('Error creating category:', error);
@@ -304,24 +312,38 @@ export async function updateCategory(id: string, data: Partial<CategoryInput>): 
       image: data.image === undefined ? undefined : data.image?.trim() ? data.image.trim() : null,
       parentId: data.parentId === undefined ? undefined : data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
+      showInCategoriesBlock: data.showInCategoriesBlock,
     });
 
-    await ensureCategoryParentExists(parsed.parentId);
-    await ensureNoCategoryCycle(id, parsed.parentId);
+    if (parsed.parentId !== undefined) {
+      await ensureCategoryParentExists(parsed.parentId);
+      await ensureNoCategoryCycle(id, parsed.parentId);
+    }
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    if (parsed.title !== undefined) updateData.title = parsed.title;
+    if (parsed.slug !== undefined) updateData.slug = parsed.slug;
+    if (parsed.image !== undefined) updateData.image = parsed.image;
+    if (parsed.sortOrder !== undefined) updateData.sortOrder = parsed.sortOrder;
+    if (parsed.showInCategoriesBlock !== undefined) {
+      updateData.showInCategoriesBlock = parsed.showInCategoriesBlock;
+    }
+    if (parsed.parentId !== undefined) {
+      updateData.parent = parsed.parentId
+        ? { connect: { id: parsed.parentId } }
+        : { disconnect: true };
+    }
 
     const category = await prisma.category.update({
       where: { id },
-      data: {
-        title: parsed.title,
-        slug: parsed.slug,
-        image: parsed.image,
-        sortOrder: parsed.sortOrder,
-        parentId: parsed.parentId,
-        updatedAt: new Date()
-      }
+      data: updateData as Parameters<typeof prisma.category.update>[0]['data'],
     });
     
     revalidatePath('/admin/catalog');
+    revalidatePath('/');
+    revalidatePath('/catalog');
     return category;
   } catch (error) {
     console.error('Error updating category:', error);
@@ -352,6 +374,8 @@ export async function updateCategoriesSortOrder(
     )
   );
   revalidatePath('/admin/catalog');
+  revalidatePath('/');
+  revalidatePath('/catalog');
 }
 
 // Удаление категории
@@ -373,6 +397,8 @@ export async function deleteCategory(id: string): Promise<void> {
     });
     
     revalidatePath('/admin/catalog');
+    revalidatePath('/');
+    revalidatePath('/catalog');
   } catch (error) {
     console.error('Error deleting category:', error);
     if (error instanceof Error) {

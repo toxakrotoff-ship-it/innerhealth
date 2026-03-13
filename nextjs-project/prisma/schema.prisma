@@ -56,6 +56,8 @@ model Product {
   tab2                                 String?
   tab3                                 String?
   tab4                                 String?
+  /// Черновик: скрыть товар из клиентского каталога
+  isDraft                              Boolean           @default(false)
   createdAt                            DateTime          @default(now())
   updatedAt                            DateTime          @updatedAt
   slug                                 String?           @unique
@@ -80,17 +82,19 @@ model Product {
 }
 
 model Category {
-  id        String            @id @default(cuid())
-  title     String
-  slug      String            @unique
-  image     String?
-  sortOrder Int?
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  parentId  String?
-  parent    Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children  Category[]        @relation("CategoryHierarchy")
-  products  ProductCategory[]
+  id                   String            @id @default(cuid())
+  title                String
+  slug                 String            @unique
+  image                String?
+  sortOrder            Int?
+  /// Показывать категорию в блоке «Разделы каталога» на главной и в каталоге
+  showInCategoriesBlock Boolean          @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  parentId             String?
+  parent               Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children             Category[]        @relation("CategoryHierarchy")
+  products             ProductCategory[]
 
   @@index([parentId])
 }
@@ -98,6 +102,8 @@ model Category {
 model ProductCategory {
   productId  String
   categoryId String
+  /// Порядок товара внутри конкретной категории (для админки)
+  sortOrder  Int?
   category   Category @relation(fields: [categoryId], references: [id])
   product    Product  @relation(fields: [productId], references: [id])
 

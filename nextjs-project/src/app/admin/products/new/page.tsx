@@ -61,6 +61,11 @@ interface Product {
   tab2: string | null;
   tab3: string | null;
   tab4: string | null;
+  tab1Title: string | null;
+  tab2Title: string | null;
+  tab3Title: string | null;
+  tab4Title: string | null;
+  isDraft: boolean;
   isPromoEligible: boolean;
   createdAt: string;
   updatedAt: string;
@@ -117,7 +122,12 @@ export default function NewProductPage() {
     tab2: null,
     tab3: null,
     tab4: null,
-    isPromoEligible: false,
+    tab1Title: null,
+    tab2Title: null,
+    tab3Title: null,
+    tab4Title: null,
+    isDraft: false,
+    isPromoEligible: true,
     categoryIds: [],
     photos: []
   });
@@ -146,6 +156,14 @@ export default function NewProductPage() {
       hasString(p.seoDescr) ||
       hasString(p.fbTitle) ||
       hasString(p.fbDescr) ||
+      hasString(p.tab1) ||
+      hasString(p.tab2) ||
+      hasString(p.tab3) ||
+      hasString(p.tab4) ||
+      hasString(p.tab1Title) ||
+      hasString(p.tab2Title) ||
+      hasString(p.tab3Title) ||
+      hasString(p.tab4Title) ||
       hasString(p.characteristicsComposition) ||
       hasString(p.characteristicsStorage) ||
       hasString(p.characteristicsShelfLife) ||
@@ -442,6 +460,89 @@ export default function NewProductPage() {
             onChange={(e) => handleChange('text', e.target.value)}
             rows={6}
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Табы товара</p>
+            <p className="text-xs text-gray-500">
+              Заголовок и содержимое каждого таба. Пустые табы на карточке не отображаются.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Таб 1 — заголовок</label>
+            <Input
+              value={product.tab1Title || ''}
+              onChange={(e) => handleChange('tab1Title', e.target.value || null)}
+              placeholder="Например: Описание"
+            />
+            <label className="block text-sm font-medium text-gray-700 mt-2 mb-1">Таб 1 — текст</label>
+            <Textarea
+              value={product.tab1 || ''}
+              onChange={(e) => handleChange('tab1', e.target.value || null)}
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Таб 2 — заголовок</label>
+            <Input
+              value={product.tab2Title || ''}
+              onChange={(e) => handleChange('tab2Title', e.target.value || null)}
+              placeholder="Например: Применение"
+            />
+            <label className="block text-sm font-medium text-gray-700 mt-2 mb-1">Таб 2 — текст</label>
+            <Textarea
+              value={product.tab2 || ''}
+              onChange={(e) => handleChange('tab2', e.target.value || null)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Таб 3 — заголовок</label>
+            <Input
+              value={product.tab3Title || ''}
+              onChange={(e) => handleChange('tab3Title', e.target.value || null)}
+            />
+            <label className="block text-sm font-medium text-gray-700 mt-2 mb-1">Таб 3 — текст</label>
+            <Textarea
+              value={product.tab3 || ''}
+              onChange={(e) => handleChange('tab3', e.target.value || null)}
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Таб 4 — заголовок</label>
+            <Input
+              value={product.tab4Title || ''}
+              onChange={(e) => handleChange('tab4Title', e.target.value || null)}
+            />
+            <label className="block text-sm font-medium text-gray-700 mt-2 mb-1">Таб 4 — текст</label>
+            <Textarea
+              value={product.tab4 || ''}
+              onChange={(e) => handleChange('tab4', e.target.value || null)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+              checked={product.isDraft}
+              onChange={(e) => handleChange('isDraft', e.target.checked)}
+            />
+            <span className="text-sm text-gray-700">Сохранить как черновик (не показывать на сайте)</span>
+          </label>
         </div>
 
         <div className="flex justify-end space-x-3">

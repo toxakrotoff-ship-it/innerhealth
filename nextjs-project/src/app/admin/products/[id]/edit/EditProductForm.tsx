@@ -61,6 +61,7 @@ interface Product {
   tab2Title: string | null;
   tab3Title: string | null;
   tab4Title: string | null;
+  isDraft: boolean;
   createdAt: string;
   updatedAt: string;
   categories: { categoryId: string }[];
@@ -97,6 +98,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     priceOld: null as number | null,
     discountPrice: null as number | null,
     isPromoEligible: false,
+    isDraft: false,
     categories: [] as string[],
     weight: null as number | null,
     length: null as number | null,
@@ -163,7 +165,8 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         photo: data.photo || '',
         priceOld: data.priceOld || null,
         discountPrice: data.discountPrice || null,
-        isPromoEligible: data.isPromoEligible || false,
+        isPromoEligible: data.isPromoEligible ?? true,
+        isDraft: data.isDraft ?? false,
         categories: data.categories?.map((cat: { categoryId: string }) => cat.categoryId) || [],
         weight: data.weight ?? null,
         length: data.length ?? null,
@@ -243,6 +246,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           priceOld: formData.priceOld,
           discountPrice: formData.discountPrice,
           isPromoEligible: formData.isPromoEligible,
+          isDraft: formData.isDraft,
           weight: formData.weight ?? null,
           length: formData.length ?? null,
           width: formData.width ?? null,
@@ -381,17 +385,31 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 placeholder="—"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isPromoEligible"
-                checked={formData.isPromoEligible}
-                onChange={(e) => setFormData((prev) => ({ ...prev, isPromoEligible: e.target.checked }))}
-                className="form-input h-4 w-4 rounded"
-              />
-              <label htmlFor="isPromoEligible" className="text-sm font-medium text-gray-700">
-                Участвует в скидке по промокоду
-              </label>
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isPromoEligible"
+                  checked={formData.isPromoEligible}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isPromoEligible: e.target.checked }))}
+                  className="form-input h-4 w-4 rounded"
+                />
+                <label htmlFor="isPromoEligible" className="text-sm font-medium text-gray-700">
+                  Участвует в скидке по промокоду
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isDraft"
+                  checked={Boolean(formData.isDraft)}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isDraft: e.target.checked }))}
+                  className="form-input h-4 w-4 rounded"
+                />
+                <label htmlFor="isDraft" className="text-sm font-medium text-gray-700">
+                  Черновик (скрыть товар с сайта)
+                </label>
+              </div>
             </div>
 
             <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">

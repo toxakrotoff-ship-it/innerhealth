@@ -3,7 +3,7 @@ import { requireAdminSession } from '@/lib/require-admin';
 import fs from 'fs';
 import path from 'path';
 
-const ALLOWED_FOLDERS = ['products', 'posts', 'content'] as const;
+const ALLOWED_FOLDERS = ['products', 'posts', 'content', 'categories'] as const;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB

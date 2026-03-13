@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import ProfileMenu from './ProfileMenu';
 import AdminNav from './AdminNav';
@@ -94,13 +95,23 @@ export default function AdminLayoutClient({
               </svg>
             </button>
             <div className="admin-header-spacer" />
-            <div className="admin-header-profile">
-              <ProfileMenu
-                userName={session.user?.name}
-                userEmail={session.user?.email}
-                userRole={session.user?.role}
-                lastLogin={session.user?.lastLogin}
-              />
+            <div className="flex items-center gap-3">
+              <Link
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-action-blue hover:text-action-blue"
+              >
+                На сайт
+              </Link>
+              <div className="admin-header-profile">
+                <ProfileMenu
+                  userName={session.user?.name}
+                  userEmail={session.user?.email}
+                  userRole={session.user?.role}
+                  lastLogin={session.user?.lastLogin}
+                />
+              </div>
             </div>
           </div>
         </header>
