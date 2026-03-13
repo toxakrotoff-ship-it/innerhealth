@@ -13,6 +13,8 @@ import {
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
+import { Heading2 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import {
   mapUserAddressToShipping,
   type UserAddressForCheckout,

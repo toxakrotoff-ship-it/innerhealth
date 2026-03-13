@@ -3,10 +3,11 @@
 import { AdaptiveContainer } from './adaptive-container'
 import { FluidGrid } from './fluid-grid'
 import { ResponsiveText, Heading1, Heading2, Heading3, TextBase, TextLG } from './responsive-text'
+import { SpacingVertical } from './scalable-spacing'
 
 export function AdaptiveDemo() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 md:p-8">
       <AdaptiveContainer maxWidth="4xl" className="py-8">
         <Heading1 className="mb-8 text-center">
           Демонстрация адаптивной системы
@@ -32,7 +33,7 @@ export function AdaptiveDemo() {
                 </span>
               </div>
               <AdaptiveContainer maxWidth="default" className="bg-white p-6 shadow-md">
-                <div className="h-24 rounded-lg bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center">
+                <div className="h-24 rounded-lg bg-linear-to-r from-blue-100 to-cyan-100 flex items-center justify-center">
                   <TextBase>Содержимое контейнера</TextBase>
                 </div>
               </AdaptiveContainer>
@@ -46,7 +47,7 @@ export function AdaptiveDemo() {
                 </span>
               </div>
               <AdaptiveContainer maxWidth="2xl" className="bg-white p-6 shadow-md">
-                <div className="h-24 rounded-lg bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center">
+                <div className="h-24 rounded-lg bg-linear-to-r from-purple-100 to-pink-100 flex items-center justify-center">
                   <TextBase>Более широкий контейнер для больших экранов</TextBase>
                 </div>
               </AdaptiveContainer>
@@ -60,7 +61,7 @@ export function AdaptiveDemo() {
                 </span>
               </div>
               <AdaptiveContainer maxWidth="4xl" className="bg-white p-6 shadow-md">
-                <div className="h-24 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center">
+                <div className="h-24 rounded-lg bg-linear-to-r from-green-100 to-emerald-100 flex items-center justify-center">
                   <TextBase>Максимально широкий контейнер для экранов 4K</TextBase>
                 </div>
               </AdaptiveContainer>
@@ -90,7 +91,7 @@ export function AdaptiveDemo() {
             {Array.from({ length: 16 }).map((_, i) => (
               <div
                 key={i}
-                className="h-32 rounded-xl bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center p-4 shadow-sm"
+                className="h-32 rounded-xl bg-linear-to-br from-orange-100 to-amber-100 flex items-center justify-center p-4 shadow-sm"
               >
                 <div className="text-center">
                   <div className="text-2xl font-bold text-amber-800">{i + 1}</div>
@@ -176,7 +177,7 @@ export function AdaptiveDemo() {
 
           <SpacingVertical size={8} />
 
-          <div className="rounded-xl border border-gray-300 bg-gradient-to-r from-gray-50 to-white p-8">
+          <div className="rounded-xl border border-gray-300 bg-linear-to-r from-gray-50 to-white p-8">
             <Heading3 className="mb-6 text-center">Примеры типографики</Heading3>
             <div className="space-y-6">
               <div className="border-b pb-4">
@@ -205,7 +206,7 @@ export function AdaptiveDemo() {
                 </ResponsiveText>
               </div>
               <div>
-                <ResponsiveText variant="4xl" weight="bold" className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                <ResponsiveText variant="4xl" weight="bold" className="bg-linear-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                   Огромный текст (36px) → увеличивается на больших экранах
                 </ResponsiveText>
               </div>
@@ -214,7 +215,7 @@ export function AdaptiveDemo() {
         </section>
 
         {/* Секция 4: Информация о брейкпоинтах */}
-        <section className="rounded-2xl bg-gradient-to-br from-gray-900 to-black p-8 text-white">
+        <section className="rounded-2xl bg-linear-to-br from-gray-900 to-black p-8 text-white">
           <Heading2 className="mb-6 text-white">Система брейкпоинтов</Heading2>
           <TextBase className="mb-8 text-gray-300">
             Новые брейкпоинты для больших экранов, добавленные в Фазе 1
@@ -252,7 +253,7 @@ export function AdaptiveDemo() {
         </section>
 
         {/* Секция 5: Рекомендации */}
-        <section className="mt-16 rounded-2xl bg-gradient-to-r from-blue-50 to-cyan-50 p-8">
+        <section className="mt-16 rounded-2xl bg-linear-to-r from-blue-50 to-cyan-50 p-8">
           <Heading2 className="mb-6">Рекомендации по тестированию</Heading2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-lg bg-white p-6 shadow-sm">

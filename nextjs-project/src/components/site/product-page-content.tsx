@@ -12,7 +12,8 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
-import { Heading1 } from '@/components/ui/responsive-text'
+import { Heading1, Heading2 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
 interface ProductPageContentProps {
   product: {
