@@ -24,6 +24,9 @@ out/
 build/
 dist/
 *.tsbuildinfo
+# Tailwind/PostCSS compiled output (generated)
+output.css
+**/public/output.css
 
 # Logs and debug
 *.log
@@ -52,14 +55,41 @@ coverage/
 .turbo/
 .vercel
 
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
+# Playwright (anywhere in repo)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+*.trace.zip
+**/playwright/.trace/
+**/test-results/**/*.png
+**/test-results/**/*.webm
+
+# Chrome DevTools / browser screenshots and logs (dev only)
+browser-logs/
+**/browser-logs/
+**/dev-screenshots/
+*.cpu-profile.json
+*.cpu-profile-*-summary.md
+
+# App routes: test/demo/debug pages (dev only, not for production)
+nextjs-project/src/app/test/
+nextjs-project/src/app/debug-table/
+nextjs-project/src/app/debug-profile-menu/
+nextjs-project/src/app/debug-styles/
+nextjs-project/src/app/simple-test/
+nextjs-project/src/app/test-styles/
 
 # Prisma (generated client lives in node_modules / custom output)
 # prisma/migrations/ — commit; .prisma/ — ignore if present
 .prisma/
 .worktrees/
+*.prisma.backup
+*.config.ts.bak
+
+# DB dumps and local SQL artifacts (do not commit)
+*.dump
+*.sql
+!prisma/migrations/**/*.sql
+!**/prisma/migrations/**/*.sql

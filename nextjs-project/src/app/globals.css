@@ -62,6 +62,11 @@
   --radius-full: 9999px;
 }
 
+/* Скрытие прелоадера до первого кадра, если пользователь уже видел его в течение 24ч (скрипт в layout вешает класс) */
+html.preloader-skip .preloader-overlay {
+  display: none !important;
+}
+
 @layer base {
   /* Фиксированный базовый размер шрифта для предотвращения конфликтов адаптивного clamp.
      Адаптивное масштабирование реализуется через медиа-запросы и tailwind config. */
@@ -70,6 +75,14 @@
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  html.preloader-active {
+    overflow: hidden !important;
+  }
+
+  html.preloader-active body {
+    overflow: hidden !important;
   }
 
   body {

@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import { Unbounded } from 'next/font/google'
+import { Preloader } from '@/components/site/preloader'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -45,8 +46,25 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru" className={`${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}>
+    <html
+      lang="ru"
+      className={`${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: 'html.preloader-skip .preloader-overlay{display:none!important}',
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var k='innerhealth-preloader-seen',v=sessionStorage.getItem(k),t=v?parseInt(v,10):0;if(t&&Date.now()-t<864e5){document.documentElement.dataset.preloaderSkip='1';document.documentElement.classList.add('preloader-skip');}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-gray-50 font-sans antialiased text-gray-900">
+        <Preloader />
         {children}
       </body>
     </html>
