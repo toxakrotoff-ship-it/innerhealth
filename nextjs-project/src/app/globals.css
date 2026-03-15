@@ -1423,27 +1423,6 @@ html.preloader-skip .preloader-overlay {
 
   .admin-container {
     width: 100%;
-    max-width: var(--container-default);
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  @media (min-width: 1280px) {
-    .admin-container {
-      max-width: var(--container-xl);
-    }
-  }
-
-  @media (min-width: 1536px) {
-    .admin-container {
-      max-width: var(--container-2xl);
-    }
-  }
-
-  @media (min-width: 1920px) {
-    .admin-container {
-      max-width: var(--container-3xl);
-    }
   }
 
   @media (min-width: 2560px) {

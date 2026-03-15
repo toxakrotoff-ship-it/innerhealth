@@ -1,9 +1,8 @@
 import nextDynamic from 'next/dynamic'
-import { getSettingsMap } from '@/services/settings.service'
-import { buildOrganizationJsonLd } from '@/lib/schema-org'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
+import { SiteLayoutJsonLd } from './site-layout-json-ld'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -16,14 +15,15 @@ const CookieConsent = nextDynamic(
 /** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
 export const dynamic = 'force-dynamic'
 
-export default async function SiteLayout({
+/**
+ * Synchronous layout shell so the root <div> is always the first node in the HTML.
+ * Async data (e.g. JSON-LD) is rendered by child components to avoid hydration mismatch.
+ */
+export default function SiteLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const settings = await getSettingsMap()
-  const organizationJsonLd = buildOrganizationJsonLd(settings)
-
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <SiteHeader />
@@ -32,13 +32,7 @@ export default async function SiteLayout({
       </main>
       <SiteFooter />
       <BackToTopButton />
-      {organizationJsonLd && (
-        <script
-          type="application/ld+json"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-      )}
+      <SiteLayoutJsonLd />
       <CartDrawer />
       <CookieConsent />
     </div>

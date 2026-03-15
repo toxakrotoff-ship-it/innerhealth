@@ -99,23 +99,21 @@ export const CDEK_CREDENTIAL_KEYS = ['cdek_api_key', 'cdek_client_secret'] as co
 
 /**
  * Учётные данные СДЭК для OAuth: из настроек админки (если заданы оба поля) или из env.
- * source нужен, чтобы после успешной проверки записать учётные данные из настроек в env-файл.
  */
 export async function getCdekCredentials(): Promise<{
   clientId: string;
   clientSecret: string;
-  source: 'admin' | 'env';
 } | null> {
   const map = await getSettingsMap([...CDEK_CREDENTIAL_KEYS]);
   const fromAdminId = map.cdek_api_key?.trim();
   const fromAdminSecret = map.cdek_client_secret?.trim();
   if (fromAdminId && fromAdminSecret) {
-    return { clientId: fromAdminId, clientSecret: fromAdminSecret, source: 'admin' };
+    return { clientId: fromAdminId, clientSecret: fromAdminSecret };
   }
   const fromEnvId = process.env.CDEK_CLIENT_ID ?? process.env.CDEK_ACCOUNT;
   const fromEnvSecret = process.env.CDEK_CLIENT_SECRET ?? process.env.CDEK_SECURE;
   if (fromEnvId?.trim() && fromEnvSecret?.trim()) {
-    return { clientId: fromEnvId.trim(), clientSecret: fromEnvSecret.trim(), source: 'env' };
+    return { clientId: fromEnvId.trim(), clientSecret: fromEnvSecret.trim() };
   }
   return null;
 }

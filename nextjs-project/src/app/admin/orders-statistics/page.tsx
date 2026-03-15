@@ -124,9 +124,9 @@ export default function OrdersStatisticsPage() {
 
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const ordersWithPromo = orders.filter(order => order.promoCodeId !== null).length;
+  const ordersWithPromo = orders.filter((order) => order.promoCodeId != null).length;
   const revenueWithPromo = orders
-    .filter(order => order.promoCodeId !== null)
+    .filter((order) => order.promoCodeId != null)
     .reduce((sum, order) => sum + order.total, 0);
 
   // Форматирование даты вручную
@@ -142,16 +142,20 @@ export default function OrdersStatisticsPage() {
   };
 
   if (loading) {
-    return <div className="p-8">Загрузка статистики...</div>;
+    return (
+      <div className="admin-container">
+        <div className="admin-content">
+          <p className="text-gray-500">Загрузка статистики...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="alert alert-error">
-          <div className="text-sm">
-            {error}
-          </div>
+      <div className="admin-container">
+        <div className="admin-content">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 text-sm">{error}</div>
         </div>
       </div>
     );
@@ -160,10 +164,10 @@ export default function OrdersStatisticsPage() {
   return (
     <div className="admin-container">
       <div className="admin-content">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Статистика заказов</h1>
-        
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6 md:mb-8">Статистика заказов</h1>
+
         {/* Статистические карточки */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="card">
             <div className="text-sm font-medium text-gray-500">Всего заказов</div>
             <div className="text-3xl font-bold mt-2">{totalOrders}</div>
@@ -250,7 +254,7 @@ export default function OrdersStatisticsPage() {
 
         {/* Фильтры */}
         <div className="card mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 md:p-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Поиск</label>
               <input
@@ -284,79 +288,82 @@ export default function OrdersStatisticsPage() {
           </div>
         </div>
         
-        {/* Таблица заказов */}
-        <div className="card">
-          <div className="table-responsive">
-            <table className="table table-horizontal">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID заказа
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Дата
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Сумма
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Промокод
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Статус
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-4 text-center text-sm text-gray-500">
-                      Нет заказов для отображения
-                    </td>
-                  </tr>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {order.id}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(order.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {order.total.toFixed(2)} ₽
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                        {order.promoCode ? (
-                          <div>
-                            <div className="font-medium">{order.promoCode.code}</div>
-                            <div className="text-xs text-gray-500">
-                              {order.promoCode.discountType === 'percentage'
-                                ? `${order.promoCode.discountValue}%`
-                                : `${order.promoCode.discountValue} ₽`}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.status === 'completed' ? 'Завершен' :
-                           order.status === 'pending' ? 'В обработке' : 'Другое'}
-                        </span>
-                      </td>
+        {/* Список заказов */}
+        {filteredOrders.length === 0 ? (
+          <div className="card p-8 text-center text-sm text-gray-500">Нет заказов для отображения</div>
+        ) : (
+          <>
+            {/* Мобильная версия: карточки */}
+            <div className="md:hidden space-y-4">
+              {filteredOrders.map((order) => (
+                <div key={order.id} className="card p-4">
+                  <p className="text-xs font-mono text-gray-500 break-all">{order.id}</p>
+                  <p className="text-sm text-gray-600 mt-0.5">{formatDate(order.createdAt)}</p>
+                  <p className="font-medium text-gray-900 mt-1">{order.total.toFixed(2)} ₽</p>
+                  {order.promoCode ? (
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {order.promoCode.code} ({order.promoCode.discountType === 'percentage' ? `${order.promoCode.discountValue}%` : `${order.promoCode.discountValue} ₽`})
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400 mt-0.5">—</p>
+                  )}
+                  <span className={`inline-flex w-fit mt-2 px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {order.status === 'completed' ? 'Завершен' : order.status === 'pending' ? 'В обработке' : 'Другое'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Десктоп: таблица */}
+            <div className="hidden md:block card overflow-hidden">
+              <div className="table-responsive">
+                <table className="table table-horizontal">
+                  <thead>
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID заказа</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сумма</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Промокод</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{formatDate(order.createdAt)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{order.total.toFixed(2)} ₽</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          {order.promoCode ? (
+                            <div>
+                              <div className="font-medium">{order.promoCode.code}</div>
+                              <div className="text-xs text-gray-500">
+                                {order.promoCode.discountType === 'percentage' ? `${order.promoCode.discountValue}%` : `${order.promoCode.discountValue} ₽`}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status === 'completed' ? 'Завершен' : order.status === 'pending' ? 'В обработке' : 'Другое'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

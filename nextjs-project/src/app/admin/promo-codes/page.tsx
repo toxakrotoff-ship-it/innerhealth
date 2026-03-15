@@ -328,11 +328,11 @@ export default function PromoCodesPage() {
               </div>
             </div>
             
-            <div className="flex space-x-3">
+            <div className="flex flex-wrap gap-2">
               <Button variant="primary" type="submit">
                 {editingCode ? 'Обновить' : 'Создать'}
               </Button>
-              <Button variant="secondary" 
+              <Button variant="secondary"
                 type="button"
                 onClick={() => {
                   setShowForm(false);
@@ -369,100 +369,78 @@ export default function PromoCodesPage() {
           </div>
         </div>
       ) : (
-        <div className="card overflow-hidden min-w-0">
-          <div className="table-responsive overflow-x-auto">
-            <table className="table table-horizontal min-w-[800px]">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Код
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Тип
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Скидка
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Использовано
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Статус
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Действует
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-white border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {promoCodes.map((code) => (
-                  <tr key={code.id} className="group hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium text-gray-900 text-center">
-                      {code.code}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                      {code.discountType === 'percentage' ? 'Процент' : 'Фиксированная'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                      {code.discountType === 'percentage'
-                        ? `${code.discountValue}%`
-                        : `${code.discountValue} ₽`}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                      <span className="inline-flex items-center justify-center">
-                        {code.usedCount}
-                        {code.usageLimit && (
-                          <span className="ml-1 text-gray-400">/ {code.usageLimit}</span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {code.isActive ? 'Активен' : 'Неактивен'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                      <div className="flex flex-col items-center">
-                        <span>{code.validFrom ? new Date(code.validFrom).toLocaleDateString('ru-RU') : '—'}</span>
-                        <span className="text-gray-400 text-xs">{code.validTo ? new Date(code.validTo).toLocaleDateString('ru-RU') : '—'}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium align-top text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] transition-colors">
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleEdit(code)}
-                        >
-                          Редактировать
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleActive(code.id, !code.isActive)}
-                        >
-                          {code.isActive ? 'Отключить' : 'Включить'}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(code.id)}
-                        >
-                          Удалить
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Мобильная версия: карточки */}
+          <div className="md:hidden space-y-4">
+            {promoCodes.map((code) => (
+              <div key={code.id} className="card p-4">
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-mono font-medium text-gray-900">{code.code}</p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500">
+                    <span>{code.discountType === 'percentage' ? 'Процент' : 'Фикс.'}</span>
+                    <span>{code.discountType === 'percentage' ? `${code.discountValue}%` : `${code.discountValue} ₽`}</span>
+                    <span>Использовано: {code.usedCount}{code.usageLimit ? ` / ${code.usageLimit}` : ''}</span>
+                  </div>
+                  <span className={`inline-flex w-fit px-2 py-0.5 text-xs font-semibold rounded-full ${code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {code.isActive ? 'Активен' : 'Неактивен'}
+                  </span>
+                  <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-gray-100">
+                    <Button variant="secondary" size="sm" onClick={() => handleEdit(code)}>Редактировать</Button>
+                    <Button variant="outline" size="sm" onClick={() => toggleActive(code.id, !code.isActive)}>
+                      {code.isActive ? 'Отключить' : 'Включить'}
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id)}>Удалить</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* Десктоп: таблица */}
+          <div className="hidden md:block card overflow-hidden min-w-0">
+            <div className="table-responsive overflow-x-auto">
+              <table className="table table-horizontal min-w-[800px]">
+                <thead>
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Код</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Тип</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Скидка</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Использовано</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Действует</th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-white border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)]">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {promoCodes.map((code) => (
+                    <tr key={code.id} className="group hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium text-gray-900 text-center">{code.code}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? 'Процент' : 'Фиксированная'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? `${code.discountValue}%` : `${code.discountValue} ₽`}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.usedCount}{code.usageLimit ? ` / ${code.usageLimit}` : ''}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{code.isActive ? 'Активен' : 'Неактивен'}</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
+                        <div className="flex flex-col items-center">
+                          <span>{code.validFrom ? new Date(code.validFrom).toLocaleDateString('ru-RU') : '—'}</span>
+                          <span className="text-gray-400 text-xs">{code.validTo ? new Date(code.validTo).toLocaleDateString('ru-RU') : '—'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium align-top text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] transition-colors">
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          <Button variant="secondary" size="sm" onClick={() => handleEdit(code)}>Редактировать</Button>
+                          <Button variant="outline" size="sm" onClick={() => toggleActive(code.id, !code.isActive)}>{code.isActive ? 'Отключить' : 'Включить'}</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id)}>Удалить</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
       </div>
     </div>

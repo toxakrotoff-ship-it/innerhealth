@@ -62,7 +62,8 @@ export interface AdminOrderDto {
   status: string;
   createdAt: string;
   userId: string | null;
-  promoCode?: {
+  promoCodeId: string | null;
+  promoCode: {
     code: string;
   } | null;
   shippingInfo: {
@@ -88,6 +89,7 @@ export async function getOrdersForAdmin(): Promise<AdminOrderDto[]> {
     status: order.status,
     createdAt: order.createdAt.toISOString(),
     userId: order.userId ?? null,
+    promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
     shippingInfo: order.shippingInfo
       ? {
