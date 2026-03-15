@@ -152,6 +152,8 @@ export interface CreateOrderShippingParams {
 export async function createOrderWithItemsAndShipping(params: {
   total: number;
   promoCodeId: string | null;
+  /** Сумма скидки по промокоду (для расчёта дохода партнёра от скидок). */
+  promoDiscountAmount?: number | null;
   userId?: string | null;
   items: Array<{ productId: string; quantity: number; price: number }>;
   shipping: CreateOrderShippingParams;
@@ -162,6 +164,7 @@ export async function createOrderWithItemsAndShipping(params: {
         total: params.total,
         status: 'pending',
         promoCodeId: params.promoCodeId || undefined,
+        promoDiscountAmount: params.promoDiscountAmount ?? undefined,
         userId: params.userId ?? undefined,
         items: {
           create: params.items.map((i) => ({

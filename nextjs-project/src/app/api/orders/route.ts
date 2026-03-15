@@ -129,6 +129,8 @@ export async function POST(request: Request) {
     const goodsTotal =
       sumPromoPrice + sumEligibleFixed + applyPromoToSubtotal(sumEligiblePercent, promo) + sumIneligible
     const total = goodsTotal + deliverySum
+    const promoDiscountAmount =
+      promo != null ? sumEligiblePercent - applyPromoToSubtotal(sumEligiblePercent, promo) : 0
 
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id ?? null
@@ -136,6 +138,7 @@ export async function POST(request: Request) {
     const order = await orderService.createOrderWithItemsAndShipping({
       total,
       promoCodeId: promoCodeId || null,
+      promoDiscountAmount: promoDiscountAmount > 0 ? promoDiscountAmount : null,
       userId,
       items: items.map((i) => {
         const product = productMap.get(i.productId)!

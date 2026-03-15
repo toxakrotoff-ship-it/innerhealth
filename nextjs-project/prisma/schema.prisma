@@ -135,6 +135,8 @@ model Order {
   id                String        @id @default(cuid())
   userId            String?
   total             Float
+  /// Сумма скидки по промокоду (для расчёта дохода партнёра от скидок)
+  promoDiscountAmount Float?
   status            String        @default("pending")
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -182,6 +184,8 @@ model User {
   emailVerifiedAt          DateTime?
   /// Дата и время последнего входа в систему
   lastLoginAt              DateTime?
+  /// База расчёта дохода партнёра: order_total | discount_amount (только для role PARTNER)
+  partnerIncomeBase        String?
   emailVerificationTokens  EmailVerificationToken[]
   orders                   Order[]
   partnerPromoCodes        PartnerPromoCode[]

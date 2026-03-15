@@ -7,12 +7,17 @@ export type { SettingKey } from '@/services/settings.service';
 
 const putSettingsSchema = z.record(z.string(), z.string());
 
+const ADMIN_SETTINGS_KEYS = [
+  ...settingsService.SETTING_KEYS,
+  ...settingsService.SCHEMA_ORG_KEYS,
+] as const;
+
 export async function GET() {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
   try {
-    const map = await settingsService.getSettingsMap();
+    const map = await settingsService.getSettingsMap(ADMIN_SETTINGS_KEYS);
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings GET error:', err);
@@ -37,7 +42,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const map = await settingsService.upsertSettings(body);
+    const map = await settingsService.upsertSettings(body, ADMIN_SETTINGS_KEYS);
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings PUT error:', err);

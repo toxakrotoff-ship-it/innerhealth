@@ -234,7 +234,7 @@ export default function AdminSettingsPage() {
                       <select
                         id={field.key}
                         className="form-input w-full"
-                        value={(values[field.key] || (field.key === 'yookassa_receipt_vat_code' || field.key === 'yookassa_receipt_vat_code_delivery' ? '1' : ''))}
+                        value={(values[field.key] ?? (field.key === 'yookassa_receipt_vat_code' || field.key === 'yookassa_receipt_vat_code_delivery' ? '1' : ''))}
                         onChange={(e) => updateValue(field.key, e.target.value)}
                       >
                         {field.options.map((opt) => (

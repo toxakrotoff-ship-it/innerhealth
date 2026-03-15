@@ -65,11 +65,12 @@ export async function getPartnerStatsByUserId(
 }
 
 /**
- * For partner LK: per promo — ordersCount and partnerIncome (totalAmount * commissionPercent/100). No totalAmount in response.
+ * For partner LK: per promo — ordersCount and partnerIncome. Base for income: per-partner setting (order total or discount amount).
  */
 export async function getPartnerStatsForPartner(
   userId: string
 ): Promise<PartnerStatForPartner[]> {
+  const incomeBase = await getPartnerIncomeBaseForUser(userId);
   const bindings = await prisma.partnerPromoCode.findMany({
     where: { userId },
     include: {
@@ -87,14 +88,20 @@ export async function getPartnerStatsForPartner(
           status: { in: [...PAID_STATUSES] },
         },
         _count: { id: true },
-        _sum: { total: true },
+        _sum: {
+          total: true,
+          promoDiscountAmount: true,
+        },
       }),
       prisma.order.count({
         where: { promoCodeId: b.promoCodeId },
       }),
     ]);
-    const totalAmount = paidAgg._sum.total ?? 0;
-    const partnerIncome = totalAmount * (b.commissionPercent / 100);
+    const baseAmount =
+      incomeBase === 'discount_amount'
+        ? (paidAgg._sum.promoDiscountAmount ?? 0)
+        : (paidAgg._sum.total ?? 0);
+    const partnerIncome = baseAmount * (b.commissionPercent / 100);
     results.push({
       promoCodeId: b.promoCode.id,
       code: b.promoCode.code,
@@ -200,4 +207,37 @@ export async function ensureUserIsPartner(userId: string): Promise<boolean> {
     select: { role: true },
   });
   return user?.role === Role.PARTNER;
+}
+
+/**
+ * Get partner's income base setting. Returns order_total if not set or user not partner.
+ */
+export async function getPartnerIncomeBaseForUser(
+  userId: string
+): Promise<'order_total' | 'discount_amount'> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, partnerIncomeBase: true },
+  });
+  if (user?.role !== Role.PARTNER) return 'order_total';
+  const v = user.partnerIncomeBase?.trim().toLowerCase();
+  return v === 'discount_amount' ? 'discount_amount' : 'order_total';
+}
+
+/**
+ * Update partner's income base (admin). Fails if user is not PARTNER.
+ */
+export async function updatePartnerIncomeBase(
+  userId: string,
+  partnerIncomeBase: 'order_total' | 'discount_amount'
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const isPartner = await ensureUserIsPartner(userId);
+  if (!isPartner) {
+    return { ok: false, error: 'User is not a partner' };
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { partnerIncomeBase },
+  });
+  return { ok: true };
 }

@@ -95,6 +95,7 @@ export async function getUsersForAdmin(role?: Role) {
       role: true,
       createdAt: true,
       lastLoginAt: true,
+      partnerIncomeBase: true,
     },
     orderBy: { createdAt: 'desc' },
   });

@@ -66,6 +66,7 @@ export async function GET(request: Request) {
           const totalRevenue = stats.reduce((s, x) => s + x.totalAmount, 0);
           return {
             ...base,
+            partnerIncomeBase: u.partnerIncomeBase === 'discount_amount' ? 'discount_amount' : 'order_total',
             promoCodes: promoCodes.map((p) => ({
               id: p.promoCodeId,
               code: p.code,
@@ -81,8 +82,14 @@ export async function GET(request: Request) {
     return NextResponse.json(formatted);
   } catch (error) {
     console.error('Error fetching users:', error);
+    const message =
+      error instanceof Error ? error.message : 'Failed to fetch users';
+    const hint =
+      message.includes('partnerIncomeBase') || message.includes('Unknown column')
+        ? ' Run: npx prisma migrate deploy'
+        : '';
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { error: `Failed to fetch users.${hint}`, details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 }
     );
   }

@@ -32,7 +32,9 @@ export default function AdminPartnersPage() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Не удалось загрузить партнёров');
+        const msg = data.error || 'Не удалось загрузить партнёров';
+        const hint = data.details ? ` ${data.details}` : '';
+        throw new Error(msg + hint);
       }
       const data = await response.json();
       setPartners(data);

@@ -32,12 +32,20 @@ export default function AdminPartnerDetailPage() {
   const params = useParams();
   const userId = params.userId as string;
 
-  const [partner, setPartner] = useState<{ id: string; email: string; name: string | null } | null>(null);
+  const [partner, setPartner] = useState<{
+    id: string;
+    email: string;
+    name: string | null;
+    partnerIncomeBase?: 'order_total' | 'discount_amount';
+  } | null>(null);
   const [bindings, setBindings] = useState<Binding[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
   const [allPromos, setAllPromos] = useState<PromoOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [partnerIncomeBase, setPartnerIncomeBase] = useState<'order_total' | 'discount_amount'>('order_total');
+  const [savingIncomeBase, setSavingIncomeBase] = useState(false);
 
   const [addPromoId, setAddPromoId] = useState('');
   const [addPercent, setAddPercent] = useState(10);
@@ -71,6 +79,7 @@ export default function AdminPartnerDetailPage() {
       const usersList = await usersRes.json();
       const p = usersList.find((u: { id: string }) => u.id === userId);
       setPartner(p ?? null);
+      setPartnerIncomeBase(p?.partnerIncomeBase ?? 'order_total');
       setBindings(await bindingsRes.json());
       setStats(await statsRes.json());
       const promos = await promosRes.json();
@@ -92,6 +101,26 @@ export default function AdminPartnerDetailPage() {
 
   const assignedPromoIds = new Set(bindings.map((b) => b.promoCodeId));
   const availablePromos = allPromos.filter((pr) => !assignedPromoIds.has(pr.id));
+
+  async function handleSaveIncomeBase() {
+    setError(null);
+    setSavingIncomeBase(true);
+    try {
+      const res = await fetch(`/api/admin/partners/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerIncomeBase }),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Не удалось сохранить');
+      setPartner((prev) => (prev ? { ...prev, partnerIncomeBase } : null));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    } finally {
+      setSavingIncomeBase(false);
+    }
+  }
 
   async function handleAssign() {
     if (!addPromoId || addPercent < 0 || addPercent > 100) return;
@@ -220,6 +249,32 @@ export default function AdminPartnerDetailPage() {
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
+
+      <section className="card mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Расчёт дохода партнёра</h2>
+        <p className="text-sm text-gray-500 mb-4">От какой базы считать процент дохода по промокодам для этого партнёра.</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Доход считать от</label>
+            <select
+              className="form-input min-w-[280px]"
+              value={partnerIncomeBase}
+              onChange={(e) => setPartnerIncomeBase(e.target.value as 'order_total' | 'discount_amount')}
+            >
+              <option value="order_total">От суммы заказов (корзина с промокодом)</option>
+              <option value="discount_amount">От суммы скидок по промокоду</option>
+            </select>
+          </div>
+          <Button
+            variant="primary"
+            type="button"
+            onClick={handleSaveIncomeBase}
+            disabled={savingIncomeBase}
+          >
+            {savingIncomeBase ? 'Сохранение…' : 'Сохранить'}
+          </Button>
+        </div>
+      </section>
 
       <section className="card mt-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Привязанные промокоды</h2>
