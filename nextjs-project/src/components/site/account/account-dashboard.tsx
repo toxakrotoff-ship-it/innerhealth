@@ -38,20 +38,20 @@ export function AccountDashboard({
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
           href="/account/orders"
-          className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-medium text-text transition hover:border-action-blue"
+          className="rounded-full border border-gray-300 bg-white px-5 py-3 min-h-[48px] flex items-center justify-center text-center text-sm font-medium text-text transition hover:border-action-blue"
         >
           Мои заказы
         </Link>
         <Link
           href="/account/addresses"
-          className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-medium text-text transition hover:border-action-blue"
+          className="rounded-full border border-gray-300 bg-white px-5 py-3 min-h-[48px] flex items-center justify-center text-center text-sm font-medium text-text transition hover:border-action-blue"
         >
           Мои адреса
         </Link>
         {userRole === 'PARTNER' && (
           <Link
             href="/account/partner"
-            className="rounded-full border border-gray-300 bg-white px-5 py-3 text-center text-sm font-medium text-text transition hover:border-action-blue"
+            className="rounded-full border border-gray-300 bg-white px-5 py-3 min-h-[48px] flex items-center justify-center text-center text-sm font-medium text-text transition hover:border-action-blue sm:col-span-2"
           >
             Партнёрская программа
           </Link>

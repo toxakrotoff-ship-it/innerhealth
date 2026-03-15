@@ -19,7 +19,7 @@ export default async function AccountOrdersPage({ searchParams }: AccountOrdersP
   const orders = await getUserOrders(session.user.id as string, parsedQuery)
 
   return (
-    <div className="mx-auto max-w-[min(70rem,92vw)] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[min(70rem,92vw)] px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
       <AccountOrdersTable
         items={orders.items}
         page={orders.pagination.page}

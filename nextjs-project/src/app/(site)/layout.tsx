@@ -27,7 +27,7 @@ export default async function SiteLayout({
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <SiteHeader />
-      <main className="flex-1 pt-16 2xl:pt-18 3xl:pt-20 4xl:pt-24 5xl:pt-28 6xl:pt-32">
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] 2xl:pt-[calc(4.5rem+env(safe-area-inset-top))] 3xl:pt-[calc(5rem+env(safe-area-inset-top))] 4xl:pt-[calc(6rem+env(safe-area-inset-top))] 5xl:pt-[calc(7rem+env(safe-area-inset-top))] 6xl:pt-[calc(8rem+env(safe-area-inset-top))]">
         {children}
       </main>
       <SiteFooter />

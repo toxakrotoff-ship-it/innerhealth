@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Button from '@/components/ui/button';
 
@@ -16,6 +16,8 @@ const ROLE_FILTERS = [
   ...ROLES,
 ] as const;
 
+const ROLE_LABEL_MAP: Record<string, string> = Object.fromEntries(ROLES.map((r) => [r.value, r.label]));
+
 interface AdminUser {
   id: string;
   email: string;
@@ -28,18 +30,53 @@ interface AdminUser {
   totalRevenue?: number;
 }
 
+function formatDateRu(iso: string) {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDateTimeRu(iso: string) {
+  return new Date(iso).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(value);
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     name: '',
     role: 'USER' as string,
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const filteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(q) || (u.name ?? '').toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
+
+  const stats = useMemo(() => {
+    const byRole: Record<string, number> = {};
+    ROLES.forEach((r) => (byRole[r.value] = 0));
+    users.forEach((u) => (byRole[u.role] = (byRole[u.role] ?? 0) + 1));
+    return { total: users.length, byRole };
+  }, [users]);
 
   useEffect(() => {
     fetchUsers();
@@ -193,31 +230,51 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2 items-center">
-        <span className="text-sm text-gray-600">Роль:</span>
-        {ROLE_FILTERS.map((r) => (
-          <button
-            key={r.value || 'all'}
+      <div className="mb-4 space-y-4">
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-sm text-gray-600">Роль:</span>
+          {ROLE_FILTERS.map((r) => (
+            <button
+              key={r.value || 'all'}
+              type="button"
+              onClick={() => setRoleFilter(r.value)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                (r.value === '' && roleFilter === '') || roleFilter === r.value
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+          <Button
             type="button"
-            onClick={() => setRoleFilter(r.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-              (r.value === '' && roleFilter === '') || roleFilter === r.value
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            variant="secondary"
+            onClick={() => fetchUsers()}
+            className="ml-auto"
+            disabled={loading}
           >
-            {r.label}
-          </button>
-        ))}
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => fetchUsers()}
-          className="ml-auto"
-          disabled={loading}
-        >
-          Обновить
-        </Button>
+            Обновить
+          </Button>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <input
+            type="search"
+            placeholder="Поиск по email или имени..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="form-input max-w-xs"
+            aria-label="Поиск пользователей"
+          />
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+            <span>Всего: <strong className="text-gray-900">{stats.total}</strong></span>
+            {ROLES.map((r) => (
+              <span key={r.value}>
+                {r.label}: <strong className="text-gray-900">{stats.byRole[r.value] ?? 0}</strong>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {showForm && (
@@ -307,135 +364,217 @@ export default function AdminUsersPage() {
             </div>
           </div>
         </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <div className="table-responsive overflow-x-auto">
-            <table className="table table-horizontal min-w-[640px]">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Имя
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Роль
-                  </th>
-                  {(roleFilter === 'PARTNER' || users.some((u) => u.role === 'PARTNER')) && (
-                    <>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Промокоды
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Заказов
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Сумма выкупа
-                      </th>
-                    </>
-                  )}
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Последний вход
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Дата регистрации
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {user.email}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {user.name || '—'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <select
-                        className="form-input text-sm py-1.5 pr-8"
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                      >
-                        {ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    {(roleFilter === 'PARTNER' || users.some((u) => u.role === 'PARTNER')) && (
-                      <>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {user.role === 'PARTNER' && user.promoCodes?.length
-                            ? user.promoCodes.map((p) => p.code).join(', ')
-                            : user.role === 'PARTNER'
-                              ? '—'
-                              : '—'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {user.role === 'PARTNER' && user.ordersCount !== undefined ? user.ordersCount : '—'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {user.role === 'PARTNER' && user.totalRevenue !== undefined
-                            ? new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(user.totalRevenue)
-                            : '—'}
-                        </td>
-                      </>
-                    )}
-                    <td
-                      className="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
-                      title={user.lastLoginAt ? new Date(user.lastLoginAt).toISOString() : undefined}
-                    >
-                      {user.lastLoginAt
-                        ? new Date(user.lastLoginAt).toLocaleString('ru-RU', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString('ru-RU')}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap flex items-center gap-1">
-                      {user.role === 'PARTNER' && (
-                        <Link
-                          href={`/admin/partners/${user.id}`}
-                          className="p-2 text-gray-400 hover:text-blue-600 rounded transition"
-                          title="Настроить партнёра"
-                          aria-label="Настроить партнёра"
-                        >
-                          <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                        </Link>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(user)}
-                        className="p-2 text-gray-400 hover:text-red-600 rounded transition"
-                        title="Удалить пользователя"
-                        aria-label="Удалить пользователя"
-                      >
-                        <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      ) : searchQuery.trim() && filteredUsers.length === 0 ? (
+        <div className="card">
+          <div className="p-8 text-center">
+            <p className="text-gray-600">По запросу «{searchQuery.trim()}» никого не найдено.</p>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="mt-3 text-sm text-blue-600 hover:underline"
+            >
+              Сбросить поиск
+            </button>
           </div>
         </div>
+      ) : (
+        <>
+          {searchQuery.trim() && (
+            <p className="mb-3 text-sm text-gray-500">
+              Показано {filteredUsers.length} из {users.length}
+            </p>
+          )}
+          {/* Мобильный вид: карточки */}
+          <div className="md:hidden space-y-3">
+            {filteredUsers.map((user) => (
+              <div
+                key={user.id}
+                className="card border border-gray-200 rounded-xl p-4 space-y-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 break-all">{user.email}</p>
+                    {user.name && <p className="text-sm text-gray-600 mt-0.5">{user.name}</p>}
+                  </div>
+                  <span className="shrink-0 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+                    {ROLE_LABEL_MAP[user.role] ?? user.role}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <span>Регистрация: {formatDateRu(user.createdAt)}</span>
+                  <span>Вход: {user.lastLoginAt ? formatDateTimeRu(user.lastLoginAt) : '—'}</span>
+                  {user.role === 'PARTNER' && (
+                    <>
+                      <span>Заказов: {user.ordersCount ?? 0}</span>
+                      <span>Выкуп: {user.totalRevenue !== undefined ? formatMoney(user.totalRevenue) : '—'}</span>
+                      {user.promoCodes?.length ? (
+                        <span className="col-span-2">Промокоды: {user.promoCodes.map((p) => p.code).join(', ')}</span>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                  <select
+                    className="form-input text-sm py-1.5 pr-8 flex-1 min-w-0"
+                    value={user.role}
+                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                  {user.role === 'PARTNER' && (
+                    <Link
+                      href={`/admin/partners/${user.id}`}
+                      className="p-2 text-gray-500 hover:text-blue-600 rounded transition border border-gray-200"
+                      title="Настроить партнёра"
+                      aria-label="Настроить партнёра"
+                    >
+                      <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(user)}
+                    className="p-2 text-gray-500 hover:text-red-600 rounded transition border border-gray-200"
+                    title="Удалить пользователя"
+                    aria-label="Удалить пользователя"
+                  >
+                    <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Десктоп: таблица */}
+          <div className="hidden md:block card overflow-hidden">
+            <div className="table-responsive overflow-x-auto">
+              <table className="table table-horizontal w-full">
+                <thead>
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[180px]">
+                      Email
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Имя
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Роль
+                    </th>
+                    {(roleFilter === 'PARTNER' || users.some((u) => u.role === 'PARTNER')) && (
+                      <>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Промокоды
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Заказов
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Сумма выкупа
+                        </th>
+                      </>
+                    )}
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Последний вход
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Дата регистрации
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Действия
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 break-all max-w-[240px]">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {user.name || '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <select
+                          className="form-input text-sm py-1.5 pr-8"
+                          value={user.role}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r.value} value={r.value}>
+                              {r.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      {(roleFilter === 'PARTNER' || users.some((u) => u.role === 'PARTNER')) && (
+                        <>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {user.role === 'PARTNER' && user.promoCodes?.length
+                              ? user.promoCodes.map((p) => p.code).join(', ')
+                              : user.role === 'PARTNER'
+                                ? '—'
+                                : '—'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {user.role === 'PARTNER' && user.ordersCount !== undefined ? user.ordersCount : '—'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {user.role === 'PARTNER' && user.totalRevenue !== undefined
+                              ? formatMoney(user.totalRevenue)
+                              : '—'}
+                          </td>
+                        </>
+                      )}
+                      <td
+                        className="px-4 py-3 whitespace-nowrap text-sm text-gray-700"
+                        title={user.lastLoginAt ? new Date(user.lastLoginAt).toISOString() : undefined}
+                      >
+                        {user.lastLoginAt ? formatDateTimeRu(user.lastLoginAt) : '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {formatDateRu(user.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap flex items-center gap-1">
+                        {user.role === 'PARTNER' && (
+                          <Link
+                            href={`/admin/partners/${user.id}`}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded transition"
+                            title="Настроить партнёра"
+                            aria-label="Настроить партнёра"
+                          >
+                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user)}
+                          className="p-2 text-gray-400 hover:text-red-600 rounded transition"
+                          title="Удалить пользователя"
+                          aria-label="Удалить пользователя"
+                        >
+                          <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

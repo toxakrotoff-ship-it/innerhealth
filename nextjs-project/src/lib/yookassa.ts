@@ -172,6 +172,48 @@ export async function getYookassaPayment(
   return { status: data.status, metadata: data.metadata }
 }
 
+/** Result of checking YooKassa API connection (credentials and network). */
+export interface YookassaConnectionCheck {
+  ok: boolean
+  error?: string
+}
+
+/**
+ * Проверяет подключение к API ЮKassa: валидность учётных данных и доступность API.
+ * Выполняет GET /payments?limit=1 — при 200 подключение OK, при 401 неверные учётные данные.
+ */
+export async function checkYookassaConnection(
+  credentials?: YookassaCredentials | null
+): Promise<YookassaConnectionCheck> {
+  try {
+    const creds = getCredentials(credentials)
+    const auth = buildAuthHeader(creds)
+    const res = await fetch(`${YOOKASSA_API}/payments?limit=1`, {
+      method: 'GET',
+      headers: { Authorization: auth, 'Content-Type': 'application/json' },
+    })
+    if (res.status === 401) {
+      return { ok: false, error: 'Неверный Shop ID или секретный ключ' }
+    }
+    if (!res.ok) {
+      const errText = await res.text()
+      let message = `HTTP ${res.status}`
+      try {
+        const errJson = JSON.parse(errText)
+        if (errJson.description) message = errJson.description
+        if (errJson.code) message = `${errJson.code}: ${message}`
+      } catch {
+        if (errText) message = errText.slice(0, 200)
+      }
+      return { ok: false, error: message }
+    }
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: message }
+  }
+}
+
 /**
  * Формирует позиции чека 54-ФЗ из позиций заказа.
  * vat_code: 1 — без НДС, 2—6 — разные ставки НДС (см. документацию ЮKassa).

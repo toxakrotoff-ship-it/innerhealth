@@ -89,3 +89,22 @@ export async function confirmTelegramLinkAndReturnUserId(
   });
   return linkRecord.userId;
 }
+
+/**
+ * Get Telegram user id for the partner who owns the given promo code (by promoCodeId).
+ * Returns null if promo is not assigned to a partner or partner has no Telegram linked.
+ */
+export async function getPartnerTelegramUserIdByPromoCodeId(
+  promoCodeId: string
+): Promise<string | null> {
+  const binding = await prisma.partnerPromoCode.findUnique({
+    where: { promoCodeId },
+    select: { userId: true },
+  });
+  if (!binding) return null;
+  const whitelist = await prisma.telegramWhitelist.findUnique({
+    where: { userId: binding.userId },
+    select: { telegramUserId: true },
+  });
+  return whitelist?.telegramUserId ?? null;
+}

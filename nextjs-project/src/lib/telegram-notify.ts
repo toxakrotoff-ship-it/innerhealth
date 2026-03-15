@@ -1,11 +1,11 @@
 import * as telegramService from '@/services/telegram.service';
 import * as userService from '@/services/user.service';
+import * as settingsService from '@/services/settings.service';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = 'https://api.telegram.org';
 
-async function getWhitelistChatIds(): Promise<string[]> {
-  if (!TELEGRAM_BOT_TOKEN) return [];
+async function getWhitelistChatIds(token: string | undefined): Promise<string[]> {
+  if (!token) return [];
   const list = await telegramService.getTelegramWhitelist();
   return list.map((r) => r.telegramUserId);
 }
@@ -14,9 +14,14 @@ interface SendMessageOptions {
   replyMarkup?: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
 }
 
-async function sendMessage(chatId: string, text: string, options?: SendMessageOptions): Promise<void> {
-  if (!TELEGRAM_BOT_TOKEN) return;
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+async function sendMessage(
+  token: string | undefined,
+  chatId: string,
+  text: string,
+  options?: SendMessageOptions
+): Promise<void> {
+  if (!token) return;
+  const url = `${TELEGRAM_API}/bot${token}/sendMessage`;
   const body: Record<string, unknown> = {
     chat_id: chatId,
     text,
@@ -58,12 +63,17 @@ export interface OrderNotifyPayload {
     country: string;
   };
   promoCode?: string | null;
+  /** If set, partner linked to this promo will receive a separate short notification. */
+  promoCodeId?: string | null;
 }
 
 export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
-  const chatIdsPromise = getWhitelistChatIds();
-  chatIdsPromise.then(async (chatIds) => {
-    if (chatIds.length === 0) return;
+  settingsService.getTelegramBotToken().then((token) => {
+    if (!token) return null;
+    return getWhitelistChatIds(token).then((chatIds) => ({ token, chatIds }));
+  }).then(async (result) => {
+    if (!result || result.chatIds.length === 0) return;
+    const { token, chatIds } = result;
     const lines: string[] = [
       '<b>Новый заказ</b>',
       `ID: ${escapeHtml(payload.orderId)}`,
@@ -86,9 +96,27 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
     ];
     const text = lines.filter(Boolean).join('\n');
     for (const chatId of chatIds) {
-      await sendMessage(chatId, text).catch((e) =>
+      await sendMessage(token, chatId, text).catch((e) =>
         console.error('[telegram-notify] order notify error:', e)
       );
+    }
+    // Notify partner whose promo was used (if linked to Telegram)
+    if (payload.promoCodeId) {
+      telegramService
+        .getPartnerTelegramUserIdByPromoCodeId(payload.promoCodeId)
+        .then((partnerChatId) => {
+          if (!partnerChatId || !token) return;
+          const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
+          const partnerText =
+            `💰 <b>Заказ по вашему промокоду</b>\n\n` +
+            `Промокод: ${promoLabel}\n` +
+            `Заказ ID: ${escapeHtml(payload.orderId)}\n` +
+            `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
+          return sendMessage(token, partnerChatId, partnerText).catch((e) =>
+            console.error('[telegram-notify] partner order notify error:', e)
+          );
+        })
+        .catch((e) => console.error('[telegram-notify] getPartnerTelegramUserIdByPromoCodeId:', e));
     }
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
 }
@@ -99,23 +127,25 @@ export interface FormNotifyPayload {
 }
 
 export function notifyTelegramForm(payload: FormNotifyPayload): void {
-  const chatIdsPromise = getWhitelistChatIds();
-  chatIdsPromise.then(async (chatIds) => {
-    if (chatIds.length === 0) return;
-    const lines: string[] = [
-      '<b>Новая заявка с сайта</b>',
-      `Форма: ${escapeHtml(payload.formName)}`,
-      '',
-      ...Object.entries(payload.fields).map(
-        ([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value || '—')}`
-      ),
-    ];
-    const text = lines.join('\n');
-    for (const chatId of chatIds) {
-      await sendMessage(chatId, text).catch((e) =>
-        console.error('[telegram-notify] form notify error:', e)
-      );
-    }
+  settingsService.getTelegramBotToken().then((token) => {
+    if (!token) return;
+    return getWhitelistChatIds(token).then(async (chatIds) => {
+      if (chatIds.length === 0) return;
+      const lines: string[] = [
+        '<b>Новая заявка с сайта</b>',
+        `Форма: ${escapeHtml(payload.formName)}`,
+        '',
+        ...Object.entries(payload.fields).map(
+          ([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value || '—')}`
+        ),
+      ];
+      const text = lines.join('\n');
+      for (const chatId of chatIds) {
+        await sendMessage(token, chatId, text).catch((e) =>
+          console.error('[telegram-notify] form notify error:', e)
+        );
+      }
+    });
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
 }
 
@@ -133,59 +163,102 @@ export interface ReviewNotifyPayload {
 /** Уведомление в Telegram о новом отзыве с кнопками «Разместить» / «Отклонить». Только для чатов из вайтлиста. */
 export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
   const { reviewId, authorName, text } = payload;
-  const chatIdsPromise = getWhitelistChatIds();
-  chatIdsPromise.then(async (chatIds) => {
-    if (chatIds.length === 0) return;
-    const textPreview = text.length > 300 ? text.slice(0, 297) + '…' : text;
-    const lines: string[] = [
-      '📝 <b>Новый отзыв (на модерации)</b>',
-      `Автор: ${escapeHtml(authorName)}`,
-      '',
-      escapeHtml(textPreview),
-    ];
-    const messageText = lines.join('\n');
-    const callbackDataPrefix = 'review_';
-    const approveData = callbackDataPrefix + 'approve_' + reviewId;
-    const rejectData = callbackDataPrefix + 'reject_' + reviewId;
-    if (approveData.length > 64 || rejectData.length > 64) {
-      console.error('[telegram-notify] review id too long for callback_data');
-    }
-    const replyMarkup = {
-      inline_keyboard: [
-        [
-          { text: '✅ Разместить', callback_data: approveData.slice(0, 64) },
-          { text: '❌ Отклонить', callback_data: rejectData.slice(0, 64) },
+  settingsService.getTelegramBotToken().then((token) => {
+    if (!token) return;
+    return getWhitelistChatIds(token).then(async (chatIds) => {
+      if (chatIds.length === 0) return;
+      const textPreview = text.length > 300 ? text.slice(0, 297) + '…' : text;
+      const lines: string[] = [
+        '📝 <b>Новый отзыв (на модерации)</b>',
+        `Автор: ${escapeHtml(authorName)}`,
+        '',
+        escapeHtml(textPreview),
+      ];
+      const messageText = lines.join('\n');
+      const callbackDataPrefix = 'review_';
+      const approveData = callbackDataPrefix + 'approve_' + reviewId;
+      const rejectData = callbackDataPrefix + 'reject_' + reviewId;
+      if (approveData.length > 64 || rejectData.length > 64) {
+        console.error('[telegram-notify] review id too long for callback_data');
+      }
+      const replyMarkup = {
+        inline_keyboard: [
+          [
+            { text: '✅ Разместить', callback_data: approveData.slice(0, 64) },
+            { text: '❌ Отклонить', callback_data: rejectData.slice(0, 64) },
+          ],
         ],
-      ],
-    };
-    for (const chatId of chatIds) {
-      await sendMessage(chatId, messageText, { replyMarkup }).catch((e) =>
-        console.error('[telegram-notify] review notify error:', e)
-      );
-    }
+      };
+      for (const chatId of chatIds) {
+        await sendMessage(token, chatId, messageText, { replyMarkup }).catch((e) =>
+          console.error('[telegram-notify] review notify error:', e)
+        );
+      }
+    });
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
+}
+
+export interface PaymentErrorNotifyPayload {
+  orderId: string;
+  /** Сумма заказа в рублях (опционально, например для webhook неизвестна). */
+  total?: number;
+  errorMessage: string;
+  /** Контекст: создание платежа при оформлении заказа или верификация в webhook. */
+  context: 'create' | 'webhook';
+}
+
+/** Алерт в Telegram при ошибке ЮKassa (нет связи с платёжной системой, ошибка API и т.д.). */
+export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): void {
+  const { orderId, total, errorMessage, context } = payload;
+  settingsService.getTelegramBotToken().then((token) => {
+    if (!token) return;
+    return getWhitelistChatIds(token);
+  }).then(async (chatIds) => {
+    if (!chatIds || chatIds.length === 0) return;
+    const contextLabel = context === 'create' ? 'создание платежа' : 'верификация в webhook';
+    const totalStr =
+      total !== undefined && total !== null
+        ? `Сумма: ${total.toFixed(0)} ₽. `
+        : '';
+    const lines: string[] = [
+      '⚠️ <b>Ошибка ЮKassa</b>',
+      `Не удалось связаться с платёжной системой (${escapeHtml(contextLabel)}).`,
+      '',
+      `Заказ: ${escapeHtml(orderId)}. ${totalStr}Ошибка: ${escapeHtml(errorMessage.slice(0, 300))}`,
+    ];
+    const text = lines.join('\n');
+    return settingsService.getTelegramBotToken().then((token) => {
+      if (!token) return;
+      for (const chatId of chatIds) {
+        sendMessage(token, chatId, text).catch((e) =>
+          console.error('[telegram-notify] payment error notify:', e)
+        );
+      }
+    });
+  }).catch((e) => console.error('[telegram-notify] payment error getWhitelistChatIds:', e));
 }
 
 /** Уведомление в Telegram о том, что пользователь привязал аккаунт (подключился к уведомлениям). */
 export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void {
   const { userId, telegramUserId } = payload;
-  Promise.all([
-    getWhitelistChatIds(),
-    userService.findUserProfile(userId),
-  ])
-    .then(async ([chatIds, user]) => {
-      if (chatIds.length === 0) return;
-      const label = user
-        ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
-        : userId;
-      const text =
-        '🔗 <b>Подключение Telegram</b>\n\n' +
-        `Пользователь ${escapeHtml(label)} привязал уведомления (Telegram ID: <code>${escapeHtml(telegramUserId)}</code>).`;
-      for (const chatId of chatIds) {
-        await sendMessage(chatId, text).catch((e) =>
-          console.error('[telegram-notify] connection notify error:', e)
-        );
-      }
-    })
-    .catch((e) => console.error('[telegram-notify] connection notify:', e));
+  settingsService.getTelegramBotToken().then((token) => {
+    if (!token) return null;
+    return getWhitelistChatIds(token).then((chatIds) =>
+      userService.findUserProfile(userId).then((user) => ({ token, chatIds, user }))
+    );
+  }).then(async (result) => {
+    if (!result || result.chatIds.length === 0) return;
+    const { token, chatIds, user } = result;
+    const label = user
+      ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
+      : userId;
+    const text =
+      '🔗 <b>Подключение Telegram</b>\n\n' +
+      `Пользователь ${escapeHtml(label)} привязал уведомления (Telegram ID: <code>${escapeHtml(telegramUserId)}</code>).`;
+    for (const chatId of chatIds) {
+      await sendMessage(token, chatId, text).catch((e) =>
+        console.error('[telegram-notify] connection notify error:', e)
+      );
+    }
+  }).catch((e) => console.error('[telegram-notify] connection notify:', e));
 }

@@ -7,7 +7,7 @@ import {
   appendDeliveryReceiptItem,
   getBaseUrl,
 } from '@/lib/yookassa'
-import { notifyTelegramOrder } from '@/lib/telegram-notify'
+import { notifyTelegramOrder, notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { sendNewOrderNotification } from '@/lib/email'
 import { randomUUID } from 'crypto'
 import * as productService from '@/services/product.service'
@@ -15,6 +15,8 @@ import * as promoService from '@/services/promo.service'
 import * as orderService from '@/services/order.service'
 import * as userService from '@/services/user.service'
 import * as settingsService from '@/services/settings.service'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 /** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
 function parseVatCode(value: string | undefined, fallback: number): number {
@@ -128,9 +130,13 @@ export async function POST(request: Request) {
       sumPromoPrice + sumEligibleFixed + applyPromoToSubtotal(sumEligiblePercent, promo) + sumIneligible
     const total = goodsTotal + deliverySum
 
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id ?? null
+
     const order = await orderService.createOrderWithItemsAndShipping({
       total,
       promoCodeId: promoCodeId || null,
+      userId,
       items: items.map((i) => {
         const product = productMap.get(i.productId)!
         return {
@@ -176,6 +182,7 @@ export async function POST(request: Request) {
         country: (shipping.country ?? 'Россия').trim(),
       },
       promoCode: promoCodeStr,
+      promoCodeId: order.promoCodeId ?? undefined,
     })
 
     const orderNotificationPayload = {
@@ -266,6 +273,13 @@ export async function POST(request: Request) {
         )
       } catch (yooErr) {
         console.error('YooKassa create payment error:', yooErr)
+        const errorMessage = yooErr instanceof Error ? yooErr.message : String(yooErr)
+        notifyTelegramPaymentError({
+          orderId: order.id,
+          total,
+          errorMessage,
+          context: 'create',
+        })
         return NextResponse.json(
           { error: 'Заказ создан, но не удалось создать платёж. Мы свяжемся с вами.' },
           {

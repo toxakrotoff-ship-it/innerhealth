@@ -117,6 +117,41 @@ async function getPromoStats(): Promise<Array<{ code: string; usedCount: number;
   }
 }
 
+interface PartnerStatRow {
+  promoCodeId: string;
+  code: string;
+  ordersCount: number;
+  applicationsCount: number;
+  partnerIncome: number;
+}
+
+async function getPartnerStatsByTelegramUserId(
+  telegramUserId: string
+): Promise<{ stats: PartnerStatRow[] } | { error: string }> {
+  try {
+    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const res = await fetchWithTimeout(
+      `${base}/api/telegram/partner-stats?telegramUserId=${encodeURIComponent(telegramUserId)}`,
+      { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
+    );
+    const raw = await res.text();
+    if (!res.ok) {
+      let err: { error?: string } = {};
+      try {
+        err = JSON.parse(raw) as { error?: string };
+      } catch {
+        err = { error: raw.slice(0, 100) };
+      }
+      return { error: err.error || 'Не удалось загрузить статистику' };
+    }
+    const data = JSON.parse(raw) as { stats?: PartnerStatRow[] };
+    return { stats: Array.isArray(data.stats) ? data.stats : [] };
+  } catch (e) {
+    console.error('[bot] getPartnerStatsByTelegramUserId error:', e instanceof Error ? e.name : e);
+    return { error: 'Сервис временно недоступен' };
+  }
+}
+
 async function sendMessage(chatId: string, text: string): Promise<void> {
   const safeText = String(text).slice(0, 4096);
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -329,14 +364,17 @@ async function run(): Promise<void> {
             if (result.success) {
               await sendMessage(
                 chatId,
-                '✅ Вас подключили к уведомлениям.\n\nВы будете получать сообщения о новых заказах и заявках с сайта Inner Health.'
+                '✅ Вас подключили к уведомлениям.\n\nВы будете получать сообщения о новых заказах и заявках с сайта Inner Health. Партнёрам: команда /stats — статистика по вашим промокодам.'
               ).catch(() => {});
             } else {
               const errMsg = result.error === 'Code expired' ? 'Код истёк. Создайте новую ссылку в админке (Профиль → Подключить Telegram).' : (result.error || 'Не удалось привязать. Попробуйте снова.');
               await sendMessage(chatId, errMsg).catch(() => {});
             }
           } else {
-            await sendMessage(chatId, 'Используйте ссылку из админки (Профиль → Подключить Telegram), чтобы подключить уведомления.').catch(() => {});
+            await sendMessage(
+              chatId,
+              'Используйте ссылку из админки (Профиль → Подключить Telegram) или из личного кабинета партнёра на сайте, чтобы подключить уведомления.'
+            ).catch(() => {});
           }
           continue;
         }
@@ -386,8 +424,39 @@ async function run(): Promise<void> {
           continue;
         }
 
+        if (text === '/stats' || text === '/mystats') {
+          const result = await getPartnerStatsByTelegramUserId(fromId);
+          if ('error' in result) {
+            await sendMessage(
+              chatId,
+              result.error === 'Not a partner or Telegram not linked'
+                ? 'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.'
+                : result.error
+            ).catch(() => {});
+            continue;
+          }
+          const stats = result.stats;
+          if (stats.length === 0) {
+            await sendMessage(chatId, 'У вас пока нет привязанных промокодов или статистики.').catch(() => {});
+            continue;
+          }
+          const totalOrders = stats.reduce((s, x) => s + x.ordersCount, 0);
+          const totalIncome = stats.reduce((s, x) => s + x.partnerIncome, 0);
+          const lines = stats.map((p) => {
+            const code = escapeHtml(p.code.slice(0, 50));
+            return `• <code>${code}</code> — применений: ${p.applicationsCount}, оплачено: ${p.ordersCount}, доход: ${p.partnerIncome.toFixed(0)} ₽`;
+          });
+          const header =
+            '<b>Ваша статистика</b>\n\n' +
+            `Оплачено заказов: <b>${totalOrders}</b>\n` +
+            `Ваш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n` +
+            lines.join('\n');
+          await sendMessage(chatId, header).catch(() => {});
+          continue;
+        }
+
         if (text.startsWith('/')) {
-          await sendMessage(chatId, 'Неизвестная команда. Доступны: /start, /status, /promo').catch(() => {});
+          await sendMessage(chatId, 'Неизвестная команда. Доступны: /start, /status, /promo, /stats (для партнёров).').catch(() => {});
         }
       } catch (e) {
         console.error('Bot update error:', e);

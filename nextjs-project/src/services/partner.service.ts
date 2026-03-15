@@ -14,7 +14,10 @@ export interface PartnerStatForAdmin {
 export interface PartnerStatForPartner {
   promoCodeId: string;
   code: string;
+  /** Оплаченные заказы (paid/completed) */
   ordersCount: number;
+  /** Всего применений промокода (любой статус заказа) */
+  applicationsCount: number;
   partnerIncome: number;
 }
 
@@ -77,20 +80,26 @@ export async function getPartnerStatsForPartner(
   const results: PartnerStatForPartner[] = [];
 
   for (const b of bindings) {
-    const agg = await prisma.order.aggregate({
-      where: {
-        promoCodeId: b.promoCodeId,
-        status: { in: [...PAID_STATUSES] },
-      },
-      _count: { id: true },
-      _sum: { total: true },
-    });
-    const totalAmount = agg._sum.total ?? 0;
+    const [paidAgg, applicationsAgg] = await Promise.all([
+      prisma.order.aggregate({
+        where: {
+          promoCodeId: b.promoCodeId,
+          status: { in: [...PAID_STATUSES] },
+        },
+        _count: { id: true },
+        _sum: { total: true },
+      }),
+      prisma.order.count({
+        where: { promoCodeId: b.promoCodeId },
+      }),
+    ]);
+    const totalAmount = paidAgg._sum.total ?? 0;
     const partnerIncome = totalAmount * (b.commissionPercent / 100);
     results.push({
       promoCodeId: b.promoCode.id,
       code: b.promoCode.code,
-      ordersCount: agg._count.id,
+      ordersCount: paidAgg._count.id,
+      applicationsCount: applicationsAgg,
       partnerIncome,
     });
   }

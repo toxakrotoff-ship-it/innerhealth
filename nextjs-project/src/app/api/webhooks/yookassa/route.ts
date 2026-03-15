@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createCdekOrder } from '@/lib/cdek'
 import { getYookassaPayment } from '@/lib/yookassa'
+import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
 
@@ -90,6 +91,12 @@ export async function POST(request: Request) {
       payment = await getYookassaPayment(body.object.id, credentials)
     } catch (err) {
       console.error('[webhook/yookassa] GET payment verification failed', orderId, err)
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      notifyTelegramPaymentError({
+        orderId,
+        errorMessage,
+        context: 'webhook',
+      })
       return NextResponse.json({ ok: true })
     }
     if (!payment || payment.status !== 'succeeded') {

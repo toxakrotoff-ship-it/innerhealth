@@ -345,6 +345,26 @@ export async function getCdekToken(): Promise<string> {
   return data.access_token
 }
 
+/** Результат проверки подключения к API СДЭК. */
+export interface CdekConnectionCheck {
+  ok: boolean
+  error?: string
+}
+
+/**
+ * Проверяет подключение к API СДЭК: получает OAuth-токен (учётные данные из env).
+ * Успех означает валидные CDEK_CLIENT_ID и CDEK_CLIENT_SECRET (или CDEK_ACCOUNT и CDEK_SECURE).
+ */
+export async function checkCdekConnection(): Promise<CdekConnectionCheck> {
+  try {
+    await getCdekToken()
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: message }
+  }
+}
+
 /**
  * Расчёт стоимости доставки по списку тарифов (все доступные варианты).
  * Использует endpoint /v2/calculator/tarifflist (список тарифов с ценами).

@@ -20,6 +20,7 @@ export const SETTING_KEYS = [
   'site_name',
   'site_contact_email',
   'default_currency',
+  'telegram_bot_token',
 ] as const
 
 export const SCHEMA_ORG_KEYS = [
@@ -82,4 +83,12 @@ export const YOOKASSA_KEYS = [
 
 export async function getYookassaSettingsMap() {
   return getSettingsMap(YOOKASSA_KEYS);
+}
+
+/** Telegram bot token: из настроек админки или TELEGRAM_BOT_TOKEN. Для уведомлений и link-code. */
+export async function getTelegramBotToken(): Promise<string | undefined> {
+  const fromEnv = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const map = await getSettingsMap(['telegram_bot_token']);
+  const fromSettings = map.telegram_bot_token?.trim();
+  return fromSettings || fromEnv || undefined;
 }

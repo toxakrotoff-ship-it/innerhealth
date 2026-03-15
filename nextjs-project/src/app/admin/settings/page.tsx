@@ -39,9 +39,10 @@ const FIELDS: Array<{
   label: string;
   type: 'text' | 'password' | 'select';
   placeholder?: string;
-  group: 'cdek' | 'yookassa' | 'site';
+  group: 'cdek' | 'yookassa' | 'site' | 'telegram';
   options?: Array<{ value: string; label: string }>;
 }> = [
+  { key: 'telegram_bot_token', label: 'Токен Telegram-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
   { key: 'cdek_api_key', label: 'API-ключ СДЭК', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
   { key: 'cdek_sender_phone', label: 'Телефон отправителя (СДЭК)', type: 'text', placeholder: '+7 (999) 123-45-67', group: 'cdek' },
@@ -65,7 +66,8 @@ const FIELDS: Array<{
   { key: 'schema_org_social_links', label: 'Ссылки для sameAs (через запятую)', type: 'text', group: 'site' },
 ];
 
-const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site'; title: string }> = [
+const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram'; title: string }> = [
+  { id: 'telegram', title: 'Telegram-бот' },
   { id: 'cdek', title: 'Доставка (СДЭК)' },
   { id: 'yookassa', title: 'Оплата (ЮKassa)' },
   { id: 'site', title: 'Общие настройки сайта' },
@@ -91,6 +93,10 @@ export default function AdminSettingsPage() {
   const [totpCode, setTotpCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [showDisableModal, setShowDisableModal] = useState(false);
+  const [yookassaCheckLoading, setYookassaCheckLoading] = useState(false);
+  const [yookassaCheckResult, setYookassaCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [cdekCheckLoading, setCdekCheckLoading] = useState(false);
+  const [cdekCheckResult, setCdekCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -250,6 +256,66 @@ export default function AdminSettingsPage() {
                   </div>
                 ))}
               </div>
+              {group.id === 'yookassa' && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={yookassaCheckLoading}
+                    onClick={async () => {
+                      setYookassaCheckResult(null);
+                      setYookassaCheckLoading(true);
+                      try {
+                        const res = await fetch('/api/admin/check-yookassa');
+                        const data = await res.json();
+                        setYookassaCheckResult({ ok: data.ok, error: data.error });
+                      } catch {
+                        setYookassaCheckResult({ ok: false, error: 'Ошибка запроса' });
+                      } finally {
+                        setYookassaCheckLoading(false);
+                      }
+                    }}
+                  >
+                    {yookassaCheckLoading ? 'Проверка…' : 'Проверить подключение к ЮKassa'}
+                  </Button>
+                  {yookassaCheckResult && (
+                    <span className={yookassaCheckResult.ok ? 'ml-3 text-green-600 text-sm' : 'ml-3 text-red-600 text-sm'}>
+                      {yookassaCheckResult.ok ? 'Подключение успешно' : yookassaCheckResult.error}
+                    </span>
+                  )}
+                </div>
+              )}
+              {group.id === 'cdek' && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={cdekCheckLoading}
+                    onClick={async () => {
+                      setCdekCheckResult(null);
+                      setCdekCheckLoading(true);
+                      try {
+                        const res = await fetch('/api/admin/check-cdek');
+                        const data = await res.json();
+                        setCdekCheckResult({ ok: data.ok, error: data.error });
+                      } catch {
+                        setCdekCheckResult({ ok: false, error: 'Ошибка запроса' });
+                      } finally {
+                        setCdekCheckLoading(false);
+                      }
+                    }}
+                  >
+                    {cdekCheckLoading ? 'Проверка…' : 'Проверить подключение к СДЭК'}
+                  </Button>
+                  {cdekCheckResult && (
+                    <span className={cdekCheckResult.ok ? 'ml-3 text-green-600 text-sm' : 'ml-3 text-red-600 text-sm'}>
+                      {cdekCheckResult.ok ? 'Подключение успешно' : cdekCheckResult.error}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 

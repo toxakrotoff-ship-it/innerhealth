@@ -15,7 +15,7 @@ export function AccountHeader({ title }: AccountHeaderProps) {
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-medium text-text transition hover:border-action-blue hover:text-action-blue"
+          className="rounded-full border border-gray-300 bg-white px-5 py-3 min-h-[44px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue hover:text-action-blue"
         >
           На сайт
         </Link>

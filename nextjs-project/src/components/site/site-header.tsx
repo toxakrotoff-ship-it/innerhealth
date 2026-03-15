@@ -60,7 +60,7 @@ export async function SiteHeader() {
     {/* Клиентский компонент для очистки поврежденных cookies */}
     <ClearInvalidSession hasInvalidSession={hasInvalidSession} />
     <header
-      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/80"
+      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/80 pt-[env(safe-area-inset-top)]"
     >
       <div 
         className={`
@@ -71,7 +71,7 @@ export async function SiteHeader() {
         `}
       >
         <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
-          <HeaderNavMobile variant="light" />
+          <HeaderNavMobile variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
           <Link
             href="/"
             className={`

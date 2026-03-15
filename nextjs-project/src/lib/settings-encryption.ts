@@ -20,6 +20,7 @@ function isProduction(): boolean {
 export const SENSITIVE_SETTING_KEYS = [
   'yookassa_secret_key',
   'cdek_api_key',
+  'telegram_bot_token',
 ] as const
 
 export type SensitiveSettingKey = (typeof SENSITIVE_SETTING_KEYS)[number]

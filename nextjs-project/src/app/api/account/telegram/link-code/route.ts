@@ -1,25 +1,31 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { requireAdminSession } from '@/lib/require-admin';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import * as telegramService from '@/services/telegram.service';
 import * as settingsService from '@/services/settings.service';
 
-const CODE_BYTES = 12; // 24 hex chars
+const CODE_BYTES = 12;
 const EXPIRES_MINUTES = 10;
 
 function generateCode(): string {
   return randomBytes(CODE_BYTES).toString('hex');
 }
 
-/** POST: создать одноразовый код привязки и вернуть ссылку на бота (ADMIN only). */
+/** POST: создать одноразовый код привязки и вернуть ссылку на бота (PARTNER only). */
 export async function POST() {
-  const session = await requireAdminSession();
-  if (session instanceof NextResponse) return session;
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (session.user.role !== 'PARTNER') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const token = await settingsService.getTelegramBotToken();
   if (!token) {
     return NextResponse.json(
-      { error: 'Telegram bot not configured. Задайте токен в настройках или TELEGRAM_BOT_TOKEN.' },
+      { error: 'Telegram bot not configured. Обратитесь к администратору.' },
       { status: 503 }
     );
   }
@@ -62,7 +68,7 @@ export async function POST() {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error('Telegram link-code error:', message, e);
+    console.error('Telegram link-code (account) error:', message, e);
     return NextResponse.json(
       { error: 'Failed to create link code', details: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 }

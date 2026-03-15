@@ -9,6 +9,7 @@ import { verifyTotpCode } from '@/lib/totp'
 import { verifyCodeHash } from '@/lib/set-initial-password'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import * as auth2faService from '@/services/auth-2fa.service'
+import * as userService from '@/services/user.service'
 
 const bodySchema = z.object({
   code: z.string().length(6, 'Code must be 6 digits').regex(/^\d+$/),
@@ -121,6 +122,12 @@ export async function POST(request: Request) {
   }
 
   const { grantId } = await createGrant(user.id)
+
+  try {
+    await userService.updateLastLoginAt(user.id)
+  } catch (err) {
+    console.error('[verify-2fa] updateLastLoginAt failed:', err)
+  }
 
   await auth2faService.deleteTwoFactorPending(pendingId)
 
