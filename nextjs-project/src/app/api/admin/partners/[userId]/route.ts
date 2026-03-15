@@ -40,8 +40,9 @@ export async function PATCH(
     userId,
     body.partnerIncomeBase
   );
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+  if (result.ok) {
+    return NextResponse.json({ ok: true });
   }
-  return NextResponse.json({ ok: true });
+  const failed = result as { ok: false; error: string };
+  return NextResponse.json({ error: failed.error }, { status: 400 });
 }
