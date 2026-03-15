@@ -1,39 +1,30 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import { checkCdekConnection } from '@/lib/cdek'
+import * as settingsService from '@/services/settings.service'
 
 /**
  * GET /api/admin/check-cdek
- * Проверяет подключение к API СДЭК (OAuth по CDEK_CLIENT_ID и CDEK_CLIENT_SECRET из env).
+ * Проверяет подключение к API СДЭК. Учётные данные из настроек админки или из env.
  * Только для администраторов.
  */
 export async function GET() {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
-  const hasFromEnv =
-    typeof process.env.CDEK_CLIENT_ID === 'string' &&
-    process.env.CDEK_CLIENT_ID.length > 0 &&
-    typeof process.env.CDEK_CLIENT_SECRET === 'string' &&
-    process.env.CDEK_CLIENT_SECRET.length > 0
-  const hasFromLegacyEnv =
-    typeof process.env.CDEK_ACCOUNT === 'string' &&
-    process.env.CDEK_ACCOUNT.length > 0 &&
-    typeof process.env.CDEK_SECURE === 'string' &&
-    process.env.CDEK_SECURE.length > 0
-
-  if (!hasFromEnv && !hasFromLegacyEnv) {
+  const creds = await settingsService.getCdekCredentials()
+  if (!creds) {
     return NextResponse.json(
       {
         ok: false,
         error:
-          'Учётные данные СДЭК не заданы. Укажите CDEK_CLIENT_ID и CDEK_CLIENT_SECRET (или CDEK_ACCOUNT и CDEK_SECURE) в .env',
+          'Учётные данные СДЭК не заданы. Укажите API-ключ и секрет в настройках или CDEK_CLIENT_ID и CDEK_CLIENT_SECRET в .env',
       },
       { status: 400 }
     )
   }
 
-  const result = await checkCdekConnection()
+  const result = await checkCdekConnection(creds)
   if (result.ok) {
     return NextResponse.json({ ok: true })
   }

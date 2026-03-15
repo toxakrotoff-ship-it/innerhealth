@@ -43,7 +43,8 @@ const FIELDS: Array<{
   options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'telegram_bot_token', label: 'Токен Telegram-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
-  { key: 'cdek_api_key', label: 'API-ключ СДЭК', type: 'password', placeholder: '••••••••', group: 'cdek' },
+  { key: 'cdek_api_key', label: 'API-ключ СДЭК (Client ID)', type: 'password', placeholder: '••••••••', group: 'cdek' },
+  { key: 'cdek_client_secret', label: 'Секрет СДЭК (Client Secret)', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
   { key: 'cdek_sender_phone', label: 'Телефон отправителя (СДЭК)', type: 'text', placeholder: '+7 (999) 123-45-67', group: 'cdek' },
   { key: 'cdek_sender_address', label: 'Адрес отправителя (СДЭК)', type: 'text', placeholder: 'Город, улица, дом', group: 'cdek' },

@@ -1,5 +1,6 @@
 /**
  * Интеграция с API СДЭК (https://apidoc.cdek.ru).
+ * Учётные данные OAuth: из настроек админки (cdek_api_key + cdek_client_secret) или из env.
  * Реализовано по разделам документации:
  * - Auth: getOAuthToken (https://apidoc.cdek.ru/#tag/auth/operation/getOAuthToken)
  * - Location: города (https://apidoc.cdek.ru/#tag/location)
@@ -307,21 +308,39 @@ export function mergeCdekPackages(packages: CdekPackage[]): CdekPackage[] {
   ]
 }
 
-let cachedToken: { token: string; expiresAt: number } | null = null
+let cachedToken: {
+  key: string
+  token: string
+  expiresAt: number
+} | null = null
+
+export interface CdekCredentials {
+  clientId: string
+  clientSecret: string
+}
 
 /**
  * Получает OAuth-токен СДЭК (getOAuthToken, кэшируется до истечения).
- * Переменные: CDEK_CLIENT_ID + CDEK_CLIENT_SECRET или CDEK_ACCOUNT + CDEK_SECURE.
+ * Учётные данные: из override, иначе из настроек админки или env (настройки перекрывают env).
  */
-export async function getCdekToken(): Promise<string> {
-  const now = Date.now()
-  if (cachedToken && cachedToken.expiresAt > now + 60_000) {
-    return cachedToken.token
+export async function getCdekToken(
+  override?: CdekCredentials | null
+): Promise<string> {
+  const { getCdekCredentials } = await import('@/services/settings.service')
+  const creds = override ?? (await getCdekCredentials())
+  if (!creds?.clientId || !creds.clientSecret) {
+    throw new Error(
+      'CDEK: задайте учётные данные в настройках (API-ключ и секрет) или CDEK_CLIENT_ID и CDEK_CLIENT_SECRET в .env'
+    )
   }
-  const clientId = process.env.CDEK_CLIENT_ID ?? process.env.CDEK_ACCOUNT
-  const clientSecret = process.env.CDEK_CLIENT_SECRET ?? process.env.CDEK_SECURE
-  if (!clientId || !clientSecret) {
-    throw new Error('CDEK: задайте CDEK_CLIENT_ID и CDEK_CLIENT_SECRET (или CDEK_ACCOUNT и CDEK_SECURE)')
+  const now = Date.now()
+  const cacheKey = creds.clientId
+  if (
+    cachedToken &&
+    cachedToken.key === cacheKey &&
+    cachedToken.expiresAt > now + 60_000
+  ) {
+    return cachedToken.token
   }
   const base = getCdekApiBase()
   const response = await fetch(`${base}/oauth/token`, {
@@ -329,8 +348,8 @@ export async function getCdekToken(): Promise<string> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
     }),
   })
   if (!response.ok) {
@@ -339,6 +358,7 @@ export async function getCdekToken(): Promise<string> {
   }
   const data = (await response.json()) as CdekAuthResponse
   cachedToken = {
+    key: cacheKey,
     token: data.access_token,
     expiresAt: now + (data.expires_in - 60) * 1000,
   }
@@ -352,12 +372,14 @@ export interface CdekConnectionCheck {
 }
 
 /**
- * Проверяет подключение к API СДЭК: получает OAuth-токен (учётные данные из env).
- * Успех означает валидные CDEK_CLIENT_ID и CDEK_CLIENT_SECRET (или CDEK_ACCOUNT и CDEK_SECURE).
+ * Проверяет подключение к API СДЭК: получает OAuth-токен.
+ * Учётные данные: из override, иначе из настроек админки или env (настройки перекрывают env).
  */
-export async function checkCdekConnection(): Promise<CdekConnectionCheck> {
+export async function checkCdekConnection(
+  override?: CdekCredentials | null
+): Promise<CdekConnectionCheck> {
   try {
-    await getCdekToken()
+    await getCdekToken(override)
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
