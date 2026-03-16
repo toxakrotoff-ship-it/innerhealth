@@ -250,7 +250,12 @@ export function buildReceiptItemsFromOrderItems(
   return orderItems.map((item, i) => ({
     description: item.description.slice(0, 128),
     quantity: item.quantity,
-    amount: { value: amounts[i].toFixed(2), currency: 'RUB' },
+    amount: {
+      // YooKassa ожидает здесь цену за единицу товара, а не сумму позиции.
+      // amounts[i] — это сумма по позиции, делим на quantity, чтобы получить цену за единицу.
+      value: (amounts[i] / item.quantity).toFixed(2),
+      currency: 'RUB',
+    },
     vat_code: vatCode,
     payment_mode: 'full_prepayment',
     payment_subject: 'commodity',
