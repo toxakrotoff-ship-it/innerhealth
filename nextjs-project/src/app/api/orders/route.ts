@@ -8,7 +8,7 @@ import {
   getBaseUrl,
 } from '@/lib/yookassa'
 import { notifyTelegramOrder, notifyTelegramPaymentError } from '@/lib/telegram-notify'
-import { sendNewOrderNotification } from '@/lib/email'
+import { sendOrderEmailsWithDelay } from '@/lib/email'
 import { randomUUID } from 'crypto'
 import * as productService from '@/services/product.service'
 import * as promoService from '@/services/promo.service'
@@ -208,11 +208,12 @@ export async function POST(request: Request) {
       promoCode: promoCodeStr,
     }
     const adminEmails = await userService.getAdminNotificationEmails()
-    if (adminEmails.length > 0) {
-      void sendNewOrderNotification(adminEmails, orderNotificationPayload).catch((e) =>
-        console.error('[orders] New order email notification error:', e)
-      )
-    }
+    void sendOrderEmailsWithDelay(
+      adminEmails,
+      shipping.email.trim(),
+      shipping.fullName.trim(),
+      orderNotificationPayload
+    )
 
     const yookassaSettings = await settingsService.getYookassaSettingsMap()
     const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
@@ -239,7 +240,8 @@ export async function POST(request: Request) {
             quantity: oi.quantity,
             price: oi.price,
           })),
-          vatCodeGoods
+          vatCodeGoods,
+          total - deliverySum
         )
         const receiptWithDelivery = appendDeliveryReceiptItem(
           receiptItems,

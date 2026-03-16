@@ -19,6 +19,8 @@ import {
   mapUserAddressToShipping,
   type UserAddressForCheckout,
 } from '@/lib/mappers/user-address-to-shipping'
+import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
+import { validateEmail } from '@/lib/validations/contact'
 
 interface PromoResult {
   valid: boolean
@@ -108,6 +110,8 @@ export function CartPageContent() {
   })
   const [comment, setComment] = useState('')
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [isPrivacyAccepted, setIsPrivacyAccepted] = useState(false)
   const [savedAddresses, setSavedAddresses] = useState<UserAddressForCheckout[]>([])
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
@@ -343,6 +347,11 @@ export function CartPageContent() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    const phoneCheck = validatePhoneRu(formData.phone)
+    const emailCheck = validateEmail(formData.email)
+    setPhoneError(phoneCheck.valid ? null : phoneCheck.message)
+    setEmailError(emailCheck.valid ? null : emailCheck.message)
+    if (!phoneCheck.valid || !emailCheck.valid) return
     const fullName = recipientName.trim() || formData.fullName
     const city = selectedCity?.city ?? formData.city
     let address: string
@@ -459,14 +468,28 @@ export function CartPageContent() {
     <form onSubmit={handleSubmitOrder} className="space-y-8">
       {/* Список товаров на всю ширину */}
       <div className="space-y-4 xl:space-y-6 2xl:space-y-8 3xl:space-y-10 4xl:space-y-12 5xl:space-y-14 6xl:space-y-16">
-        {items.map((line) => (
-          <CartLineRow
-            key={line.productId}
-            line={line}
-            onRemove={() => removeItem(line.productId)}
-            onQuantityChange={(q) => updateQuantity(line.productId, q)}
-          />
-        ))}
+        {items.map((line) => {
+          const lineTotalOriginal = (line.price ?? 0) * line.quantity
+          const isEligibleForPercent =
+            !line.hasPromoPrice &&
+            line.isPromoEligible !== false &&
+            (line.discountPrice == null || line.discountPrice === undefined)
+          const lineTotalAfterPromo =
+            promoResult?.valid &&
+            subtotalEligiblePercent > 0 &&
+            isEligibleForPercent
+              ? lineTotalOriginal * (totalAfterPromo / subtotalEligiblePercent)
+              : lineTotalOriginal
+          return (
+            <CartLineRow
+              key={line.productId}
+              line={line}
+              lineTotalAfterPromo={lineTotalAfterPromo}
+              onRemove={() => removeItem(line.productId)}
+              onQuantityChange={(q) => updateQuantity(line.productId, q)}
+            />
+          )
+        })}
       </div>
 
       <ScalableSpacing size="lg" />
@@ -557,25 +580,58 @@ export function CartPageContent() {
             <Heading2 className="mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20">Контактные данные</Heading2>
             <div className="space-y-3 xl:space-y-4 2xl:space-y-5 3xl:space-y-6 4xl:space-y-7 5xl:space-y-8 6xl:space-y-10">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+                <label htmlFor="cart-phone" className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
                 <input
+                  id="cart-phone"
                   type="tel"
                   required
+                  autoComplete="tel"
                   value={formData.phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                  className="form-input w-full rounded-lg text-base min-h-[44px]"
-                  placeholder="+7 (999) 123-45-67"
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, phone: applyPhoneMask(e.target.value) }))
+                    if (phoneError) setPhoneError(null)
+                  }}
+                  onBlur={() => {
+                    const result = validatePhoneRu(formData.phone)
+                    setPhoneError(result.valid ? null : result.message)
+                  }}
+                  className={`form-input w-full rounded-lg text-base min-h-[44px] ${phoneError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="+7 (999) 999-99-99"
+                  aria-invalid={!!phoneError}
+                  aria-describedby={phoneError ? 'cart-phone-error' : undefined}
                 />
+                {phoneError && (
+                  <p id="cart-phone-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {phoneError}
+                  </p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="cart-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
+                  id="cart-email"
                   type="email"
                   required
+                  autoComplete="email"
                   value={formData.email}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  className="form-input w-full rounded-lg text-base min-h-[44px]"
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                    if (emailError) setEmailError(null)
+                  }}
+                  onBlur={() => {
+                    const result = validateEmail(formData.email)
+                    setEmailError(result.valid ? null : result.message)
+                  }}
+                  className={`form-input w-full rounded-lg text-base min-h-[44px] ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="example@mail.ru"
+                  aria-invalid={!!emailError}
+                  aria-describedby={emailError ? 'cart-email-error' : undefined}
                 />
+                {emailError && (
+                  <p id="cart-email-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {emailError}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -584,14 +640,22 @@ export function CartPageContent() {
             <Heading2 className="mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20">Итого</Heading2>
             <dl className="space-y-2 xl:space-y-3 2xl:space-y-4 3xl:space-y-5 4xl:space-y-6 5xl:space-y-8 6xl:space-y-10 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Товары</span>
+                <span className="text-gray-600">
+                  {discount > 0 ? 'Стоимость товаров (до скидки)' : 'Товары'}
+                </span>
                 <span>{subtotal.toLocaleString('ru-RU')} ₽</span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Скидка</span>
-                  <span>-{discount.toLocaleString('ru-RU')} ₽</span>
-                </div>
+                <>
+                  <div className="flex justify-between text-green-600">
+                    <span>Скидка по промокоду</span>
+                    <span>-{discount.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Стоимость товаров со скидкой</span>
+                    <span>{total.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                </>
               )}
               {(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && deliverySum > 0 && (
                 <>
@@ -643,13 +707,18 @@ export function CartPageContent() {
 
 function CartLineRow({
   line,
+  lineTotalAfterPromo,
   onRemove,
   onQuantityChange,
 }: {
   line: CartLine
+  /** Сумма по строке после скидки по промокоду (если применена). */
+  lineTotalAfterPromo: number
   onRemove: () => void
   onQuantityChange: (q: number) => void
 }) {
+  const lineTotalOriginal = (line.price ?? 0) * line.quantity
+  const hasDiscount = lineTotalAfterPromo < lineTotalOriginal && lineTotalOriginal > 0
   return (
     <div className="flex gap-4 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 5xl:gap-16 6xl:gap-20 bg-white rounded-xl border border-gray-200 p-4 xl:p-6 2xl:p-8 3xl:p-10 4xl:p-12 5xl:p-16 6xl:p-20">
       <div className="relative w-20 h-20 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
@@ -689,8 +758,19 @@ function CartLineRow({
           </button>
         </div>
       </div>
-      <div className="font-medium text-text">
-        {((line.price ?? 0) * line.quantity).toLocaleString('ru-RU')} ₽
+      <div className="font-medium text-text text-right">
+        {hasDiscount ? (
+          <span className="flex flex-col items-end gap-0.5">
+            <span className="text-gray-400 line-through text-sm">
+              {lineTotalOriginal.toLocaleString('ru-RU')} ₽
+            </span>
+            <span className="text-green-600">
+              {lineTotalAfterPromo.toLocaleString('ru-RU')} ₽
+            </span>
+          </span>
+        ) : (
+          <span>{lineTotalOriginal.toLocaleString('ru-RU')} ₽</span>
+        )}
       </div>
     </div>
   )

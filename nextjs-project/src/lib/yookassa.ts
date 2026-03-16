@@ -216,23 +216,45 @@ export async function checkYookassaConnection(
 
 /**
  * Формирует позиции чека 54-ФЗ из позиций заказа.
- * vat_code: 1 — без НДС, 2—6 — разные ставки НДС (см. документацию ЮKassa).
+ * Сумма позиций должна совпадать с суммой платежа (требование ЮKassa).
+ * @param orderItems — позиции заказа (название, кол-во, цена за единицу).
+ * @param vatCode — код НДС (1 — без НДС, 2—6 — см. документацию ЮKassa).
+ * @param targetGoodsTotal — целевая сумма по товарам (например, после скидки). Если не задана, используется сумма (price × quantity).
  */
 export function buildReceiptItemsFromOrderItems(
   orderItems: Array<{ description: string; quantity: number; price: number }>,
-  vatCode: number = 1
+  vatCode: number = 1,
+  targetGoodsTotal?: number
 ): YookassaReceiptItem[] {
-  return orderItems.map((item) => {
-    const amount = item.price * item.quantity
-    return {
-      description: item.description.slice(0, 128),
-      quantity: item.quantity,
-      amount: { value: amount.toFixed(2), currency: 'RUB' },
-      vat_code: vatCode,
-      payment_mode: 'full_prepayment',
-      payment_subject: 'commodity',
-    }
-  })
+  const fullSubtotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0)
+  const totalToUse = targetGoodsTotal ?? fullSubtotal
+
+  if (orderItems.length === 0) return []
+  if (fullSubtotal <= 0) return []
+
+  const scale = totalToUse / fullSubtotal
+  const amounts: number[] = []
+  let runningSum = 0
+
+  for (let i = 0; i < orderItems.length; i++) {
+    const lineTotal = orderItems[i].price * orderItems[i].quantity
+    const scaled = lineTotal * scale
+    const value =
+      i < orderItems.length - 1
+        ? Math.round(scaled * 100) / 100
+        : Math.max(0, totalToUse - runningSum)
+    amounts.push(value)
+    runningSum += value
+  }
+
+  return orderItems.map((item, i) => ({
+    description: item.description.slice(0, 128),
+    quantity: item.quantity,
+    amount: { value: amounts[i].toFixed(2), currency: 'RUB' },
+    vat_code: vatCode,
+    payment_mode: 'full_prepayment',
+    payment_subject: 'commodity',
+  }))
 }
 
 /**
