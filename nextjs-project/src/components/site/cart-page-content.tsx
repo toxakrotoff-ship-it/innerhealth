@@ -626,7 +626,9 @@ export function CartPageContent() {
                   }}
                   onBlur={() => {
                     const result = validateEmail(formData.email)
-                    setEmailError(result.valid ? null : result.message)
+                    setEmailError(
+                      result.valid ? null : ('message' in result ? result.message : null)
+                    )
                   }}
                   className={`form-input w-full rounded-lg text-base min-h-[44px] ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="example@mail.ru"
