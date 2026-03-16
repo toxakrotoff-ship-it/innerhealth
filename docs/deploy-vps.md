@@ -41,7 +41,7 @@ cd innerhealth/nextjs-project
 
 В обоих случаях обязательно проверьте/задайте для прода:
 
-- `NEXTAUTH_URL` — домен прода (например `https://innerhealth.ru`).
+- `NEXTAUTH_URL` — домен прода (например `https://innerhaealth.inetrnet.pp.ru`).
 - `NEXTAUTH_SECRET`, ключи YooKassa, CDEK, Telegram, SMTP и т.д.
 - **Карта СДЭК и контакты:** `NEXT_PUBLIC_YANDEX_MAPS_API_KEY` — ключ из [Яндекс.Разработки](https://developer.tech.yandex.ru/) (JavaScript API карт). Добавьте в `.env` на сервере одну строку, затем пересоберите образ: `docker compose build app && docker compose up -d app`. После этого при любом `git pull` и `./deploy/deploy-quick.sh` ключ подхватится из уже существующего `.env` (файл не коммитится в git).
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — если нужны не дефолтные; `DATABASE_URL` в docker-compose подставляется из них, в .env можно не дублировать.
@@ -57,15 +57,15 @@ nano .env   # или vim
 
 ```bash
 sudo apt install certbot
-sudo certbot certonly --webroot -w /var/lib/certbot -d innerhealth.ru -d www.innerhealth.ru
+sudo certbot certonly --webroot -w /var/lib/certbot -d innerhaealth.inetrnet.pp.ru
 ```
 
 Смонтировать сертификаты в Nginx: в `docker-compose.yml` для сервиса `nginx` добавить volume:
 
 ```yaml
 volumes:
-  - /etc/letsencrypt/live/innerhealth.ru/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-  - /etc/letsencrypt/live/innerhealth.ru/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+  - /etc/letsencrypt/live/innerhaealth.inetrnet.pp.ru/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+  - /etc/letsencrypt/live/innerhaealth.inetrnet.pp.ru/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
 ```
 
 Раскомментировать HTTPS-блок в `deploy/nginx/conf.d/default.conf` и включить редирект с HTTP на HTTPS в HTTP-блоке. Перезапустить контейнеры:

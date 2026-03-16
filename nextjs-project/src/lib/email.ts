@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-const DEFAULT_PUBLIC_URL = 'https://innerhealth.ru'
+const DEFAULT_PUBLIC_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://innerhaealth.inetrnet.pp.ru'
 
 /**
  * Delay between order emails (admin → customer) to reduce burst pattern and spam/rate-limit risk.

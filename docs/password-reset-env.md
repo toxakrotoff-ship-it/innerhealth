@@ -91,8 +91,8 @@ SMTP_FROM=ваш@mail.ru
 ```env
 # URL сайта (для ссылки «Сбросить пароль» в письме)
 # Локально: http://localhost:3000
-# Прод: https://ваш-домен.ru
-NEXTAUTH_URL=https://innerhealth.ru
+# Прод: https://innerhaealth.inetrnet.pp.ru
+NEXTAUTH_URL=https://innerhaealth.inetrnet.pp.ru
 
 # SMTP VK WorkSpace (Mail.ru)
 SMTP_HOST=smtp.mail.ru
@@ -113,7 +113,7 @@ SMTP_FROM=support@innerhealth.ru
 
 | Переменная      | Вопрос / где взять |
 |-----------------|--------------------|
-| **NEXTAUTH_URL** | Какой адрес у сайта, где крутится приложение? Локально — `http://localhost:3000`, в проде — `https://innerhealth.ru` (или другой домен). Ссылка из письма будет вести сюда. |
+| **NEXTAUTH_URL** | Какой адрес у сайта, где крутится приложение? Локально — `http://localhost:3000`, в проде — `https://innerhaealth.inetrnet.pp.ru`. Ссылка из письма будет вести сюда. |
 | **SMTP_USER**   | Обычно это полный email ящика. Подтвердите: используем **support@innerhealth.ru**? |
 | **SMTP_PASS**   | Пароль приложения для этого ящика. Создан ли уже «Пароль для внешних приложений» в настройках почты (Аккаунт → Безопасность)? Если нет — создайте и вставьте сюда этот пароль (не основной пароль входа). |
 | **SMTP_FROM**   | С какого адреса должны уходить письма? Обычно тот же **support@innerhealth.ru**. Если нужен другой «от кого» — напишите какой. |

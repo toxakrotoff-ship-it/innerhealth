@@ -91,8 +91,8 @@ SMTP_FROM=ваш@mail.ru
 ```env
 # URL сайта (для ссылки «Сбросить пароль» в письме)
 # Локально: http://localhost:3000
-# Прод: https://ваш-домен.ru
-NEXTAUTH_URL=https://innerhealth.ru
+# Прод: https://innerhaealth.inetrnet.pp.ru
+NEXTAUTH_URL=https://innerhaealth.inetrnet.pp.ru
 
 # SMTP VK WorkSpace (Mail.ru)
 SMTP_HOST=smtp.mail.ru

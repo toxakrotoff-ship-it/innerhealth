@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
             Политика конфиденциальности
           </h1>
-          <p className="mt-2 text-gray-500 text-sm">
+            <p className="mt-2 text-gray-500 text-sm">
             Обработка персональных данных на сайте https://innerhealth.ru/
           </p>
         </header>

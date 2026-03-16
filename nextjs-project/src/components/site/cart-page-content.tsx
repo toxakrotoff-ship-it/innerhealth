@@ -349,8 +349,12 @@ export function CartPageContent() {
     e.preventDefault()
     const phoneCheck = validatePhoneRu(formData.phone)
     const emailCheck = validateEmail(formData.email)
-    setPhoneError(phoneCheck.valid ? null : phoneCheck.message)
-    setEmailError(emailCheck.valid ? null : emailCheck.message)
+    setPhoneError(
+      phoneCheck.valid ? null : ('message' in phoneCheck ? phoneCheck.message : null)
+    )
+    setEmailError(
+      emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
+    )
     if (!phoneCheck.valid || !emailCheck.valid) return
     const fullName = recipientName.trim() || formData.fullName
     const city = selectedCity?.city ?? formData.city
@@ -593,7 +597,9 @@ export function CartPageContent() {
                   }}
                   onBlur={() => {
                     const result = validatePhoneRu(formData.phone)
-                    setPhoneError(result.valid ? null : result.message)
+                    setPhoneError(
+                      result.valid ? null : ('message' in result ? result.message : null)
+                    )
                   }}
                   className={`form-input w-full rounded-lg text-base min-h-[44px] ${phoneError ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="+7 (999) 999-99-99"
