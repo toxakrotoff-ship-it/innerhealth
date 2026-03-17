@@ -149,6 +149,8 @@ model Order {
   cdekOrderError      String?
   /// Трек-номер СДЭК (если предоставлен)
   cdekTrackNumber     String?
+  /// Дата мягкого удаления заказа (корзина). null = активен
+  deletedAt           DateTime?
   promoCode           PromoCode?    @relation(fields: [promoCodeId], references: [id])
   user                User?         @relation(fields: [userId], references: [id])
   items               OrderItem[]
@@ -156,6 +158,7 @@ model Order {
 
   @@index([status])
   @@index([userId, createdAt])
+  @@index([deletedAt, createdAt])
 }
 
 model User {

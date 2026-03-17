@@ -79,6 +79,7 @@ export interface AdminOrderDto {
 /** Get all orders for admin list with masked PII. */
 export async function getOrdersForAdmin(): Promise<AdminOrderDto[]> {
   const orders = await prisma.order.findMany({
+    where: { deletedAt: null },
     include: orderAdminInclude,
     orderBy: { createdAt: 'desc' },
   });
@@ -101,6 +102,47 @@ export async function getOrdersForAdmin(): Promise<AdminOrderDto[]> {
           deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
         }
       : null,
+  }));
+}
+
+export interface AdminOrderWithDeletedDto extends AdminOrderDto {
+  deletedAt: string | null;
+}
+
+/** Get orders for admin with optional trash filter. */
+export async function getOrdersForAdminWithTrash(options: {
+  mode: 'active' | 'trash';
+}): Promise<AdminOrderWithDeletedDto[]> {
+  const where: Prisma.OrderWhereInput =
+    options.mode === 'trash'
+      ? { deletedAt: { not: null } }
+      : { deletedAt: null };
+
+  const orders = await prisma.order.findMany({
+    where,
+    include: orderAdminInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return orders.map((order) => ({
+    id: order.id,
+    total: order.total,
+    status: order.status,
+    createdAt: order.createdAt.toISOString(),
+    userId: order.userId ?? null,
+    promoCodeId: order.promoCodeId ?? null,
+    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    shippingInfo: order.shippingInfo
+      ? {
+          fullName: order.shippingInfo.fullName,
+          phoneMasked: maskPhone(order.shippingInfo.phone),
+          phoneRaw: order.shippingInfo.phone,
+          city: order.shippingInfo.city,
+          addressShort: shortAddress(order.shippingInfo.address, order.shippingInfo.city),
+          deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
+        }
+      : null,
+    deletedAt: order.deletedAt ? order.deletedAt.toISOString() : null,
   }));
 }
 
