@@ -238,6 +238,38 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
   }).catch((e) => console.error('[telegram-notify] payment error getWhitelistChatIds:', e));
 }
 
+export interface InfraAlertNotifyPayload {
+  kind: 'disk' | 'memory' | 'cpu' | 'container' | 'custom';
+  severity: 'info' | 'warn' | 'critical';
+  message: string;
+}
+
+/** Тех. алерт (VPS/инфраструктура). Доставка только тех-админам (opt-in + привязанный Telegram). */
+export async function notifyTelegramInfraAlert(payload: InfraAlertNotifyPayload): Promise<void> {
+  const token = await settingsService.getTelegramBotToken();
+  if (!token) return;
+
+  const chatIds = await userService.getInfraAlertTelegramChatIds();
+  if (chatIds.length === 0) return;
+
+  const severityLabel =
+    payload.severity === 'critical' ? 'CRITICAL' : payload.severity === 'warn' ? 'WARN' : 'INFO';
+  const lines: string[] = [
+    `🛠️ <b>Infra alert</b>`,
+    `Severity: <b>${escapeHtml(severityLabel)}</b>`,
+    `Kind: <code>${escapeHtml(payload.kind)}</code>`,
+    '',
+    escapeHtml(payload.message),
+  ];
+  const text = lines.join('\n');
+
+  for (const chatId of chatIds) {
+    await sendMessage(token, chatId, text).catch((e) =>
+      console.error('[telegram-notify] infra alert notify error:', e)
+    );
+  }
+}
+
 /** Уведомление в Telegram о том, что пользователь привязал аккаунт (подключился к уведомлениям). */
 export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void {
   const { userId, telegramUserId } = payload;

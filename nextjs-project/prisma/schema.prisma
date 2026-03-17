@@ -170,6 +170,8 @@ model User {
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   role                     Role                      @default(USER)
+  /// Получать тех. алерты (VPS/инфраструктура). Opt-in, только для ADMIN.
+  infraAlertsEnabled       Boolean                   @default(false)
   mustChangePassword       Boolean                   @default(false)
   /// Фамилия
   lastName                 String?
