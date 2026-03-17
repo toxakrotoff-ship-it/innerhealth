@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as userService from '@/services/user.service';
 import * as telegramService from '@/services/telegram.service';
+import { z } from 'zod';
 
 /** GET: список привязок Telegram по администраторам (роль ADMIN). Только для ADMIN. */
 export async function GET() {
@@ -16,6 +17,7 @@ export async function GET() {
       name: [u.name, u.lastName].filter(Boolean).join(' ') || u.email,
       telegramUserId: u.telegramWhitelist?.telegramUserId ?? null,
       linkedAt: u.telegramWhitelist?.linkedAt?.toISOString() ?? null,
+      infraAlertsEnabled: u.infraAlertsEnabled ?? false,
     }));
     return NextResponse.json(list);
   } catch (e) {
@@ -24,6 +26,37 @@ export async function GET() {
       { error: 'Не удалось загрузить привязки Telegram' },
       { status: 500 }
     );
+  }
+}
+
+const patchSchema = z.object({
+  userId: z.string().min(1),
+  infraAlertsEnabled: z.boolean(),
+});
+
+/** PATCH: включить/выключить тех. алерты для администратора. Только для ADMIN. */
+export async function PATCH(request: Request) {
+  const session = await requireAdminSession();
+  if (session instanceof NextResponse) return session;
+
+  const json = await request.json().catch(() => null);
+  const parsed = patchSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Неверные данные' }, { status: 400 });
+  }
+
+  try {
+    const result = await userService.updateAdminInfraAlertsEnabled({
+      userId: parsed.data.userId,
+      infraAlertsEnabled: parsed.data.infraAlertsEnabled,
+    });
+    if (!result.updated) {
+      return NextResponse.json({ error: 'Пользователь не найден или не администратор' }, { status: 404 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    console.error('Settings telegram PATCH error:', e);
+    return NextResponse.json({ error: 'Не удалось сохранить настройку' }, { status: 500 });
   }
 }
 

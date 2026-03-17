@@ -16,6 +16,7 @@ interface AdminTelegram {
   name: string;
   telegramUserId: string | null;
   linkedAt: string | null;
+  infraAlertsEnabled: boolean;
 }
 
 /** Коды НДС для чеков 54-ФЗ (справочник ЮKassa). */
@@ -100,6 +101,7 @@ export default function AdminSettingsPage() {
   const [mailboxEdit, setMailboxEdit] = useState<Record<string, string>>({});
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [unlinkingUserId, setUnlinkingUserId] = useState<string | null>(null);
+  const [updatingInfraAlertsUserId, setUpdatingInfraAlertsUserId] = useState<string | null>(null);
   const [twoFactorStatus, setTwoFactorStatus] = useState<{
     twoFactorEnabled: boolean;
     twoFactorMethod: string | null;
@@ -482,6 +484,7 @@ export default function AdminSettingsPage() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Пользователь</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telegram ID</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Привязан</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Тех. алерты</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">Действия</th>
                     </tr>
                   </thead>
@@ -501,6 +504,44 @@ export default function AdminSettingsPage() {
                                 year: 'numeric',
                               })
                             : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {t.telegramUserId ? (
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4"
+                                checked={Boolean(t.infraAlertsEnabled)}
+                                disabled={updatingInfraAlertsUserId !== null}
+                                onChange={async (e) => {
+                                  setUpdatingInfraAlertsUserId(t.id);
+                                  setError(null);
+                                  try {
+                                    const res = await fetch('/api/admin/settings/telegram', {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        userId: t.id,
+                                        infraAlertsEnabled: e.target.checked,
+                                      }),
+                                    });
+                                    if (!res.ok) {
+                                      const data = await res.json().catch(() => ({}));
+                                      throw new Error(data.error || 'Ошибка');
+                                    }
+                                    await loadTelegram();
+                                  } catch (err) {
+                                    setError(err instanceof Error ? err.message : 'Ошибка');
+                                  } finally {
+                                    setUpdatingInfraAlertsUserId(null);
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">вкл</span>
+                            </label>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {t.telegramUserId ? (

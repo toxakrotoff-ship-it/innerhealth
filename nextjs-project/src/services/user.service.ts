@@ -217,6 +217,7 @@ export async function getAdminsWithTelegramWhitelist() {
       email: true,
       name: true,
       lastName: true,
+      infraAlertsEnabled: true,
       telegramWhitelist: {
         select: { telegramUserId: true, linkedAt: true },
       },
@@ -238,4 +239,24 @@ export async function getAdminsForSettingsList() {
     },
     orderBy: { email: 'asc' },
   });
+}
+
+export async function getInfraAlertTelegramChatIds(): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN', infraAlertsEnabled: true },
+    select: { telegramWhitelist: { select: { telegramUserId: true } } },
+    orderBy: { email: 'asc' },
+  })
+  return rows.map((r) => r.telegramWhitelist?.telegramUserId).filter((v): v is string => Boolean(v))
+}
+
+export async function updateAdminInfraAlertsEnabled(params: {
+  userId: string
+  infraAlertsEnabled: boolean
+}): Promise<{ updated: boolean }> {
+  const result = await prisma.user.updateMany({
+    where: { id: params.userId, role: 'ADMIN' },
+    data: { infraAlertsEnabled: params.infraAlertsEnabled },
+  })
+  return { updated: result.count > 0 }
 }
