@@ -11,7 +11,9 @@ set -euo pipefail
 # Idempotent: running multiple times updates scripts and cron entry.
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-OPS_SRC="${PROJECT_ROOT}/nextjs-project/deploy/ops"
+# This script lives in: <nextjs-project>/deploy/ops/
+# Therefore ops source directory is: <nextjs-project>/deploy/ops
+OPS_SRC="${PROJECT_ROOT}/deploy/ops"
 
 TARGET_DIR="/opt/innerhealth"
 TARGET_SCRIPTS_DIR="${TARGET_DIR}/ops"
