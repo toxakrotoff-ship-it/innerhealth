@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { calculateGiftsForOrder } from '@/services/gift-promotion.service';
 import { maskPhone, shortAddress } from '@/lib/pii-masking';
 
 const orderAdminInclude = {
@@ -201,6 +202,17 @@ export async function createOrderWithItemsAndShipping(params: {
   shipping: CreateOrderShippingParams;
 }) {
   return prisma.$transaction(async (tx) => {
+    const hasPromoCode = params.promoCodeId != null;
+    const gifts = await calculateGiftsForOrder({
+      items: params.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        price: i.price,
+        hasPromoPrice: false,
+      })),
+      hasPromoCode,
+    });
+
     const created = await tx.order.create({
       data: {
         total: params.total,
@@ -209,11 +221,22 @@ export async function createOrderWithItemsAndShipping(params: {
         promoDiscountAmount: params.promoDiscountAmount ?? undefined,
         userId: params.userId ?? undefined,
         items: {
-          create: params.items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            price: i.price,
-          })),
+          create: [
+            ...params.items.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              price: i.price,
+              isGift: false,
+              giftPromotionId: undefined,
+            })),
+            ...gifts.map((g) => ({
+              productId: g.giftProductId,
+              quantity: g.quantity,
+              price: 0,
+              isGift: true,
+              giftPromotionId: g.giftPromotionId,
+            })),
+          ],
         },
       },
       include: { items: { include: { product: { select: { title: true } } } } },

@@ -75,6 +75,7 @@ model Product {
   orderItems                           OrderItem[]
   categories                           ProductCategory[]
   quickOrders                          QuickOrder[]
+  giftPromotions                       GiftPromotion[]
 
   @@index([slug])
   @@index([createdAt])
@@ -120,15 +121,18 @@ model CartItem {
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  order     Order    @relation(fields: [orderId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
+  id             String         @id @default(cuid())
+  orderId        String
+  productId      String
+  quantity       Int
+  price          Float
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  isGift         Boolean        @default(false)
+  giftPromotionId String?
+  order          Order          @relation(fields: [orderId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
+  giftPromotion  GiftPromotion? @relation(fields: [giftPromotionId], references: [id])
 }
 
 model Order {
@@ -379,6 +383,34 @@ model PromoCode {
   updatedAt         DateTime          @updatedAt
   orders            Order[]
   partnerAssignment PartnerPromoCode?
+}
+
+model GiftPromotion {
+  id                         String       @id @default(cuid())
+  title                      String
+  status                     String       @default("enabled")
+  validFrom                  DateTime?
+  validTo                    DateTime?
+  giftProductId              String
+  triggerType                String
+  triggerProductId           String?
+  triggerProductMinQty       Int?
+  minCartTotal               Float?
+  cartTotalCalculationMode   String?
+  giftQuantityMode           String
+  maxGiftsPerOrder           Int?
+  promoProductInteractionMode String?
+  promoCodeInteractionMode   String?
+  autoRemoveWhenConditionFails Boolean   @default(true)
+  userCanRemoveGiftManually  Boolean     @default(false)
+  showOnSite                 Boolean     @default(false)
+  siteTitle                  String?
+  siteDescription            String?
+  coverImage                 String?
+  createdAt                  DateTime    @default(now())
+  updatedAt                  DateTime    @updatedAt
+  giftProduct                Product     @relation(fields: [giftProductId], references: [id])
+  orderItems                 OrderItem[]
 }
 
 /// Связь партнёр–промокод: один промокод привязан не более чем к одному партнёру; процент дохода по промокоду.

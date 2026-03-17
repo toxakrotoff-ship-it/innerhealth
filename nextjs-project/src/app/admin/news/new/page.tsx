@@ -62,6 +62,15 @@ export default function NewNewsPage() {
     setFormData((prev) => ({ ...prev, type: initialType }));
   }, [initialType]);
 
+  const handleTypeChange = (nextType: PostType) => {
+    setFormData((prev) => ({ ...prev, type: nextType }));
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('type', nextType);
+
+    router.replace(`/${base}/news/new?${params.toString()}`);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement | HTMLTextAreaElement;
     const checked = (e.target as HTMLInputElement).checked;
@@ -123,7 +132,7 @@ export default function NewNewsPage() {
                   type="radio"
                   name="type"
                   checked={formData.type === 'news'}
-                  onChange={() => setFormData((p) => ({ ...p, type: 'news' }))}
+                  onChange={() => handleTypeChange('news')}
                   className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Новость</span>
@@ -133,7 +142,7 @@ export default function NewNewsPage() {
                   type="radio"
                   name="type"
                   checked={formData.type === 'article'}
-                  onChange={() => setFormData((p) => ({ ...p, type: 'article' }))}
+                  onChange={() => handleTypeChange('article')}
                   className="rounded-full border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span>Статья</span>

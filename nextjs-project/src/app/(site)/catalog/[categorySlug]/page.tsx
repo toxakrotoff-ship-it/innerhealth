@@ -8,6 +8,26 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
+import { FluidGrid } from '@/components/ui/fluid-grid'
+import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { TiltCard } from '@/components/ui/tilt-card'
+
+function htmlToPlainText(html: string): string {
+  const stripped = html
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+  return stripped
+}
 
 /** Статический рендер категории, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -81,6 +101,8 @@ export default async function CategoryPage({ params }: PageProps) {
     content &&
     (Boolean(content.bullets?.length) || Boolean(content.paragraphs?.length))
 
+  const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date()) : []
+
   return (
     <>
       {/* Hero баннер для категорий с контентом */}
@@ -150,6 +172,81 @@ export default async function CategoryPage({ params }: PageProps) {
               </div>
             </div>
           )}
+          {categorySlug === 'aktsii' && giftPromos.length > 0 && (
+            <div className="mb-10">
+              <ScrollReveal as="div" variant="fade-up">
+                <FluidGrid cols={1} colsTablet={2} colsDesktop={3} gap={4} adaptiveGap>
+                  {giftPromos.map((promo) => {
+                    const title = promo.siteTitle || promo.title
+                    const descriptionPlain = promo.siteDescription
+                      ? htmlToPlainText(promo.siteDescription)
+                      : ''
+                    const cover = (promo as any).coverImage as string | undefined
+                    const fallbackPhoto = promo.giftProduct?.photo ?? null
+                    const imageSrc =
+                      cover ??
+                      (fallbackPhoto
+                        ? fallbackPhoto.startsWith('/')
+                          ? fallbackPhoto
+                          : `/${fallbackPhoto.replace(/^\//, '')}`
+                        : null)
+
+                    return (
+                      <div
+                        key={promo.id}
+                        className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                      >
+                        <TiltCard>
+                          <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                            {imageSrc && (
+                              <>
+                                <Image
+                                  src={imageSrc}
+                                  alt={title}
+                                  fill
+                                  className="object-cover object-center"
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                />
+                                <div
+                                  className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                                  aria-hidden
+                                />
+                              </>
+                            )}
+
+                            <div className="relative z-10 space-y-2 max-w-xs">
+                              <span className="inline-flex items-center gap-2 rounded-full bg-red-600/95 px-3 py-1 text-xs font-semibold tracking-wide text-white shadow-sm">
+                                <span className="inline-flex h-4 w-4 items-center justify-center" aria-hidden>
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4">
+                                    <path
+                                      fill="currentColor"
+                                      d="M9 3.255a1.875 1.875 0 1 0 0 3.75h1.875v4.5H3A1.875 1.875 0 0 1 1.125 9.63v-.75c0-1.036.84-1.875 1.875-1.875h3.193a3.375 3.375 0 0 1 5.432-3.997 3.375 3.375 0 0 1 5.432 3.997H21c1.035 0 1.875.84 1.875 1.875v.75c0 1.035-.84 1.875-1.875 1.875h-8.625v-4.5h1.875a1.875 1.875 0 1 0-1.875-1.875v1.875h-1.5V5.13c0-1.036-.84-1.875-1.875-1.875ZM10.875 13.005h-8.25v6.75a2.25 2.25 0 0 0 2.25 2.25h6v-9ZM12.375 13.005v9h6.75a2.25 2.25 0 0 0 2.25-2.25v-6.75h-9Z"
+                                    />
+                                  </svg>
+                                </span>
+                                Подарок
+                              </span>
+
+                              <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md line-clamp-3">
+                                {title}
+                              </span>
+
+                              {descriptionPlain && (
+                                <span className="block text-sm text-white/90 drop-shadow line-clamp-3">
+                                  {descriptionPlain}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </TiltCard>
+                      </div>
+                    )
+                  })}
+                </FluidGrid>
+              </ScrollReveal>
+            </div>
+          )}
+
           {products.length === 0 ? (
             <p className="text-gray-500">В этой категории пока нет товаров.</p>
           ) : (

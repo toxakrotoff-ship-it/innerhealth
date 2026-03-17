@@ -501,6 +501,7 @@ export function CartPageContent() {
             isEligibleForPercent
               ? lineTotalOriginal * (totalAfterPromo / subtotalEligiblePercent)
               : lineTotalOriginal
+          const isGift = false
           return (
             <CartLineRow
               key={line.productId}
