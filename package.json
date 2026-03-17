@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "cd nextjs-project && npm run dev",
+    "build": "cd nextjs-project && npm run build",
+    "start": "cd nextjs-project && npm run start",
+    "lint": "cd nextjs-project && npm run lint"
   },
   "dependencies": {
     "@prisma/client": "^7.4.0",

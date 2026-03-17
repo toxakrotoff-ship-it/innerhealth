@@ -297,12 +297,25 @@ export function Preloader() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (document.documentElement.dataset.preloaderSkip === '1') return
-    const t = setTimeout(() => {
-      sessionStorage.setItem(PRELOADER_SEEN_KEY, String(Date.now()))
+
+    const seenRaw = sessionStorage.getItem(PRELOADER_SEEN_KEY)
+    const seenAt = seenRaw ? Number.parseInt(seenRaw, 10) : 0
+    const isSeenRecently = Boolean(seenAt && Date.now() - seenAt < PRELOADER_24H_MS)
+
+    if (isSeenRecently || document.documentElement.dataset.preloaderSkip === '1') {
+      document.documentElement.dataset.preloaderSkip = '1'
+      document.documentElement.classList.add('preloader-skip')
+      setVisible(false)
+      return
+    }
+
+    sessionStorage.setItem(PRELOADER_SEEN_KEY, String(Date.now()))
+
+    const timeoutId = window.setTimeout(() => {
       setVisible(false)
     }, TOTAL_DURATION_MS)
-    return () => clearTimeout(t)
+
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   useEffect(() => {

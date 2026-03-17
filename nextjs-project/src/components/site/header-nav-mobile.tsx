@@ -69,12 +69,12 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
             </Link>
             <div className="flex flex-col">
               {NAV_LINKS.map(({ label, href }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={navLinkClass}
-                  onClick={() => setOpen(false)}
-                >
+                  <Link
+                    key={href}
+                    href={href}
+                    className={navLinkClass}
+                    onClick={() => setOpen(false)}
+                  >
                   {label}
                 </Link>
               ))}
@@ -83,7 +83,7 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
               {isAuthenticated ? (
                 <>
                   <Link
-                    href={role === 'ADMIN' || role === 'WRITER' ? '/admin/catalog' : '/account'}
+                    href={role === 'ADMIN' || role === 'WRITER' ? '/admin-panel' : '/account'}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${variant === 'dark' ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                     onClick={() => setOpen(false)}
                   >

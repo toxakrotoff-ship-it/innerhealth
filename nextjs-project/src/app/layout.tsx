@@ -54,12 +54,8 @@ export default function RootLayout({
       <head>
         <style
           dangerouslySetInnerHTML={{
-            __html: 'html.preloader-skip .preloader-overlay{display:none!important}',
-          }}
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var k='innerhealth-preloader-seen',v=sessionStorage.getItem(k),t=v?parseInt(v,10):0;if(t&&Date.now()-t<864e5){document.documentElement.dataset.preloaderSkip='1';document.documentElement.classList.add('preloader-skip');}})();`,
+            __html:
+              'html.preloader-skip .preloader-overlay,html[data-preloader-skip="1"] .preloader-overlay{display:none!important}',
           }}
         />
       </head>

@@ -82,19 +82,19 @@ model Product {
 }
 
 model Category {
-  id                   String            @id @default(cuid())
-  title                String
-  slug                 String            @unique
-  image                String?
-  sortOrder            Int?
+  id                    String            @id @default(cuid())
+  title                 String
+  slug                  String            @unique
+  image                 String?
+  sortOrder             Int?
   /// Показывать категорию в блоке «Разделы каталога» на главной и в каталоге
-  showInCategoriesBlock Boolean          @default(true)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  parentId             String?
-  parent               Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children             Category[]        @relation("CategoryHierarchy")
-  products             ProductCategory[]
+  showInCategoriesBlock Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  parentId              String?
+  parent                Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children              Category[]        @relation("CategoryHierarchy")
+  products              ProductCategory[]
 
   @@index([parentId])
 }
@@ -132,27 +132,27 @@ model OrderItem {
 }
 
 model Order {
-  id                String        @id @default(cuid())
-  userId            String?
-  total             Float
+  id                  String        @id @default(cuid())
+  userId              String?
+  total               Float
   /// Сумма скидки по промокоду (для расчёта дохода партнёра от скидок)
   promoDiscountAmount Float?
-  status            String        @default("pending")
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  promoCodeId       String?
+  status              String        @default("pending")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  promoCodeId         String?
   /// * ID платежа ЮKassa (для связки с webhook и return_url)
-  yookassaPaymentId String?       @unique
+  yookassaPaymentId   String?       @unique
   /// UUID заказа в СДЭК после успешного создания
-  cdekOrderUuid     String?       @unique
+  cdekOrderUuid       String?       @unique
   /// Последнее сообщение об ошибке СДЭК (для админки и повтора)
-  cdekOrderError    String?
+  cdekOrderError      String?
   /// Трек-номер СДЭК (если предоставлен)
-  cdekTrackNumber   String?
-  promoCode         PromoCode?    @relation(fields: [promoCodeId], references: [id])
-  user              User?         @relation(fields: [userId], references: [id])
-  items             OrderItem[]
-  shippingInfo      ShippingInfo?
+  cdekTrackNumber     String?
+  promoCode           PromoCode?    @relation(fields: [promoCodeId], references: [id])
+  user                User?         @relation(fields: [userId], references: [id])
+  items               OrderItem[]
+  shippingInfo        ShippingInfo?
 
   @@index([status])
   @@index([userId, createdAt])
@@ -517,6 +517,47 @@ model Redirect {
   @@index([sourcePath])
 }
 
+model AnalyticsEvent {
+  id         String             @id @default(cuid())
+  occurredAt DateTime           @default(now())
+  userId     String?
+  sessionId  String?
+  anonId     String?
+  type       AnalyticsEventType
+  path       String
+  pageTitle  String?
+  meta       Json?
+  ipHash     String?
+  userAgent  String?
+
+  @@index([occurredAt])
+  @@index([type, occurredAt])
+  @@index([path, occurredAt])
+  @@index([sessionId, occurredAt])
+}
+
+model DailyTrafficStats {
+  id        String   @id @default(cuid())
+  date      DateTime
+  path      String?
+  pageViews Int
+  sessions  Int
+  users     Int?
+  clicks    Int
+
+  @@unique([date, path])
+}
+
+model DailyFunnelStats {
+  id               String     @id @default(cuid())
+  date             DateTime
+  step             FunnelStep
+  count            Int
+  conversionToNext Float?
+
+  @@unique([date, step])
+}
+
 enum Role {
   USER
   WRITER
@@ -529,4 +570,19 @@ enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum AnalyticsEventType {
+  PAGE_VIEW
+  CLICK
+  CART_ADD
+  CHECKOUT_START
+  ORDER_CREATED
+}
+
+enum FunnelStep {
+  PAGE_VIEW
+  CART_ADD
+  CHECKOUT_START
+  ORDER_CREATED
 }

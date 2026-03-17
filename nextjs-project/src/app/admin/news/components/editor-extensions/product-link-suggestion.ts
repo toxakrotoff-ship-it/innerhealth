@@ -218,7 +218,7 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
   },
 
   addProseMirrorPlugins() {
-    const self = this
+    const markName = this.name
 
     return [
       Suggestion<ProductSuggestionItem>({
@@ -246,7 +246,7 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
                 text: props.title,
                 marks: [
                   {
-                    type: self.name,
+                    type: markName,
                     attrs: {
                       href,
                       target: '_blank',

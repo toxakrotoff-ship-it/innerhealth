@@ -22,6 +22,8 @@ export const SETTING_KEYS = [
   'site_contact_email',
   'default_currency',
   'telegram_bot_token',
+  'yandexMetrikaHeadCode',
+  'yandexMetrikaBodyCode',
 ] as const
 
 export const SCHEMA_ORG_KEYS = [

@@ -142,6 +142,7 @@ const settingsChildren: NavItemEntry[] = [
 ]
 
 const navConfig: NavEntry[] = [
+  { path: '', label: 'Статистика сайта', icon: icons.stats },
   { path: 'profile', label: 'Профиль', icon: icons.profile },
   { path: 'catalog', label: 'Каталог товаров', icon: icons.catalog },
   { path: 'reviews', label: 'Модерация отзывов', icon: icons.reviews },
@@ -175,6 +176,9 @@ function getItemIsActive(
   base: string
 ): boolean {
   const prefix = `/${base}/`
+  if (itemPath === '') {
+    return pathname === `/${base}` || pathname === `/${base}/`
+  }
   if (itemPath === 'news?type=article') {
     return pathname === `${prefix}news` && searchParams.get('type') === 'article'
   }
@@ -301,10 +305,10 @@ export default function AdminNav() {
           )
         }
 
-        const href = `/${base}/${entry.path}`
+        const href = entry.path === '' ? `/${base}` : `/${base}/${entry.path}`
         const isActive = getItemIsActive(entry.path, pathname, searchParams, base)
         return (
-          <li key={entry.path}>
+          <li key={entry.path || 'dashboard'}>
             <Link
               href={href}
               className={`admin-nav-item ${isActive ? 'admin-nav-item-active' : ''}`}

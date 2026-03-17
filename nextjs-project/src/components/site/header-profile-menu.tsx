@@ -81,15 +81,7 @@ export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role }: 
           {isAdminUser ? (
             <>
               <Link
-                href="/admin/profile"
-                className="block rounded-xl px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                role="menuitem"
-                onClick={() => setIsOpen(false)}
-              >
-                Редактировать профиль
-              </Link>
-              <Link
-                href="/admin/catalog"
+                href="/admin-panel"
                 className="mt-1 block rounded-xl px-3 py-2 text-sm text-gray-800 hover:bg-gray-100"
                 role="menuitem"
                 onClick={() => setIsOpen(false)}

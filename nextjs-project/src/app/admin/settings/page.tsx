@@ -37,9 +37,9 @@ const VAT_CODE_OPTIONS: Array<{ value: string; label: string }> = [
 const FIELDS: Array<{
   key: string;
   label: string;
-  type: 'text' | 'password' | 'select';
+  type: 'text' | 'password' | 'select' | 'textarea';
   placeholder?: string;
-  group: 'cdek' | 'yookassa' | 'site' | 'telegram';
+  group: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics';
   options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'telegram_bot_token', label: 'Токен Telegram-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
@@ -65,13 +65,28 @@ const FIELDS: Array<{
   { key: 'schema_org_phone', label: 'Телефон для schema.org', type: 'text', group: 'site' },
   { key: 'schema_org_address', label: 'Адрес (одной строкой)', type: 'text', group: 'site' },
   { key: 'schema_org_social_links', label: 'Ссылки для sameAs (через запятую)', type: 'text', group: 'site' },
+  {
+    key: 'yandexMetrikaHeadCode',
+    label: 'Yandex Metrika — код для <head>',
+    type: 'textarea',
+    placeholder: '<script type="text/javascript">...</script>',
+    group: 'analytics',
+  },
+  {
+    key: 'yandexMetrikaBodyCode',
+    label: 'Yandex Metrika — код для <body>',
+    type: 'textarea',
+    placeholder: '<noscript>...</noscript>',
+    group: 'analytics',
+  },
 ];
 
-const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram'; title: string }> = [
+const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics'; title: string }> = [
   { id: 'telegram', title: 'Telegram-бот' },
   { id: 'cdek', title: 'Доставка (СДЭК)' },
   { id: 'yookassa', title: 'Оплата (ЮKassa)' },
   { id: 'site', title: 'Общие настройки сайта' },
+  { id: 'analytics', title: 'Аналитика / Счётчики' },
 ];
 
 export default function AdminSettingsPage() {
@@ -243,6 +258,14 @@ export default function AdminSettingsPage() {
                           </option>
                         ))}
                       </select>
+                    ) : field.type === 'textarea' ? (
+                      <textarea
+                        id={field.key}
+                        className="form-input w-full min-h-[120px] font-mono text-xs"
+                        placeholder={field.placeholder}
+                        value={values[field.key] ?? ''}
+                        onChange={(e) => updateValue(field.key, e.target.value)}
+                      />
                     ) : (
                       <input
                         id={field.key}

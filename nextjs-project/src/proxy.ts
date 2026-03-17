@@ -76,7 +76,9 @@ async function proxyHandler(request: Request) {
   if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
     const rest = pathname.slice(1 + adminSecretPath.length) || ''
     const rewritePath = `/admin${rest}`
-    const res = NextResponse.rewrite(new URL(rewritePath, request.url))
+    const url = new URL(request.url)
+    url.pathname = rewritePath
+    const res = NextResponse.rewrite(url)
     return addSecurityHeaders(res)
   }
   const res = NextResponse.next()

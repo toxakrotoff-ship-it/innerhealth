@@ -21,6 +21,7 @@ import {
 } from '@/lib/mappers/user-address-to-shipping'
 import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
+import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 
 interface PromoResult {
   valid: boolean
@@ -418,11 +419,27 @@ export function CartPageContent() {
       const data = await res.json()
       if (data.confirmationUrl) {
         useCartStore.getState().clearCart()
+        logAnalyticsEvent({
+          type: 'CHECKOUT_START',
+          path: '/cart',
+          meta: {
+            totalWithDelivery,
+            deliveryMethod,
+          },
+        })
         window.location.href = data.confirmationUrl
         return
       }
       setOrderSuccess(true)
       useCartStore.getState().clearCart()
+      logAnalyticsEvent({
+        type: 'ORDER_CREATED',
+        path: '/cart',
+        meta: {
+          totalWithDelivery,
+          deliveryMethod,
+        },
+      })
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Ошибка оформления заказа')
     } finally {
