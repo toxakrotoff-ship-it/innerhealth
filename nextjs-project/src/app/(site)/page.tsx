@@ -21,6 +21,8 @@ import {
   getResolvedBlocksForPage,
   type ContentBlockResolved,
 } from '@/services/content-block.service'
+import { getActiveSitePopup } from '@/services/site-popup.service'
+import { HomePopupClient } from '@/components/site/home-popup-client'
 import { Heading2 } from '@/components/ui/responsive-text'
 import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
@@ -112,9 +114,10 @@ async function getHomeData() {
 
 export default async function HomePage() {
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
-  const [homeBlocks, catalogBlocks] = await Promise.all([
+  const [homeBlocks, catalogBlocks, popup] = await Promise.all([
     getResolvedBlocksForPage('home'),
     getResolvedBlocksForPage('catalog'),
+    getActiveSitePopup(),
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
@@ -137,6 +140,24 @@ export default async function HomePage() {
 
   return (
     <div>
+      <HomePopupClient
+        popup={
+          popup
+            ? {
+                id: popup.id,
+                title: popup.title,
+                isEnabled: popup.isEnabled,
+                richJson: (popup.richJson as Prisma.JsonValue | null) as any,
+                imageUrl: popup.imageUrl,
+                ctaLabel: popup.ctaLabel,
+                ctaUrl: popup.ctaUrl,
+                delaySeconds: popup.delaySeconds,
+                hideForDays: popup.hideForDays,
+                autoCloseSeconds: popup.autoCloseSeconds,
+              }
+            : null
+        }
+      />
       <HeroBlock
         badge={heroBadge}
         title={heroTitle}

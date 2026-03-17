@@ -137,6 +137,7 @@ const crmChildren: NavItemEntry[] = [
 const settingsChildren: NavItemEntry[] = [
   { path: 'settings', label: 'API и интеграции', icon: icons.settings },
   { path: 'content', label: 'Тексты страниц', icon: icons.content },
+   { path: 'site-popup', label: 'Попап на главной', icon: icons.promo },
   { path: 'faq', label: 'FAQ', icon: icons.faq },
   { path: 'redirects', label: 'Редиректы', icon: icons.redirects },
 ]

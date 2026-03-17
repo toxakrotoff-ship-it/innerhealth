@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
 import { prisma } from '@/lib/prisma'
 
-const baseSchema = {
+const createSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
   status: z.enum(['enabled', 'disabled']).default('enabled'),
   validFrom: z.string().datetime().nullable().optional(),
@@ -15,21 +15,49 @@ const baseSchema = {
   minCartTotal: z.number().min(0).nullable().optional(),
   giftQuantityMode: z.enum(['ONE_PER_ORDER', 'PER_TRIGGER']),
   maxGiftsPerOrder: z.number().int().min(0).nullable().optional(),
-  promoProductInteractionMode: z.enum(['BLOCK_IF_PROMO_PRODUCTS_PRESENT', 'ALWAYS_ALLOW']).nullable().optional(),
-  promoCodeInteractionMode: z.enum(['ALLOW_WITH_PROMOCODE', 'BLOCK_IF_PROMOCODE_PRESENT']).nullable().optional(),
+  promoProductInteractionMode: z
+    .enum(['BLOCK_IF_PROMO_PRODUCTS_PRESENT', 'ALWAYS_ALLOW'])
+    .nullable()
+    .optional(),
+  promoCodeInteractionMode: z
+    .enum(['ALLOW_WITH_PROMOCODE', 'BLOCK_IF_PROMOCODE_PRESENT'])
+    .nullable()
+    .optional(),
   autoRemoveWhenConditionFails: z.boolean().optional(),
   userCanRemoveGiftManually: z.boolean().optional(),
   showOnSite: z.boolean().optional(),
   siteTitle: z.string().nullable().optional(),
   siteDescription: z.string().nullable().optional(),
   coverImage: z.string().nullable().optional(),
-}
-
-const createSchema = z.object(baseSchema)
+})
 
 const updateSchema = z.object({
   id: z.string().min(1, 'ID обязателен'),
-  ...Object.fromEntries(Object.entries(baseSchema).map(([k, v]) => [k, (v as z.ZodTypeAny).optional()])),
+  title: z.string().min(1).optional(),
+  status: z.enum(['enabled', 'disabled']).optional(),
+  validFrom: z.string().datetime().nullable().optional(),
+  validTo: z.string().datetime().nullable().optional(),
+  giftProductId: z.string().min(1).optional(),
+  triggerType: z.enum(['PRODUCT', 'CART_TOTAL']).optional(),
+  triggerProductId: z.string().nullable().optional(),
+  triggerProductMinQty: z.number().int().min(1).nullable().optional(),
+  minCartTotal: z.number().min(0).nullable().optional(),
+  giftQuantityMode: z.enum(['ONE_PER_ORDER', 'PER_TRIGGER']).optional(),
+  maxGiftsPerOrder: z.number().int().min(0).nullable().optional(),
+  promoProductInteractionMode: z
+    .enum(['BLOCK_IF_PROMO_PRODUCTS_PRESENT', 'ALWAYS_ALLOW'])
+    .nullable()
+    .optional(),
+  promoCodeInteractionMode: z
+    .enum(['ALLOW_WITH_PROMOCODE', 'BLOCK_IF_PROMOCODE_PRESENT'])
+    .nullable()
+    .optional(),
+  autoRemoveWhenConditionFails: z.boolean().optional(),
+  userCanRemoveGiftManually: z.boolean().optional(),
+  showOnSite: z.boolean().optional(),
+  siteTitle: z.string().nullable().optional(),
+  siteDescription: z.string().nullable().optional(),
+  coverImage: z.string().nullable().optional(),
 })
 
 const deleteSchema = z.object({

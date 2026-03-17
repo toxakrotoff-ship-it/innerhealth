@@ -1,0 +1,161 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import type { JSONContent } from '@tiptap/core'
+import Link from 'next/link'
+import Image from 'next/image'
+
+export interface SitePopupDto {
+  id: string
+  title: string
+  isEnabled: boolean
+  richJson: JSONContent | null
+  imageUrl: string | null
+  ctaLabel: string | null
+  ctaUrl: string | null
+  delaySeconds: number
+  hideForDays: number
+  autoCloseSeconds: number | null
+}
+
+interface HomePopupClientProps {
+  popup: SitePopupDto | null
+}
+
+export function HomePopupClient({ popup }: HomePopupClientProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const storageKey = useMemo(
+    () => (popup ? `innerhealth_site_popup_${popup.id}` : null),
+    [popup?.id]
+  )
+
+  useEffect(() => {
+    if (!popup || !popup.isEnabled || !storageKey) return
+
+    const entryRaw = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
+    if (entryRaw) {
+      try {
+        const parsed = JSON.parse(entryRaw) as { closedAt: string }
+        const closedAt = new Date(parsed.closedAt)
+        const now = new Date()
+        const diffDays = (now.getTime() - closedAt.getTime()) / (1000 * 60 * 60 * 24)
+        if (diffDays < popup.hideForDays) {
+          return
+        }
+      } catch {
+        // ignore parse errors and treat as not shown
+      }
+    }
+
+    const delay = Math.max(0, popup.delaySeconds) * 1000
+    const delayTimer = window.setTimeout(() => {
+      setIsOpen(true)
+    }, delay)
+
+    let autoCloseTimer: number | null = null
+    if (popup.autoCloseSeconds && popup.autoCloseSeconds > 0) {
+      autoCloseTimer = window.setTimeout(() => {
+        setIsOpen(false)
+        persistClosed()
+      }, (popup.delaySeconds + popup.autoCloseSeconds) * 1000)
+    }
+
+    function persistClosed() {
+      if (!storageKey) return
+      try {
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({ closedAt: new Date().toISOString() })
+        )
+      } catch {
+        // ignore
+      }
+    }
+
+    return () => {
+      window.clearTimeout(delayTimer)
+      if (autoCloseTimer != null) window.clearTimeout(autoCloseTimer)
+    }
+  }, [popup, storageKey])
+
+  if (!popup || !popup.isEnabled) return null
+
+  const handleClose = () => {
+    setIsOpen(false)
+    if (!storageKey) return
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({ closedAt: new Date().toISOString() })
+      )
+    } catch {
+      // ignore
+    }
+  }
+
+  // Very minimal rich-text rendering: for now we just render as plain text fallback.
+  const plainText =
+    popup.richJson && Array.isArray(popup.richJson.content)
+      ? popup.richJson.content
+          .map((node: any) => {
+            if (typeof node?.text === 'string') return node.text
+            if (Array.isArray(node?.content)) {
+              return node.content.map((n: any) => (typeof n?.text === 'string' ? n.text : '')).join(' ')
+            }
+            return ''
+          })
+          .join(' ')
+      : ''
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/40"
+        aria-hidden="true"
+        onClick={handleClose}
+      />
+      <div className="relative z-50 w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-700 hover:bg-gray-100 shadow-sm"
+          aria-label="Закрыть уведомление"
+        >
+          <span className="text-lg leading-none">&times;</span>
+        </button>
+        {popup.imageUrl && (
+          <div className="relative h-40 w-full">
+            <Image
+              src={popup.imageUrl}
+              alt={popup.title}
+              fill
+              className="object-cover"
+              sizes="100vw"
+            />
+          </div>
+        )}
+        <div className="p-5 space-y-3">
+          <h2 className="text-lg font-semibold text-gray-900">{popup.title}</h2>
+          {plainText && (
+            <p className="text-sm text-gray-700 whitespace-pre-line">{plainText}</p>
+          )}
+          {popup.ctaLabel && popup.ctaUrl && (
+            <div className="pt-2">
+              <Link
+                href={popup.ctaUrl}
+                onClick={handleClose}
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-action-blue transition-colors"
+              >
+                {popup.ctaLabel}
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
