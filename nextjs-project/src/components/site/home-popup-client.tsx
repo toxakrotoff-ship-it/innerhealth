@@ -5,6 +5,22 @@ import type { JSONContent } from '@tiptap/core'
 import Link from 'next/link'
 import Image from 'next/image'
 
+function extractPlainTextFromTiptap(content: JSONContent | null): string {
+  if (!content?.content) return ''
+
+  const out: string[] = []
+  const stack: JSONContent[] = [...content.content]
+
+  while (stack.length > 0) {
+    const node = stack.shift()
+    if (!node) continue
+    if (typeof node.text === 'string') out.push(node.text)
+    if (Array.isArray(node.content)) stack.unshift(...node.content)
+  }
+
+  return out.join(' ').replaceAll(/\s+/g, ' ').trim()
+}
+
 export interface SitePopupDto {
   id: string
   title: string
@@ -94,19 +110,7 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
     }
   }
 
-  // Very minimal rich-text rendering: for now we just render as plain text fallback.
-  const plainText =
-    popup.richJson && Array.isArray(popup.richJson.content)
-      ? popup.richJson.content
-          .map((node: any) => {
-            if (typeof node?.text === 'string') return node.text
-            if (Array.isArray(node?.content)) {
-              return node.content.map((n: any) => (typeof n?.text === 'string' ? n.text : '')).join(' ')
-            }
-            return ''
-          })
-          .join(' ')
-      : ''
+  const plainText = extractPlainTextFromTiptap(popup.richJson ?? null)
 
   if (!isOpen) return null
 
@@ -121,7 +125,7 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
         <button
           type="button"
           onClick={handleClose}
-          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-700 hover:bg-gray-100 shadow-sm"
+          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-red-500 hover:text-white hover:shadow-md hover:scale-105"
           aria-label="Закрыть уведомление"
         >
           <span className="text-lg leading-none">&times;</span>
@@ -143,7 +147,7 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
             <p className="text-sm text-gray-700 whitespace-pre-line">{plainText}</p>
           )}
           {popup.ctaLabel && popup.ctaUrl && (
-            <div className="pt-2">
+            <div className="pt-2 flex justify-center">
               <Link
                 href={popup.ctaUrl}
                 onClick={handleClose}

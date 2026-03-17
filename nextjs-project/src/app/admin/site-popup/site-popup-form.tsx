@@ -7,6 +7,22 @@ import { RichTextEditor } from '@/app/admin/news/components/RichTextEditor'
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone'
 import type { SitePopupFormInput } from './actions'
 
+function extractPlainTextFromTiptap(content: JSONContent | null): string {
+  if (!content?.content) return ''
+
+  const out: string[] = []
+  const stack: JSONContent[] = [...content.content]
+
+  while (stack.length > 0) {
+    const node = stack.shift()
+    if (!node) continue
+    if (typeof node.text === 'string') out.push(node.text)
+    if (Array.isArray(node.content)) stack.unshift(...node.content)
+  }
+
+  return out.join(' ').replaceAll(/\s+/g, ' ').trim()
+}
+
 interface SitePopupFormProps {
   initialValue: SitePopupFormInput & { richJson: JSONContent | null }
 }
@@ -40,6 +56,7 @@ export function SitePopupForm({ initialValue }: SitePopupFormProps) {
     }
   }
 
+  const plainTextPreview = extractPlainTextFromTiptap(value.richJson ?? null)
   return (
     <div className="space-y-6">
       {error && (
@@ -228,6 +245,44 @@ export function SitePopupForm({ initialValue }: SitePopupFormProps) {
           {saving ? 'Сохранение…' : 'Сохранить попап'}
         </Button>
       </div>
+
+      <section className="pt-6 border-t border-gray-200 mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Предпросмотр попапа</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Макет того, как попап будет выглядеть на сайте. Точные отступы и адаптивное поведение можно проверить на
+          главной странице после сохранения.
+        </p>
+        <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-md overflow-hidden border border-gray-100">
+          {value.imageUrl && (
+            <div className="relative h-36 w-full bg-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={value.imageUrl} alt={value.title} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="p-4 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {value.title || 'Заголовок попапа'}
+              </h3>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs">
+                ×
+              </span>
+            </div>
+            {plainTextPreview && (
+              <p className="text-xs text-gray-700 line-clamp-3 whitespace-pre-line">
+                {plainTextPreview}
+              </p>
+            )}
+            {value.ctaLabel && (
+              <div className="pt-1 flex justify-center">
+                <span className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white">
+                  {value.ctaLabel}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
