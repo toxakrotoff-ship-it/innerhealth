@@ -90,6 +90,8 @@ const proxyWithAuth = withAuth(proxyHandler, {
     authorized: ({ token, req }) => {
       if (isTelegramServiceRequest(req)) return true
       const pathname = new URL(req.url).pathname
+      // Token-protected infra alerts endpoint must be callable without NextAuth session.
+      if (pathname === '/api/admin/infra-alert') return true
       const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
       const isAdminApi = pathname.startsWith('/api/admin')
       if (!isAdminPath && !isAdminApi) return true
