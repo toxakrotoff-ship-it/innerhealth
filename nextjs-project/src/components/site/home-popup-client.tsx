@@ -18,7 +18,7 @@ function extractPlainTextFromTiptap(content: JSONContent | null): string {
     if (Array.isArray(node.content)) stack.unshift(...node.content)
   }
 
-  return out.join(' ').replaceAll(/\s+/g, ' ').trim()
+  return out.join(' ').replace(/\s+/g, ' ').trim()
 }
 
 export interface SitePopupDto {
