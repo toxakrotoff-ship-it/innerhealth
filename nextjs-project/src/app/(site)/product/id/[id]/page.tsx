@@ -42,6 +42,14 @@ export default async function ProductByIdPage({ params }: PageProps) {
 
   if (product.slug) redirect(`/product/${product.slug}`)
 
+  const sortedCategoryLinks = [...product.categories].sort((a, b) => {
+    const ao = a.category.sortOrder ?? 0
+    const bo = b.category.sortOrder ?? 0
+    if (ao !== bo) return ao - bo
+    return a.category.title.localeCompare(b.category.title, 'ru')
+  })
+  const primaryCategory = sortedCategoryLinks[0]?.category
+
   const categoryIds = product.categories.map((item) => item.categoryId)
   const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
@@ -52,6 +60,7 @@ export default async function ProductByIdPage({ params }: PageProps) {
       tabs={buildTabs(product)}
       photos={photos}
       relatedProducts={relatedProducts}
+      relatedProductsCategoryTitle={primaryCategory?.title ?? null}
     />
   )
 }

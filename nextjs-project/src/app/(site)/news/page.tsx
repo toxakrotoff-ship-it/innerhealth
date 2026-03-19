@@ -1,13 +1,28 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
+import { Breadcrumbs } from '@/components/site/breadcrumbs'
 
 export const revalidate = 900
+
+export const metadata: Metadata = {
+  title: 'Новости',
+  description:
+    'Новости Inner Health: акции, поступления, события и полезные материалы о здоровье и нутриентах.',
+  alternates: { canonical: '/news' },
+  openGraph: {
+    title: 'Новости | Inner Health',
+    description: 'Актуальные новости магазина и полезная информация для клиентов.',
+    url: '/news',
+  },
+}
 
 async function getNewsList() {
   try {
@@ -21,12 +36,16 @@ async function getNewsList() {
   }
 }
 
+const newsBreadcrumbItems = [{ label: 'Главная', href: '/' }, { label: 'Новости' }]
+
 export default async function NewsListPage() {
   const posts = await getNewsList()
 
   return (
     <AdaptiveContainer maxWidth="default" className="py-10">
-      <Heading1 className="text-text mb-6">Новости</Heading1>
+      <BreadcrumbJsonLd items={newsBreadcrumbItems} currentPath="/news" />
+      <Breadcrumbs items={newsBreadcrumbItems} />
+      <Heading1 className="text-text mb-6 mt-2">Новости</Heading1>
       <ScalableSpacing size="lg" />
       {posts.length > 0 ? (
         <FluidGrid

@@ -18,13 +18,18 @@ export function SprintPowerBlock() {
           {/* Слева: изображение + плавающая карточка как в референсе */}
           <div className="relative">
             <div className="relative aspect-square bg-slate-100 rounded-[40px] overflow-hidden">
-              <Image
-                src={sprintPowerMockup}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
+              {/* Inset keeps the mockup visibly smaller than the slate “frame” (was fill + object-cover edge-to-edge). */}
+              <div className="absolute inset-[7%] sm:inset-[8%] md:inset-[9%]">
+                <div className="relative h-full w-full">
+                  <Image
+                    src={sprintPowerMockup}
+                    alt=""
+                    fill
+                    className="object-contain object-center"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
+              </div>
             </div>
             <div className="absolute right-4 bottom-4 md:-bottom-6 md:-right-6 bg-white p-6 rounded-3xl shadow-xl border border-slate-100 max-w-[240px] z-10">
               <h3 className="text-sm font-semibold mb-2 tracking-tight uppercase text-slate-900">

@@ -6,8 +6,10 @@ import { RecentlyViewedProducts } from '@/components/site/recently-viewed-produc
 import { ProductCard } from '@/components/site/product-card'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { QuickOrderDialog } from '@/components/site/quick-order-dialog'
+import { PurchaseTrustStrip } from '@/components/site/purchase-trust-strip'
+import { ProductRelatedCategoryLinks } from '@/components/site/product-related-category-links'
 import { ProductMediaGallery } from '@/components/site/product-media-gallery'
-import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { Breadcrumbs, type BreadcrumbItemType } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
@@ -33,9 +35,14 @@ interface ProductPageContentProps {
   }
   tabs: { title: string; content: string }[]
   photos: ProductGalleryPhoto[]
+  /** When omitted, uses Главная → Каталог → title */
+  breadcrumbItems?: BreadcrumbItemType[]
+  /** Primary category title for contextual internal links */
+  relatedProductsCategoryTitle?: string | null
   relatedProducts: Array<{
     id: string
     title: string
+    brand: string | null
     price: number
     priceOld: number | null
     photo: string | null
@@ -57,18 +64,26 @@ function getStockBadge(quantity: number | null | undefined): StockBadgeState {
   return { label: 'Заканчивается', className: 'bg-orange-100 text-orange-700' }
 }
 
-export function ProductPageContent({ product, tabs, photos, relatedProducts }: ProductPageContentProps) {
+export function ProductPageContent({
+  product,
+  tabs,
+  photos,
+  relatedProducts,
+  breadcrumbItems,
+  relatedProductsCategoryTitle,
+}: ProductPageContentProps) {
   const stock = getStockBadge(product.quantity)
+  const crumbs: BreadcrumbItemType[] =
+    breadcrumbItems ??
+    [
+      { label: 'Главная', href: '/' },
+      { label: 'Каталог', href: '/catalog' },
+      { label: product.title },
+    ]
 
   return (
     <AdaptiveContainer maxWidth="default" className="py-10">
-      <Breadcrumbs
-        items={[
-          { label: 'Главная', href: '/' },
-          { label: 'Каталог', href: '/catalog' },
-          { label: product.title },
-        ]}
-      />
+      <Breadcrumbs items={crumbs} />
       <RecentlyViewedTracker productId={product.id} />
       <FluidGrid
         cols={1}
@@ -122,6 +137,7 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
           <div className="mt-3">
             <CompareToggleButton productId={product.id} />
           </div>
+          <PurchaseTrustStrip />
           {product.description && (
             <div
               className="mt-6 text-gray-600 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
@@ -167,8 +183,18 @@ export function ProductPageContent({ product, tabs, photos, relatedProducts }: P
       {relatedProducts.length > 0 && (
         <ScalableSpacing size="lg">
           <section className="pt-8 border-t border-gray-200">
-            <Heading2 className="mb-4">С этим товаром покупают</Heading2>
+            <Heading2 className="mb-1">Из той же категории</Heading2>
+            <p className="text-sm text-gray-600 mb-4 max-w-2xl">
+              Подборка похожих позиций из каталога — удобно сравнить состав и цену.
+            </p>
+            {relatedProductsCategoryTitle ? (
+              <ProductRelatedCategoryLinks
+                categoryTitle={relatedProductsCategoryTitle}
+                items={relatedProducts}
+              />
+            ) : null}
             <FluidGrid
+              className="mt-6"
               cols={2}
               colsTablet={3}
               colsDesktop={4}

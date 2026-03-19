@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
@@ -8,6 +9,7 @@ import { ProductCard } from '@/components/site/product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
 import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
+import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { PostCard } from '@/components/site/post-card'
 import {
   filterCatalogBlockCategories,
@@ -48,6 +50,19 @@ const ReviewCtaBlock = dynamic(
   () => import('@/components/site/review-cta-block').then((m) => ({ default: m.ReviewCtaBlock })),
   { ssr: true }
 )
+
+export const metadata: Metadata = {
+  title: 'Главная',
+  description:
+    'Inner Health: нутриенты, коллаген, грибные комплексы и здоровое питание. Акции, доставка по России, сертифицированная продукция.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: 'Inner Health — нутриенты и здоровое питание',
+    description:
+      'Интернет-магазин нутриентов и продуктов для здоровья: каталог, новости и выгодные предложения.',
+    url: '/',
+  },
+}
 
 export const revalidate = 300
 
@@ -167,6 +182,7 @@ export default async function HomePage() {
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
+      <HowToOrderSteps />
       <SpacingVertical size="lg" />
 
       {/* Новинки — фоны сохраняем */}

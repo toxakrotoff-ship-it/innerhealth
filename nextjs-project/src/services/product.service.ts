@@ -128,6 +128,19 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
   };
 }
 
+/** Count products matching catalog filters (SEO robots / thin URLs without loading rows). */
+export async function countCatalogProducts(
+  options: Pick<CatalogQueryOptions, 'q' | 'brands' | 'minPrice' | 'maxPrice' | 'promoOnly'>
+): Promise<number> {
+  const where = buildCatalogWhere({
+    page: 1,
+    pageSize: 1,
+    sort: 'newest',
+    ...options,
+  });
+  return prisma.product.count({ where });
+}
+
 export async function getCatalogBrandOptions(): Promise<string[]> {
   const rows = await prisma.product.findMany({
     where: {

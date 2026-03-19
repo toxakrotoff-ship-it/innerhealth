@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
@@ -18,11 +20,16 @@ import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { getResolvedBlock } from '@/services/content-block.service'
+import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
+import { CatalogZeroHitReporter } from '@/components/site/catalog-zero-hit-reporter'
+import {
+  buildCatalogListPath,
+  parseCatalogSearchParams,
+} from '@/lib/catalog-list-path'
+import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
-
-const PRODUCTS_PER_PAGE = 24
 
 interface CatalogPageProps {
   searchParams: Promise<{
@@ -37,33 +44,62 @@ interface CatalogPageProps {
   }>
 }
 
+const CATALOG_DESCRIPTION =
+  'Каталог товаров Inner Health: нутриенты, коллаген, БАДы и специализированное питание. Фильтры по цене и бренду, доставка по России.'
+
+export async function generateMetadata({
+  searchParams,
+}: CatalogPageProps): Promise<Metadata> {
+  const raw = await searchParams
+  const p = parseCatalogSearchParams(raw)
+  const canonicalPath = buildCatalogListPath({
+    page: p.page,
+    q: p.q,
+    minPrice: p.minPrice,
+    maxPrice: p.maxPrice,
+    brands: p.brands,
+    promoOnly: p.promoOnly,
+    sort: p.sort,
+    view: p.view,
+  })
+  const matchingTotal = await productService.countCatalogProducts({
+    q: p.q,
+    brands: p.brands,
+    minPrice: p.minPrice,
+    maxPrice: p.maxPrice,
+    promoOnly: p.promoOnly,
+  })
+  const robots = getCatalogListingRobots({ parsed: p, matchingTotal })
+  const titleBase = 'Каталог'
+  const title = p.page > 1 ? `${titleBase} — страница ${p.page}` : titleBase
+  return {
+    title,
+    description: CATALOG_DESCRIPTION,
+    alternates: { canonical: canonicalPath },
+    robots,
+    openGraph: {
+      title: `${title} | Inner Health`,
+      description:
+        'Выберите категорию и оформите заказ онлайн. Акции, подарки и консультации по ассортименту.',
+      url: canonicalPath,
+    },
+  }
+}
+
+const PRODUCTS_PER_PAGE = 24
+
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const sp = await searchParams
   const {
-    page: pageParam,
-    q: qParam,
-    minPrice: minPriceParam,
-    maxPrice: maxPriceParam,
-    brand: brandParam,
-    promo: promoParam,
-    sort: sortParam,
-    view: viewParam,
-  } = await searchParams
-
-  const q = qParam?.trim() ?? ''
-  const minPrice = minPriceParam ? Number(minPriceParam) : undefined
-  const maxPrice = maxPriceParam ? Number(maxPriceParam) : undefined
-  const promoOnly = promoParam === '1'
-  const selectedBrands = (brandParam ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean)
-
-  const sort =
-    sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'name_asc'
-      ? sortParam
-      : 'newest'
-  const view = viewParam === 'list' ? 'list' : 'grid'
-  const page = Math.max(1, parseInt(String(pageParam), 10) || 1)
+    page,
+    q,
+    minPrice,
+    maxPrice,
+    brands: selectedBrands,
+    promoOnly,
+    sort,
+    view,
+  } = parseCatalogSearchParams(sp)
 
   const [categories, brandOptions, catalogResult] = await Promise.all([
     prisma.category.findMany({
@@ -114,12 +150,26 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     { label: 'Главная', href: '/' },
     { label: 'Каталог' },
   ]
+  const catalogCurrentPath = buildCatalogListPath({
+    page,
+    q,
+    minPrice,
+    maxPrice,
+    brands: selectedBrands,
+    promoOnly,
+    sort,
+    view,
+  })
 
   return (
     <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
+      <BreadcrumbJsonLd items={breadcrumbItems} currentPath={catalogCurrentPath} />
+      <Suspense fallback={null}>
+        <CatalogZeroHitReporter query={q} hasProducts={products.length > 0} />
+      </Suspense>
       <Breadcrumbs items={breadcrumbItems} />
       <Heading1 className="mb-6 mt-0">
-        Каталог
+        {page > 1 ? `Каталог — страница ${page}` : 'Каталог'}
       </Heading1>
       <CatalogControls
         initialQuery={q}

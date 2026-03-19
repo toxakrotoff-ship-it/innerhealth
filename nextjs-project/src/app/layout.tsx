@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import { Unbounded } from 'next/font/google'
 import { Preloader } from '@/components/site/preloader'
+import { getSiteBaseUrl } from '@/lib/site-url'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -35,9 +36,61 @@ const unbounded = Unbounded({
   display: 'swap',
 })
 
+const siteBaseUrl = getSiteBaseUrl()
+const yandexVerification = process.env.NEXT_PUBLIC_YANDEX_VERIFICATION?.trim()
+
 export const metadata: Metadata = {
-  title: 'Inner Health — Нутриенты и здоровое питание',
-  description: 'Магазин нутриентов и продуктов для здоровья Inner Health',
+  metadataBase: new URL(siteBaseUrl),
+  title: {
+    default: 'Inner Health — нутриенты и здоровое питание',
+    template: '%s | Inner Health',
+  },
+  description:
+    'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
+  applicationName: 'Inner Health',
+  referrer: 'origin-when-cross-origin',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'ru_RU',
+    url: siteBaseUrl,
+    siteName: 'Inner Health',
+    title: 'Inner Health — нутриенты и здоровое питание',
+    description:
+      'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
+    images: [
+      {
+        url: '/hero-portrait.png',
+        alt: 'Inner Health',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Inner Health — нутриенты и здоровое питание',
+    description:
+      'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
+    images: ['/hero-portrait.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  category: 'health',
+  ...(yandexVerification
+    ? { verification: { yandex: yandexVerification } }
+    : {}),
 }
 
 export default function RootLayout({

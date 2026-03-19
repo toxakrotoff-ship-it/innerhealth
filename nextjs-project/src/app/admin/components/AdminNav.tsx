@@ -172,6 +172,7 @@ const navConfig: NavEntry[] = [
   // 3. Контент и маркетинг
   { path: 'news', label: 'Новости', icon: icons.news },
   { path: 'news?type=article', label: 'Статьи', icon: icons.news },
+  { path: 'seo-hubs', label: 'SEO хабы', icon: icons.content },
   { path: 'promo-codes', label: 'Промокоды', icon: icons.promo },
   { path: 'reviews', label: 'Модерация отзывов', icon: icons.reviews },
 
@@ -220,6 +221,7 @@ function getItemIsActive(
   if (itemPath === 'leads-export') return pathname === `${prefix}leads-export`
   if (itemPath === 'quick-orders') return pathname === `${prefix}quick-orders`
   if (itemPath === 'content') return pathname === `${prefix}content`
+  if (itemPath === 'seo-hubs') return pathname.startsWith(`${prefix}seo-hubs`)
   if (itemPath === 'settings') return pathname === `${prefix}settings`
   return pathname === `${prefix}${itemPath}`
 }

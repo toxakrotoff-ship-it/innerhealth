@@ -1,5 +1,5 @@
 import { getSettingsMap } from '@/services/settings.service'
-import { buildOrganizationJsonLd } from '@/lib/schema-org'
+import { buildOrganizationJsonLd, buildWebSiteJsonLd } from '@/lib/schema-org'
 
 /**
  * Async fragment that fetches settings and renders organization JSON-LD.
@@ -9,16 +9,28 @@ import { buildOrganizationJsonLd } from '@/lib/schema-org'
 export async function SiteLayoutJsonLd() {
   const settings = await getSettingsMap()
   const organizationJsonLd = buildOrganizationJsonLd(settings)
+  const webSiteJsonLd = buildWebSiteJsonLd(settings)
 
-  if (!organizationJsonLd) {
+  if (!organizationJsonLd && !webSiteJsonLd) {
     return null
   }
 
   return (
-    <script
-      type="application/ld+json"
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-    />
+    <>
+      {organizationJsonLd ? (
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+      ) : null}
+      {webSiteJsonLd ? (
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
+        />
+      ) : null}
+    </>
   )
 }

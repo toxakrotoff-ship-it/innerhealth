@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
@@ -12,6 +13,8 @@ import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
+import { stripHtmlToPlainText } from '@/lib/plain-text'
+import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -34,6 +37,38 @@ export const revalidate = 600
 
 interface PageProps {
   params: Promise<{ categorySlug: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { categorySlug } = await params
+  const category = await prisma.category.findUnique({
+    where: { slug: categorySlug },
+    select: { title: true },
+  })
+  if (!category) {
+    return {}
+  }
+
+  const content = getCategoryPageContent(categorySlug)
+  let description = `${category.title} — товары в каталоге Inner Health. Доставка по России.`
+  if (content?.paragraphs?.length) {
+    description = stripHtmlToPlainText(content.paragraphs[0] ?? '', 158)
+  } else if (content?.bullets?.length) {
+    description = stripHtmlToPlainText(content.bullets.join(' '), 158)
+  }
+
+  const path = `/catalog/${categorySlug}`
+
+  return {
+    title: category.title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      title: `${category.title} | Inner Health`,
+      description,
+      url: path,
+    },
+  }
 }
 
 export default async function CategoryPage({ params }: PageProps) {
@@ -144,9 +179,10 @@ export default async function CategoryPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Хлебные крошки */}
-      <section className="bg-highlight-blue border-b border-gray-200/70">
+      {/* Хлебные крошки — нейтральный фон, без отдельной «полосы» highlight-blue */}
+      <section className="bg-white">
         <AdaptiveContainer maxWidth="default">
+          <BreadcrumbJsonLd items={breadcrumbItems} currentPath={`/catalog/${categorySlug}`} />
           <Breadcrumbs
             items={breadcrumbItems}
           />

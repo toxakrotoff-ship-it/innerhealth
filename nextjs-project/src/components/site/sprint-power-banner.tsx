@@ -36,14 +36,14 @@ function MarqueeContent() {
 export function SprintPowerBanner() {
   return (
     <section
-      className="bg-slate-900 py-6 border-y border-white/5 overflow-hidden"
+      className="bg-slate-900 py-6 border-y border-white/5 overflow-hidden min-h-[3.25rem] flex items-center"
       aria-label="Баннер Sprint Power"
     >
       <Link
         href={BANNER_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex w-max animate-marquee-sprint gap-8 whitespace-nowrap hover:[&_span]:text-white/60 transition-colors"
+        className="flex w-max min-h-[2.75rem] items-center animate-marquee-sprint gap-8 whitespace-nowrap hover:[&_span]:text-white/60 transition-colors"
       >
         <MarqueeContent />
         <MarqueeContent />

@@ -1,11 +1,26 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 
 export const revalidate = 3600
+
+export const metadata: Metadata = {
+  title: 'Статьи',
+  description:
+    'Статьи Inner Health о нутриентах, питании и здоровье. Экспертные материалы и обзоры продуктов.',
+  alternates: { canonical: '/informaciya' },
+  openGraph: {
+    title: 'Статьи | Inner Health',
+    description: 'Полезные статьи о здоровье, БАДах и сбалансированном питании.',
+    url: '/informaciya',
+  },
+}
 
 async function getArticlesList() {
   try {
@@ -19,12 +34,51 @@ async function getArticlesList() {
   }
 }
 
+async function getPublishedHubs() {
+  try {
+    return await prisma.seoHub.findMany({
+      where: { published: true },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, title: true, slug: true },
+    })
+  } catch {
+    return []
+  }
+}
+
+const breadcrumbItems = [
+  { label: 'Главная', href: '/' },
+  { label: 'Статьи' },
+]
+
 export default async function InformaciyaPage() {
-  const posts = await getArticlesList()
+  const [posts, hubs] = await Promise.all([getArticlesList(), getPublishedHubs()])
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
-      <Heading1 className="text-text mb-6">Статьи</Heading1>
+    <AdaptiveContainer
+      maxWidth="default"
+      className="pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24"
+    >
+      <BreadcrumbJsonLd items={breadcrumbItems} currentPath="/informaciya" />
+      <Breadcrumbs items={breadcrumbItems} />
+      <Heading1 className="text-text mb-6 mt-2">Статьи</Heading1>
+      {hubs.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-text mb-3">Подборки и гайды</h2>
+          <ul className="flex flex-wrap gap-2">
+            {hubs.map((h) => (
+              <li key={h.id}>
+                <Link
+                  href={`/guides/${h.slug}`}
+                  className="inline-flex rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text hover:border-action-blue hover:text-action-blue transition-colors"
+                >
+                  {h.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {posts.length > 0 ? (
         <ul className="space-y-4">
           {posts.map((post) => (

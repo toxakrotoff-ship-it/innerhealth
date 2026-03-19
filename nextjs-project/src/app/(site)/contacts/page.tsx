@@ -56,7 +56,7 @@ export default async function ContactsPage() {
   const phoneHref = `tel:${phone.replace(/\s|\(|\)|-/g, '')}`
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white">
       <AdaptiveContainer maxWidth="default">
         <Breadcrumbs items={breadcrumbItems} />
       </AdaptiveContainer>
@@ -67,7 +67,13 @@ export default async function ContactsPage() {
         </ResponsiveText>
 
         <ScalableSpacing size="lg">
-          <FluidGrid cols={1} colsDesktop={2} gap={6} adaptiveGap>
+          <FluidGrid
+            cols={1}
+            colsDesktop={2}
+            gap="4"
+            adaptiveGap={false}
+            className="lg:gap-5 xl:gap-6 2xl:gap-6 3xl:gap-8 4xl:gap-8"
+          >
             <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 min-h-[320px]">
               <YandexMapDynamic className="w-full h-full min-h-[320px]" />
             </div>

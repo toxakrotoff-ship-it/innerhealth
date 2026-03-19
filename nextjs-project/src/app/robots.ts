@@ -1,17 +1,15 @@
 import type { MetadataRoute } from 'next'
-
-function getBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : 'https://innerhaealth.inetrnet.pp.ru'
-  )
-}
+import { getSiteBaseUrl } from '@/lib/site-url'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = getBaseUrl()
+  const baseUrl = getSiteBaseUrl()
   const adminPath = process.env.ADMIN_SECRET_PATH || 'admin'
+  let host: string | undefined
+  try {
+    host = new URL(baseUrl).host
+  } catch {
+    host = undefined
+  }
 
   return {
     rules: [
@@ -31,5 +29,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    ...(host ? { host } : {}),
   }
 }

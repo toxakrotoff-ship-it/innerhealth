@@ -1,10 +1,23 @@
-import { prisma } from '@/lib/prisma';
-import { ReviewsSection } from './reviews-section';
-import { AdaptiveContainer } from '@/components/ui/adaptive-container';
-import { Heading1 } from '@/components/ui/responsive-text';
-import { ScalableSpacing } from '@/components/ui/scalable-spacing';
+import type { Metadata } from 'next'
+import { prisma } from '@/lib/prisma'
+import { ReviewsSection } from './reviews-section'
+import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { Heading1 } from '@/components/ui/responsive-text'
+import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 
-export const revalidate = 1800;
+export const revalidate = 1800
+
+export const metadata: Metadata = {
+  title: 'Отзывы',
+  description:
+    'Отзывы покупателей Inner Health о нутриентах, доставке и сервисе. Реальные мнения клиентов магазина.',
+  alternates: { canonical: '/otzyvy' },
+  openGraph: {
+    title: 'Отзывы | Inner Health',
+    description: 'Читайте отзывы о товарах и работе магазина Inner Health.',
+    url: '/otzyvy',
+  },
+}
 
 type ReviewRow = {
   id: string;

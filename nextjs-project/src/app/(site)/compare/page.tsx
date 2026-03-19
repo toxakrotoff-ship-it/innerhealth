@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { ComparePageContent } from '@/components/site/compare-page-content'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
+
+export const metadata: Metadata = {
+  title: 'Сравнение товаров',
+  robots: { index: false, follow: true },
+}
 
 export default function ComparePage() {
   return (

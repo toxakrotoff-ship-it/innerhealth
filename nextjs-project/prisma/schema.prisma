@@ -365,8 +365,35 @@ model Post {
   previewImage String?
   published    Boolean  @default(false)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   excerpt      String?
   type         String   @default("news")
+}
+
+/// Поисковые запросы каталога без выдачи (для доработки ассортимента и редиректов).
+model CatalogSearchZeroHit {
+  id        String   @id @default(cuid())
+  query     String
+  path      String   @default("/catalog")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+}
+
+/// SEO-хабы: кластерные страницы со ссылками на товары.
+model SeoHub {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  excerpt       String?
+  content       Json
+  productSlugs  String[] @default([])
+  published     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([published, slug])
 }
 
 model PromoCode {

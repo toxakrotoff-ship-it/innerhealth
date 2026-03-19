@@ -40,7 +40,10 @@ export default async function AboutPage() {
 
   return (
     <div className="bg-white">
-      <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3">
+      <AdaptiveContainer
+        maxWidth="default"
+        className="pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24"
+      >
         <Breadcrumbs items={breadcrumbItems} />
 
         <ResponsiveText as="h1" variant="4xl" weight="bold" className="mb-10 mt-0 font-display">
