@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
 import Link from 'next/link'
+import { ChevronDown } from 'lucide-react'
 import Button from '@/components/ui/button'
 import { ProductTable } from './components/ProductTable'
 import { Product } from '@prisma/client'
 import { CategorySidebar } from './components/CategorySidebar'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
+import { NO_CATEGORY_ID } from './constants'
 
 interface ProductWithCategories extends Product {
   categories?: { categoryId: string }[]
@@ -18,6 +21,15 @@ export default function AdminCatalogPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [categoriesPanelOpen, setCategoriesPanelOpen] = useState(false)
+  const [categoriesEverOpened, setCategoriesEverOpened] = useState(false)
+
+  const filterSummary =
+    selectedCategory === null
+      ? 'Все товары'
+      : selectedCategory === NO_CATEGORY_ID
+        ? 'Без раздела'
+        : 'Выбранный раздел'
 
   const fetchProducts = async () => {
     try {
@@ -44,6 +56,10 @@ export default function AdminCatalogPage() {
     fetchProducts()
   }, [selectedCategory])
 
+  useEffect(() => {
+    if (categoriesPanelOpen) setCategoriesEverOpened(true)
+  }, [categoriesPanelOpen])
+
   const handleCategorySelect = (categoryId: string | null) => {
     setSelectedCategory(categoryId)
   }
@@ -55,14 +71,12 @@ export default function AdminCatalogPage() {
           <h1>Каталог товаров</h1>
           <p>Управление товарами магазина</p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="admin-card h-64 animate-pulse rounded-xl" />
-          <div className="lg:col-span-3 space-y-4">
-            <div className="admin-card h-14 animate-pulse rounded-xl" />
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="admin-card h-16 animate-pulse rounded-xl" />
-            ))}
-          </div>
+        <div className="space-y-4">
+          <div className="admin-card h-12 animate-pulse rounded-xl" />
+          <div className="admin-card h-14 animate-pulse rounded-xl" />
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="admin-card h-16 animate-pulse rounded-xl" />
+          ))}
         </div>
       </div>
     )
@@ -103,21 +117,46 @@ export default function AdminCatalogPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <CategorySidebar
-            selectedCategory={selectedCategory}
-            onCategorySelect={handleCategorySelect}
-            products={products}
-          />
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setCategoriesPanelOpen((open) => !open)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            aria-expanded={categoriesPanelOpen}
+            aria-controls="admin-catalog-categories-panel"
+          >
+            <span>Категории</span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 transition-transform ${categoriesPanelOpen ? 'rotate-180' : ''}`}
+              aria-hidden
+            />
+          </button>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Сейчас: <span className="font-medium text-gray-700 dark:text-gray-200">{filterSummary}</span>
+          </span>
         </div>
-        <div className="lg:col-span-3">
-          <ProductTable
-            products={products}
-            onRefresh={fetchProducts}
-            selectedCategory={selectedCategory}
-          />
-        </div>
+
+        <AdminCollapsible open={categoriesPanelOpen} className="max-w-2xl">
+          {categoriesEverOpened ? (
+            <div id="admin-catalog-categories-panel">
+              <CategorySidebar
+                selectedCategory={selectedCategory}
+                onCategorySelect={(id) => {
+                  handleCategorySelect(id)
+                  setCategoriesPanelOpen(false)
+                }}
+                products={products}
+              />
+            </div>
+          ) : null}
+        </AdminCollapsible>
+
+        <ProductTable
+          products={products}
+          onRefresh={fetchProducts}
+          selectedCategory={selectedCategory}
+        />
       </div>
     </div>
   )

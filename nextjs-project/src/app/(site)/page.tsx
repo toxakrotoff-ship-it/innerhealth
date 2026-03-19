@@ -189,7 +189,7 @@ export default async function HomePage() {
           {newProducts.length <= 1 ? (
             <div className="flex justify-center">
               {newProducts[0] && (
-                <div className="w-full max-w-sm md:max-w-md">
+                <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
                   <ProductCard
                     key={newProducts[0].id}
                     id={newProducts[0].id}
@@ -460,7 +460,7 @@ export default async function HomePage() {
           )}
         </AdaptiveContainer>
       </section>
-      <SpacingVertical size="lg" />
+      {/* No SpacingVertical here: margin would show main’s bg-white between two bg-slate-50 sections */}
 
       {/* Отзывы */}
       <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">

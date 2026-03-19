@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
+import { ModalLayer } from '@/components/ui/modal-layer';
 
 interface AdminMailbox {
   id: string;
@@ -735,10 +736,18 @@ export default function AdminSettingsPage() {
           )}
         </div>
 
-        {showDisableModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Отключить 2FA</h3>
+        <ModalLayer
+          open={showDisableModal}
+          onClose={() => {
+            setShowDisableModal(false);
+            setDisablePassword('');
+          }}
+          backdropClassName="bg-black/50"
+          panelClassName="max-w-sm w-full"
+          dialogProps={{ 'aria-labelledby': 'admin-2fa-disable-title' }}
+        >
+            <div className="bg-white rounded-lg shadow-xl w-full p-6">
+              <h3 id="admin-2fa-disable-title" className="text-lg font-semibold text-gray-900 mb-2">Отключить 2FA</h3>
               <p className="text-sm text-gray-600 mb-4">
                 Введите пароль или текущий код из приложения для подтверждения.
               </p>
@@ -795,8 +804,7 @@ export default function AdminSettingsPage() {
                 </Button>
               </div>
             </div>
-          </div>
-        )}
+        </ModalLayer>
       </div>
     </div>
   );

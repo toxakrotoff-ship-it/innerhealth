@@ -4,10 +4,7 @@ import * as productService from '@/services/product.service';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
-import sharp from 'sharp';
-
-const MAX_WIDTH = 1920;
-const BLUR_PLACEHOLDER_SIZE = 10;
+import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 type PhotoEntry = { url: string; blurDataURL?: string };
 
@@ -121,33 +118,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const basePipeline = sharp(originalBuffer);
-    const metadata = await basePipeline.metadata();
-    const width = metadata.width ?? 0;
-    const resized = width > MAX_WIDTH
-      ? basePipeline.resize(MAX_WIDTH, null, { withoutEnlargement: true })
-      : basePipeline;
-
     const webpFileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webp`;
     const webpFilePath = path.join(uploadDir, webpFileName);
-
-    await resized.webp({ quality: 85 }).toFile(webpFilePath);
+    const { webpBuffer, blurDataURL } = await normalizeProductPhoto(originalBuffer);
+    await fsPromises.writeFile(webpFilePath, webpBuffer);
 
     const photoUrl = `/uploads/products/${productName}/${webpFileName}`;
-
-    let blurDataURL: string | undefined;
-    try {
-      const blurBuffer = await sharp(originalBuffer)
-        .resize(BLUR_PLACEHOLDER_SIZE, null, { withoutEnlargement: true })
-        .webp({ quality: 20 })
-        .toBuffer();
-      blurDataURL = `data:image/webp;base64,${blurBuffer.toString('base64')}`;
-    } catch {
-      // optional blur generation failure — continue without placeholder
-    }
+    const blurDataURLValue = blurDataURL ?? undefined;
 
     const existingPhotos = parsePhotosJson(existingProduct.photos);
-    const newEntry: PhotoEntry = { url: photoUrl, blurDataURL };
+    const newEntry: PhotoEntry = { url: photoUrl, blurDataURL: blurDataURLValue };
     const updatedPhotos: PhotoEntry[] = [newEntry, ...existingPhotos];
     const photosJson = updatedPhotos.map((p) =>
       p.blurDataURL ? { url: p.url, blurDataURL: p.blurDataURL } : { url: p.url }
@@ -161,7 +141,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: 'Image downloaded, optimized and saved successfully',
       photo: photoUrl,
-      blurDataURL: blurDataURL ?? undefined,
+      blurDataURL: blurDataURLValue,
       product: updatedProduct,
     });
   } catch (error) {

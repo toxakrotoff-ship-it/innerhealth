@@ -128,7 +128,8 @@ const patchProductSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
   price: z.number().min(0).optional(),
   quantity: z.number().int().min(0).optional(),
-}).refine((d) => d.price !== undefined || d.quantity !== undefined, { message: 'Provide at least one of price, quantity' });
+  isDraft: z.boolean().optional(),
+}).refine((d) => d.price !== undefined || d.quantity !== undefined || d.isDraft !== undefined, { message: 'Provide at least one of price, quantity, isDraft' });
 
 export async function PATCH(request: Request) {
   const session = await requireAdminSession();
@@ -143,13 +144,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const { id, price, quantity } = parsed;
+  const { id, price, quantity, isDraft } = parsed;
 
   try {
 
-    const data: { price?: number; quantity?: number } = {};
+    const data: { price?: number; quantity?: number; isDraft?: boolean } = {};
     if (price !== undefined) data.price = price;
     if (quantity !== undefined) data.quantity = quantity;
+    if (isDraft !== undefined) data.isDraft = isDraft;
 
     const updated = await productService.patchProductPriceQuantity(id, data);
     return NextResponse.json(updated);

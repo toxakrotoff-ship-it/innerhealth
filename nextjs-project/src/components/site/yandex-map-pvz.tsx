@@ -160,7 +160,7 @@ export function YandexMapPvz({
     script.async = true
     script.onload = initMap
     script.onerror = () => {
-      setLoadError('Не удалось загрузить карту. Проверьте NEXT_PUBLIC_YANDEX_MAPS_API_KEY (см. docs/yandex-maps-env.md).')
+      setLoadError('Не удалось загрузить карту. Проверьте NEXT_PUBLIC_YANDEX_MAPS_API_KEY (см. nextjs-project/docs/yandex-maps-env.md).')
     }
     document.head.appendChild(script)
     return () => {

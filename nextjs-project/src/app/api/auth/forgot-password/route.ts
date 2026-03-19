@@ -75,7 +75,7 @@ export async function POST(request: Request) {
         error:
           process.env.SMTP_HOST
             ? 'Не удалось отправить письмо. Проверьте SMTP настройки и логи сервера.'
-            : 'Отправка писем не настроена. Добавьте SMTP_HOST, SMTP_USER, SMTP_PASS в .env.local (см. docs/password-reset-env.md).',
+            : 'Отправка писем не настроена. Добавьте SMTP_HOST, SMTP_USER, SMTP_PASS в .env.local (см. nextjs-project/docs/password-reset-env.md).',
       },
       {
         status: 500,

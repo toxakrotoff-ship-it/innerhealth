@@ -105,8 +105,8 @@ const proxyWithAuth = withAuth(proxyHandler, {
 const proxy = process.env.NODE_ENV === 'production' ? proxyWithAuth : proxyHandler
 export default proxy
 
+/** Must stay a literal in this file (same module as default) — Next.js 16 rejects `config` re-exported from `middleware.ts`. */
 export const config = {
-  // Must stay static: Next.js parses matcher at build-time.
   matcher: [
     '/',
     '/admin/:path*',

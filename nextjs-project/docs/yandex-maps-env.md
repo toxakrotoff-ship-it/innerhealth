@@ -106,7 +106,7 @@ docker compose up -d
 
 ### Скрипт блокируется CSP (в Network — тип «CSP», 0 байт)
 
-В проекте включён Content-Security-Policy (middleware `src/proxy.ts`). Для карты в CSP разрешены: `script-src` — `https://api-maps.yandex.ru` и `https://yastatic.net` (Яндекс подгружает бандл с yastatic.net; без него в консоли: «заблокировали выполнение сценария на …yastatic.net…» и «ymaps: Failed to bundle "full"»); `connect-src` — `https://api-maps.yandex.ru` и `https://*.maps.yandex.ru`. После изменения пересоберите образ и перезапустите приложение.
+В проекте включён Content-Security-Policy (edge-файл Next.js 16: `src/proxy.ts` — см. [middleware-to-proxy](https://nextjs.org/docs/messages/middleware-to-proxy)). Для карты в CSP разрешены: `script-src` — `https://api-maps.yandex.ru` и `https://yastatic.net` (Яндекс подгружает бандл с yastatic.net; без него в консоли: «заблокировали выполнение сценария на …yastatic.net…» и «ymaps: Failed to bundle "full"»); `connect-src` — `https://api-maps.yandex.ru` и `https://*.maps.yandex.ru`. После изменения пересоберите образ и перезапустите приложение.
 
 ### Другие причины
 

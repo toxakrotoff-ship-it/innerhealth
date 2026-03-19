@@ -88,8 +88,8 @@ export function ProductCard({
           transform: 'rotateX(var(--r-y)) rotateY(var(--r-x))',
         }}
       >
-        <div className="relative aspect-square bg-highlight-blue flex items-center justify-center overflow-hidden">
-          <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
+        <div className="relative aspect-3/4 overflow-hidden bg-highlight-blue">
+          <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
             <ProductQuickView
               id={id}
               title={title}
@@ -114,7 +114,7 @@ export function ProductCard({
               }
               alt={title}
               fill
-              className="object-contain p-4"
+              className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={priority}
               placeholder={blurDataURL ? 'blur' : undefined}
@@ -122,12 +122,14 @@ export function ProductCard({
               unoptimized={photo.startsWith('http://') || photo.startsWith('https://')}
             />
           ) : (
-            <span className="text-action-blue/40 text-4xl font-light">?</span>
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-action-blue/40 text-4xl font-light">?</span>
+            </div>
           )}
         </div>
-        <div className="flex flex-1 min-h-0 min-w-0 flex-col p-4">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col px-3 py-2">
           <div className="flex-1 min-h-0 min-w-0">
-            <h3 className="font-medium text-text line-clamp-2 group-hover:text-action-blue transition-colors">
+            <h3 className="text-xs sm:text-sm font-medium text-text line-clamp-2 group-hover:text-action-blue transition-colors">
               {title}
             </h3>
             {(brand || sku) && (
@@ -135,8 +137,8 @@ export function ProductCard({
                 {brand ? `Бренд: ${brand}` : ''}{brand && sku ? ' • ' : ''}{sku ? `SKU: ${sku}` : ''}
               </p>
             )}
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-lg font-semibold text-text">
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="text-sm sm:text-base font-semibold text-text">
                 {price.toLocaleString('ru-RU')} ₽
               </span>
               {priceOld != null && priceOld > price && (
@@ -146,7 +148,7 @@ export function ProductCard({
               )}
             </div>
           </div>
-          <div className="mt-3 flex min-w-0 flex-col gap-2">
+          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5">
             <AddToCartButton
               productId={id}
               title={title}
@@ -157,11 +159,11 @@ export function ProductCard({
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
               size="sm"
-              className="w-full"
+              className="w-full min-h-[40px] sm:min-h-[36px]"
             />
             <Link
               href={detailHref}
-              className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
+              className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[40px] sm:min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
             >
               Подробнее
             </Link>

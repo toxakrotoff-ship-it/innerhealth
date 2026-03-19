@@ -116,7 +116,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   ]
 
   return (
-    <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3">
+    <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
       <Breadcrumbs items={breadcrumbItems} />
       <Heading1 className="mb-6 mt-0">
         Каталог
@@ -189,7 +189,18 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       ) : (
         <>
           {view === 'grid' ? (
-            <FluidGrid cols={2} colsTablet={3} colsDesktop={4} colsXl={4} cols2xl={4} cols3xl={4} cols4xl={4} gap={4} adaptiveGap>
+            <FluidGrid
+              cols={2}
+              colsTablet={3}
+              colsDesktop={4}
+              colsXl={5}
+              cols2xl={5}
+              cols3xl={6}
+              cols4xl={6}
+              gap="6"
+              adaptiveGap={false}
+              className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+            >
               {products.map((p, index) => (
                 <ProductCard
                   key={p.id}
@@ -229,7 +240,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           )}
           {(page > 1 || hasNextPage) && (
             <nav
-              className="mt-8 flex flex-wrap items-center justify-center gap-2"
+              className="mt-10 md:mt-12 flex flex-wrap items-center justify-center gap-2"
               aria-label="Пагинация каталога"
             >
               {page > 1 && (

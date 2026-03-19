@@ -219,6 +219,8 @@ npm run test -- --coverage
 
 ## Ссылки
 
+> **Архив:** длинные отчёты (`adaptive-testing-final-report`, `adaptive-test-coverage-expansion-report`, `mobile-desktop-testing-report`, `adaptive-ui-testing-report`) удалены как устаревшие дубликаты; актуальное состояние смотрите по результатам команд тестов выше (обновлено 19.03.2026).
+
 - [Playwright Documentation](https://playwright.dev/)
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library](https://testing-library.com/)

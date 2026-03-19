@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 
 const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 
@@ -9,12 +9,54 @@ interface ImageDropzoneProps {
   onChange: (url: string | null) => void;
   disabled?: boolean;
   className?: string;
+  chooseButtonText?: string;
+  showHelperText?: boolean;
 }
 
-export function ImageDropzone({ value, onChange, disabled, className = '' }: ImageDropzoneProps) {
+interface ImageInfo {
+  readonly width: number
+  readonly height: number
+}
+
+async function getImageInfoFromFile(file: File): Promise<ImageInfo | null> {
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    // Prefer createImageBitmap when available (faster, no DOM insert)
+    if (typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(file)
+      const info = { width: bmp.width, height: bmp.height }
+      bmp.close()
+      return info
+    }
+
+    const img = new Image()
+    img.decoding = 'async'
+    const loaded = new Promise<ImageInfo>((resolve, reject) => {
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      img.onerror = () => reject(new Error('Failed to read image dimensions'))
+    })
+    img.src = objectUrl
+    return await loaded
+  } catch {
+    return null
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
+export function ImageDropzone({
+  value,
+  onChange,
+  disabled,
+  className = '',
+  chooseButtonText = 'Выбрать файл',
+  showHelperText = true,
+}: ImageDropzoneProps) {
+  const inputId = useId()
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -22,6 +64,7 @@ export function ImageDropzone({ value, onChange, disabled, className = '' }: Ima
         setUploadError('Выберите изображение (JPG, PNG, GIF, WebP)');
         return;
       }
+      setImageInfo(await getImageInfoFromFile(file));
       setUploadError(null);
       setUploading(true);
       try {
@@ -79,6 +122,10 @@ export function ImageDropzone({ value, onChange, disabled, className = '' }: Ima
     [disabled, uploading, uploadFile]
   );
 
+  const aspectRatio = imageInfo ? imageInfo.width / imageInfo.height : null
+  const isNearSquare =
+    aspectRatio != null ? Math.abs(aspectRatio - 1) <= 0.08 : null
+
   return (
     <div className={className}>
       <div
@@ -93,12 +140,20 @@ export function ImageDropzone({ value, onChange, disabled, className = '' }: Ima
         `}
       >
         <input
+          id={inputId}
           type="file"
           accept={ACCEPT}
           onChange={handleInputChange}
           disabled={disabled || uploading}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
+
+        {showHelperText && (
+          <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] text-gray-700 shadow-sm">
+            Рекомендуем: 1200×1200, товар ближе к верху, снизу оставьте ~15–20% воздуха
+          </div>
+        )}
+
         {value ? (
           <div className="relative w-full max-w-[200px] aspect-square mx-auto rounded-lg overflow-hidden bg-gray-100">
             <img
@@ -143,11 +198,29 @@ export function ImageDropzone({ value, onChange, disabled, className = '' }: Ima
                   Перетащите фото сюда или нажмите для выбора
                 </p>
                 <p className="text-xs text-gray-400 mt-1">JPG, PNG, GIF, WebP</p>
+                <label
+                  htmlFor={inputId}
+                  className="mt-3 inline-flex items-center justify-center rounded-lg bg-action-blue px-4 py-2 text-sm font-medium text-white hover:bg-action-blue/90"
+                >
+                  {chooseButtonText}
+                </label>
               </>
             )}
           </>
         )}
       </div>
+
+      {imageInfo && (
+        <div className="mt-2 text-xs text-gray-600">
+          Размер: <span className="font-medium">{imageInfo.width}×{imageInfo.height}</span>
+          {isNearSquare === false && (
+            <span className="ml-2 text-amber-700">
+              Лучше квадрат (1:1) — иначе в каталоге будет разный кроп/поля
+            </span>
+          )}
+        </div>
+      )}
+
       {uploadError && (
         <p className="mt-2 text-sm text-red-600">{uploadError}</p>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ImageDropzone } from '@/app/admin/products/components/ImageDropzone'
 import {
   DndContext,
   closestCenter,
@@ -144,6 +145,14 @@ export function ProductGalleryEditor({ photos, onChange, disabled }: ProductGall
     onChange(next)
   }
 
+  const addUploadedPhoto = (url: string | null) => {
+    if (!url) return
+    const hasOnlyEmpty = localPhotos.length === 1 && localPhotos[0] === ''
+    const next = hasOnlyEmpty ? [url] : [url, ...localPhotos]
+    setLocalPhotos(next)
+    onChange(next)
+  }
+
   const items = localPhotos.length > 0 ? localPhotos : ['']
   const sortableIds = items.map((_, i) => `photo-${i}`)
 
@@ -160,6 +169,16 @@ export function ProductGalleryEditor({ photos, onChange, disabled }: ProductGall
           + Добавить фото
         </button>
       </div>
+
+      <ImageDropzone
+        value={null}
+        onChange={addUploadedPhoto}
+        disabled={disabled}
+        className="max-w-xl"
+        chooseButtonText="Выбрать файл"
+        showHelperText={false}
+      />
+
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">

@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { ChevronDown } from 'lucide-react'
+import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
+import { cn } from '@/lib/utils'
 import { Category, getCategoriesWithCounts } from '../actions'
 import { NO_CATEGORY_ID } from '../constants'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
@@ -90,48 +93,45 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
         </button>
         {products.filter((p) => !p.categories?.length).length > 0 && (
           <div className="rounded-lg overflow-hidden">
-            {expandedIds.has(NO_CATEGORY_ID) ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(NO_CATEGORY_ID)}
-                  className="ml-3 mt-0.5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  <span className="inline-block w-4 text-left" aria-hidden>▼</span>
-                  Скрыть товары
-                </button>
-                <ul className="ml-3 pl-2 border-l border-gray-200 text-xs text-gray-500 space-y-0.5 py-1">
-                  {products
-                    .filter((p) => !p.categories?.length)
-                    .slice(0, 8)
-                    .map((p) => (
-                      <li key={p.id}>
-                        <Link
-                          href={`/${base}/products/${p.id}/edit`}
-                          className="truncate block hover:text-gray-800 hover:underline"
-                          title={p.title}
-                        >
-                          {p.title}
-                        </Link>
-                      </li>
-                    ))}
-                  {products.filter((p) => !p.categories?.length).length > 8 && (
-                    <li className="text-gray-400">
-                      и ещё {products.filter((p) => !p.categories?.length).length - 8}
+            <button
+              type="button"
+              onClick={() => toggleExpanded(NO_CATEGORY_ID)}
+              className="ml-3 mt-0.5 flex w-[calc(100%-0.75rem)] items-center gap-1.5 text-left text-xs text-gray-500 hover:text-gray-700"
+            >
+              <ChevronDown
+                className={cn(
+                  'h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none',
+                  expandedIds.has(NO_CATEGORY_ID) && 'rotate-180'
+                )}
+                aria-hidden
+              />
+              {expandedIds.has(NO_CATEGORY_ID)
+                ? 'Скрыть товары'
+                : `Показать товары (${products.filter((p) => !p.categories?.length).length})`}
+            </button>
+            <AdminCollapsible open={expandedIds.has(NO_CATEGORY_ID)}>
+              <ul className="ml-3 space-y-0.5 border-l border-gray-200 py-1 pl-2 text-xs text-gray-500">
+                {products
+                  .filter((p) => !p.categories?.length)
+                  .slice(0, 8)
+                  .map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        href={`/${base}/products/${p.id}/edit`}
+                        className="block truncate hover:text-gray-800 hover:underline"
+                        title={p.title}
+                      >
+                        {p.title}
+                      </Link>
                     </li>
-                  )}
-                </ul>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => toggleExpanded(NO_CATEGORY_ID)}
-                className="ml-3 mt-0.5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-              >
-                <span className="inline-block w-4 text-left" aria-hidden>▶</span>
-                Показать товары ({products.filter((p) => !p.categories?.length).length})
-              </button>
-            )}
+                  ))}
+                {products.filter((p) => !p.categories?.length).length > 8 && (
+                  <li className="text-gray-400">
+                    и ещё {products.filter((p) => !p.categories?.length).length - 8}
+                  </li>
+                )}
+              </ul>
+            </AdminCollapsible>
           </div>
         )}
         {categories.map((cat) => {
@@ -156,22 +156,21 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
                       e.stopPropagation()
                       toggleExpanded(cat.id)
                     }}
-                    className="ml-3 mt-0.5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                    className="ml-3 mt-0.5 flex w-[calc(100%-0.75rem)] items-center gap-1.5 text-left text-xs text-gray-500 hover:text-gray-700"
                   >
-                    {expandedIds.has(cat.id) ? (
-                      <>
-                        <span className="inline-block w-4 text-left" aria-hidden>▼</span>
-                        Скрыть товары
-                      </>
-                    ) : (
-                      <>
-                        <span className="inline-block w-4 text-left" aria-hidden>▶</span>
-                        Показать товары ({productsInCategory.length})
-                      </>
-                    )}
+                    <ChevronDown
+                      className={cn(
+                        'h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none',
+                        expandedIds.has(cat.id) && 'rotate-180'
+                      )}
+                      aria-hidden
+                    />
+                    {expandedIds.has(cat.id)
+                      ? 'Скрыть товары'
+                      : `Показать товары (${productsInCategory.length})`}
                   </button>
-                  {expandedIds.has(cat.id) && (
-                    <ul className="ml-3 pl-2 border-l border-gray-200 text-xs text-gray-500 space-y-0.5 py-1">
+                  <AdminCollapsible open={expandedIds.has(cat.id)}>
+                    <ul className="ml-3 space-y-0.5 border-l border-gray-200 py-1 pl-2 text-xs text-gray-500">
                       {productsInCategory.slice(0, 8).map((p) => (
                         <li key={p.id} className="truncate">
                           <Link
@@ -187,7 +186,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
                         <li className="text-gray-400">и ещё {productsInCategory.length - 8}</li>
                       )}
                     </ul>
-                  )}
+                  </AdminCollapsible>
                 </>
               )}
             </div>

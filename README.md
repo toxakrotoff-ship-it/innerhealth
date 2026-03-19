@@ -9,7 +9,7 @@
 - **Frontend / Backend:** [Next.js](https://nextjs.org/) 16 (App Router), React 19, TypeScript
 - **Стили:** Tailwind CSS 4, Radix UI, Shadcn-подобные компоненты
 - **БД:** PostgreSQL, [Prisma](https://www.prisma.io/) 7 (в т.ч. `@prisma/adapter-pg`)
-- **Аутентификация:** NextAuth v4 (Credentials, JWT), 2FA (TOTP и email-коды); в планах — переход на v5 (см. [docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md))
+- **Аутентификация:** NextAuth **v4** (Credentials, JWT), 2FA (TOTP и email-коды); переход на v5 — в roadmap (см. [docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md))
 - **Редактор контента:** TipTap
 - **Деплой:** Docker, Nginx; опционально Let's Encrypt
 
@@ -87,6 +87,7 @@ npm run dev
 - **[docs/env's.md](docs/env's.md)** — перечень переменных окружения (база, auth, YooKassa, CDEK, Telegram, SMTP и др.)
 - **[nextjs-project/docs/password-reset-env.md](nextjs-project/docs/password-reset-env.md)** — сброс пароля и настройка SMTP (в т.ч. VK WorkSpace, Gmail, Яндекс, Mail.ru)
 - **[nextjs-project/docs/2fa-env.md](nextjs-project/docs/2fa-env.md)** — переменные для 2FA (TOTP, email-коды)
+- **[nextjs-project/docs/yandex-maps-env.md](nextjs-project/docs/yandex-maps-env.md)** — Яндекс.Карты (ключ, CSP)
 
 ### Деплой и инфраструктура
 
@@ -114,6 +115,7 @@ npm run dev
 
 - **[docs/categories.md](docs/categories.md)** — категории каталога
 - **[docs/performance-optimization.md](docs/performance-optimization.md)** — оптимизация производительности
+- **[nextjs-project/docs/plans/2026-03-18-product-photo-normalization-design.md](nextjs-project/docs/plans/2026-03-18-product-photo-normalization-design.md)** — нормализация URL фото товаров (каталог, карточка, админка)
 
 ---
 
@@ -122,7 +124,7 @@ npm run dev
 - **Публичная часть:** `/`, `/catalog`, `/catalog/[categorySlug]`, `/product/[slug]`, `/product/id/[id]`, `/cart`, `/news`, `/news/[slug]`, `/o-nas`, `/contacts`, `/sotrudnichestvo`, `/privacy`, `/oferta` и др.
 - **ЛК пользователя:** `/account` (профиль), `/account/orders`, `/account/orders/[id]`, `/account/addresses`, `/account/verify-email`; для партнёров — `/account/partner` (промокоды, статистика, доход).
 - **Вход:** `/login`, `/login/2fa`, `/login/forgot-password`, `/login/reset-password`, `/login/change-password`, `/login/set-initial-password`
-- **Админка:** `/admin` (редирект на каталог), `/admin/catalog`, `/admin/catalog/categories`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit`, `/admin/products/import`, `/admin/news`, `/admin/promo-codes`, `/admin/orders`, `/admin/orders-statistics`, `/admin/users`, `/admin/partners`, `/admin/partners/[userId]`, `/admin/settings`, `/admin/profile`, `/admin/tilda-leads`, `/admin/partnership`, `/admin/faq`, `/admin/quick-orders`, `/admin/redirects`
+- **Админка:** `/admin` (редирект на каталог), `/admin/catalog`, `/admin/catalog/categories`, `/admin/products`, `/admin/products/new`, `/admin/products/[id]/edit`, `/admin/products/import`, `/admin/news`, `/admin/promo-codes`, `/admin/orders`, `/admin/orders-statistics`, `/admin/users`, `/admin/partners`, `/admin/partners/[userId]`, `/admin/settings`, `/admin/profile`, `/admin/tilda-leads`, `/admin/partnership`, `/admin/faq`, `/admin/quick-orders`, `/admin/redirects`, `/admin/site-popup`, `/admin/gift-promotions`, `/admin/leads-export`, `/admin/content` и др. (полный список — вывод `next build` или `docs/plans/PROJECT-INDEX.md`)
 
 API: префикс `/api` (auth, admin, cart, orders, telegram, partners и т.д.).
 

@@ -84,9 +84,10 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
     )
   }
 
+  /* min-h breakpoints mirror `main` pt in `app/(site)/layout.tsx` (sticky header offset). */
   return (
     <section
-      className="relative min-h-[calc(100vh-65px)] flex items-center overflow-hidden text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
+      className="relative min-h-[calc(100dvh-4rem-env(safe-area-inset-top))] 2xl:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] 3xl:min-h-[calc(100dvh-5rem-env(safe-area-inset-top))] 4xl:min-h-[calc(100dvh-6rem-env(safe-area-inset-top))] 5xl:min-h-[calc(100dvh-7rem-env(safe-area-inset-top))] 6xl:min-h-[calc(100dvh-8rem-env(safe-area-inset-top))] flex items-center overflow-hidden pb-6 sm:pb-8 text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
       aria-label="Главный блок"
     >
       <AdaptiveContainer
@@ -96,7 +97,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
         <ScrollReveal
           as="div"
           variant="fade-up"
-          className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 overflow-hidden max-h-[calc(100vh-65px)] overflow-y-hidden"
+          className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 min-h-0"
         >
           <div className={badgeClassName}>
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />

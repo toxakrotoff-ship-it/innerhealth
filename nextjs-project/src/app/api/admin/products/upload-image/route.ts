@@ -3,11 +3,9 @@ import { requireAdminSession } from '@/lib/require-admin';
 import * as productService from '@/services/product.service';
 import fs from 'fs';
 import path from 'path';
-import sharp from 'sharp';
+import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const MAX_WIDTH = 1920;
-const BLUR_PLACEHOLDER_SIZE = 10;
 
 type PhotoEntry = { url: string; blurDataURL?: string };
 
@@ -52,37 +50,20 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const pipeline = sharp(buffer);
-    const metadata = await pipeline.metadata();
-    const width = metadata.width ?? 0;
-    const resized = width > MAX_WIDTH
-      ? pipeline.resize(MAX_WIDTH, null, { withoutEnlargement: true })
-      : pipeline;
+    const { webpBuffer, blurDataURL } = await normalizeProductPhoto(buffer);
 
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.webp`;
     const filePath = path.join(uploadDir, fileName);
-    await resized
-      .webp({ quality: 85 })
-      .toFile(filePath);
+    await fs.promises.writeFile(filePath, webpBuffer);
 
     const photoUrl = `/uploads/products/${fileName}`;
-
-    let blurDataURL: string | undefined;
-    try {
-      const blurBuffer = await sharp(buffer)
-        .resize(BLUR_PLACEHOLDER_SIZE, null, { withoutEnlargement: true })
-        .webp({ quality: 20 })
-        .toBuffer();
-      blurDataURL = `data:image/webp;base64,${blurBuffer.toString('base64')}`;
-    } catch {
-      // optional: continue without placeholder
-    }
+    const blurDataURLValue = blurDataURL ?? undefined;
 
     if (productId) {
       const existingProduct = await productService.findProductById(productId);
       if (existingProduct) {
         const existingPhotos = parsePhotosJson(existingProduct.photos);
-        const newEntry: PhotoEntry = { url: photoUrl, blurDataURL };
+        const newEntry: PhotoEntry = { url: photoUrl, blurDataURL: blurDataURLValue };
         const updatedPhotos: PhotoEntry[] = [newEntry, ...existingPhotos];
         const photosJson = updatedPhotos.map((p) =>
           p.blurDataURL ? { url: p.url, blurDataURL: p.blurDataURL } : { url: p.url }
@@ -97,7 +78,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: 'File uploaded successfully',
       photo: photoUrl,
-      blurDataURL: blurDataURL ?? undefined,
+      blurDataURL: blurDataURLValue,
     });
   } catch (error) {
     console.error('Error uploading file:', error);

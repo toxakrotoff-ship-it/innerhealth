@@ -3,6 +3,8 @@
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { cn } from '@/lib/utils'
+import { useModalPresence } from '@/components/ui/modal-layer'
 
 const GALLERY_IMAGES = [
   { src: '/images/gallery/gallery-1.png', alt: 'Фото 1' },
@@ -13,6 +15,7 @@ const GALLERY_IMAGES = [
 export function GalleryBlock() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const { mounted: lightboxMounted, visible: lightboxVisible } = useModalPresence(lightboxOpen)
 
   const openAt = useCallback((index: number) => {
     setCurrentIndex(index)
@@ -30,7 +33,7 @@ export function GalleryBlock() {
   }, [])
 
   useEffect(() => {
-    if (!lightboxOpen) return
+    if (!lightboxMounted) return
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
       if (e.key === 'ArrowLeft') goPrev()
@@ -38,7 +41,7 @@ export function GalleryBlock() {
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [lightboxOpen, close, goPrev, goNext])
+  }, [lightboxMounted, close, goPrev, goNext])
 
   useEffect(() => {
     if (lightboxOpen) document.body.style.overflow = 'hidden'
@@ -80,9 +83,12 @@ export function GalleryBlock() {
         </div>
       </section>
 
-      {lightboxOpen && (
+      {lightboxMounted && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          className={cn(
+            'fixed inset-0 z-50 flex items-center justify-center bg-black/90 transition-opacity duration-[220ms] ease-out motion-reduce:transition-none',
+            lightboxVisible ? 'opacity-100' : 'opacity-0'
+          )}
           role="dialog"
           aria-modal="true"
           aria-label="Просмотр изображения"

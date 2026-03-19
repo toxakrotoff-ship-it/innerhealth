@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AddToCartButton } from '@/components/site/add-to-cart-button';
 import { CompareToggleButton } from '@/components/site/compare-toggle-button';
+import { ModalLayer } from '@/components/ui/modal-layer';
 
 interface ProductQuickViewProps {
   id: string;
@@ -73,10 +74,19 @@ export function ProductQuickView({
   }, [open, id, description]);
 
   const modalContent =
-    open && isMounted
+    isMounted
       ? createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4" role="dialog" aria-modal="true">
-            <div className="w-full max-w-2xl xl:max-w-3xl 2xl:max-w-4xl 3xl:max-w-5xl rounded-2xl bg-white shadow-xl">
+          <ModalLayer
+            open={open}
+            onClose={() => setOpen(false)}
+            zClass="z-50"
+            className="px-4"
+            backdropClassName="bg-black/45"
+            panelClassName="w-full max-w-2xl xl:max-w-3xl 2xl:max-w-4xl 3xl:max-w-5xl"
+            lockBodyScroll
+            dialogProps={{ 'aria-label': 'Быстрый просмотр' }}
+          >
+            <div className="rounded-2xl bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
                 <h3 className="text-base font-semibold text-text">Быстрый просмотр</h3>
                 <button
@@ -144,7 +154,7 @@ export function ProductQuickView({
                 </div>
               </div>
             </div>
-          </div>,
+          </ModalLayer>,
           document.body
         )
       : null;

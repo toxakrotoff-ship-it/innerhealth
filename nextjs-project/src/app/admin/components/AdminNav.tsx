@@ -3,7 +3,9 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
+import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
+import { cn } from '@/lib/utils'
 
 const iconClass = 'admin-nav-icon'
 
@@ -160,7 +162,8 @@ const navConfig: NavEntry[] = [
     children: crmChildren,
   },
   {
-    path: 'catalog-edit',
+    /** Group link goes to the same default as the first child (catalog list). */
+    path: 'catalog',
     label: 'Редактирование товаров',
     icon: icons.catalog,
     children: catalogEditChildren,
@@ -267,10 +270,18 @@ export default function AdminNav() {
                   aria-expanded={expanded}
                   aria-label={expanded ? 'Свернуть' : 'Развернуть'}
                 >
-                  {expanded ? icons.chevronDown : icons.chevronRight}
+                  <span
+                    className={cn(
+                      'inline-flex transition-transform duration-200 ease-out motion-reduce:transition-none',
+                      expanded && 'rotate-90'
+                    )}
+                    aria-hidden
+                  >
+                    {icons.chevronRight}
+                  </span>
                 </button>
               </div>
-              {expanded && (
+              <AdminCollapsible open={expanded}>
                 <ul className="admin-nav-list admin-nav-sublist">
                   {entry.children.map((child) => {
                     const childHref = `/${base}/${child.path}`
@@ -288,7 +299,7 @@ export default function AdminNav() {
                     )
                   })}
                 </ul>
-              )}
+              </AdminCollapsible>
             </li>
           )
         }

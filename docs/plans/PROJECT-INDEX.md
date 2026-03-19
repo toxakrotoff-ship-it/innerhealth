@@ -8,16 +8,13 @@
 
 ```
 innerhealth/
-├── nextjs-project/     # основное Next.js приложение (вся логика, Prisma, API)
-├── docs/               # документация
-├── docs/plans/         # ТЗ и планы (2fa, cdek, roadmap и т.д.)
-├── prisma/             # (legacy?) отдельная схема в корне
-├── tests/              # e2e (example.spec.ts)
-├── plans/              # планы (animation, auth, catalog, admin и т.д.)
-├── package.json
-├── tailwind.config.ts
+├── nextjs-project/     # Next.js приложение (Prisma, API, UI); см. nextjs-project/docs/
+├── docs/               # документация репозитория
+├── docs/plans/         # ТЗ, roadmap, архивные планы (auth, catalog, animation…)
+├── prisma/             # дублирующая схема в корне — ориентир: nextjs-project/prisma/
+├── tests/              # Playwright (adaptive, user-scenarios)
+├── deploy/             # деплой VPS / Docker
 ├── README.md
-├── .env.local
 └── playwright.config.ts
 ```
 
@@ -71,7 +68,7 @@ innerhealth/
 | `app/admin/layout.tsx` | Защищённый админ: `getServerSession(authOptions)`; редирект на `/login` без сессии, на `/login/change-password` при `mustChangePassword`; базовый путь из `ADMIN_SECRET_PATH` или `'admin'` |
 | `app/login/layout.tsx` | Обёртка страниц входа (метаданные) |
 
-**Middleware:** в `src/` отдельного `middleware.ts` нет; защита маршрутов в layout'ах и в API через `getServerSession`.
+**Edge:** `src/proxy.ts` — в Next.js 16 это допустимое имя edge-файла (аналог middleware; отдельный `middleware.ts` рядом недопустим). NextAuth `withAuth` в production, CSP, rewrite `ADMIN_SECRET_PATH`, редиректы из БД. Дополнительно: layout админки и `getServerSession` в API.
 
 ### 3.2 Страницы приложения (App Router)
 
@@ -131,16 +128,8 @@ innerhealth/
 | `/admin/promo-codes` | `app/admin/promo-codes/page.tsx` |
 | `/admin/tilda-leads` | `app/admin/tilda-leads/page.tsx` |
 | `/admin/partnership` | `app/admin/partnership/page.tsx` |
-
-#### Отладочные
-
-| Маршрут | Файл |
-|---------|------|
-| `/debug-table` | `app/debug-table/page.tsx` |
-| `/debug-profile-menu` | `app/debug-profile-menu/page.tsx` |
-| `/debug-styles` | `app/debug-styles/page.tsx` |
-| `/test-styles` | `app/test-styles/page.tsx` |
-| `/simple-test` | `app/simple-test/page.tsx` |
+| `/admin/partners` | `app/admin/partners/page.tsx` |
+| `/admin/partners/[userId]` | `app/admin/partners/[userId]/page.tsx` |
 
 ### 3.3 Специальные маршруты
 
@@ -148,7 +137,7 @@ innerhealth/
 |------|------------|
 | `app/sitemap.ts` | Sitemap |
 | `app/robots.ts` | Robots.txt (исключение админки) |
-| `proxy.ts` | Прокси (упоминается в контексте) |
+| `proxy.ts` | Edge: auth, CSP, редиректы (Next.js 16 proxy convention) |
 
 ---
 
@@ -243,6 +232,7 @@ innerhealth/
 | `slugify.ts` | Slug |
 | `utils.ts` | Общие утилиты |
 | `test-env.ts` | Проверка env |
+| `product-photo-normalization.ts` | Единый базовый URL для фото товаров (каталог, карточка, превью в админке) |
 
 ### 5.1 Контент и константы
 
@@ -313,7 +303,7 @@ innerhealth/
 | **Order** | userId, total, status, yookassaPaymentId, cdekOrderUuid, cdekOrderError, shippingInfo, promoCodeId |
 | **OrderItem** | orderId, productId, quantity, price |
 | **ShippingInfo** | orderId, fullName, phone, email, address, city, zipCode, country, deliveryMethod, cdekCityCode, cdekPvzCode, cdekTariffCode, street, house, apartment и т.д. |
-| **User** | email, password, name, lastName, phone, notificationEmail, role (USER\|WRITER\|ADMIN), mustChangePassword, **twoFactorEnabled**, **twoFactorMethod**, **totpSecretEncrypted**; связи: TwoFactorPending, TwoFactorGrant, PasswordResetToken, SetInitialPasswordToken, TelegramWhitelist, TelegramLinkCode |
+| **User** | email, password, name, lastName, phone, notificationEmail, role (USER\|WRITER\|ADMIN\|**PARTNER**), mustChangePassword, **twoFactorEnabled**, **twoFactorMethod**, **totpSecretEncrypted**; связи: TwoFactorPending, TwoFactorGrant, PasswordResetToken, SetInitialPasswordToken, TelegramWhitelist, TelegramLinkCode, **PartnerPromoCode** |
 | **TwoFactorPending** | userId, tokenHash, expiresAt, emailCodeHash, emailCodeExpiresAt |
 | **TwoFactorGrant** | userId, usedAt, expiresAt |
 | **PasswordResetToken** | userId, tokenHash, expiresAt, usedAt |
@@ -377,6 +367,7 @@ innerhealth/
 | `docs/plans/2026-02-24-2fa-design.md` | Дизайн 2FA |
 | `docs/plans/2026-02-24-cdek-order-after-payment.md` | СДЭК после оплаты |
 | `docs/plans/2026-02-23-roadmap-batch.md` | Roadmap batch |
+| `nextjs-project/docs/plans/2026-03-18-product-photo-normalization-design.md` | Нормализация URL фото товаров |
 
 ---
 

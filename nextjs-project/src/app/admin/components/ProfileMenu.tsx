@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
+import { cn } from '@/lib/utils';
 
 interface ProfileMenuProps {
   userName: string | undefined;
@@ -52,13 +53,29 @@ export default function ProfileMenu({ userName, userEmail, userRole, triggerLabe
             </>
           )}
         </span>
-        <svg className="profile-menu-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+        <svg
+          className={cn(
+            'profile-menu-chevron transition-transform duration-200 ease-out motion-reduce:transition-none',
+            isOpen && 'rotate-180'
+          )}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden
+        >
           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
       </button>
 
-      {isOpen && (
-        <div className="profile-menu-dropdown" role="menu">
+      <div
+        className={cn(
+          /* Без transform/scale: в сайдбаре меню открывается вверх (bottom: 100%), scale ломает визуально */
+          'profile-menu-dropdown transition-[opacity,visibility] duration-200 ease-out motion-reduce:transition-none',
+          isOpen ? 'visible opacity-100' : 'invisible opacity-0 pointer-events-none'
+        )}
+        role="menu"
+        aria-hidden={!isOpen}
+        inert={!isOpen ? true : undefined}
+      >
           <div className="profile-menu-user">
             <span className="profile-menu-user-avatar">{initial}</span>
             <div className="profile-menu-user-info">
@@ -93,7 +110,6 @@ export default function ProfileMenu({ userName, userEmail, userRole, triggerLabe
             </button>
           </div>
         </div>
-      )}
     </div>
   );
 }

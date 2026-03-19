@@ -343,7 +343,7 @@ export async function updateProduct(
 
 export async function patchProductPriceQuantity(
   id: string,
-  data: { price?: number; quantity?: number }
+  data: { price?: number; quantity?: number; isDraft?: boolean }
 ) {
   return prisma.product.update({
     where: { id },

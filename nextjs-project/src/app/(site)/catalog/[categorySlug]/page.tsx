@@ -250,7 +250,18 @@ export default async function CategoryPage({ params }: PageProps) {
           {products.length === 0 ? (
             <p className="text-gray-500">В этой категории пока нет товаров.</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <FluidGrid
+              cols={2}
+              colsTablet={3}
+              colsDesktop={4}
+              colsXl={5}
+              cols2xl={5}
+              cols3xl={6}
+              cols4xl={6}
+              gap="6"
+              adaptiveGap={false}
+              className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+            >
               {products.map((p, index) => (
                 <ProductCard
                   key={p.id}
@@ -266,7 +277,7 @@ export default async function CategoryPage({ params }: PageProps) {
                   blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />
               ))}
-            </div>
+            </FluidGrid>
           )}
 
           {/* Описание раздела под каталогом */}

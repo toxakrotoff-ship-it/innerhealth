@@ -1,7 +1,7 @@
 # Статус проекта InnerHealth.ru (по ТЗ adminv2.md)
 
-**Дата обновления:** 28.02.2026  
-**Реализовано:** админка (каталог, товары, категории, новости, промокоды, заказы, пользователи, **партнёры**, настройки, модерация отзывов, FAQ, быстрые заявки, редиректы, Telegram), публичная часть (главная, каталог, карточка товара, корзина, новости, отзывы), **ЛК пользователя** (профиль, заказы, адреса, верификация email), **ЛК партнёра** (промокоды, статистика, доход), **2FA** (TOTP и email-коды), **ЮKassa и СДЭК (API)**. В планах: переход на NextAuth v5, доработки СДЭК (виджет ПВЗ, авто-заказ при оплате).
+**Дата обновления:** 19.03.2026  
+**Реализовано:** админка (каталог, товары, категории, новости, промокоды, заказы, пользователи, **партнёры**, настройки, модерация отзывов, FAQ, быстрые заявки, редиректы, Telegram), публичная часть (главная, каталог, карточка товара, корзина, новости, отзывы), **ЛК пользователя** (профиль, заказы, адреса, верификация email), **ЛК партнёра** (промокоды, статистика, доход), **2FA** (TOTP и email-коды), **ЮKassa и СДЭК (API)**, **нормализация URL фото товаров** для каталога и карточек (см. `nextjs-project/src/lib/product-photo-normalization.ts` и [дизайн-док](../nextjs-project/docs/plans/2026-03-18-product-photo-normalization-design.md)). В планах: переход на NextAuth v5, доработки СДЭК (виджет ПВЗ, авто-заказ при оплате).
 
 ---
 
@@ -19,7 +19,7 @@
 - **Next.js** (App Router), **PostgreSQL**, **Prisma** — подключены. Синглтон Prisma в `src/lib/prisma.ts`.
 - **Tailwind CSS** — настроен. **Шрифт Montserrat** подключён в корневом `layout.tsx` через `next/font/google` (переменная `--font-montserrat`, `font-sans` на `body`).
 - **NextAuth** (v4) — Credentials, JWT, страницы `/login`, сброс пароля (forgot/reset), **завершение регистрации нового пользователя** (ссылка из письма → код на почту → установка пароля на `/login/set-initial-password`). **2FA реализовано:** TOTP и email-коды, страница `/login/2fa`, API `/api/auth/2fa/setup`, `/api/auth/2fa/send-code`, `/api/auth/verify-2fa`; настройка в админке (Профиль / Настройки).
-- **Middleware** — в `src/proxy.ts`: withAuth, проверка авторизации для путей админки и `/api/admin`; учёт `ADMIN_SECRET_PATH` в `authorized`; при кастомном пути — rewrite на `/admin`; все ссылки админки строятся от `adminBasePath` (контекст `AdminBasePathProvider` из layout). Matcher: `/admin/:path*`, `/api/admin/:path*`, `/api/orders`, `/api/promo/:path*`, `/api/auth/forgot-password`, `/api/auth/reset-password`, `/:segment/:path*`.
+- **Edge (Next.js 16)** — `src/proxy.ts`: в этой версии фреймворка edge-логика задаётся файлом `proxy` (не добавляйте отдельный `middleware.ts` рядом — будет конфликт). `withAuth` в production, упрощённый handler в development; защита админки и `/api/admin`; `ADMIN_SECRET_PATH` и rewrite на `/admin`; CSP и редиректы из БД. Ссылки админки — `adminBasePath` (`AdminBasePathProvider`). Matcher — `export const config` в `proxy.ts`.
 
 ### Админка
 - **Layout** — сайдбар, хедер, ProfileMenu, навигация (порядок пунктов):

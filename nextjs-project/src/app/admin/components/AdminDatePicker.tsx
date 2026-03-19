@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { useModalPresence } from '@/components/ui/modal-layer'
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const MONTHS = [
@@ -67,6 +69,7 @@ interface AdminDatePickerProps {
 
 export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDate }: AdminDatePickerProps) {
   const [open, setOpen] = useState(false)
+  const { mounted: pickerMounted, visible: pickerVisible } = useModalPresence(open)
   const [value, setValue] = useState<string>(defaultValue ?? '')
   const [viewMonth, setViewMonth] = useState<Date>(() => {
     const from = parseYMD(defaultValue ?? '')
@@ -135,9 +138,12 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
         <CalendarIcon />
       </button>
 
-      {open && (
+      {pickerMounted && (
         <div
-          className="absolute z-50 mt-1 w-[280px] rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+          className={cn(
+            'absolute z-50 mt-1 w-[280px] rounded-lg border border-gray-200 bg-white p-3 shadow-lg transition-[opacity,transform] duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:transition-none',
+            pickerVisible ? 'translate-y-0 opacity-100' : 'translate-y-0.5 opacity-0'
+          )}
           role="dialog"
           aria-label="Выбор даты"
         >

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { JSONContent } from '@tiptap/core'
 import Link from 'next/link'
 import Image from 'next/image'
+import { ModalLayer } from '@/components/ui/modal-layer'
 
 function extractPlainTextFromTiptap(content: JSONContent | null): string {
   if (!content?.content) return ''
@@ -112,16 +113,17 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
 
   const plainText = extractPlainTextFromTiptap(popup.richJson ?? null)
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/40"
-        aria-hidden="true"
-        onClick={handleClose}
-      />
-      <div className="relative z-50 w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+    <ModalLayer
+      open={isOpen}
+      onClose={handleClose}
+      zClass="z-40"
+      backdropClassName="bg-black/40"
+      panelClassName="w-full max-w-lg"
+      lockBodyScroll
+      dialogProps={{ 'aria-label': popup.title }}
+    >
+      <div className="relative rounded-2xl bg-white shadow-2xl overflow-hidden">
         <button
           type="button"
           onClick={handleClose}
@@ -159,7 +161,7 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
           )}
         </div>
       </div>
-    </div>
+    </ModalLayer>
   )
 }
 

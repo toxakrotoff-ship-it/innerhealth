@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties, MouseEvent, ReactElement } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   DndContext,
   PointerSensor,
@@ -41,8 +43,10 @@ interface EditingState {
   value: string
 }
 
+type SortKey = keyof Product | 'categoryTitle'
+
 interface SortConfig {
-  key: keyof Product
+  key: SortKey
   direction: 'asc' | 'desc'
 }
 
@@ -56,28 +60,96 @@ interface ProductRowProps {
   canReorder: boolean
   isSaving: boolean
   isDeleting: boolean
+  isTogglingDraft: boolean
   editing: EditingState | null
   setEditing: (value: EditingState | null | ((prev: EditingState | null) => EditingState | null)) => void
   onStartEditPrice: () => void
   onStartEditQuantity: () => void
   onDelete: (product: Product) => void
   saveInline: (productId: string, field: 'price' | 'quantity', value: string) => Promise<void>
+  onToggleDraft: (productId: string, nextIsDraft: boolean) => void
 }
 
-function ProductRow({
+function getCategoryLine(product: ProductWithCategories): string {
+  if (!product.categories?.length) return '—'
+  return (
+    product.categories
+      .map((pc) => pc.category?.title)
+      .filter(Boolean)
+      .join(', ') || '—'
+  )
+}
+
+const MOBILE_SORT_OPTIONS: { label: string; value: string; config: SortConfig | null }[] = [
+  { label: 'Как в списке (без сортировки)', value: '', config: null },
+  { label: 'Дата — сначала новые', value: 'createdAt:desc', config: { key: 'createdAt', direction: 'desc' } },
+  { label: 'Дата — сначала старые', value: 'createdAt:asc', config: { key: 'createdAt', direction: 'asc' } },
+  { label: 'Название А → Я', value: 'title:asc', config: { key: 'title', direction: 'asc' } },
+  { label: 'Название Я → А', value: 'title:desc', config: { key: 'title', direction: 'desc' } },
+  { label: 'Раздел А → Я', value: 'categoryTitle:asc', config: { key: 'categoryTitle', direction: 'asc' } },
+  { label: 'Раздел Я → А', value: 'categoryTitle:desc', config: { key: 'categoryTitle', direction: 'desc' } },
+  { label: 'Цена — по возрастанию', value: 'price:asc', config: { key: 'price', direction: 'asc' } },
+  { label: 'Цена — по убыванию', value: 'price:desc', config: { key: 'price', direction: 'desc' } },
+  { label: 'Остаток — по возрастанию', value: 'quantity:asc', config: { key: 'quantity', direction: 'asc' } },
+  { label: 'Остаток — по убыванию', value: 'quantity:desc', config: { key: 'quantity', direction: 'desc' } },
+  { label: 'Сайт — сначала на сайте', value: 'isDraft:asc', config: { key: 'isDraft', direction: 'asc' } },
+  { label: 'Сайт — сначала скрытые', value: 'isDraft:desc', config: { key: 'isDraft', direction: 'desc' } },
+]
+
+function mobileSortSelectValue(sortConfig: SortConfig | null): string {
+  if (!sortConfig) return ''
+  return `${String(sortConfig.key)}:${sortConfig.direction}`
+}
+
+function AdminCatalogSortSelect({
+  sortConfig,
+  onChange,
+  id,
+}: {
+  sortConfig: SortConfig | null
+  onChange: (config: SortConfig | null) => void
+  id: string
+}): ReactElement {
+  return (
+    <div className="w-full min-w-0 lg:flex-1">
+      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400" htmlFor={id}>
+        Сортировка
+      </label>
+      <select
+        id={id}
+        className="form-input mt-1.5 w-full text-sm"
+        value={mobileSortSelectValue(sortConfig)}
+        onChange={(e) => {
+          const opt = MOBILE_SORT_OPTIONS.find((o) => o.value === e.target.value)
+          onChange(opt?.config ?? null)
+        }}
+      >
+        {MOBILE_SORT_OPTIONS.map((o) => (
+          <option key={o.value || 'default'} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function ProductCardRow({
   product,
   canReorder,
   isSaving,
   isDeleting,
+  isTogglingDraft,
   editing,
   setEditing,
   onStartEditPrice,
   onStartEditQuantity,
   onDelete,
   saveInline,
+  onToggleDraft,
 }: ProductRowProps) {
+  const router = useRouter()
   const base = useAdminBasePath()
-
   const {
     attributes,
     listeners,
@@ -87,143 +159,211 @@ function ProductRow({
     isDragging,
   } = useSortable({ id: product.id, disabled: !canReorder })
 
-  const style: React.CSSProperties = {
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
+  const handleCardClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (isDragging) return
+    const target = e.target as HTMLElement
+    if (target.closest('a, button, input, textarea, select')) return
+    if (target.closest('[data-prevent-row-nav]')) return
+    router.push(`/${base}/products/${product.id}/edit`)
+  }
+
+  const categoryLine = getCategoryLine(product)
+
   return (
-    <tr
+    <div
       ref={setNodeRef}
       style={style}
-      className={isDragging ? 'opacity-50 bg-gray-50' : undefined}
+      className={`w-full min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900 ${
+        isDragging ? 'opacity-60 ring-2 ring-action-blue/40' : ''
+      }`}
     >
-      <td className="max-w-[280px]">
-        <div className="flex items-center gap-3 min-w-0">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            router.push(`/${base}/products/${product.id}/edit`)
+          }
+        }}
+        className="cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-action-blue/50"
+      >
+        <div className="flex gap-3">
           {canReorder && (
             <button
               type="button"
-              className="touch-none p-1 rounded text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing focus:outline-none"
+              className="touch-none shrink-0 self-start rounded p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
               {...listeners}
               {...attributes}
               aria-label="Перетащить для изменения порядка"
+              onClick={(e) => e.stopPropagation()}
             >
-              <GripVertical className="w-4 h-4" />
+              <GripVertical className="h-5 w-5" />
             </button>
           )}
-          <div className="product-thumb rounded-lg bg-gray-100 flex items-center justify-center shrink-0 flex-none">
+          <div className="product-thumb flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
             {product.photo ? (
-              <img
-                src={product.photo}
-                alt=""
-                width={40}
-                height={40}
-              />
+              <img src={product.photo} alt="" width={48} height={48} className="h-full w-full object-cover" />
             ) : (
-              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 14m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 14m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
               </svg>
             )}
           </div>
-          <div className="min-w-0">
-            <p className="font-medium text-gray-900 truncate">{product.title}</p>
-            <p className="text-xs text-gray-500">SKU: {product.sku || '—'}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-gray-900 dark:text-gray-100">{product.title}</p>
+            <p className="mt-0.5 text-xs text-gray-500">SKU: {product.sku || '—'}</p>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+              <span className="text-gray-500">Раздел:</span> {categoryLine}
+            </p>
           </div>
         </div>
-      </td>
-      <td className="text-gray-600 text-sm">
-        {product.categories?.length
-          ? product.categories
-              .map((pc) => pc.category?.title)
-              .filter(Boolean)
-              .join(', ') || '—'
-          : '—'}
-      </td>
-      <td
-        className="font-medium text-gray-900 align-top"
-        onDoubleClick={onStartEditPrice}
-        title="Двойной клик — изменить"
-      >
-        {editing?.productId === product.id && editing?.field === 'price' ? (
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={editing.value}
-            onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-            onBlur={() => {
-              if (editing) void saveInline(product.id, 'price', editing.value)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (editing) void saveInline(product.id, 'price', editing.value)
-              }
-              if (e.key === 'Escape') setEditing(null)
-            }}
-            className="form-input w-24 py-1 text-sm"
-            autoFocus
-          />
-        ) : isSaving ? (
-          <span className="text-gray-400">…</span>
-        ) : (
-          <span suppressHydrationWarning>{Number(product.price).toLocaleString('ru-RU')} ₽</span>
-        )}
-      </td>
-      <td
-        className="text-gray-600 align-top"
-        onDoubleClick={onStartEditQuantity}
-        title="Двойной клик — изменить"
-      >
-        {editing?.productId === product.id && editing?.field === 'quantity' ? (
-          <input
-            type="number"
-            min={0}
-            value={editing.value}
-            onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-            onBlur={() => {
-              if (editing) void saveInline(product.id, 'quantity', editing.value)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (editing) void saveInline(product.id, 'quantity', editing.value)
-              }
-              if (e.key === 'Escape') setEditing(null)
-            }}
-            className="form-input w-20 py-1 text-sm"
-            autoFocus
-          />
-        ) : isSaving ? (
-          <span className="text-gray-400">…</span>
-        ) : (
-          <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
-        )}
-      </td>
-      <td className="text-gray-600" suppressHydrationWarning>
-        {new Date(product.createdAt).toLocaleDateString('ru-RU', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        })}
-      </td>
-      <td>
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/${useAdminBasePath()}/products/${product.id}/edit`}
-            className="inline-flex items-center justify-center h-10 px-4 rounded-full text-sm font-medium bg-highlight-blue text-(--color-text) hover:opacity-90 transition-opacity min-h-[32px]"
-          >
-            Ред.
-          </Link>
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={isDeleting}
-            onClick={() => onDelete(product)}
-          >
-            {isDeleting ? '…' : 'Удалить'}
-          </Button>
-        </div>
-      </td>
-    </tr>
+
+        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+          <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Сайт</span>
+              <button
+                type="button"
+                data-prevent-row-nav
+                disabled={isTogglingDraft}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleDraft(product.id, !product.isDraft)
+                }}
+                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60"
+                aria-label={
+                  product.isDraft ? 'Показать товар на сайте (сейчас скрыт)' : 'Скрыть товар с сайта (сейчас показан)'
+                }
+                style={{
+                  backgroundColor: product.isDraft ? '#d1d5db' : 'var(--color-action-blue)',
+                }}
+              >
+                <span
+                  className="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
+                  style={{
+                    transform: product.isDraft ? 'translateX(2px)' : 'translateX(22px)',
+                  }}
+                />
+              </button>
+            </div>
+            <span className="text-xs text-gray-500" suppressHydrationWarning>
+              {new Date(product.createdAt).toLocaleDateString('ru-RU', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </span>
+          </div>
+          <dt className="text-gray-500">Цена</dt>
+          <dd className="text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">
+            {editing?.productId === product.id && editing?.field === 'price' ? (
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                data-prevent-row-nav
+                value={editing.value}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                onBlur={() => {
+                  if (editing) void saveInline(product.id, 'price', editing.value)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && editing) void saveInline(product.id, 'price', editing.value)
+                  if (e.key === 'Escape') setEditing(null)
+                }}
+                className="form-input box-border w-full max-w-[9rem] py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                autoFocus
+              />
+            ) : isSaving ? (
+              <span className="text-gray-400">…</span>
+            ) : (
+              <button
+                type="button"
+                data-prevent-row-nav
+                className="rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStartEditPrice()
+                }}
+              >
+                <span suppressHydrationWarning>{`${Number(product.price).toLocaleString('ru-RU')}\u202f₽`}</span>
+              </button>
+            )}
+          </dd>
+          <dt className="text-gray-500">Остаток</dt>
+          <dd className="text-right tabular-nums text-gray-700 dark:text-gray-300">
+            {editing?.productId === product.id && editing?.field === 'quantity' ? (
+              <input
+                type="number"
+                min={0}
+                data-prevent-row-nav
+                value={editing.value}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                onBlur={() => {
+                  if (editing) void saveInline(product.id, 'quantity', editing.value)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && editing) void saveInline(product.id, 'quantity', editing.value)
+                  if (e.key === 'Escape') setEditing(null)
+                }}
+                className="form-input box-border ml-auto block w-full max-w-[6rem] py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                autoFocus
+              />
+            ) : isSaving ? (
+              <span className="text-gray-400">…</span>
+            ) : (
+              <button
+                type="button"
+                data-prevent-row-nav
+                className="rounded px-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStartEditQuantity()
+                }}
+              >
+                <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
+              </button>
+            )}
+          </dd>
+        </dl>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+        <Link
+          href={`/${base}/products/${product.id}/edit`}
+          className="inline-flex flex-1 min-w-[6rem] items-center justify-center rounded-full bg-highlight-blue px-3 py-2 text-sm font-medium text-(--color-text) hover:opacity-90"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Редактировать
+        </Link>
+        <Button
+          variant="destructive"
+          size="sm"
+          disabled={isDeleting}
+          className="min-w-[6rem] flex-1"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(product)
+          }}
+        >
+          {isDeleting ? '…' : 'Удалить'}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -234,6 +374,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editing, setEditing] = useState<EditingState | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [togglingDraftId, setTogglingDraftId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -242,6 +383,8 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   )
 
   const canReorder = selectedCategory !== null && selectedCategory !== NO_CATEGORY_ID
+  /** Перетаскивание только без поиска — иначе порядок в state расходится со списком. */
+  const dragEnabled = canReorder && !searchTerm.trim()
 
   const saveInline = async (productId: string, field: 'price' | 'quantity', value: string) => {
     const num = field === 'price' ? parseFloat(value) : (value === '' ? 0 : parseInt(value, 10))
@@ -263,6 +406,25 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
       alert('Не удалось сохранить')
     } finally {
       setSavingId(null)
+    }
+  }
+
+  const toggleDraft = async (productId: string, nextIsDraft: boolean) => {
+    setTogglingDraftId(productId)
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: productId, isDraft: nextIsDraft }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      onRefresh()
+    } catch (e) {
+      console.error(e)
+      alert('Не удалось обновить видимость товара')
+    } finally {
+      setTogglingDraftId(null)
     }
   }
 
@@ -295,10 +457,11 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     }
   }, [selectedCategory, products])
 
-  const handleSort = (key: keyof Product) => {
-    const direction =
-      sortConfig?.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
-    setSortConfig({ key, direction })
+  const getFirstCategoryTitle = (product: ProductWithCategories): string | null => {
+    const title = product.categories?.map((c) => c.category?.title).find(Boolean)
+    if (!title) return null
+    const trimmed = title.trim()
+    return trimmed ? trimmed : null
   }
 
   const sortedProducts = useMemo(() => {
@@ -306,6 +469,22 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     if (!sortConfig) return list
 
     list.sort((a, b) => {
+      if (sortConfig.key === 'categoryTitle') {
+        const av = getFirstCategoryTitle(a)
+        const bv = getFirstCategoryTitle(b)
+        // Put empties last (user choice)
+        if (av == null && bv == null) return 0
+        if (av == null) return 1
+        if (bv == null) return -1
+        const cmp = av.localeCompare(bv, 'ru-RU', { sensitivity: 'base' })
+        return sortConfig.direction === 'asc' ? cmp : -cmp
+      }
+
+      if (sortConfig.key === 'title') {
+        const cmp = a.title.localeCompare(b.title, 'ru-RU', { sensitivity: 'base' })
+        return sortConfig.direction === 'asc' ? cmp : -cmp
+      }
+
       const av = a[sortConfig.key]
       const bv = b[sortConfig.key]
       if (av == null && bv == null) return 0
@@ -345,11 +524,11 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    if (!canReorder || !selectedCategory) return
+    if (!dragEnabled || !selectedCategory) return
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const current = [...filteredProducts]
+    const current = [...filteredAndSorted]
     const fromIndex = current.findIndex((p) => p.id === active.id)
     const toIndex = current.findIndex((p) => p.id === over.id)
     if (fromIndex === -1 || toIndex === -1) return
@@ -358,7 +537,11 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     const [moved] = reordered.splice(fromIndex, 1)
     reordered.splice(toIndex, 0, moved)
 
-    setFilteredProducts(reordered)
+    setFilteredProducts((prev) => {
+      const inReorder = new Set(reordered.map((p) => p.id))
+      const rest = prev.filter((p) => !inReorder.has(p.id))
+      return [...reordered, ...rest]
+    })
 
     const payloadItems: ReorderPayloadItem[] = reordered.map((p, index) => ({
       productId: p.id,
@@ -389,106 +572,80 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   }
 
   return (
-    <div className="admin-card">
-      <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            placeholder="Поиск по названию или SKU..."
-            className="form-input pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+    <div className="admin-card w-full min-w-0">
+      <div className="flex flex-col gap-3 border-b border-gray-200 p-4">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-end">
+          <div className="relative min-w-0 w-full lg:flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Поиск по названию или SKU..."
+              className="form-input w-full pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <AdminCatalogSortSelect
+            id="admin-catalog-sort"
+            sortConfig={sortConfig}
+            onChange={setSortConfig}
           />
+          <Button variant="secondary" size="sm" className="shrink-0 self-stretch sm:self-auto" onClick={onRefresh}>
+            Обновить
+          </Button>
         </div>
-        <Button variant="secondary" size="sm" onClick={onRefresh}>
-          Обновить
-        </Button>
       </div>
 
-      <div className="admin-table-wrap">
+      <div className="admin-table-wrap w-full min-w-0 p-3 sm:p-4">
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={filteredAndSorted.map((p) => p.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Товар</th>
-                  <th className="min-w-[140px]">Раздел</th>
-                  <th
-                    className="cursor-pointer select-none hover:bg-gray-100"
-                    onClick={() => handleSort('price')}
-                  >
-                    Цена
-                    {sortConfig?.key === 'price' && (
-                      <span className="ml-1 text-xs">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </th>
-                  <th className="min-w-[80px]">Остаток</th>
-                  <th
-                    className="cursor-pointer select-none hover:bg-gray-100"
-                    onClick={() => handleSort('createdAt')}
-                  >
-                    Дата
-                    {sortConfig?.key === 'createdAt' && (
-                      <span className="ml-1 text-xs">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </th>
-                  <th className="w-[140px]">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSorted.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-12 text-center">
-                      <div className="inline-flex flex-col items-center gap-3 text-gray-500">
-                        <span className="text-4xl opacity-50">📦</span>
-                        <p className="text-sm font-medium">Нет товаров</p>
-                        <p className="text-xs max-w-[240px]">
-                          {searchTerm
-                            ? 'Попробуйте изменить поиск или фильтр по категории'
-                            : 'Добавьте товар или импортируйте из CSV'}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAndSorted.map((product) => (
-                    <ProductRow
-                      key={product.id}
-                      product={product}
-                      canReorder={canReorder}
-                      isSaving={savingId === product.id}
-                      isDeleting={deletingId === product.id}
-                      editing={editing}
-                      setEditing={setEditing}
-                      onStartEditPrice={() =>
-                        setEditing({
-                          productId: product.id,
-                          field: 'price',
-                          value: String(product.price),
-                        })
-                      }
-                      onStartEditQuantity={() =>
-                        setEditing({
-                          productId: product.id,
-                          field: 'quantity',
-                          value: String(product.quantity ?? ''),
-                        })
-                      }
-                      onDelete={handleDelete}
-                      saveInline={saveInline}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
+          <SortableContext items={filteredAndSorted.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex w-full min-w-0 flex-col gap-3">
+              {filteredAndSorted.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-gray-500 dark:border-gray-700">
+                  <span className="text-4xl opacity-50">📦</span>
+                  <p className="mt-2 text-sm font-medium">Нет товаров</p>
+                  <p className="mt-1 text-xs">
+                    {searchTerm
+                      ? 'Попробуйте изменить поиск или фильтр по категории'
+                      : 'Добавьте товар или импортируйте из CSV'}
+                  </p>
+                </div>
+              ) : (
+                filteredAndSorted.map((product) => (
+                  <ProductCardRow
+                    key={product.id}
+                    product={product}
+                    canReorder={dragEnabled}
+                    isSaving={savingId === product.id}
+                    isDeleting={deletingId === product.id}
+                    isTogglingDraft={togglingDraftId === product.id}
+                    editing={editing}
+                    setEditing={setEditing}
+                    onStartEditPrice={() =>
+                      setEditing({
+                        productId: product.id,
+                        field: 'price',
+                        value: String(product.price),
+                      })
+                    }
+                    onStartEditQuantity={() =>
+                      setEditing({
+                        productId: product.id,
+                        field: 'quantity',
+                        value: String(product.quantity ?? ''),
+                      })
+                    }
+                    onDelete={handleDelete}
+                    saveInline={saveInline}
+                    onToggleDraft={toggleDraft}
+                  />
+                ))
+              )}
+            </div>
           </SortableContext>
         </DndContext>
       </div>

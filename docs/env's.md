@@ -1,6 +1,10 @@
 # Переменные окружения (nextjs-project)
 
-Файл `.env` или `.env.local` создаётся в каталоге **nextjs-project**. Для сброса пароля и SMTP (Gmail, Яндекс, VK WorkSpace) см. [nextjs-project/docs/password-reset-env.md](../nextjs-project/docs/password-reset-env.md).
+Файл `.env` или `.env.local` создаётся в каталоге **nextjs-project**.
+
+- Сброс пароля и SMTP (Gmail, Яндекс, VK WorkSpace): [nextjs-project/docs/password-reset-env.md](../nextjs-project/docs/password-reset-env.md)
+- 2FA (TOTP, коды по почте): [nextjs-project/docs/2fa-env.md](../nextjs-project/docs/2fa-env.md)
+- Яндекс.Карты (CSP, ключ): [nextjs-project/docs/yandex-maps-env.md](../nextjs-project/docs/yandex-maps-env.md)
 
 ---
 
