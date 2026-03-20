@@ -39,8 +39,12 @@ COPY --from=builder /app/prisma.config.ts ./
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npm ci --omit=dev --ignore-scripts && npx prisma generate
 
-# Артефакты сборки Next.js
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+# Артефакты сборки Next.js (standalone)
+# В режиме `output: 'standalone'` достаточно:
+# - `.next/standalone` (сервер и минимальный набор файлов)
+# - `.next/static` (статические чанки)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./.next/standalone
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Скрипты для telegram-bot (ts-node запускает scripts/telegram-bot.ts)
@@ -60,4 +64,5 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["npm", "run", "start"]
+# Запуск standalone-сервера вместо `next start`, чтобы не требовать весь `.next`.
+CMD ["node", ".next/standalone/server.js"]

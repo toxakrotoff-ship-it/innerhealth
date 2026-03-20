@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { validatePhoneRu } from '@/lib/phone-mask'
+import { validateEmailReality } from '@/lib/security/email-reality'
 
 const MAX_ITEMS = 50
 const MAX_QUANTITY_PER_ITEM = 99
@@ -26,7 +28,7 @@ const doorAddressSchema = z
 export const shippingSchema = z.object({
   fullName: z.string().min(1, 'Укажите имя').max(MAX_STRING_LENGTH).trim(),
   phone: z.string().min(1, 'Укажите телефон').max(PHONE_MAX).trim(),
-  email: z.string().email('Некорректный email').max(EMAIL_MAX).trim(),
+  email: z.string().min(1, 'Укажите email').max(EMAIL_MAX).trim(),
   address: z.string().min(1, 'Укажите адрес').max(MAX_STRING_LENGTH).trim(),
   city: z.string().min(1, 'Укажите город').max(100).trim(),
   zipCode: z.string().max(20).trim(),
@@ -37,6 +39,27 @@ export const shippingSchema = z.object({
   cdekTariffCode: z.number().int().positive().nullable().optional(),
   doorAddress: doorAddressSchema,
 })
+  .superRefine(async (shipping, ctx) => {
+    // Телефон: проверяем не только маску/длину, но и реальную корректность для РФ.
+    const phoneRes = validatePhoneRu(shipping.phone)
+    if (phoneRes.valid === false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phone'],
+        message: phoneRes.message,
+      })
+    }
+
+    // Email: синтаксис + запрет disposable + проверка домена по DNS.
+    const emailRes = await validateEmailReality(shipping.email)
+    if (emailRes.valid === false) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['email'],
+        message: emailRes.message,
+      })
+    }
+  })
 
 export const createOrderBodySchema = z.object({
   items: z.array(orderItemSchema).min(1, 'Корзина пуста').max(MAX_ITEMS),

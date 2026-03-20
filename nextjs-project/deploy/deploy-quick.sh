@@ -16,7 +16,7 @@ git reset --hard "origin/$(git branch --show-current)"
 
 cd "$DEPLOY_DIR"
 
-echo "==> Building app from repo (with cache)..."
+echo "==> Building app image (with cache)..."
 docker compose build app
 
 echo "==> Migration status (before deploy)..."
@@ -28,16 +28,18 @@ docker compose run --rm app npx prisma migrate deploy
 echo "==> Restarting app..."
 docker compose up -d app
 
-echo "==> Building telegram-bot (кэш, быстро)..."
-docker compose build telegram-bot
-docker compose up -d telegram-bot
+echo "==> Restarting telegram-bot (no separate build)..."
+# В текущей конфигурации `telegram-bot` использует тот же image, что и `app`.
+docker compose up -d --no-build telegram-bot
 
-echo "==> Перезапуск контейнеров app и telegram-bot..."
-docker compose restart app telegram-bot
+echo "==> Removing old telegram-bot image (if still present)..."
+docker image rm nextjs-project-telegram-bot:latest || true
 
-echo "==> Cleaning up (dangling images, build cache)..."
+echo "==> Cleaning up Docker cache (safe)..."
 docker image prune -f
-docker builder prune -f 2>/dev/null || true
+# Builder cache может быть довольно объёмным после сборок.
+# Не трогаем volumes, чтобы не потерять данные БД.
+docker builder prune -af || true
 
 echo "==> Done."
 docker compose ps

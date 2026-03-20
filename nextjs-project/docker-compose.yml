@@ -6,6 +6,7 @@ x-logging: &default-logging
 
 services:
   app:
+    image: nextjs-project-app:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -53,9 +54,9 @@ services:
           memory: 1500M
 
   telegram-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # Экономим SSD: бот не нуждается в отдельной сборке Next.js.
+    # Используем тот же image, что и `app` (в нём есть /app/scripts и deps).
+    image: nextjs-project-app:latest
     restart: unless-stopped
     env_file: .env
     environment:

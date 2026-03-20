@@ -27,31 +27,37 @@ const headerIconLink =
 export async function SiteHeader() {
   let session = null
   let hasInvalidSession = false
-  
+
+  // Чтобы не тратить CPU на `getServerSession` при каждом заходе (особенно для анонимных),
+  // сначала проверим наличие cookies NextAuth.
+  let hasSessionCookie = false
   try {
-    session = await getServerSession(authOptions)
-  } catch (error) {
-    // Ошибка декодирования JWT — токен зашифрован другим ключом
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[SiteHeader] Failed to decode session token:', error instanceof Error ? error.message : String(error))
+    const cookieStore = await cookies()
+    hasSessionCookie =
+      Boolean(cookieStore.get('next-auth.session-token')) ||
+      Boolean(cookieStore.get('__Secure-next-auth.session-token'))
+  } catch {
+    // Ignore cookie read errors
+  }
+
+  if (hasSessionCookie) {
+    try {
+      session = await getServerSession(authOptions)
+    } catch (error) {
+      // Ошибка декодирования JWT — токен зашифрован другим ключом
+      if (process.env.NODE_ENV === 'development') {
+        console.error(
+          '[SiteHeader] Failed to decode session token:',
+          error instanceof Error ? error.message : String(error),
+        )
+      }
+      hasInvalidSession = true
     }
-    hasInvalidSession = true
   }
   
   // Если сессия null, проверяем наличие cookies NextAuth
   // Если cookies есть - они повреждены и должны быть очищены через API
-  if (!session) {
-    try {
-      const cookieStore = await cookies()
-      const hasSessionCookie = cookieStore.get('next-auth.session-token') ||
-                               cookieStore.get('__Secure-next-auth.session-token')
-      if (hasSessionCookie) {
-        hasInvalidSession = true
-      }
-    } catch {
-      // Ignore cookie read errors
-    }
-  }
+  if (!session && hasSessionCookie) hasInvalidSession = true
   
   const isAuthenticated = Boolean(session?.user?.id)
 
