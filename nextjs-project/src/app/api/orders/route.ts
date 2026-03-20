@@ -57,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const raw = await request.json()
-    const parsed = createOrderBodySchema.safeParse(raw)
+    const parsed = await createOrderBodySchema.safeParseAsync(raw)
     if (!parsed.success) {
       const first = parsed.error.flatten().fieldErrors
       const message = Object.values(first)[0]?.[0] ?? parsed.error.message

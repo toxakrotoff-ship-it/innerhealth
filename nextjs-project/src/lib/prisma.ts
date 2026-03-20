@@ -18,8 +18,18 @@ if (!connectionString) {
   )
 }
 
+const databasePoolMax = (() => {
+  const raw = Number(process.env.DATABASE_POOL_MAX ?? '5')
+  return Number.isFinite(raw) && raw > 0 ? raw : 5
+})()
+
 const pool = new Pool({
   connectionString,
+  // Ограничиваем число активных соединений к Postgres на малых VPS,
+  // иначе при всплесках параллелизма расходуются CPU/RAM и растёт latency.
+  max: databasePoolMax,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 5_000,
 })
 
 const adapter = new PrismaPg(pool)

@@ -2,9 +2,10 @@
  * Клиентская валидация контактных полей (email и т.д.).
  */
 
+import { isEmail } from 'validator'
+import { getEmailRiskVerdict } from '@/lib/security/email-risk'
+
 const EMAIL_MAX = 254
-/** Упрощённая проверка формата email (локальная часть @ домен.зона). */
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function validateEmail(value: string): { valid: true } | { valid: false; message: string } {
   const trimmed = value.trim()
@@ -14,8 +15,19 @@ export function validateEmail(value: string): { valid: true } | { valid: false; 
   if (trimmed.length > EMAIL_MAX) {
     return { valid: false, message: 'Слишком длинный email' }
   }
-  if (!EMAIL_REGEX.test(trimmed)) {
+  if (
+    !isEmail(trimmed, {
+      require_tld: true,
+      allow_utf8_local_part: false,
+      allow_smtputf8: false,
+    })
+  ) {
     return { valid: false, message: 'Введите корректный email, например example@mail.ru' }
   }
+
+  if (getEmailRiskVerdict(trimmed) === 'block') {
+    return { valid: false, message: 'Временные email адреса недопустимы' }
+  }
+
   return { valid: true }
 }

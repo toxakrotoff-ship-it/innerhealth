@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import * as quickOrderService from '@/services/quick-order.service'
+import { validatePhoneRu } from '@/lib/phone-mask'
 
 const QUICK_ORDER_RATE_LIMIT = 8
 
@@ -19,7 +20,16 @@ const quickOrderSchema = z.object({
     .string()
     .trim()
     .min(6, 'Укажите корректный телефон')
-    .max(30, 'Телефон слишком длинный'),
+    .max(30, 'Телефон слишком длинный')
+    .superRefine((value, ctx) => {
+      const phoneRes = validatePhoneRu(value)
+      if (phoneRes.valid === false) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: phoneRes.message,
+        })
+      }
+    }),
   comment: z
     .string()
     .trim()

@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
+
 /**
  * Маска ввода телефона в формате +7 (999) 999-99-99.
  * Из ввода извлекаются только цифры; первая 8 заменяется на 7.
@@ -61,5 +63,23 @@ export function validatePhoneRu(value: string): { valid: true } | { valid: false
   if (digits[0] !== RU_COUNTRY_CODE) {
     return { valid: false, message: 'Номер должен начинаться с +7' }
   }
+
+  // Дополнительно проверяем "реальность" номера и соответствие маске мобильного 9xx.
+  const parsed = parsePhoneNumberFromString(`+${digits}`, 'RU')
+  if (parsed == null || !parsed.isValid()) {
+    return { valid: false, message: 'Введите корректный номер телефона' }
+  }
+
+  const countryCallingCode = String(parsed.countryCallingCode ?? '')
+  if (countryCallingCode !== RU_COUNTRY_CODE) {
+    return { valid: false, message: 'Номер должен начинаться с +7' }
+  }
+
+  // Маска: +7 (999) ..., то есть национальный номер 10 цифр и первая цифра 9.
+  const nationalDigits = String(parsed.nationalNumber ?? '')
+  if (nationalDigits.length !== 10 || nationalDigits[0] !== '9') {
+    return { valid: false, message: 'Номер должен соответствовать маске: +7 (999) 999-99-99' }
+  }
+
   return { valid: true }
 }

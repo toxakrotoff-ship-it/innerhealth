@@ -2,6 +2,11 @@ import 'server-only'
 
 import { prisma } from '@/lib/prisma'
 
+const ANALYTICS_EVENT_KEEP_LAST_DAYS = (() => {
+  const raw = Number(process.env.ANALYTICS_EVENT_KEEP_LAST_DAYS ?? '7')
+  return Number.isFinite(raw) && raw >= 0 ? raw : 7
+})()
+
 const FUNNEL_STEPS = [
   { step: 'PAGE_VIEW' as const, next: 'CART_ADD' as const },
   { step: 'CART_ADD' as const, next: 'CHECKOUT_START' as const },
@@ -15,6 +20,13 @@ function getDateRangeForDay(date: Date): { start: Date; end: Date } {
   const end = new Date(start)
   end.setDate(end.getDate() + 1)
   return { start, end }
+}
+
+function getAnalyticsDeletionCutoff(now: Date): Date {
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() - ANALYTICS_EVENT_KEEP_LAST_DAYS)
+  cutoff.setHours(0, 0, 0, 0)
+  return cutoff
 }
 
 export async function aggregateTrafficForDate(date: Date): Promise<void> {
@@ -110,6 +122,7 @@ export async function aggregateForDateRange(
   start.setHours(0, 0, 0, 0)
   const end = new Date(to)
   end.setHours(0, 0, 0, 0)
+  const deletionCutoff = getAnalyticsDeletionCutoff(new Date())
 
   for (
     let cursor = new Date(start);
@@ -118,10 +131,24 @@ export async function aggregateForDateRange(
   ) {
     // Клонируем, чтобы транзакции не портили счётчик.
     const day = new Date(cursor)
+    const { start: dayStart, end: dayEnd } = getDateRangeForDay(day)
     // eslint-disable-next-line no-await-in-loop
     await aggregateTrafficForDate(day)
     // eslint-disable-next-line no-await-in-loop
     await aggregateFunnelForDate(day)
+
+    // После агрегации удаляем сырые события для дней старше ретенции,
+    // чтобы таблица `AnalyticsEvent` не разрасталась и не забивала SSD.
+    if (dayEnd <= deletionCutoff) {
+      await prisma.analyticsEvent.deleteMany({
+        where: {
+          occurredAt: {
+            gte: dayStart,
+            lt: dayEnd,
+          },
+        },
+      })
+    }
   }
 }
 

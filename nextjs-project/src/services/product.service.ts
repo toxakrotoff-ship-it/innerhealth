@@ -1,5 +1,5 @@
 import 'server-only';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 /** Select only fields needed for admin list — do NOT fetch photos Json or long text. */
@@ -163,24 +163,41 @@ export async function suggestProducts(query: string, limit = 8) {
   const q = query.trim();
   if (!q) return [];
 
-  return prisma.product.findMany({
-    where: {
-      isDraft: false,
-      OR: [
-        { title: { contains: q, mode: 'insensitive' } },
-        { sku: { contains: q, mode: 'insensitive' } },
-      ],
-    },
-    orderBy: [{ createdAt: 'desc' }],
-    take: Math.max(1, Math.min(limit, 10)),
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      sku: true,
-      price: true,
-    },
-  });
+  const take = Math.max(1, Math.min(limit, 10));
+
+  // Для "смежных" добавляем trigram match (`%`) и similarity-score.
+  // Точные подстроки (`ILIKE '%q%'`) остаются и получают более высокий вес в сортировке.
+  return prisma.$queryRaw<
+    Array<{ id: string; title: string; slug: string | null; sku: string | null; price: number }>
+  >(
+    Prisma.sql`
+      SELECT
+        "id",
+        "title",
+        "slug",
+        "sku",
+        "price"
+      FROM "Product"
+      WHERE "isDraft" = false
+        AND (
+          "title" ILIKE '%' || ${q} || '%'
+          OR "sku" ILIKE '%' || ${q} || '%'
+          OR "title" % ${q}
+          OR "sku" % ${q}
+        )
+      ORDER BY
+        (
+          CASE WHEN "title" ILIKE '%' || ${q} || '%' THEN 100 ELSE 0 END
+          + CASE WHEN "sku" ILIKE '%' || ${q} || '%' THEN 50 ELSE 0 END
+          + GREATEST(
+              COALESCE(similarity("title", ${q}), 0),
+              COALESCE(similarity("sku", ${q}), 0)
+            )
+        ) DESC,
+        "createdAt" DESC
+      LIMIT ${take};
+    `
+  );
 }
 
 export async function getProductsForCompare(productIds: string[]) {

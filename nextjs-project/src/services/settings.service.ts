@@ -39,21 +39,54 @@ export const SCHEMA_ORG_KEYS = [
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
 
+type SettingsCacheEntry = {
+  value: string
+  expiresAt: number
+}
+
+const SETTINGS_CACHE_TTL_MS = (() => {
+  const raw = Number(process.env.SETTINGS_CACHE_TTL_MS ?? '60000')
+  return Number.isFinite(raw) && raw >= 0 ? raw : 60000
+})()
+const settingsCacheByKey = new Map<string, SettingsCacheEntry>()
+
 /** Get settings as key-value map. Sensitive values are decrypted when read. */
 export async function getSettingsMap(keys: readonly string[] = SETTING_KEYS) {
-  const rows = await prisma.siteSetting.findMany({
-    where: { key: { in: [...keys] } },
-  })
+  const now = Date.now()
+
   const map: Record<string, string> = {}
+  const missingKeys: Array<string> = []
+
   for (const k of keys) {
+    const cached = settingsCacheByKey.get(k)
+    if (cached && cached.expiresAt > now) {
+      map[k] = cached.value
+      continue
+    }
+
     map[k] = ''
+    missingKeys.push(k)
   }
-  for (const row of rows) {
-    const value = isSensitiveSettingKey(row.key)
-      ? decryptSettingValue(row.value)
-      : row.value
-    map[row.key] = value
+
+  const uniqueMissingKeys = Array.from(new Set(missingKeys))
+  if (uniqueMissingKeys.length > 0) {
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: uniqueMissingKeys } },
+    })
+
+    for (const row of rows) {
+      const value = isSensitiveSettingKey(row.key)
+        ? decryptSettingValue(row.value)
+        : row.value
+
+      map[row.key] = value
+      settingsCacheByKey.set(row.key, {
+        value,
+        expiresAt: now + SETTINGS_CACHE_TTL_MS,
+      })
+    }
   }
+
   return map
 }
 
