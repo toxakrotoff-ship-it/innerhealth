@@ -99,7 +99,11 @@ npm run start
 node .next/standalone/server.js
 ```
 
-При этом текущая рабочая директория должна быть корнем проекта (где лежит `package.json`), т.к. сервер ожидает рядом папку `public` и `.next/static`. При деплое в Docker копируют `standalone`, `public` и `.next/static` — см. [Next.js Docker standalone](https://github.com/vercel/next.js/tree/canary/examples/with-docker).
+Сервер Next.js делает `process.chdir` в каталог `.next/standalone`, поэтому **клиентские чанки** (`/_next/static/...`) и файлы из **`public/`** (например `/images/...`) должны быть доступны относительно этого каталога: `.next/standalone/.next/static` и `.next/standalone/public`. В **`Dockerfile`** это дублируется явным `COPY` из артефактов сборки. Дополнительно в корне образа остаются `/app/public` и `/app/.next/static` для совместимости и скриптов.
+
+Пути к `public/uploads` в коде API разрешаются через **`getProjectRoot()`** (`src/lib/project-root.ts`), чтобы при `cwd === .next/standalone` запись шла в реальный `/app/public/uploads` (совпадает с volume в `docker-compose`).
+
+См. также [Next.js Docker standalone](https://github.com/vercel/next.js/tree/canary/examples/with-docker).
 
 ## Несколько инстансов (load balancer)
 

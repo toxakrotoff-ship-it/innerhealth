@@ -3,9 +3,10 @@ import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import path from 'path'
 import dotenv from 'dotenv'
+import { getProjectRoot } from '@/lib/project-root'
 
 // Загружаем переменные окружения: сначала из корня проекта, затем .env.local
-const projectRoot = process.cwd()
+const projectRoot = getProjectRoot()
 dotenv.config({ path: path.join(projectRoot, '.env') })
 dotenv.config({ path: path.join(projectRoot, '.env.local') })
 

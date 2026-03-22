@@ -19,6 +19,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://innerhaealth.inetrnet.pp.ru}
       # 0 = не запускать миграции при старте (БД уже мигрирована/перенесена). Включить: RUN_MIGRATE=1 в .env
       RUN_MIGRATE: "0"
+    # Загрузки с админки: путь на диске должен совпадать с getProjectRoot() + public/uploads (= /app/public/uploads при standalone)
     volumes:
       - ./public/uploads:/app/public/uploads
     depends_on:
@@ -87,7 +88,7 @@ services:
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
       - certbot_www:/var/www/certbot:ro
-      # Раздача загрузок (standalone Next.js не отдаёт public/): тот же каталог, что и у app
+      # Раздача /uploads/ с диска (nginx), без прокси через Node; тот же каталог, что у app volume
       - ./public/uploads:/var/www/uploads:ro
     depends_on:
       - app

@@ -189,7 +189,11 @@ sudo chown -R 1001:1001 public/uploads
 
 После первого выполнения перезапуск контейнеров не нужен.
 
-Превью загрузок в редакторе отдаёт **nginx** (location `/uploads/` → каталог `public/uploads`), так как Next.js в режиме `standalone` не раздаёт папку `public/`. Конфиг и volume для nginx уже настроены в `docker-compose.yml` и `deploy/nginx/conf.d/default.conf`.
+Статика из репозитория (`public/images/...`, `favicon` и т.д.) в Docker попадает в образ в **`.next/standalone/public`** (см. `nextjs-project/Dockerfile`), чтобы Next в standalone отдавал `/images/...` без 404.
+
+Загрузки пользователей (`/uploads/...`) по-прежнему удобно отдавать **nginx** напрямую с диска (location `/uploads/` → тот же каталог `public/uploads` на хосте), чтобы крупные файлы не шли через Node. Конфиг и volume настроены в `docker-compose.yml` и `deploy/nginx/conf.d/default.conf`.
+
+Запись файлов загрузок из админки идёт в **`/app/public/uploads`** благодаря `getProjectRoot()` в API — это совпадает с примонтированным `./public/uploads`.
 
 ## Перенос локальной БД в прод (без рук)
 

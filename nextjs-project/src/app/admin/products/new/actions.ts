@@ -3,6 +3,7 @@
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
+import { getProjectRoot } from '@/lib/project-root';
 
 // Инициализация Prisma Client
 // const prisma = new PrismaClient();
@@ -38,7 +39,7 @@ async function downloadImage(imageUrl: string, filename: string, productFolder: 
     console.log(`[DEBUG] Скачивание изображения: ${imageUrl}`);
     
     // Создаем директорию uploads если она не существует
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', productFolder);
+    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', productFolder);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

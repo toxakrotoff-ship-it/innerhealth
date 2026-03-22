@@ -43,9 +43,15 @@ RUN npm ci --omit=dev --ignore-scripts && npx prisma generate
 # В режиме `output: 'standalone'` достаточно:
 # - `.next/standalone` (сервер и минимальный набор файлов)
 # - `.next/static` (статические чанки)
+# Важно: standalone-сервер `process.chdir(__dirname)` в `.next/standalone`,
+# поэтому статика должна лежать по пути `.next/standalone/.next/static`.
+# Аналогично `public/` (картинки `/images/...`, favicon и т.д.) должен быть доступен как
+# `.next/standalone/public`, иначе запросы к статике из `public/` вернут 404.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./.next/standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/standalone/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./.next/standalone/public
 
 # Скрипты для telegram-bot (ts-node запускает scripts/telegram-bot.ts)
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts

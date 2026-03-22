@@ -64,6 +64,37 @@ function getStockBadge(quantity: number | null | undefined): StockBadgeState {
   return { label: 'Заканчивается', className: 'bg-orange-100 text-orange-700' }
 }
 
+/** HTML snippet vs plain text — must not mix `dangerouslySetInnerHTML` with children on one node. */
+function looksLikeHtmlMarkup(text: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(text.trim())
+}
+
+function ProductDescriptionBlock({ description }: { description: string }) {
+  const className =
+    'mt-6 text-gray-600 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal'
+  if (looksLikeHtmlMarkup(description)) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: description }} />
+  }
+  return (
+    <div className={className}>
+      <p>{description}</p>
+    </div>
+  )
+}
+
+function ProductLongTextBlock({ text }: { text: string }) {
+  const className =
+    'prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal'
+  if (looksLikeHtmlMarkup(text)) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: text }} />
+  }
+  return (
+    <div className={className}>
+      <span className="whitespace-pre-line">{text}</span>
+    </div>
+  )
+}
+
 export function ProductPageContent({
   product,
   tabs,
@@ -138,38 +169,14 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} />
           </div>
           <PurchaseTrustStrip />
-          {product.description && (
-            <div
-              className="mt-6 text-gray-600 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
-              dangerouslySetInnerHTML={
-                /<[a-z][\s\S]*>/i.test(product.description.trim())
-                  ? { __html: product.description }
-                  : undefined
-              }
-            >
-              {!/<[a-z][\s\S]*>/i.test(product.description.trim()) && (
-                <p>{product.description}</p>
-              )}
-            </div>
-          )}
+          {product.description && <ProductDescriptionBlock description={product.description} />}
         </div>
       </FluidGrid>
 
       {product.text && (
         <ScalableSpacing size="lg">
           <section className="border-t border-gray-200 dark:border-gray-700 pt-8">
-            <div
-              className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
-              dangerouslySetInnerHTML={
-                /<[a-z][\s\S]*>/i.test(product.text.trim())
-                  ? { __html: product.text }
-                  : undefined
-              }
-            >
-              {!/<[a-z][\s\S]*>/i.test(product.text.trim()) && (
-                <span className="whitespace-pre-line">{product.text}</span>
-              )}
-            </div>
+            <ProductLongTextBlock text={product.text} />
           </section>
         </ScalableSpacing>
       )}

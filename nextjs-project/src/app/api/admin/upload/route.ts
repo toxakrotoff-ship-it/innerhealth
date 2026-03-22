@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import fs from 'fs';
 import path from 'path';
+import { getProjectRoot } from '@/lib/project-root';
 
 const ALLOWED_FOLDERS = ['products', 'posts', 'content', 'categories'] as const;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
     const ext = ALLOWED_EXT.has(rawExt) ? rawExt : 'jpg';
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder);
+    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', folder);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

@@ -3,6 +3,7 @@ import { requireAdminSession } from '@/lib/require-admin';
 import * as productService from '@/services/product.service';
 import fs from 'fs';
 import path from 'path';
+import { getProjectRoot } from '@/lib/project-root';
 import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', 'products');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }

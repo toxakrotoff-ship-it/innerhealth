@@ -4,6 +4,7 @@ import * as productService from '@/services/product.service';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import { getProjectRoot } from '@/lib/project-root';
 import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 type PhotoEntry = { url: string; blurDataURL?: string };
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
 
     // Создаем директорию для загрузки файлов, если её нет
     const productName = existingProduct.title.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\-_]/g, '_');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products', productName);
+    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', 'products', productName);
     
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });

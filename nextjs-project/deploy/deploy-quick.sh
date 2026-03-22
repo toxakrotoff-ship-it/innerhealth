@@ -26,7 +26,7 @@ echo "==> Applying migrations from repo..."
 docker compose run --rm app npx prisma migrate deploy
 
 echo "==> Restarting app..."
-docker compose up -d app
+docker compose up -d --force-recreate app
 
 echo "==> Restarting telegram-bot (no separate build)..."
 # В текущей конфигурации `telegram-bot` использует тот же image, что и `app`.

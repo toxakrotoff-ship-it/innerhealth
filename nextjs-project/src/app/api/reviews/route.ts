@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getProjectRoot } from '@/lib/project-root';
 import * as reviewService from '@/services/review.service';
 import { notifyTelegramNewReview } from '@/lib/telegram-notify';
 
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
       }
       const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
       const ext = ALLOWED_EXT.has(rawExt) ? rawExt : 'jpg';
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', UPLOAD_FOLDER);
+      const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', UPLOAD_FOLDER);
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
