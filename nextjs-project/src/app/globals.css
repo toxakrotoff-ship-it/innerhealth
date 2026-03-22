@@ -808,17 +808,18 @@ html.preloader-skip .preloader-overlay {
     }
   }
 
-  /* Sprint Power banner: две копии контента, сдвиг на 50% для бесшовного цикла */
+  /* Sprint Power banner: ровно две одинаковые полосы без лишних gap — иначе -50% даёт скачок */
   .animate-marquee-sprint {
-    contain: layout style paint;
     animation: marquee-sprint 30s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
   }
   @keyframes marquee-sprint {
     0% {
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
     }
     100% {
-      transform: translateX(-50%);
+      transform: translate3d(-50%, 0, 0);
     }
   }
   @media (prefers-reduced-motion: reduce) {
