@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { AdminDatePicker } from './components/AdminDatePicker'
+import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
 
 export const dynamic = 'force-dynamic'
 
@@ -213,6 +215,8 @@ export default async function AdminPage({
 
   const period = resolvePeriod(periodParam)
 
+  const adminBasePath = `/${process.env.ADMIN_SECRET_PATH ?? 'admin'}`
+
   const { from, to, isCustom } = getDateRange(period, fromParam, toParam)
   const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(
     period,
@@ -230,33 +234,7 @@ export default async function AdminPage({
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Быстрый выбор:</span>
-              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-                {[
-                  { key: '7d', label: '7 дней' },
-                  { key: '30d', label: '30 дней' },
-                  { key: '90d', label: '90 дней' },
-                  { key: 'all', label: 'Всё время' },
-                ].map((item) => {
-                  const href =
-                    item.key === '30d'
-                      ? '/admin-panel'
-                      : `/admin-panel?period=${item.key}`
-                  const isActive = period === item.key
-                  return (
-                    <a
-                      key={item.key}
-                      href={href}
-                      className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      {item.label}
-                    </a>
-                  )
-                })}
-              </div>
+              <AdminStatsPeriodPresets adminBasePath={adminBasePath} period={period} />
             </div>
             <form method="get" className="flex flex-wrap items-end gap-3 border-l border-gray-200 pl-4">
               <AdminDatePicker
@@ -281,12 +259,13 @@ export default async function AdminPage({
                   Применить
                 </button>
                 {isCustom && (
-                  <a
-                    href="/admin-panel"
-                    className="text-sm text-gray-500 hover:text-gray-800 underline"
+                  <Link
+                    href={adminBasePath}
+                    scroll={false}
+                    className="text-sm text-gray-500 underline hover:text-gray-800"
                   >
                     Сбросить
-                  </a>
+                  </Link>
                 )}
               </div>
             </form>

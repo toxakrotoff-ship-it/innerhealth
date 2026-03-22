@@ -808,11 +808,11 @@ html.preloader-skip .preloader-overlay {
     }
   }
 
-  /* Sprint Power banner: ровно две одинаковые полосы без лишних gap — иначе -50% даёт скачок */
+  /* Sprint Power banner: ровно две одинаковые полосы без лишних gap — иначе -50% даёт скачок.
+     Не используем постоянный will-change: transform — в Firefox это часто перегружает композитор
+     и даёт рывки у других анимаций на странице; translate3d в keyframes достаточно для слоя. */
   .animate-marquee-sprint {
     animation: marquee-sprint 30s linear infinite;
-    will-change: transform;
-    backface-visibility: hidden;
   }
   @keyframes marquee-sprint {
     0% {
