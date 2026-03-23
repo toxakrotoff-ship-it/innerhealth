@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
 import Link from 'next/link'
 import { ChevronDown } from 'lucide-react'
@@ -17,10 +18,16 @@ interface ProductWithCategories extends Product {
 
 export default function AdminCatalogPage() {
   const base = useAdminBasePath()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [products, setProducts] = useState<ProductWithCategories[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => {
+    const categoryId = searchParams.get('categoryId')
+    return categoryId && categoryId.trim() ? categoryId : null
+  })
   const [categoriesPanelOpen, setCategoriesPanelOpen] = useState(false)
   const [categoriesEverOpened, setCategoriesEverOpened] = useState(false)
 
@@ -60,7 +67,18 @@ export default function AdminCatalogPage() {
     if (categoriesPanelOpen) setCategoriesEverOpened(true)
   }, [categoriesPanelOpen])
 
+  useEffect(() => {
+    const categoryIdFromUrl = searchParams.get('categoryId')
+    const normalizedCategoryId = categoryIdFromUrl && categoryIdFromUrl.trim() ? categoryIdFromUrl : null
+    setSelectedCategory((current) => (current === normalizedCategoryId ? current : normalizedCategoryId))
+  }, [searchParams])
+
   const handleCategorySelect = (categoryId: string | null) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (categoryId) params.set('categoryId', categoryId)
+    else params.delete('categoryId')
+    const queryString = params.toString()
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
     setSelectedCategory(categoryId)
   }
 
