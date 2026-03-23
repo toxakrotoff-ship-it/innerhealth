@@ -47,6 +47,7 @@ function getDateRange(
 interface DeviceStats {
   desktop: number
   mobile: number
+  tablet: number
   other: number
 }
 
@@ -96,7 +97,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       }>,
       ordersCount: 0,
       pageStats: [] as PageStat[],
-      deviceStats: { desktop: 0, mobile: 0, other: 0 } as DeviceStats,
+      deviceStats: { desktop: 0, mobile: 0, tablet: 0, other: 0 } as DeviceStats,
     }
   }
 
@@ -106,7 +107,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
     ? { gte: from, lte: to }
     : undefined
 
-  const [trafficTotal, funnelTotal, ordersCount, deviceDesktop, deviceMobile] = await Promise.all([
+  const [trafficTotal, funnelTotal, ordersCount, deviceAggregate] = await Promise.all([
     anyPrisma.dailyTrafficStats.aggregate({
       where: dateWhere ? { date: dateWhere } : undefined,
       _sum: { pageViews: true, sessions: true, clicks: true },
@@ -119,36 +120,74 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
     anyPrisma.order.count({
       where: dateWhere ? { createdAt: dateWhere } : undefined,
     }),
-    anyPrisma.analyticsEvent
-      ? anyPrisma.analyticsEvent.count({
-          where: {
-            type: 'PAGE_VIEW',
-            occurredAt: dateWhere,
-            meta: {
-              path: ['deviceType'],
-              equals: 'desktop',
-            },
-          },
-        })
-      : Promise.resolve(0),
-    anyPrisma.analyticsEvent
-      ? anyPrisma.analyticsEvent.count({
-          where: {
-            type: 'PAGE_VIEW',
-            occurredAt: dateWhere,
-            meta: {
-              path: ['deviceType'],
-              equals: 'mobile',
-            },
-          },
-        })
-      : Promise.resolve(0),
+    prisma.dailyDeviceStats.aggregate({
+      where: dateWhere ? { date: dateWhere } : undefined,
+      _sum: {
+        desktop: true,
+        mobile: true,
+        tablet: true,
+        unknown: true,
+      },
+    }),
   ])
 
-  const deviceStats: DeviceStats = {
-    desktop: deviceDesktop,
-    mobile: deviceMobile,
-    other: Math.max(0, (trafficTotal._sum.pageViews ?? 0) - deviceDesktop - deviceMobile),
+  const totalPv = trafficTotal._sum.pageViews ?? 0
+  const sumD = deviceAggregate._sum.desktop ?? 0
+  const sumM = deviceAggregate._sum.mobile ?? 0
+  const sumT = deviceAggregate._sum.tablet ?? 0
+  const sumU = deviceAggregate._sum.unknown ?? 0
+  const sumAgg = sumD + sumM + sumT + sumU
+
+  let deviceStats: DeviceStats
+
+  if (sumAgg > 0 || totalPv === 0) {
+    deviceStats = {
+      desktop: sumD,
+      mobile: sumM,
+      tablet: sumT,
+      other: sumU,
+    }
+  } else if (anyPrisma.analyticsEvent) {
+    const [deviceDesktop, deviceMobile, deviceTablet] = await Promise.all([
+      anyPrisma.analyticsEvent.count({
+        where: {
+          type: 'PAGE_VIEW',
+          occurredAt: dateWhere,
+          meta: {
+            path: ['deviceType'],
+            equals: 'desktop',
+          },
+        },
+      }),
+      anyPrisma.analyticsEvent.count({
+        where: {
+          type: 'PAGE_VIEW',
+          occurredAt: dateWhere,
+          meta: {
+            path: ['deviceType'],
+            equals: 'mobile',
+          },
+        },
+      }),
+      anyPrisma.analyticsEvent.count({
+        where: {
+          type: 'PAGE_VIEW',
+          occurredAt: dateWhere,
+          meta: {
+            path: ['deviceType'],
+            equals: 'tablet',
+          },
+        },
+      }),
+    ])
+    deviceStats = {
+      desktop: deviceDesktop,
+      mobile: deviceMobile,
+      tablet: deviceTablet,
+      other: Math.max(0, totalPv - deviceDesktop - deviceMobile - deviceTablet),
+    }
+  } else {
+    deviceStats = { desktop: 0, mobile: 0, tablet: 0, other: 0 }
   }
 
   const trafficRows = anyPrisma.dailyTrafficStats
@@ -358,7 +397,10 @@ export default async function AdminPage({
             <h2 className="text-lg font-semibold mb-3">Устройства</h2>
             {(() => {
               const total =
-                deviceStats.desktop + deviceStats.mobile + deviceStats.other
+                deviceStats.desktop +
+                deviceStats.mobile +
+                deviceStats.tablet +
+                deviceStats.other
               const formatPct = (value: number) =>
                 total > 0 ? `${Math.round((value / total) * 100)}%` : '0%'
               return (
@@ -387,6 +429,17 @@ export default async function AdminPage({
                         </span>
                         <span className="ml-2 w-[40px] text-right text-xs text-gray-500">
                           {formatPct(deviceStats.mobile)}
+                        </span>
+                      </dd>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-gray-600">Планшеты</dt>
+                      <dd className="flex items-baseline font-semibold text-gray-900">
+                        <span className="w-[80px] text-right">
+                          {deviceStats.tablet}
+                        </span>
+                        <span className="ml-2 w-[40px] text-right text-xs text-gray-500">
+                          {formatPct(deviceStats.tablet)}
                         </span>
                       </dd>
                     </div>

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 const ANALYTICS_EVENT_KEEP_LAST_DAYS = (() => {
@@ -65,6 +66,60 @@ export async function aggregateTrafficForDate(date: Date): Promise<void> {
       })
     )
   )
+
+  await upsertDailyDeviceStatsForDay(start, end)
+}
+
+async function upsertDailyDeviceStatsForDay(start: Date, end: Date): Promise<void> {
+  const rows = await prisma.$queryRaw<Array<{ kind: string; cnt: bigint }>>(
+    Prisma.sql`
+      SELECT COALESCE(meta->>'deviceType', 'unknown') AS kind, COUNT(*)::bigint AS cnt
+      FROM "AnalyticsEvent"
+      WHERE "occurredAt" >= ${start} AND "occurredAt" < ${end}
+        AND type = 'PAGE_VIEW'::"AnalyticsEventType"
+      GROUP BY COALESCE(meta->>'deviceType', 'unknown')
+    `
+  )
+
+  let desktop = 0
+  let mobile = 0
+  let tablet = 0
+  let unknown = 0
+
+  for (const row of rows) {
+    const n = Number(row.cnt)
+    switch (row.kind) {
+      case 'desktop':
+        desktop += n
+        break
+      case 'mobile':
+        mobile += n
+        break
+      case 'tablet':
+        tablet += n
+        break
+      default:
+        unknown += n
+        break
+    }
+  }
+
+  await prisma.dailyDeviceStats.upsert({
+    where: { date: start },
+    create: {
+      date: start,
+      desktop,
+      mobile,
+      tablet,
+      unknown,
+    },
+    update: {
+      desktop,
+      mobile,
+      tablet,
+      unknown,
+    },
+  })
 }
 
 export async function aggregateFunnelForDate(date: Date): Promise<void> {

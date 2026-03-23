@@ -637,6 +637,20 @@ model DailyTrafficStats {
   @@unique([date, path])
 }
 
+/// Сводка PAGE_VIEW по типу устройства за календарный день (устойчива к удалению сырых AnalyticsEvent).
+model DailyDeviceStats {
+  id       String   @id @default(cuid())
+  date     DateTime
+  desktop  Int      @default(0)
+  mobile   Int      @default(0)
+  tablet   Int      @default(0)
+  /// События без meta.deviceType или с неизвестным значением
+  unknown  Int      @default(0)
+
+  @@unique([date])
+  @@index([date])
+}
+
 model DailyFunnelStats {
   id               String     @id @default(cuid())
   date             DateTime

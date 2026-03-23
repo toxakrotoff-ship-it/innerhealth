@@ -10,20 +10,67 @@ interface TipTapNode {
     level?: number
     src?: string
     alt?: string
+    /** TipTap Image extension may store dimensions as number or string */
+    width?: number | string | null
+    height?: number | string | null
     listStyleType?: string
     markerStyle?: string
     start?: number
   }
-  marks?: { type: string }[]
+  marks?: {
+    type: string
+    attrs?: {
+      href?: string
+      target?: string
+      rel?: string
+    }
+  }[]
 }
 
-function renderMarks(children: React.ReactNode, marks: { type: string }[] | undefined) {
+/** Fits column width and caps extreme height (tall portraits) while keeping aspect ratio */
+const articleBodyImageClassName =
+  'mx-auto block h-auto w-auto max-w-full max-h-[min(85vh,56rem)] rounded-lg bg-gray-100 align-middle'
+
+function parsePositiveInt(value: number | string | null | undefined): number | undefined {
+  if (value === null || value === undefined) return undefined
+  const n = typeof value === 'number' ? value : parseInt(String(value).replace(/px$/i, ''), 10)
+  if (!Number.isFinite(n) || n <= 0) return undefined
+  return Math.round(n)
+}
+
+function renderMarks(
+  children: React.ReactNode,
+  marks:
+    | {
+        type: string
+        attrs?: {
+          href?: string
+          target?: string
+          rel?: string
+        }
+      }[]
+    | undefined
+) {
   if (!marks?.length) return children
   let node: React.ReactNode = children
   for (const mark of marks) {
     if (mark.type === 'bold') node = <strong>{node}</strong>
     else if (mark.type === 'italic') node = <em>{node}</em>
     else if (mark.type === 'underline') node = <u>{node}</u>
+    else if (mark.type === 'link' && mark.attrs?.href) {
+      const href = mark.attrs.href
+      const isExternal = /^https?:\/\//i.test(href)
+      node = (
+        <a
+          href={href}
+          target={mark.attrs.target ?? (isExternal ? '_blank' : undefined)}
+          rel={mark.attrs.rel ?? (isExternal ? 'noopener noreferrer' : undefined)}
+          className="text-blue-700 underline decoration-blue-300 hover:text-blue-800"
+        >
+          {node}
+        </a>
+      )
+    }
   }
   return node
 }
@@ -96,18 +143,33 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
       const src = node.attrs?.src
       if (!src) return null
       const isLocal = typeof src === 'string' && src.startsWith('/')
+      const intrinsicW = parsePositiveInt(node.attrs?.width)
+      const intrinsicH = parsePositiveInt(node.attrs?.height)
+      const hasIntrinsicSize = intrinsicW !== undefined && intrinsicH !== undefined
+
       return (
-        <figure key={stableKey} className="my-6">
-          <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+        <figure key={stableKey} className="my-6 min-w-0">
+          {hasIntrinsicSize ? (
             <Image
               src={src}
               alt={node.attrs?.alt ?? ''}
-              fill
-              className="object-cover"
+              width={intrinsicW}
+              height={intrinsicH}
+              className={articleBodyImageClassName}
               sizes="(max-width: 768px) 100vw, 672px"
               unoptimized={isLocal}
             />
-          </div>
+          ) : (
+            // Natural aspect ratio; max-w-full + max-h scale down oversized assets inside the article column.
+            // eslint-disable-next-line @next/next/no-img-element -- dimensions unknown in stored JSON; native img preserves ratio
+            <img
+              src={src}
+              alt={node.attrs?.alt ?? ''}
+              className={articleBodyImageClassName}
+              loading="lazy"
+              decoding="async"
+            />
+          )}
         </figure>
       )
     }

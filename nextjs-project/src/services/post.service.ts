@@ -43,3 +43,32 @@ export async function deletePost(id: string) {
     where: { id },
   });
 }
+
+/** Suggest posts for internal links in the news editor (admin). */
+export async function suggestPostsForLink(query: string, limit: number) {
+  const q = query.trim();
+  const where =
+    q.length === 0
+      ? undefined
+      : {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' as const } },
+            { slug: { contains: q, mode: 'insensitive' as const } },
+          ],
+        };
+
+  const rows = await prisma.post.findMany({
+    where,
+    select: { id: true, title: true, slug: true, type: true },
+    orderBy: { updatedAt: 'desc' },
+    take: limit,
+  });
+
+  return rows.map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    type: p.type,
+    href: `/news/${p.slug}`,
+  }));
+}

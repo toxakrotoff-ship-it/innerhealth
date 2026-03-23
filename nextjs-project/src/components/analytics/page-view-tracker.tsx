@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
+import { detectAnalyticsDeviceType } from '@/lib/analytics/device-type'
 
 function getAnonId(): string {
   if (typeof window === 'undefined') return ''
@@ -28,7 +29,11 @@ export function PageViewTracker() {
 
     const anonId = getAnonId()
     const width = window.innerWidth
-    const deviceType = width >= 1024 ? 'desktop' : 'mobile'
+    const deviceType = detectAnalyticsDeviceType({
+      userAgent: navigator.userAgent,
+      maxTouchPoints: navigator.maxTouchPoints,
+      innerWidth: width,
+    })
 
     logAnalyticsEvent({
       type: 'PAGE_VIEW',

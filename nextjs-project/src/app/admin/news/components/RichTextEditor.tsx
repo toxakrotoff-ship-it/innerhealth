@@ -12,6 +12,7 @@ import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './edito
 import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
 import { ProductLink } from './editor-extensions/product-link-suggestion';
 import { EditorMediaPanel, type UploadedImage } from './EditorMediaPanel';
+import { EditorLinkPopover } from './editor-link-popover';
 
 interface RichTextEditorProps {
   value: JSONContent | null;
@@ -35,9 +36,14 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
   const [bulletOpen, setBulletOpen] = useState(false);
   const [orderedOpen, setOrderedOpen] = useState(false);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
+  const [linkPanelOpen, setLinkPanelOpen] = useState(false);
+  const [linkPanelKey, setLinkPanelKey] = useState(0);
+  const [linkInitialHref, setLinkInitialHref] = useState('');
   const bulletRef = useRef<HTMLDivElement>(null);
   const orderedRef = useRef<HTMLDivElement>(null);
   const mediaPanelRef = useRef<HTMLDivElement>(null);
+  const linkWrapRef = useRef<HTMLDivElement>(null);
+  const linkSavedRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   const insertImage = useCallback(
     (url: string) => {
@@ -69,10 +75,49 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!linkPanelOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (linkWrapRef.current && !linkWrapRef.current.contains(target)) {
+        setLinkPanelOpen(false);
+        linkSavedRangeRef.current = null;
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [linkPanelOpen]);
+
   if (!editor) return null;
 
   const currentBulletStyle = editor.getAttributes('bulletList').listStyleType || 'disc';
   const currentOrderedStyle = editor.getAttributes('orderedList').markerStyle || 'decimal';
+
+  const handleLinkButtonMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (linkPanelOpen) {
+      setLinkPanelOpen(false);
+      linkSavedRangeRef.current = null;
+      return;
+    }
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      window.alert('Сначала выделите слово или фразу для ссылки.');
+      return;
+    }
+    linkSavedRangeRef.current = { from, to };
+    const href = editor.getAttributes('link').href as string | undefined;
+    setLinkInitialHref(href ?? '');
+    setLinkPanelKey((k) => k + 1);
+    setLinkPanelOpen(true);
+  };
+
+  const handleUnlinkMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    editor.chain().focus().setTextSelection({ from, to }).extendMarkRange('link').unsetLink().run();
+  };
 
   return (
     <>
@@ -97,6 +142,36 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
         className={`px-2 py-1 rounded text-sm underline ${editor.isActive('underline') ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
       >
         Ч
+      </button>
+      <div className="relative flex items-center" ref={linkWrapRef}>
+        <button
+          type="button"
+          onMouseDown={handleLinkButtonMouseDown}
+          className={`px-2 py-1 rounded text-sm ${editor.isActive('link') ? 'bg-gray-300 text-blue-700' : 'hover:bg-gray-200'}`}
+          title="Добавить или изменить ссылку"
+        >
+          Ссылка
+        </button>
+        {linkPanelOpen && (
+          <EditorLinkPopover
+            key={linkPanelKey}
+            editor={editor}
+            onClose={() => {
+              setLinkPanelOpen(false);
+              linkSavedRangeRef.current = null;
+            }}
+            savedRangeRef={linkSavedRangeRef}
+            initialHref={linkInitialHref}
+          />
+        )}
+      </div>
+      <button
+        type="button"
+        onMouseDown={handleUnlinkMouseDown}
+        className="px-2 py-1 rounded text-sm hover:bg-gray-200"
+        title="Убрать ссылку"
+      >
+        Без ссылки
       </button>
       <span className="w-px h-5 bg-gray-300 mx-1" />
       <button

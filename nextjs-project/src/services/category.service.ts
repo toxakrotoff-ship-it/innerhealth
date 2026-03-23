@@ -98,6 +98,34 @@ export async function getCategoryProductCount(categoryId: string) {
   });
 }
 
+/** Suggest catalog categories for internal links in the news editor (admin). */
+export async function suggestCategoriesForLink(query: string, limit: number) {
+  const q = query.trim();
+  const where =
+    q.length === 0
+      ? undefined
+      : {
+          OR: [
+            { title: { contains: q, mode: 'insensitive' as const } },
+            { slug: { contains: q, mode: 'insensitive' as const } },
+          ],
+        };
+
+  const rows = await prisma.category.findMany({
+    where,
+    select: { id: true, title: true, slug: true },
+    orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+    take: limit,
+  });
+
+  return rows.map((c) => ({
+    id: c.id,
+    title: c.title,
+    slug: c.slug,
+    href: `/catalog/${c.slug}`,
+  }));
+}
+
 /** Get products by category. */
 export async function getProductsByCategory(categoryId: string) {
   const productCategories = await prisma.productCategory.findMany({
