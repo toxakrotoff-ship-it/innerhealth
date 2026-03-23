@@ -80,51 +80,67 @@ function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBloc
 }
 
 async function getHomeData() {
-  try {
-    const [categories, newProducts, newsPosts, articlePosts, approvedReviews] =
-      await Promise.all([
-        prisma.category.findMany({
-          where: { showInCategoriesBlock: true },
-          orderBy: { sortOrder: 'asc' },
-          include: { _count: { select: { products: true } } },
-        }),
-        productService.getProductsForHome(8),
-        prisma.post.findMany({
-          where: { published: true, type: 'news' } as Prisma.PostWhereInput,
-          orderBy: { createdAt: 'desc' },
-          take: 3,
-          select: { id: true, title: true, slug: true, previewImage: true },
-        }),
-        prisma.post.findMany({
-          where: { published: true, type: 'article' } as Prisma.PostWhereInput,
-          orderBy: { createdAt: 'desc' },
-          take: 3,
-          select: { id: true, title: true, slug: true, previewImage: true },
-        }),
-        prisma.review.findMany({
-          where: { status: 'APPROVED' },
-          orderBy: { createdAt: 'desc' },
-          take: 6,
-        }),
-      ])
-    const reviews: HomeReview[] = approvedReviews.map((r) => ({
-      id: r.id,
-      authorName: r.authorName,
-      socialLink: r.socialLink,
-      text: r.text,
-      imageUrl: r.imageUrl,
-      createdAt: r.createdAt.toISOString(),
-    }))
-    return { categories, newProducts, newsPosts, articlePosts, reviews }
-  } catch {
-    return {
-      categories: [],
-      newProducts: [],
-      newsPosts: [],
-      articlePosts: [],
-      reviews: [] as HomeReview[],
+  const categories = await (async () => {
+    try {
+      const categoriesForBlock = await prisma.category.findMany({
+        where: { showInCategoriesBlock: true },
+        orderBy: { sortOrder: 'asc' },
+        include: { _count: { select: { products: true } } },
+      })
+
+      if (categoriesForBlock.length > 0) return categoriesForBlock
+
+      // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
+      return prisma.category.findMany({
+        orderBy: { sortOrder: 'asc' },
+        include: { _count: { select: { products: true } } },
+      })
+    } catch {
+      return []
     }
-  }
+  })()
+
+  const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
+    await Promise.allSettled([
+      productService.getProductsForHome(8),
+      prisma.post.findMany({
+        where: { published: true, type: 'news' } as Prisma.PostWhereInput,
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, title: true, slug: true, previewImage: true },
+      }),
+      prisma.post.findMany({
+        where: { published: true, type: 'article' } as Prisma.PostWhereInput,
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, title: true, slug: true, previewImage: true },
+      }),
+      prisma.review.findMany({
+        where: { status: 'APPROVED' },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+      }),
+    ])
+
+  const newProducts =
+    newProductsResult.status === 'fulfilled' ? newProductsResult.value : []
+  const newsPosts =
+    newsPostsResult.status === 'fulfilled' ? newsPostsResult.value : []
+  const articlePosts =
+    articlePostsResult.status === 'fulfilled' ? articlePostsResult.value : []
+  const approvedReviews =
+    approvedReviewsResult.status === 'fulfilled' ? approvedReviewsResult.value : []
+
+  const reviews: HomeReview[] = approvedReviews.map((r) => ({
+    id: r.id,
+    authorName: r.authorName,
+    socialLink: r.socialLink,
+    text: r.text,
+    imageUrl: r.imageUrl,
+    createdAt: r.createdAt.toISOString(),
+  }))
+
+  return { categories, newProducts, newsPosts, articlePosts, reviews }
 }
 
 export default async function HomePage() {
@@ -182,83 +198,90 @@ export default async function HomePage() {
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
-      <HowToOrderSteps />
-      <SpacingVertical size="lg" />
+      <HowToOrderSteps showBorders={newProducts.length > 0} />
+      {newProducts.length > 0 && <SpacingVertical size="lg" />}
 
-      {/* Новинки — фоны сохраняем */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">
-                Новинки ассортимента
-              </Heading2>
-              <p className="text-slate-500 text-sm font-semibold max-w-md">
-                {newSubtitle?.text ??
-                  'Самые актуальные разработки для вашего здоровья и энергии'}
-              </p>
-            </div>
-            <Link href="/catalog" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
-              СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {newProducts.length <= 1 ? (
-            <div className="flex justify-center">
-              {newProducts[0] && (
-                <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
-                  <ProductCard
-                    key={newProducts[0].id}
-                    id={newProducts[0].id}
-                    title={newProducts[0].title}
-                    price={newProducts[0].price}
-                    priceOld={newProducts[0].priceOld}
-                    photo={newProducts[0].photo}
-                    slug={newProducts[0].slug}
-                    quantity={newProducts[0].quantity}
-                    isPreorderEnabled={newProducts[0].isPreorderEnabled}
-                    priority
-                    blurDataURL={
-                      'photos' in newProducts[0]
-                        ? getFirstPhotoBlurDataURL(newProducts[0].photos)
-                        : undefined
-                    }
-                  />
+      {newProducts.length > 0 && (
+        <>
+          {/* Новинки — фоны сохраняем */}
+          <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
+            <AdaptiveContainer maxWidth="default">
+              <div className="flex justify-between items-end mb-10 sm:mb-12">
+                <div className="space-y-1">
+                  <Heading2 className="font-semibold tracking-tighter text-slate-900">
+                    Новинки ассортимента
+                  </Heading2>
+                  <p className="text-slate-500 text-sm font-semibold max-w-md">
+                    {newSubtitle?.text ??
+                      'Самые актуальные разработки для вашего здоровья и энергии'}
+                  </p>
                 </div>
+                <Link
+                  href="/catalog"
+                  className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0"
+                >
+                  СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
+                </Link>
+              </div>
+              {newProducts.length <= 1 ? (
+                <div className="flex justify-center">
+                  {newProducts[0] && (
+                    <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
+                      <ProductCard
+                        key={newProducts[0].id}
+                        id={newProducts[0].id}
+                        title={newProducts[0].title}
+                        price={newProducts[0].price}
+                        priceOld={newProducts[0].priceOld}
+                        photo={newProducts[0].photo}
+                        slug={newProducts[0].slug}
+                        quantity={newProducts[0].quantity}
+                        isPreorderEnabled={newProducts[0].isPreorderEnabled}
+                        priority
+                        blurDataURL={
+                          'photos' in newProducts[0]
+                            ? getFirstPhotoBlurDataURL(newProducts[0].photos)
+                            : undefined
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <FluidGrid
+                  cols={Math.min(2, newProducts.length || 1)}
+                  colsTablet={Math.min(3, newProducts.length || 1)}
+                  colsDesktop={Math.min(4, newProducts.length || 1)}
+                  colsXl={4}
+                  cols2xl={4}
+                  cols3xl={4}
+                  cols4xl={4}
+                  gap={4}
+                  adaptiveGap
+                  justify={newProducts.length < 4 ? 'center' : 'start'}
+                >
+                  {newProducts.map((p, index) => (
+                    <ProductCard
+                      key={p.id}
+                      id={p.id}
+                      title={p.title}
+                      price={p.price}
+                      priceOld={p.priceOld}
+                      photo={p.photo}
+                      slug={p.slug}
+                      quantity={p.quantity}
+                      isPreorderEnabled={p.isPreorderEnabled}
+                      priority={index < 2}
+                      blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                    />
+                  ))}
+                </FluidGrid>
               )}
-            </div>
-          ) : (
-            <FluidGrid
-              cols={Math.min(2, newProducts.length || 1)}
-              colsTablet={Math.min(3, newProducts.length || 1)}
-              colsDesktop={Math.min(4, newProducts.length || 1)}
-              colsXl={4}
-              cols2xl={4}
-              cols3xl={4}
-              cols4xl={4}
-              gap={4}
-              adaptiveGap
-              justify={newProducts.length < 4 ? 'center' : 'start'}
-            >
-              {newProducts.map((p, index) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  quantity={p.quantity}
-                  isPreorderEnabled={p.isPreorderEnabled}
-                  priority={index < 2}
-                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                />
-              ))}
-            </FluidGrid>
-          )}
-        </AdaptiveContainer>
-      </section>
-      <SpacingVertical size="lg" />
+            </AdaptiveContainer>
+          </section>
+        </>
+      )}
+      {newProducts.length > 0 && <SpacingVertical size="lg" />}
 
       {/* Новости — делаем карточки в стиле категорий */}
       <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">

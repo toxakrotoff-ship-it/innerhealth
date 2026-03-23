@@ -56,6 +56,7 @@ export const productCardSelect = {
   isPromoEligible: true,
   discountPrice: true,
   isPreorderEnabled: true,
+  isFeaturedInNewArrivals: true,
 } as const;
 
 export interface CatalogQueryOptions {
@@ -259,12 +260,32 @@ export async function getProductsForCatalog(skip: number, take: number) {
 
 /** Get products for home "new products" block. Does not fetch photos Json. */
 export async function getProductsForHome(take: number) {
-  return prisma.product.findMany({
-    where: { slug: { not: null }, isDraft: false },
+  const safeTake = Math.max(1, take);
+  const featured = await prisma.product.findMany({
+    where: {
+      slug: { not: null },
+      isDraft: false,
+      isFeaturedInNewArrivals: true,
+    },
     orderBy: { createdAt: 'desc' },
-    take,
+    take: safeTake,
     select: productCardSelect,
   });
+
+  if (featured.length >= safeTake) return featured;
+
+  const rest = await prisma.product.findMany({
+    where: {
+      slug: { not: null },
+      isDraft: false,
+      id: { notIn: featured.map((item) => item.id) },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: safeTake - featured.length,
+    select: productCardSelect,
+  });
+
+  return [...featured, ...rest];
 }
 
 /** Get products by ids with price/promo fields (for order creation). */

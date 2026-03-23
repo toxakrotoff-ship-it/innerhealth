@@ -68,6 +68,7 @@ interface Product {
   isDraft: boolean;
   isPromoEligible: boolean;
   isPreorderEnabled: boolean;
+  isFeaturedInNewArrivals: boolean;
   createdAt: string;
   updatedAt: string;
   categoryIds?: string[];
@@ -130,6 +131,7 @@ export default function NewProductPage() {
     isDraft: false,
     isPromoEligible: true,
     isPreorderEnabled: false,
+    isFeaturedInNewArrivals: false,
     categoryIds: [],
     photos: []
   });
@@ -545,6 +547,15 @@ export default function NewProductPage() {
               onChange={(e) => handleChange('isPreorderEnabled', e.target.checked)}
             />
             <span className="text-sm text-gray-700">Разрешить предзаказ при отсутствии товара</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+              checked={product.isFeaturedInNewArrivals}
+              onChange={(e) => handleChange('isFeaturedInNewArrivals', e.target.checked)}
+            />
+            <span className="text-sm text-gray-700">Показывать в блоке "Новинки ассортимента"</span>
           </label>
           <label className="inline-flex items-center gap-2">
             <input

@@ -63,6 +63,7 @@ interface Product {
   tab3Title: string | null;
   tab4Title: string | null;
   isPreorderEnabled: boolean;
+  isFeaturedInNewArrivals: boolean;
   isDraft: boolean;
   createdAt: string;
   updatedAt: string;
@@ -107,6 +108,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     discountPrice: null as number | null,
     isPromoEligible: false,
     isPreorderEnabled: false,
+    isFeaturedInNewArrivals: false,
     isDraft: false,
     categories: [] as string[],
     weight: null as number | null,
@@ -177,6 +179,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         discountPrice: data.discountPrice || null,
         isPromoEligible: data.isPromoEligible ?? true,
         isPreorderEnabled: data.isPreorderEnabled ?? false,
+        isFeaturedInNewArrivals: data.isFeaturedInNewArrivals ?? false,
         isDraft: data.isDraft ?? false,
         categories: data.categories?.map((cat: { categoryId: string }) => cat.categoryId) || [],
         weight: data.weight ?? null,
@@ -259,6 +262,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           discountPrice: formData.discountPrice,
           isPromoEligible: formData.isPromoEligible,
           isPreorderEnabled: formData.isPreorderEnabled,
+          isFeaturedInNewArrivals: formData.isFeaturedInNewArrivals,
           isDraft: formData.isDraft,
           weight: formData.weight ?? null,
           length: formData.length ?? null,
@@ -467,6 +471,18 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 />
                 <label htmlFor="isPreorderEnabled" className="text-sm font-medium text-gray-700">
                   Разрешить предзаказ при отсутствии товара
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isFeaturedInNewArrivals"
+                  checked={formData.isFeaturedInNewArrivals}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isFeaturedInNewArrivals: e.target.checked }))}
+                  className="form-input h-4 w-4 rounded"
+                />
+                <label htmlFor="isFeaturedInNewArrivals" className="text-sm font-medium text-gray-700">
+                  Показывать в блоке "Новинки ассортимента"
                 </label>
               </div>
               <div className="flex items-center gap-2">

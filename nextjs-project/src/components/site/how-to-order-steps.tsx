@@ -26,9 +26,11 @@ const steps = [
 interface HowToOrderStepsProps {
   /** When embedded inside another container (e.g. FAQ), skip outer AdaptiveContainer + title. */
   embedded?: boolean
+  /** When false, hide outer section borders (useful when adjacent sections have mismatched spacing). */
+  showBorders?: boolean
 }
 
-export function HowToOrderSteps({ embedded = false }: HowToOrderStepsProps) {
+export function HowToOrderSteps({ embedded = false, showBorders = true }: HowToOrderStepsProps) {
   const inner = (
     <>
       {!embedded && (
@@ -61,7 +63,13 @@ export function HowToOrderSteps({ embedded = false }: HowToOrderStepsProps) {
   }
 
   return (
-    <section className="py-12 sm:py-16 bg-gray-50 border-y border-gray-100">
+    <section
+      className={[
+        'py-12 sm:py-16',
+        'bg-gray-50',
+        showBorders ? 'border-y border-gray-100' : '',
+      ].join(' ')}
+    >
       <AdaptiveContainer maxWidth="default">{inner}</AdaptiveContainer>
     </section>
   )

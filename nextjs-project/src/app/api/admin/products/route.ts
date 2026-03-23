@@ -117,7 +117,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'isPreorderEnabled', 'isDraft', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
+    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'isPreorderEnabled', 'isFeaturedInNewArrivals', 'isDraft', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
     const sanitizedData: Record<string, unknown> = {};
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
       const existingSlugs = await productService.getExistingProductSlugs();
       slug = slugifyUnique(baseSlug, existingSlugs);
     }
-    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'isPreorderEnabled', 'isDraft', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
+    const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'isPreorderEnabled', 'isFeaturedInNewArrivals', 'isDraft', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
     const sanitizedCreate: Record<string, unknown> = { slug: slug || undefined };

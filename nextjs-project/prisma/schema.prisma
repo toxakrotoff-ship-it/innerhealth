@@ -73,6 +73,8 @@ model Product {
   isPromoEligible                      Boolean           @default(true)
   /// Разрешить предзаказ при нулевом остатке
   isPreorderEnabled                    Boolean           @default(false)
+  /// Ручная отметка для блока «Новинки ассортимента» на главной
+  isFeaturedInNewArrivals              Boolean           @default(false)
   cartItems                            CartItem[]
   orderItems                           OrderItem[]
   categories                           ProductCategory[]
@@ -88,6 +90,7 @@ model Product {
   @@index([isDraft, price, createdAt])
   @@index([isDraft, priceOld])
   @@index([isDraft, title, createdAt])
+  @@index([isDraft, isFeaturedInNewArrivals, createdAt])
 }
 
 model Category {
