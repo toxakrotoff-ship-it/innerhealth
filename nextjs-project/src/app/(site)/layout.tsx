@@ -5,6 +5,7 @@ import { BackToTopButton } from '@/components/site/back-to-top-button'
 import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
+import { getRedirectMap } from '@/services/redirect.service'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -17,6 +18,36 @@ const CookieConsent = nextDynamic(
 /** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
 export const dynamic = 'force-dynamic'
 
+function createHashRedirectScript(hashRedirectsJson: string): string {
+  return `
+(() => {
+  const redirectMap = ${hashRedirectsJson};
+  const normalizedMap = new Map(Object.entries(redirectMap));
+  function toSourcePath(hash) {
+    const cleanHash = (hash || '').trim();
+    if (!cleanHash || cleanHash === '#') return null;
+    return cleanHash.startsWith('/') ? cleanHash : '/' + cleanHash;
+  }
+  function toTargetUrl(destination) {
+    return destination.startsWith('http')
+      ? destination
+      : window.location.origin + (destination.startsWith('/') ? '' : '/') + destination;
+  }
+  function applyHashRedirect() {
+    const sourcePath = toSourcePath(window.location.hash);
+    if (!sourcePath) return;
+    const destination = normalizedMap.get(sourcePath);
+    if (!destination) return;
+    const targetUrl = toTargetUrl(destination);
+    if (targetUrl === window.location.href) return;
+    window.location.replace(targetUrl);
+  }
+  applyHashRedirect();
+  window.addEventListener('hashchange', applyHashRedirect);
+})();
+`.trim()
+}
+
 /**
  * Synchronous layout shell so the root <div> is always the first node in the HTML.
  * Async data (e.g. JSON-LD) is rendered by child components to avoid hydration mismatch.
@@ -28,9 +59,22 @@ export default async function SiteLayout({
 }) {
   const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'])
   const bodyCode = map.yandexMetrikaBodyCode
+  const redirects = await getRedirectMap()
+  const hashRedirects = redirects.reduce<Record<string, string>>((acc, item) => {
+    if (!item.sourcePath.startsWith('/#')) return acc
+    acc[item.sourcePath] = item.destination
+    return acc
+  }, {})
+  const hashRedirectsJson = JSON.stringify(hashRedirects).replace(/</g, '\\u003c')
+  const hashRedirectScript = createHashRedirectScript(hashRedirectsJson)
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
+      <script
+        id="hash-redirect-bootstrap"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: hashRedirectScript }}
+      />
       <PageViewTracker />
       {bodyCode ? (
         <div

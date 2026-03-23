@@ -467,8 +467,9 @@ export default function AdminRedirectsPage() {
       ) : list.length === 0 ? (
         <p className="text-gray-500">Редиректов пока нет. Добавьте первый — например, старый путь с Тильды и новый путь на сайте.</p>
       ) : (
-        <div className="bg-white shadow overflow-hidden rounded-xl border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Источник</th>
@@ -486,17 +487,20 @@ export default function AdminRedirectsPage() {
                   <td className="px-4 py-3 text-sm text-gray-600">{row.statusCode}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">{row.note ?? '—'}</td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="secondary" size="sm" onClick={() => openEdit(row)} className="mr-2">
-                      Изменить
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => handleDelete(row.id)} disabled={saving}>
-                      Удалить
-                    </Button>
+                    <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
+                      <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
+                        Изменить
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => handleDelete(row.id)} disabled={saving}>
+                        Удалить
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
     </div>
