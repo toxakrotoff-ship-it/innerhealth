@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
+import { slugify, slugifyUnique } from '@/lib/slugify'
 
 export const revalidate = 300
 
@@ -31,6 +32,29 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+async function ensureProductSlug(product: { id: string; title: string; slug: string | null }): Promise<string | null> {
+  if (product.slug) return product.slug
+
+  const baseSlug = slugify(product.title || `product-${product.id.slice(0, 8)}`)
+  const existingSlugs = await productService.getExistingProductSlugs()
+  const nextSlug = slugifyUnique(baseSlug, existingSlugs)
+
+  try {
+    const updated = await prisma.product.update({
+      where: { id: product.id },
+      data: { slug: nextSlug },
+      select: { slug: true },
+    })
+    return updated.slug
+  } catch {
+    const actual = await prisma.product.findUnique({
+      where: { id: product.id },
+      select: { slug: true },
+    })
+    return actual?.slug ?? null
+  }
+}
+
 export default async function ProductByIdPage({ params }: PageProps) {
   const { id } = await params
   const product = await prisma.product.findUnique({
@@ -40,7 +64,8 @@ export default async function ProductByIdPage({ params }: PageProps) {
 
   if (!product) notFound()
 
-  if (product.slug) redirect(`/product/${product.slug}`)
+  const resolvedSlug = await ensureProductSlug(product)
+  if (resolvedSlug) redirect(`/product/${resolvedSlug}`)
 
   const sortedCategoryLinks = [...product.categories].sort((a, b) => {
     const ao = a.category.sortOrder ?? 0
