@@ -25,7 +25,9 @@ function normalizePath(rawPath: string): string {
 function tokenize(value: string): string[] {
   return value
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    // Keep latin/cyrillic letters and digits to avoid unicode-property escapes
+    // which fail under older TS targets (es5 in this project).
+    .replace(/[^a-z0-9\u0400-\u04ff]+/g, ' ')
     .split(' ')
     .map((token) => token.trim())
     .filter((token) => token.length >= 2);
