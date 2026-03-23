@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { AdminDatePicker } from './components/AdminDatePicker'
 import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
+import { AdminStatsRefreshButton } from './components/AdminStatsRefreshButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,13 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
     }
     analyticsEvent?: {
       count: (args: unknown) => Promise<number>
+      groupBy: (args: unknown) => Promise<
+        Array<{
+          path?: string | null
+          type?: string
+          _count: { _all: number }
+        }>
+      >
     }
     order: {
       count: (args: unknown) => Promise<number>
@@ -107,7 +115,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
     ? { gte: from, lte: to }
     : undefined
 
-  const [trafficTotal, funnelTotal, ordersCount, deviceAggregate] = await Promise.all([
+  const [trafficAggregate, funnelAggregate, ordersCount, deviceAggregate] = await Promise.all([
     anyPrisma.dailyTrafficStats.aggregate({
       where: dateWhere ? { date: dateWhere } : undefined,
       _sum: { pageViews: true, sessions: true, clicks: true },
@@ -131,7 +139,12 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
     }),
   ])
 
-  const totalPv = trafficTotal._sum.pageViews ?? 0
+  const aggregateHasTrafficData =
+    (trafficAggregate._sum.pageViews ?? 0) > 0 ||
+    (trafficAggregate._sum.sessions ?? 0) > 0 ||
+    (trafficAggregate._sum.clicks ?? 0) > 0
+  const aggregateHasFunnelData = funnelAggregate.length > 0
+
   const sumD = deviceAggregate._sum.desktop ?? 0
   const sumM = deviceAggregate._sum.mobile ?? 0
   const sumT = deviceAggregate._sum.tablet ?? 0
@@ -140,7 +153,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
 
   let deviceStats: DeviceStats
 
-  if (sumAgg > 0 || totalPv === 0) {
+  if (sumAgg > 0) {
     deviceStats = {
       desktop: sumD,
       mobile: sumM,
@@ -148,7 +161,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       other: sumU,
     }
   } else if (anyPrisma.analyticsEvent) {
-    const [deviceDesktop, deviceMobile, deviceTablet] = await Promise.all([
+    const [deviceDesktop, deviceMobile, deviceTablet, totalPageViews] = await Promise.all([
       anyPrisma.analyticsEvent.count({
         where: {
           type: 'PAGE_VIEW',
@@ -179,18 +192,24 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
           },
         },
       }),
+      anyPrisma.analyticsEvent.count({
+        where: {
+          type: 'PAGE_VIEW',
+          occurredAt: dateWhere,
+        },
+      }),
     ])
     deviceStats = {
       desktop: deviceDesktop,
       mobile: deviceMobile,
       tablet: deviceTablet,
-      other: Math.max(0, totalPv - deviceDesktop - deviceMobile - deviceTablet),
+      other: Math.max(0, totalPageViews - deviceDesktop - deviceMobile - deviceTablet),
     }
   } else {
     deviceStats = { desktop: 0, mobile: 0, tablet: 0, other: 0 }
   }
 
-  const trafficRows = anyPrisma.dailyTrafficStats
+  const trafficRowsFromAggregate = anyPrisma.dailyTrafficStats
     ? await (anyPrisma.dailyTrafficStats as unknown as {
         findMany: (args: unknown) => Promise<
           Array<{
@@ -211,6 +230,95 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       })
     : []
 
+  const hasTrafficRowsFromAggregate = trafficRowsFromAggregate.length > 0
+
+  let trafficTotal = trafficAggregate
+  let funnelTotal = funnelAggregate
+  let trafficRows = trafficRowsFromAggregate
+
+  const shouldUseRawFallback =
+    Boolean(anyPrisma.analyticsEvent) &&
+    (!aggregateHasTrafficData || !aggregateHasFunnelData || !hasTrafficRowsFromAggregate)
+
+  if (shouldUseRawFallback && anyPrisma.analyticsEvent) {
+    const [totalPageViewsRaw, totalClicksRaw, pageViewByPathRaw, funnelByTypeRaw] =
+      await Promise.all([
+        anyPrisma.analyticsEvent.count({
+          where: {
+            type: 'PAGE_VIEW',
+            occurredAt: dateWhere,
+          },
+        }),
+        anyPrisma.analyticsEvent.count({
+          where: {
+            type: 'CLICK',
+            occurredAt: dateWhere,
+          },
+        }),
+        anyPrisma.analyticsEvent.groupBy({
+          by: ['path'],
+          where: {
+            type: 'PAGE_VIEW',
+            occurredAt: dateWhere,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        anyPrisma.analyticsEvent.groupBy({
+          by: ['type'],
+          where: {
+            type: { in: ['PAGE_VIEW', 'CART_ADD', 'CHECKOUT_START', 'ORDER_CREATED'] },
+            occurredAt: dateWhere,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+      ])
+
+    trafficTotal = {
+      _sum: {
+        pageViews: totalPageViewsRaw,
+        sessions: totalPageViewsRaw,
+        clicks: totalClicksRaw,
+      },
+    }
+
+    trafficRows = pageViewByPathRaw.map((row) => ({
+      date: from ?? new Date(),
+      path: row.path ?? null,
+      pageViews: row._count._all,
+      clicks: 0,
+    }))
+
+    const funnelMap = new Map<string, number>()
+    for (const row of funnelByTypeRaw) {
+      if (!row.type) continue
+      funnelMap.set(row.type, row._count._all)
+    }
+
+    const funnelSteps: Array<'PAGE_VIEW' | 'CART_ADD' | 'CHECKOUT_START' | 'ORDER_CREATED'> = [
+      'PAGE_VIEW',
+      'CART_ADD',
+      'CHECKOUT_START',
+      'ORDER_CREATED',
+    ]
+
+    funnelTotal = funnelSteps.map((step, index) => {
+      const count = funnelMap.get(step) ?? 0
+      const next = funnelSteps[index + 1]
+      const nextCount = next ? funnelMap.get(next) ?? 0 : 0
+      const conversionToNext = next && count > 0 ? Math.min(1, nextCount / count) : null
+      return {
+        date: from ?? new Date(),
+        step,
+        count,
+        conversionToNext,
+      }
+    })
+  }
+
   const pageMap = new Map<string, PageStat>()
   for (const row of trafficRows) {
     const key = row.path ?? '(без пути)'
@@ -230,6 +338,16 @@ export default async function AdminPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>
 }) {
+  const getFunnelStepLabel = (step: string): string => {
+    const stepLabels: Record<string, string> = {
+      PAGE_VIEW: 'Просмотр страницы',
+      CART_ADD: 'Добавление в корзину',
+      CHECKOUT_START: 'Начало оформления',
+      ORDER_CREATED: 'Заказ создан',
+    }
+    return stepLabels[step] ?? step
+  }
+
   const resolvedSearchParams = (await Promise.resolve(searchParams)) ?? {}
   const periodParam =
     typeof resolvedSearchParams.period === 'string'
@@ -266,7 +384,10 @@ export default async function AdminPage({
   return (
     <div className="admin-container">
       <div className="admin-content space-y-6">
-        <h1 className="text-3xl font-bold text-gray-900">Статистика</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">Статистика</h1>
+          <AdminStatsRefreshButton />
+        </div>
 
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Период</h2>
@@ -487,7 +608,7 @@ export default async function AdminPage({
                     <td className="px-4 py-2 text-sm text-gray-600">
                       {row.date.toISOString().slice(0, 10)}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-700">{row.step}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">{getFunnelStepLabel(row.step)}</td>
                     <td className="px-4 py-2 text-sm text-gray-700">{row.count}</td>
                     <td className="px-4 py-2 text-sm text-gray-700">
                       {row.conversionToNext != null
