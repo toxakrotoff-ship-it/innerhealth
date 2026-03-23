@@ -57,6 +57,7 @@ interface ReorderPayloadItem {
 
 interface ProductRowProps {
   product: ProductWithCategories
+  selectedCategory: string | null
   canReorder: boolean
   isSaving: boolean
   isDeleting: boolean
@@ -138,6 +139,7 @@ function AdminCatalogSortSelect({
 
 function ProductCardRow({
   product,
+  selectedCategory,
   canReorder,
   isSaving,
   isDeleting,
@@ -154,6 +156,9 @@ function ProductCardRow({
 }: ProductRowProps) {
   const router = useRouter()
   const base = useAdminBasePath()
+  const editProductHref = selectedCategory
+    ? `/${base}/products/${product.id}/edit?categoryId=${encodeURIComponent(selectedCategory)}`
+    : `/${base}/products/${product.id}/edit`
   const {
     attributes,
     listeners,
@@ -173,7 +178,7 @@ function ProductCardRow({
     const target = e.target as HTMLElement
     if (target.closest('a, button, input, textarea, select')) return
     if (target.closest('[data-prevent-row-nav]')) return
-    router.push(`/${base}/products/${product.id}/edit`)
+    router.push(editProductHref)
   }
 
   const categoryLine = getCategoryLine(product)
@@ -195,7 +200,7 @@ function ProductCardRow({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            router.push(`/${base}/products/${product.id}/edit`)
+            router.push(editProductHref)
           }
         }}
           className="hidden cursor-pointer lg:grid lg:grid-cols-[2rem_10fr_35fr_15fr_15fr_10fr_10fr_5fr_3rem] lg:items-center lg:gap-3 lg:px-3 lg:py-3 lg:hover:bg-gray-50 lg:dark:hover:bg-gray-800 lg:border-b lg:border-gray-200 lg:bg-white lg:dark:bg-gray-900 dark:lg:border-gray-800"
@@ -435,7 +440,7 @@ function ProductCardRow({
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              router.push(`/${base}/products/${product.id}/edit`)
+              router.push(editProductHref)
             }
           }}
           className="cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-action-blue/50"
@@ -597,7 +602,7 @@ function ProductCardRow({
 
         <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
           <Link
-            href={`/${base}/products/${product.id}/edit`}
+            href={editProductHref}
             className="inline-flex flex-1 min-w-24 items-center justify-center rounded-full bg-highlight-blue px-3 py-2 text-sm font-medium text-(--color-text) hover:opacity-90"
             onClick={(e) => e.stopPropagation()}
           >
@@ -908,6 +913,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                   <ProductCardRow
                     key={product.id}
                     product={product}
+                    selectedCategory={selectedCategory}
                     canReorder={dragEnabled}
                     isSaving={savingId === product.id}
                     isDeleting={deletingId === product.id}

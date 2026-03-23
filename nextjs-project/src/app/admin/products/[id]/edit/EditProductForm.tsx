@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { CategoryMultiSelect } from '../../components/CategoryMultiSelect';
 import { Category, getCategories } from '@/app/admin/catalog/actions';
@@ -74,8 +74,13 @@ interface EditProductFormProps {
 
 export function EditProductForm({ productId }: EditProductFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const base = useAdminBasePath();
   const id = productId;
+  const selectedCategoryId = searchParams.get('categoryId');
+  const catalogHref = selectedCategoryId
+    ? `/${base}/catalog?categoryId=${encodeURIComponent(selectedCategoryId)}`
+    : `/${base}/catalog`;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +90,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     slug: '',
     sku: '',
     price: 0,
-    quantity: 0,
+    quantity: null as number | null,
     description: '',
     text: '',
     tab1: '',
@@ -154,7 +159,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         slug: data.slug || '',
         sku: data.sku || '',
         price: data.price,
-        quantity: data.quantity || 0,
+        quantity: data.quantity ?? null,
         description: data.description || '',
         text: data.text || '',
         tab1: data.tab1 || '',
@@ -272,7 +277,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         throw new Error(detail ? `${msg}. ${detail}` : msg);
       }
       
-      router.push(`/${base}/catalog`);
+      router.push(catalogHref);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Произошла ошибка');
     }
@@ -291,7 +296,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           <Button
             className="mt-3"
             variant="secondary"
-            onClick={() => router.push(`/${base}/catalog`)}
+            onClick={() => router.push(catalogHref)}
           >
             Вернуться в каталог
           </Button>
@@ -305,7 +310,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       <div className="admin-content">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-text">Редактирование товара</h1>
-          <Button onClick={() => router.push(`/${base}/catalog`)}>
+          <Button onClick={() => router.push(catalogHref)}>
             Назад к каталогу
           </Button>
         </div>
@@ -350,7 +355,13 @@ export function EditProductForm({ productId }: EditProductFormProps) {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Цена</label>
+                <div className="mb-1 flex h-9 items-center justify-between gap-2">
+                  <label className="block text-sm font-medium text-gray-700">Цена</label>
+                  <div className="invisible inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
+                    <span className="rounded-md px-3 py-1 text-xs">Ограничен</span>
+                    <span className="rounded-md px-3 py-1 text-xs">Бесконечно</span>
+                  </div>
+                </div>
                 <input
                   type="number"
                   name="price"
@@ -364,14 +375,42 @@ export function EditProductForm({ productId }: EditProductFormProps) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Запас</label>
+                <div className="mb-1 flex h-9 items-center justify-between gap-2">
+                  <label className="block text-sm font-medium text-gray-700">Запас</label>
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, quantity: prev.quantity === null ? 0 : prev.quantity }))}
+                      className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                        formData.quantity !== null
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      Ограничен
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, quantity: null }))}
+                      className={`rounded-md px-3 py-1 text-xs transition-colors ${
+                        formData.quantity === null
+                          ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      Бесконечно
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="number"
                   name="quantity"
-                  value={formData.quantity}
+                  value={formData.quantity ?? ''}
                   onChange={handleNumberChange}
                   className="form-input w-full"
                   min="0"
+                  disabled={formData.quantity === null}
+                  placeholder={formData.quantity === null ? 'Бесконечно' : undefined}
                 />
               </div>
             </div>
@@ -626,7 +665,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
               <Button type="submit">
                 Сохранить изменения
               </Button>
-              <Button variant="secondary" onClick={() => router.push(`/${base}/catalog`)}>
+              <Button variant="secondary" onClick={() => router.push(catalogHref)}>
                 Отмена
               </Button>
             </div>
