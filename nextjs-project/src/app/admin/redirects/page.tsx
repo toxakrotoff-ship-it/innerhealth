@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
+import { ModalLayer } from '@/components/ui/modal-layer';
 
 interface RedirectRow {
   id: string;
@@ -19,6 +20,15 @@ interface ImportResult {
   created: number;
   skipped: number;
   errors: string[];
+}
+
+interface RedirectSuggestion {
+  path: string;
+  title: string;
+  type: 'product' | 'category' | 'post' | 'seo-hub' | 'static';
+  slug?: string;
+  excerpt?: string | null;
+  score: number;
 }
 
 const STATUS_OPTIONS: Array<{ value: number; label: string }> = [
@@ -44,6 +54,12 @@ export default function AdminRedirectsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showSuggestModal, setShowSuggestModal] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [suggestQuery, setSuggestQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<RedirectSuggestion[]>([]);
+  const [manualDestination, setManualDestination] = useState('');
 
   async function fetchList() {
     try {
@@ -171,6 +187,60 @@ export default function AdminRedirectsPage() {
     }
   }
 
+  async function fetchSuggestions(query: string) {
+    const sourcePath = form.sourcePath.trim();
+    if (!sourcePath) {
+      setSuggestError('Сначала заполните путь-источник');
+      setSuggestions([]);
+      return;
+    }
+
+    setSuggestLoading(true);
+    setSuggestError(null);
+    try {
+      const params = new URLSearchParams({
+        sourcePath,
+        q: query,
+        limit: '20',
+      });
+      const res = await fetch(`/api/admin/redirects/suggest?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Не удалось загрузить подсказки');
+      setSuggestions(Array.isArray(data.items) ? data.items : []);
+    } catch (e) {
+      setSuggestError(e instanceof Error ? e.message : 'Не удалось загрузить подсказки');
+    } finally {
+      setSuggestLoading(false);
+    }
+  }
+
+  function openSuggestModal() {
+    const sourcePath = form.sourcePath.trim();
+    if (!sourcePath) {
+      setError('Сначала заполните путь-источник, затем подберите путь назначения');
+      return;
+    }
+    setShowSuggestModal(true);
+    setSuggestQuery('');
+    setManualDestination(form.destination);
+    void fetchSuggestions('');
+  }
+
+  function applyDestination(value: string) {
+    const destination = value.trim();
+    if (!destination) return;
+    setForm((f) => ({ ...f, destination }));
+    setShowSuggestModal(false);
+  }
+
+  useEffect(() => {
+    if (!showSuggestModal) return;
+    const timer = window.setTimeout(() => {
+      void fetchSuggestions(suggestQuery.trim());
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [suggestQuery, showSuggestModal]);
+
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
@@ -246,14 +316,19 @@ export default function AdminRedirectsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Путь назначения</label>
-              <input
-                type="text"
-                required
-                placeholder="/ или /catalog или /product/slug"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                value={form.destination}
-                onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
-              />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  required
+                  placeholder="/ или /catalog или /product/slug"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={form.destination}
+                  onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
+                />
+                <Button type="button" variant="secondary" onClick={openSuggestModal} disabled={saving}>
+                  Подобрать
+                </Button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Код ответа (HTTP status)</label>
@@ -290,6 +365,102 @@ export default function AdminRedirectsPage() {
           </div>
         </form>
       )}
+
+      <ModalLayer
+        open={showSuggestModal}
+        onClose={() => setShowSuggestModal(false)}
+        lockBodyScroll
+        panelClassName="max-w-3xl"
+        dialogProps={{ 'aria-label': 'Подбор пути назначения' }}
+      >
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xl">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-text">Подбор пути назначения</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              Источник: <span className="font-mono">{form.sourcePath || '—'}</span>
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 mb-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Поиск по title / slug / path</span>
+              <input
+                type="text"
+                placeholder="Например: коллаген или сустав"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={suggestQuery}
+                onChange={(e) => setSuggestQuery(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-gray-700">Ручной ввод пути</span>
+              <input
+                type="text"
+                placeholder="/news/slug"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={manualDestination}
+                onChange={(e) => setManualDestination(e.target.value)}
+              />
+            </label>
+          </div>
+
+          {suggestError && <div className="mb-3 rounded-lg bg-red-50 p-2 text-sm text-red-700">{suggestError}</div>}
+          {suggestLoading && <p className="mb-3 text-sm text-gray-500">Ищем подходящие адреса…</p>}
+
+          {!suggestLoading && suggestions.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Рекомендуемый вариант</p>
+              <button
+                type="button"
+                onClick={() => setManualDestination(suggestions[0].path)}
+                className="w-full text-left rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 hover:bg-emerald-100"
+              >
+                <span className="block font-mono text-sm text-gray-900">{suggestions[0].path}</span>
+                <span className="block text-xs text-gray-600">
+                  {suggestions[0].title} • {suggestions[0].type}
+                </span>
+              </button>
+            </div>
+          )}
+
+          {!suggestLoading && (
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Другие результаты</p>
+              <div className="max-h-72 overflow-auto rounded-lg border border-gray-200">
+                {suggestions.length <= 1 ? (
+                  <p className="px-3 py-2 text-sm text-gray-500">Ничего не найдено, используйте ручной ввод.</p>
+                ) : (
+                  <ul>
+                    {suggestions.slice(1).map((item) => (
+                      <li key={`${item.path}-${item.type}`} className="border-b border-gray-100 last:border-b-0">
+                        <button
+                          type="button"
+                          onClick={() => setManualDestination(item.path)}
+                          className="w-full px-3 py-2 text-left hover:bg-gray-50"
+                        >
+                          <span className="block font-mono text-sm text-gray-900">{item.path}</span>
+                          <span className="block text-xs text-gray-600">
+                            {item.title} • {item.type}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="secondary" onClick={() => setShowSuggestModal(false)}>
+              Отмена
+            </Button>
+            <Button type="button" onClick={() => applyDestination(manualDestination)}>
+              Применить
+            </Button>
+          </div>
+        </div>
+      </ModalLayer>
 
       {loading ? (
         <p className="text-gray-500">Загрузка…</p>

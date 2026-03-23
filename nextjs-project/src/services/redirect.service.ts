@@ -1,6 +1,11 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import {
+  rankRedirectCandidates,
+  type RedirectSuggestCandidate,
+  type RankedRedirectSuggestCandidate,
+} from '@/lib/redirect-suggest';
 
 /** Допустимые коды редиректа (301 — по умолчанию для постоянных с Тилды). */
 export const REDIRECT_STATUS_CODES = [301, 302, 307, 308] as const;
@@ -201,4 +206,95 @@ export async function importRedirectsFromCsv(csvText: string): Promise<{
   }
 
   return { created: created.count, skipped: skipped.count, errors };
+}
+
+export interface RedirectSuggestion extends RankedRedirectSuggestCandidate {}
+
+function getSuggestionPostPath(type: string, slug: string): string {
+  return `${type === 'article' ? '/informaciya' : '/news'}/${slug}`;
+}
+
+const staticRedirectTargets: RedirectSuggestCandidate[] = [
+  { path: '/', title: 'Главная', type: 'static' },
+  { path: '/catalog', title: 'Каталог', type: 'static' },
+  { path: '/news', title: 'Новости', type: 'static' },
+  { path: '/informaciya', title: 'Информация', type: 'static' },
+  { path: '/guides', title: 'Гайды', type: 'static' },
+  { path: '/faq', title: 'FAQ', type: 'static' },
+  { path: '/contacts', title: 'Контакты', type: 'static' },
+  { path: '/otzyvy', title: 'Отзывы', type: 'static' },
+];
+
+async function listSuggestionCandidates(): Promise<RedirectSuggestCandidate[]> {
+  const [products, categories, posts, seoHubs] = await Promise.all([
+    prisma.product.findMany({
+      where: { slug: { not: null }, isDraft: false },
+      select: { slug: true, title: true, description: true },
+      take: 3000,
+    }),
+    prisma.category.findMany({
+      select: { slug: true, title: true },
+      take: 1000,
+    }),
+    prisma.post.findMany({
+      where: { published: true },
+      select: { slug: true, title: true, excerpt: true, type: true },
+      take: 2000,
+    }),
+    prisma.seoHub.findMany({
+      where: { published: true },
+      select: { slug: true, title: true, excerpt: true },
+      take: 1000,
+    }),
+  ]);
+
+  const productTargets: RedirectSuggestCandidate[] = products.flatMap((product) =>
+    product.slug
+      ? [
+          {
+            path: `/product/${product.slug}`,
+            title: product.title,
+            type: 'product',
+            slug: product.slug,
+            excerpt: product.description,
+          },
+        ]
+      : []
+  );
+  const categoryTargets: RedirectSuggestCandidate[] = categories.map((category) => ({
+    path: `/catalog/${category.slug}`,
+    title: category.title,
+    type: 'category',
+    slug: category.slug,
+  }));
+  const postTargets: RedirectSuggestCandidate[] = posts.map((post) => ({
+    path: getSuggestionPostPath(post.type, post.slug),
+    title: post.title,
+    type: 'post',
+    slug: post.slug,
+    excerpt: post.excerpt,
+  }));
+  const seoHubTargets: RedirectSuggestCandidate[] = seoHubs.map((hub) => ({
+    path: `/guides/${hub.slug}`,
+    title: hub.title,
+    type: 'seo-hub',
+    slug: hub.slug,
+    excerpt: hub.excerpt,
+  }));
+
+  return [...staticRedirectTargets, ...productTargets, ...categoryTargets, ...postTargets, ...seoHubTargets];
+}
+
+export async function suggestRedirectDestinations(params: {
+  sourcePath: string;
+  query?: string;
+  limit?: number;
+}): Promise<RedirectSuggestion[]> {
+  const candidates = await listSuggestionCandidates();
+  return rankRedirectCandidates({
+    sourcePath: params.sourcePath,
+    query: params.query,
+    limit: params.limit ?? 20,
+    candidates,
+  });
 }
