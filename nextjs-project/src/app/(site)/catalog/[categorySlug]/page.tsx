@@ -15,6 +15,7 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
+import { filterVisibleProducts } from '@/lib/catalog-visibility'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -86,6 +87,11 @@ export default async function CategoryPage({ params }: PageProps) {
         orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
       },
       products: {
+        where: {
+          product: {
+            isDraft: false,
+          },
+        },
         include: {
           product: {
             select: {
@@ -96,6 +102,7 @@ export default async function CategoryPage({ params }: PageProps) {
               photo: true,
               photos: true,
               slug: true,
+              isDraft: true,
               isPromoEligible: true,
               discountPrice: true,
             },
@@ -129,7 +136,7 @@ export default async function CategoryPage({ params }: PageProps) {
     }),
   ]
 
-  const products = category.products.map((pc) => pc.product)
+  const products = filterVisibleProducts(category.products.map((pc) => pc.product))
   const content = getCategoryPageContent(categorySlug)
   const hasHero = Boolean(content?.heroImage)
   const hasDescription =

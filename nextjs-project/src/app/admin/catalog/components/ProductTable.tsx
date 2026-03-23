@@ -83,6 +83,10 @@ function getCategoryLine(product: ProductWithCategories): string {
   )
 }
 
+function formatQuantity(quantity: number | null): string {
+  return quantity === null ? '∞' : String(quantity)
+}
+
 const MOBILE_SORT_OPTIONS: { label: string; value: string; config: SortConfig | null }[] = [
   { label: 'Как в списке (без сортировки)', value: '', config: null },
   { label: 'Дата — сначала новые', value: 'createdAt:desc', config: { key: 'createdAt', direction: 'desc' } },
@@ -381,7 +385,7 @@ function ProductCardRow({
               }}
             >
               <span suppressHydrationWarning className="tabular-nums">
-                {product.quantity ?? '—'}
+                {formatQuantity(product.quantity)}
               </span>
             </button>
           )}
@@ -593,7 +597,7 @@ function ProductCardRow({
                     onStartEditQuantity()
                   }}
                 >
-                  <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
+                  <span suppressHydrationWarning>{formatQuantity(product.quantity)}</span>
                 </button>
               )}
             </dd>

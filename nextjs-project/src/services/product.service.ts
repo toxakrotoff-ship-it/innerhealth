@@ -8,6 +8,8 @@ const adminListSelect = {
   tildaUid: true,
   slug: true,
   title: true,
+  brand: true,
+  sku: true,
   quantity: true,
   price: true,
   priceOld: true,
