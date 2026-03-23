@@ -46,6 +46,10 @@ interface Order {
   deletedAt?: string | null;
 }
 
+interface AdminOrderDetailResponse extends Order {
+  items: OrderItem[];
+}
+
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('ru-RU', {
     day: '2-digit',
@@ -74,6 +78,10 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [popupOrder, setPopupOrder] = useState<Order | null>(null);
+  const [popupOrderDetail, setPopupOrderDetail] = useState<AdminOrderDetailResponse | null>(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupError, setPopupError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [cdekLoadingId, setCdekLoadingId] = useState<string | null>(null);
   const [mode, setMode] = useState<'active' | 'trash'>('active');
@@ -83,6 +91,15 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetchOrders(mode);
   }, [mode]);
+
+  useEffect(() => {
+    if (!popupOrder) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setPopupOrder(null);
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [popupOrder]);
 
   async function fetchOrders(currentMode: 'active' | 'trash') {
     try {
@@ -190,6 +207,26 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function handleOpenOrderPopup(order: Order) {
+    setPopupOrder(order);
+    setPopupOrderDetail(null);
+    setPopupError(null);
+    setPopupLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setPopupError(data.error ?? 'Не удалось загрузить детали заказа');
+        return;
+      }
+      setPopupOrderDetail(data as AdminOrderDetailResponse);
+    } catch {
+      setPopupError('Ошибка запроса');
+    } finally {
+      setPopupLoading(false);
+    }
+  }
+
   const filteredOrders = orders.filter((o) => {
     const term = searchTerm.trim();
     const termLower = term.toLowerCase();
@@ -228,7 +265,17 @@ export default function AdminOrdersPage() {
     <div className="grid gap-4 sm:grid-cols-2 text-sm">
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-2">Состав заказа</h3>
-        <p className="text-gray-500">Детали состава доступны в отдельной карточке заказа.</p>
+        <p className="text-gray-500">
+          Детали состава доступны в{' '}
+          <button
+            type="button"
+            onClick={() => void handleOpenOrderPopup(order)}
+            className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+          >
+            карточке заказа
+          </button>
+          {' '}в попапе.
+        </p>
       </div>
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-2">Доставка</h3>
@@ -467,6 +514,87 @@ export default function AdminOrdersPage() {
           </>
         )}
       </div>
+      {popupOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+          role="presentation"
+          onClick={() => setPopupOrder(null)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-xl bg-white shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Карточка заказа ${popupOrder.id}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-gray-200 p-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Заказ {popupOrder.id}</h2>
+                <p className="text-sm text-gray-600">{formatDate(popupOrder.createdAt)}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPopupOrder(null)}
+                className="rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              >
+                Закрыть
+              </button>
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto p-4 space-y-4">
+              <div className="grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+                <p><span className="font-medium">Статус:</span> {statusLabel(popupOrder.status)}</p>
+                <p><span className="font-medium">Сумма:</span> {popupOrder.total.toFixed(2)} ₽</p>
+              </div>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Состав заказа</h3>
+                {popupLoading ? (
+                  <p className="text-sm text-gray-500">Загрузка состава заказа...</p>
+                ) : popupError ? (
+                  <p className="text-sm text-red-600">{popupError}</p>
+                ) : popupOrderDetail?.items && popupOrderDetail.items.length > 0 ? (
+                  <div className="overflow-x-auto rounded border border-gray-200">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-600">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Товар</th>
+                          <th className="px-3 py-2 text-right font-medium">Кол-во</th>
+                          <th className="px-3 py-2 text-right font-medium">Цена</th>
+                          <th className="px-3 py-2 text-right font-medium">Сумма</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {popupOrderDetail.items.map((item) => (
+                          <tr key={item.id} className="border-t border-gray-100">
+                            <td className="px-3 py-2 text-gray-800">{item.product.title}</td>
+                            <td className="px-3 py-2 text-right text-gray-700">{item.quantity}</td>
+                            <td className="px-3 py-2 text-right text-gray-700">{item.price.toFixed(2)} ₽</td>
+                            <td className="px-3 py-2 text-right text-gray-700">{(item.price * item.quantity).toFixed(2)} ₽</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">В составе заказа пока нет товаров.</p>
+                )}
+              </div>
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">Доставка</h3>
+                {popupOrder.shippingInfo ? (
+                  <div className="space-y-1 text-sm text-gray-700">
+                    <p><strong>{popupOrder.shippingInfo.fullName}</strong></p>
+                    <p>{popupOrder.shippingInfo.phoneMasked}</p>
+                    <p>{popupOrder.shippingInfo.city}</p>
+                    <p>{popupOrder.shippingInfo.addressShort}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Адрес доставки не указан.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

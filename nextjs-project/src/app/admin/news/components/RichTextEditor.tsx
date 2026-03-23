@@ -100,10 +100,14 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
       linkSavedRangeRef.current = null;
       return;
     }
-    const { from, to } = editor.state.selection;
+    let { from, to } = editor.state.selection;
     if (from === to) {
-      window.alert('Сначала выделите слово или фразу для ссылки.');
-      return;
+      if (!editor.isActive('link')) {
+        window.alert('Сначала выделите слово или фразу для ссылки.');
+        return;
+      }
+      editor.chain().focus().extendMarkRange('link').run();
+      ({ from, to } = editor.state.selection);
     }
     linkSavedRangeRef.current = { from, to };
     const href = editor.getAttributes('link').href as string | undefined;
@@ -463,6 +467,16 @@ export function RichTextEditor({
         .rich-text-editor-content h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.35; margin-top: 0.75em; margin-bottom: 0.25em; }
         .rich-text-editor-content h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.4; margin-top: 0.5em; margin-bottom: 0.25em; }
         .rich-text-editor-content ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.5em 0; }
+        .rich-text-editor-content a {
+          color: #1d4ed8;
+          text-decoration: underline;
+          text-decoration-color: #93c5fd;
+          text-decoration-thickness: 2px;
+          text-underline-offset: 2px;
+        }
+        .rich-text-editor-content a:hover {
+          color: #1e40af;
+        }
         ${LIST_STYLES}
       `}} />
       <MenuBar

@@ -37,6 +37,7 @@ export function EditorLinkPopover({
   savedRangeRef,
   initialHref,
 }: EditorLinkPopoverProps) {
+  const hasExistingLink = initialHref.trim().length > 0;
   const [url, setUrl] = useState(initialHref);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ContentLinkSuggestResponse | null>(null);
@@ -113,6 +114,11 @@ export function EditorLinkPopover({
       onMouseDown={(e) => e.preventDefault()}
     >
       <form onSubmit={handleSubmit} className="space-y-2">
+        {hasExistingLink && (
+          <p className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs text-blue-800">
+            На выделенном тексте уже есть ссылка.
+          </p>
+        )}
         <label htmlFor={inputId} className="block text-xs font-medium text-gray-600">
           URL или поиск
         </label>

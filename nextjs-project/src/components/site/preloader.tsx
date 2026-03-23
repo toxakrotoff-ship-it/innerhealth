@@ -298,7 +298,7 @@ export function Preloader() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const seenRaw = sessionStorage.getItem(PRELOADER_SEEN_KEY)
+    const seenRaw = localStorage.getItem(PRELOADER_SEEN_KEY)
     const seenAt = seenRaw ? Number.parseInt(seenRaw, 10) : 0
     const isSeenRecently = Boolean(seenAt && Date.now() - seenAt < PRELOADER_24H_MS)
 
@@ -309,7 +309,7 @@ export function Preloader() {
       return
     }
 
-    sessionStorage.setItem(PRELOADER_SEEN_KEY, String(Date.now()))
+    localStorage.setItem(PRELOADER_SEEN_KEY, String(Date.now()))
 
     const timeoutId = window.setTimeout(() => {
       setVisible(false)

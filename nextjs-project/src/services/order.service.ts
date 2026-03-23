@@ -110,6 +110,21 @@ export interface AdminOrderWithDeletedDto extends AdminOrderDto {
   deletedAt: string | null;
 }
 
+export interface AdminOrderDetailDto extends AdminOrderDto {
+  items: Array<{
+    id: string;
+    quantity: number;
+    price: number;
+    product: {
+      id: string;
+      title: string;
+      photo: string | null;
+    };
+  }>;
+  cdekOrderUuid: string | null;
+  cdekOrderError: string | null;
+}
+
 /** Get orders for admin with optional trash filter. */
 export async function getOrdersForAdminWithTrash(options: {
   mode: 'active' | 'trash';
@@ -145,6 +160,48 @@ export async function getOrdersForAdminWithTrash(options: {
       : null,
     deletedAt: order.deletedAt ? order.deletedAt.toISOString() : null,
   }));
+}
+
+/** Get single order details for admin popup. */
+export async function getOrderDetailForAdmin(orderId: string): Promise<AdminOrderDetailDto | null> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: orderAdminInclude,
+  });
+
+  if (!order) return null;
+
+  return {
+    id: order.id,
+    total: order.total,
+    status: order.status,
+    createdAt: order.createdAt.toISOString(),
+    userId: order.userId ?? null,
+    promoCodeId: order.promoCodeId ?? null,
+    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    shippingInfo: order.shippingInfo
+      ? {
+          fullName: order.shippingInfo.fullName,
+          phoneMasked: maskPhone(order.shippingInfo.phone),
+          phoneRaw: order.shippingInfo.phone,
+          city: order.shippingInfo.city,
+          addressShort: shortAddress(order.shippingInfo.address, order.shippingInfo.city),
+          deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
+        }
+      : null,
+    items: order.items.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      price: item.price,
+      product: {
+        id: item.product.id,
+        title: item.product.title,
+        photo: item.product.photo,
+      },
+    })),
+    cdekOrderUuid: order.cdekOrderUuid ?? null,
+    cdekOrderError: order.cdekOrderError ?? null,
+  };
 }
 
 /** Update order status. */
