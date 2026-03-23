@@ -16,6 +16,9 @@ function TabContent({ text }: { text: string }) {
         [&_table.product-characteristics-table]:table-auto
         [&_table.product-characteristics-table th]:font-semibold
         [&_table.product-characteristics-table th]:text-gray-900
+        [&_table.product-characteristics-table th]:w-[42%]
+        sm:[&_table.product-characteristics-table th]:w-[38%]
+        lg:[&_table.product-characteristics-table th]:w-[34%]
         [&_table.product-characteristics-table th]:px-4
         [&_table.product-characteristics-table th]:py-2
         [&_table.product-characteristics-table th]:align-middle
@@ -34,6 +37,9 @@ function TabContent({ text }: { text: string }) {
         [&_table[data-product-characteristics='1']]:table-auto
         [&_table[data-product-characteristics='1'] th]:font-semibold
         [&_table[data-product-characteristics='1'] th]:text-gray-900
+        [&_table[data-product-characteristics='1'] th]:w-[42%]
+        sm:[&_table[data-product-characteristics='1'] th]:w-[38%]
+        lg:[&_table[data-product-characteristics='1'] th]:w-[34%]
         [&_table[data-product-characteristics='1'] th]:px-4
         [&_table[data-product-characteristics='1'] th]:py-2
         [&_table[data-product-characteristics='1'] th]:align-middle
