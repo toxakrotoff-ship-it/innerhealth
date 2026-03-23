@@ -8,7 +8,52 @@ function TabContent({ text }: { text: string }) {
   if (isHtml) {
     return (
       <div
-        className="prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal"
+        className="prose prose-sm max-w-none
+        [&_img]:max-w-full
+        [&_ul]:list-disc [&_ol]:list-decimal
+        /* Product characteristics table (admin “Характеристика -> Значение”) */
+        [&_table.product-characteristics-table]:w-full
+        [&_table.product-characteristics-table]:table-auto
+        [&_table.product-characteristics-table th]:font-semibold
+        [&_table.product-characteristics-table th]:text-gray-900
+        [&_table.product-characteristics-table th]:px-4
+        [&_table.product-characteristics-table th]:py-2
+        [&_table.product-characteristics-table th]:align-middle
+        [&_table.product-characteristics-table th]:whitespace-normal
+        [&_table.product-characteristics-table th]:break-words
+        [&_table.product-characteristics-table td]:align-middle
+        [&_table.product-characteristics-table td]:whitespace-normal
+        [&_table.product-characteristics-table td]:break-words
+        [&_table.product-characteristics-table td]:min-w-0
+        [&_table.product-characteristics-table td]:text-gray-700
+        [&_table.product-characteristics-table td]:px-4
+        [&_table.product-characteristics-table td]:py-3
+        [&_table.product-characteristics-table>tbody>tr:last-child]:border-b!
+        [&_table.product-characteristics-table>tbody>tr:last-child]:border-gray-200!
+        [&_table[data-product-characteristics='1']]:w-full
+        [&_table[data-product-characteristics='1']]:table-auto
+        [&_table[data-product-characteristics='1'] th]:font-semibold
+        [&_table[data-product-characteristics='1'] th]:text-gray-900
+        [&_table[data-product-characteristics='1'] th]:px-4
+        [&_table[data-product-characteristics='1'] th]:py-2
+        [&_table[data-product-characteristics='1'] th]:align-middle
+        [&_table[data-product-characteristics='1'] th]:whitespace-normal
+        [&_table[data-product-characteristics='1'] th]:break-words
+        [&_table[data-product-characteristics='1'] td]:text-gray-700
+        [&_table[data-product-characteristics='1'] td]:px-4
+        [&_table[data-product-characteristics='1'] td]:py-3
+        [&_table[data-product-characteristics='1'] td]:align-middle
+        [&_table[data-product-characteristics='1'] td]:whitespace-normal
+        [&_table[data-product-characteristics='1'] td]:break-words
+        [&_table[data-product-characteristics='1'] td]:min-w-0
+        [&_table[data-product-characteristics='1']>tbody>tr:last-child]:border-b!
+        [&_table[data-product-characteristics='1']>tbody>tr:last-child]:border-gray-200!
+        dark:[&_table.product-characteristics-table th]:text-gray-100
+        dark:[&_table.product-characteristics-table td]:text-gray-200
+        dark:[&_table.product-characteristics-table>tbody>tr:last-child]:border-gray-700!
+        dark:[&_table[data-product-characteristics='1'] th]:text-gray-100
+        dark:[&_table[data-product-characteristics='1'] td]:text-gray-200
+        dark:[&_table[data-product-characteristics='1']>tbody>tr:last-child]:border-gray-700!"
         dangerouslySetInnerHTML={{ __html: text }}
       />
     );

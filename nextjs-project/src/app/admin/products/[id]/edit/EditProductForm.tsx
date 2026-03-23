@@ -8,6 +8,7 @@ import { Category, getCategories } from '@/app/admin/catalog/actions';
 import { sanitizeProductText } from '@/lib/sanitize-text';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { ProductGalleryEditor } from '../../components/ProductGalleryEditor';
+import { ProductCharacteristicsEditor } from '../../components/ProductCharacteristicsEditor';
 import { ProductRichTextEditor } from '../../components/ProductRichTextEditor';
 
 interface Product {
@@ -570,10 +571,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input w-full max-w-md"
                   placeholder="Например: Характеристики"
                 />
-                <ProductRichTextEditor
+                <ProductCharacteristicsEditor
                   value={formData.tab4}
                   onChange={(html) => setFormData((prev) => ({ ...prev, tab4: html }))}
-                  placeholder="Содержимое таба"
                 />
               </div>
             </div>

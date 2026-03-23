@@ -189,7 +189,7 @@ export function ProductPageContent({
 
       {relatedProducts.length > 0 && (
         <ScalableSpacing size="lg">
-          <section className="pt-8 border-t border-gray-200">
+          <section className={tabs.length > 0 ? 'pt-8' : 'pt-8 border-t border-gray-200'}>
             <Heading2 className="mb-1">Из той же категории</Heading2>
             <p className="text-sm text-gray-600 mb-4 max-w-2xl">
               Подборка похожих позиций из каталога — удобно сравнить состав и цену.
