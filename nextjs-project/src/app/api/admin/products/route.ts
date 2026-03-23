@@ -1,10 +1,46 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
+import { prisma } from '@/lib/prisma';
+import { buildCatalogRevalidationPaths } from '@/lib/catalog-revalidation';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 import * as productService from '@/services/product.service';
+
+async function revalidateCatalogForProduct(options: {
+  productId: string;
+  extraCategoryIds?: readonly string[];
+}): Promise<void> {
+  const linkedCategories = await prisma.productCategory.findMany({
+    where: { productId: options.productId },
+    select: { categoryId: true },
+  });
+
+  const categoryIds = Array.from(
+    new Set([
+      ...linkedCategories.map((item) => item.categoryId),
+      ...(options.extraCategoryIds ?? []),
+    ])
+  );
+
+  if (categoryIds.length === 0) {
+    for (const path of buildCatalogRevalidationPaths([])) {
+      revalidatePath(path);
+    }
+    return;
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { id: { in: categoryIds } },
+    select: { slug: true },
+  });
+
+  for (const path of buildCatalogRevalidationPaths(categories.map((category) => category.slug))) {
+    revalidatePath(path);
+  }
+}
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -107,6 +143,10 @@ export async function PUT(request: Request) {
       sanitizedData as Prisma.ProductUpdateInput,
       categoryIds
     );
+    await revalidateCatalogForProduct({
+      productId: id,
+      extraCategoryIds: categoryIds,
+    });
     return NextResponse.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
@@ -154,6 +194,7 @@ export async function PATCH(request: Request) {
     if (isDraft !== undefined) data.isDraft = isDraft;
 
     const updated = await productService.patchProductPriceQuantity(id, data);
+    await revalidateCatalogForProduct({ productId: id });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PATCH product error:', error);
@@ -210,6 +251,10 @@ export async function POST(request: Request) {
       sanitizedCreate as Prisma.ProductCreateInput,
       categoryIds
     );
+    await revalidateCatalogForProduct({
+      productId: productWithoutCategories.id,
+      extraCategoryIds: categoryIds,
+    });
     return NextResponse.json(productWithoutCategories);
   } catch (error) {
     console.error('Error creating product:', error);
@@ -238,6 +283,11 @@ export async function DELETE(request: Request) {
   const { id } = parsed;
 
   try {
+    const productCategories = await prisma.productCategory.findMany({
+      where: { productId: id },
+      select: { categoryId: true },
+    });
+    const categoryIdsToRevalidate = productCategories.map((item) => item.categoryId);
 
     const existingProduct = await productService.findProductById(id);
     if (!existingProduct) {
@@ -248,6 +298,10 @@ export async function DELETE(request: Request) {
     }
 
     const deletedProduct = await productService.deleteProduct(id);
+    await revalidateCatalogForProduct({
+      productId: id,
+      extraCategoryIds: categoryIdsToRevalidate,
+    });
     return NextResponse.json(deletedProduct);
   } catch (error) {
     console.error('Error deleting product:', error);
