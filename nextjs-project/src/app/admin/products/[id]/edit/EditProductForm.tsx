@@ -82,6 +82,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
+    sku: '',
     price: 0,
     quantity: 0,
     description: '',
@@ -150,6 +151,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       setFormData({
         title: data.title,
         slug: data.slug || '',
+        sku: data.sku || '',
         price: data.price,
         quantity: data.quantity || 0,
         description: data.description || '',
@@ -231,6 +233,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         body: JSON.stringify({
           title: formData.title,
           slug: formData.slug || null,
+          sku: formData.sku || null,
           price: formData.price,
           quantity: formData.quantity,
           description: formData.description || null,
@@ -329,6 +332,18 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 onChange={handleChange}
                 className="form-input w-full"
                 placeholder="product-url"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+              <input
+                type="text"
+                name="sku"
+                value={formData.sku}
+                onChange={handleChange}
+                className="form-input w-full"
+                placeholder="Например: collagen-250g"
               />
             </div>
             

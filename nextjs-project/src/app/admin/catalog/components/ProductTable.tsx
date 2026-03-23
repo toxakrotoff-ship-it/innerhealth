@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/button'
 import { Product } from '@prisma/client'
 import { NO_CATEGORY_ID } from '../constants'
@@ -39,7 +39,7 @@ interface ProductTableProps {
 
 interface EditingState {
   productId: string
-  field: 'price' | 'quantity'
+  field: 'price' | 'quantity' | 'sku'
   value: string
 }
 
@@ -65,8 +65,10 @@ interface ProductRowProps {
   setEditing: (value: EditingState | null | ((prev: EditingState | null) => EditingState | null)) => void
   onStartEditPrice: () => void
   onStartEditQuantity: () => void
+  onStartEditSku: () => void
   onDelete: (product: Product) => void
   saveInline: (productId: string, field: 'price' | 'quantity', value: string) => Promise<void>
+  saveInlineSku: (productId: string, nextSku: string | null) => Promise<void>
   onToggleDraft: (productId: string, nextIsDraft: boolean) => void
 }
 
@@ -144,8 +146,10 @@ function ProductCardRow({
   setEditing,
   onStartEditPrice,
   onStartEditQuantity,
+  onStartEditSku,
   onDelete,
   saveInline,
+  saveInlineSku,
   onToggleDraft,
 }: ProductRowProps) {
   const router = useRouter()
@@ -173,16 +177,18 @@ function ProductCardRow({
   }
 
   const categoryLine = getCategoryLine(product)
+  const hasDiscount = typeof product.priceOld === 'number' && product.priceOld > product.price
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`w-full min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900 ${
+      className={`w-full min-w-0 ${
         isDragging ? 'opacity-60 ring-2 ring-action-blue/40' : ''
       }`}
     >
-      <div
+      {/* Desktop (table-like) */}
+        <div
         role="button"
         tabIndex={0}
         onClick={handleCardClick}
@@ -192,13 +198,13 @@ function ProductCardRow({
             router.push(`/${base}/products/${product.id}/edit`)
           }
         }}
-        className="cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-action-blue/50"
+          className="hidden cursor-pointer lg:grid lg:grid-cols-[2rem_10fr_35fr_15fr_15fr_10fr_10fr_5fr_3rem] lg:items-center lg:gap-3 lg:px-3 lg:py-3 lg:hover:bg-gray-50 lg:dark:hover:bg-gray-800 lg:border-b lg:border-gray-200 lg:bg-white lg:dark:bg-gray-900 dark:lg:border-gray-800"
       >
-        <div className="flex gap-3">
-          {canReorder && (
+        <div className="flex w-full items-center justify-center">
+          {canReorder ? (
             <button
               type="button"
-              className="touch-none shrink-0 self-start rounded p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+              className="touch-none rounded p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
               {...listeners}
               {...attributes}
               aria-label="Перетащить для изменения порядка"
@@ -206,12 +212,22 @@ function ProductCardRow({
             >
               <GripVertical className="h-5 w-5" />
             </button>
+          ) : (
+            <span className="h-5 w-5" aria-hidden="true" />
           )}
-          <div className="product-thumb flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+        </div>
+
+        <div className="relative flex min-w-0 items-center justify-start">
+          {hasDiscount && (
+            <div className="absolute left-[-16px] top-1/2 z-10 -translate-y-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+              -%
+            </div>
+          )}
+          <div className="product-thumb flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
             {product.photo ? (
-              <img src={product.photo} alt="" width={48} height={48} className="h-full w-full object-cover" />
+              <img src={product.photo} alt="" width={36} height={36} className="h-full w-full object-cover" />
             ) : (
-              <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -221,147 +237,385 @@ function ProductCardRow({
               </svg>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-gray-900 dark:text-gray-100">{product.title}</p>
-            <p className="mt-0.5 text-xs text-gray-500">SKU: {product.sku || '—'}</p>
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-              <span className="text-gray-500">Раздел:</span> {categoryLine}
-            </p>
-          </div>
         </div>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-          <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Сайт</span>
-              <button
-                type="button"
-                data-prevent-row-nav
-                disabled={isTogglingDraft}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleDraft(product.id, !product.isDraft)
-                }}
-                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60"
-                aria-label={
-                  product.isDraft ? 'Показать товар на сайте (сейчас скрыт)' : 'Скрыть товар с сайта (сейчас показан)'
+        <div className="min-w-0">
+          <p
+            className="font-medium text-gray-900 dark:text-gray-100 overflow-hidden wrap-break-word [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical]"
+          >
+            {product.title}
+          </p>
+        </div>
+
+        <div className="min-w-0 w-full">
+          {editing?.productId === product.id && editing?.field === 'sku' ? (
+            <input
+              type="text"
+              data-prevent-row-nav
+              value={editing.value}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+              onBlur={() => {
+                const raw = editing?.value ?? ''
+                const nextSku = raw.trim() === '' ? null : raw.trim()
+                void (async () => {
+                  try {
+                    await saveInlineSku(product.id, nextSku)
+                  } finally {
+                    setEditing(null)
+                  }
+                })()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const raw = editing?.value ?? ''
+                  const nextSku = raw.trim() === '' ? null : raw.trim()
+                  void (async () => {
+                    try {
+                      await saveInlineSku(product.id, nextSku)
+                    } finally {
+                      setEditing(null)
+                    }
+                  })()
                 }
-                style={{
-                  backgroundColor: product.isDraft ? '#d1d5db' : 'var(--color-action-blue)',
-                }}
-              >
-                <span
-                  className="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
-                  style={{
-                    transform: product.isDraft ? 'translateX(2px)' : 'translateX(22px)',
-                  }}
-                />
-              </button>
-            </div>
-            <span className="text-xs text-gray-500" suppressHydrationWarning>
-              {new Date(product.createdAt).toLocaleDateString('ru-RU', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-          <dt className="text-gray-500">Цена</dt>
-          <dd className="text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">
-            {editing?.productId === product.id && editing?.field === 'price' ? (
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                data-prevent-row-nav
-                value={editing.value}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-                onBlur={() => {
-                  if (editing) void saveInline(product.id, 'price', editing.value)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && editing) void saveInline(product.id, 'price', editing.value)
-                  if (e.key === 'Escape') setEditing(null)
-                }}
-                className="form-input box-border w-full max-w-[9rem] py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                autoFocus
-              />
-            ) : isSaving ? (
-              <span className="text-gray-400">…</span>
-            ) : (
-              <button
-                type="button"
-                data-prevent-row-nav
-                className="rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onStartEditPrice()
-                }}
-              >
-                <span suppressHydrationWarning>{`${Number(product.price).toLocaleString('ru-RU')}\u202f₽`}</span>
-              </button>
-            )}
-          </dd>
-          <dt className="text-gray-500">Остаток</dt>
-          <dd className="text-right tabular-nums text-gray-700 dark:text-gray-300">
-            {editing?.productId === product.id && editing?.field === 'quantity' ? (
-              <input
-                type="number"
-                min={0}
-                data-prevent-row-nav
-                value={editing.value}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
-                onBlur={() => {
-                  if (editing) void saveInline(product.id, 'quantity', editing.value)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && editing) void saveInline(product.id, 'quantity', editing.value)
-                  if (e.key === 'Escape') setEditing(null)
-                }}
-                className="form-input box-border ml-auto block w-full max-w-[6rem] py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                autoFocus
-              />
-            ) : isSaving ? (
-              <span className="text-gray-400">…</span>
-            ) : (
-              <button
-                type="button"
-                data-prevent-row-nav
-                className="rounded px-1 hover:bg-gray-100 dark:hover:bg-gray-800"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onStartEditQuantity()
-                }}
-              >
-                <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
-              </button>
-            )}
-          </dd>
-        </dl>
+                if (e.key === 'Escape') setEditing(null)
+              }}
+              className="form-input box-border w-full py-1.5 text-sm text-gray-900 dark:text-gray-100"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="w-full rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartEditSku()
+              }}
+              aria-label="Редактировать SKU"
+            >
+              {isSaving ? (
+                <span className="text-gray-400">…</span>
+              ) : (
+                <span className="truncate text-sm text-gray-600 dark:text-gray-300">
+                  {product.sku || '—'}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
+        <div className="flex min-w-0 w-full items-center justify-center">
+          {editing?.productId === product.id && editing?.field === 'price' ? (
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              data-prevent-row-nav
+              value={editing.value}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+              onBlur={() => {
+                if (editing) void saveInline(product.id, 'price', editing.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && editing) void saveInline(product.id, 'price', editing.value)
+                if (e.key === 'Escape') setEditing(null)
+              }}
+              className="form-input box-border w-full max-w-26 py-1.5 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              autoFocus
+            />
+          ) : isSaving ? (
+            <span className="text-gray-400">…</span>
+          ) : (
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="w-full rounded px-1 text-center tabular-nums hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartEditPrice()
+              }}
+            >
+              <span suppressHydrationWarning className="tabular-nums">
+                {`${Number(product.price).toLocaleString('ru-RU')}\u202f₽`}
+              </span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex min-w-0 w-full items-center justify-center">
+          {editing?.productId === product.id && editing?.field === 'quantity' ? (
+            <input
+              type="number"
+              min={0}
+              data-prevent-row-nav
+              value={editing.value}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+              onBlur={() => {
+                if (editing) void saveInline(product.id, 'quantity', editing.value)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && editing) void saveInline(product.id, 'quantity', editing.value)
+                if (e.key === 'Escape') setEditing(null)
+              }}
+              className="form-input box-border w-full max-w-20 py-1.5 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              autoFocus
+            />
+          ) : isSaving ? (
+            <span className="text-gray-400">…</span>
+          ) : (
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="w-full rounded px-1 text-center tabular-nums hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartEditQuantity()
+              }}
+            >
+              <span suppressHydrationWarning className="tabular-nums">
+                {product.quantity ?? '—'}
+              </span>
+            </button>
+          )}
+        </div>
+
+        <div className="min-w-0 w-full truncate text-sm text-gray-600 dark:text-gray-300" title={product.brand ?? ''}>
+          {product.brand || '—'}
+        </div>
+
+        <div className="flex min-w-0 w-full items-center justify-center">
+          <button
+            type="button"
+            data-prevent-row-nav
+            disabled={isTogglingDraft}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleDraft(product.id, !product.isDraft)
+            }}
+            className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60"
+            aria-label={product.isDraft ? 'Показать товар на сайте' : 'Скрыть товар с сайта'}
+            style={{
+              backgroundColor: product.isDraft ? '#d1d5db' : 'var(--color-action-blue)',
+            }}
+          >
+            <span
+              className="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
+              style={{
+                transform: product.isDraft ? 'translateX(2px)' : 'translateX(22px)',
+              }}
+            />
+          </button>
+        </div>
+
+        <div className="flex min-w-0 w-full items-center justify-end">
+          <button
+            type="button"
+            data-prevent-row-nav
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
+            aria-label="Удалить"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(product)
+            }}
+          >
+            {isDeleting ? <span className="text-xs">…</span> : <Trash2 className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
-        <Link
-          href={`/${base}/products/${product.id}/edit`}
-          className="inline-flex flex-1 min-w-[6rem] items-center justify-center rounded-full bg-highlight-blue px-3 py-2 text-sm font-medium text-(--color-text) hover:opacity-90"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Редактировать
-        </Link>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={isDeleting}
-          className="min-w-[6rem] flex-1"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(product)
+      {/* Mobile (card) */}
+      <div className="lg:hidden rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleCardClick}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              router.push(`/${base}/products/${product.id}/edit`)
+            }
           }}
+          className="cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-action-blue/50"
         >
-          {isDeleting ? '…' : 'Удалить'}
-        </Button>
+          <div className="flex gap-3">
+            {canReorder && (
+              <button
+                type="button"
+                className="touch-none shrink-0 self-start rounded p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing"
+                {...listeners}
+                {...attributes}
+                aria-label="Перетащить для изменения порядка"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-5 w-5" />
+              </button>
+            )}
+            <div className="relative flex items-center justify-start">
+              {hasDiscount && (
+                <div className="absolute left-[-20px] top-1/2 z-10 -translate-y-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+                  -%
+                </div>
+              )}
+              <div className="product-thumb flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+                {product.photo ? (
+                  <img src={product.photo} alt="" width={48} height={48} className="h-full w-full object-cover" />
+                ) : (
+                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 14m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                )}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-gray-900 dark:text-gray-100">{product.title}</p>
+              <p className="mt-0.5 text-xs text-gray-500">SKU: {product.sku || '—'}</p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                <span className="text-gray-500">Раздел:</span> {categoryLine}
+              </p>
+            </div>
+          </div>
+
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+            <div className="col-span-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Сайт</span>
+                <button
+                  type="button"
+                  data-prevent-row-nav
+                  disabled={isTogglingDraft}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleDraft(product.id, !product.isDraft)
+                  }}
+                  className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60"
+                  aria-label={
+                    product.isDraft ? 'Показать товар на сайте (сейчас скрыт)' : 'Скрыть товар с сайта (сейчас показан)'
+                  }
+                  style={{
+                    backgroundColor: product.isDraft ? '#d1d5db' : 'var(--color-action-blue)',
+                  }}
+                >
+                  <span
+                    className="inline-block h-5 w-5 transform rounded-full bg-white transition-transform"
+                    style={{
+                      transform: product.isDraft ? 'translateX(2px)' : 'translateX(22px)',
+                    }}
+                  />
+                </button>
+              </div>
+              <span className="text-xs text-gray-500" suppressHydrationWarning>
+                {new Date(product.createdAt).toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+            <dt className="text-gray-500">Цена</dt>
+            <dd className="text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">
+              {editing?.productId === product.id && editing?.field === 'price' ? (
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  data-prevent-row-nav
+                  value={editing.value}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                  onBlur={() => {
+                    if (editing) void saveInline(product.id, 'price', editing.value)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && editing) void saveInline(product.id, 'price', editing.value)
+                    if (e.key === 'Escape') setEditing(null)
+                  }}
+                  className="form-input box-border w-full max-w-36 py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  autoFocus
+                />
+              ) : isSaving ? (
+                <span className="text-gray-400">…</span>
+              ) : (
+                <button
+                  type="button"
+                  data-prevent-row-nav
+                  className="rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStartEditPrice()
+                  }}
+                >
+                  <span suppressHydrationWarning>{`${Number(product.price).toLocaleString('ru-RU')}\u202f₽`}</span>
+                </button>
+              )}
+            </dd>
+            <dt className="text-gray-500">Остаток</dt>
+            <dd className="text-right tabular-nums text-gray-700 dark:text-gray-300">
+              {editing?.productId === product.id && editing?.field === 'quantity' ? (
+                <input
+                  type="number"
+                  min={0}
+                  data-prevent-row-nav
+                  value={editing.value}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setEditing((p) => (p ? { ...p, value: e.target.value } : null))}
+                  onBlur={() => {
+                    if (editing) void saveInline(product.id, 'quantity', editing.value)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && editing) void saveInline(product.id, 'quantity', editing.value)
+                    if (e.key === 'Escape') setEditing(null)
+                  }}
+                  className="form-input box-border ml-auto block w-full max-w-24 py-1.5 text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  autoFocus
+                />
+              ) : isSaving ? (
+                <span className="text-gray-400">…</span>
+              ) : (
+                <button
+                  type="button"
+                  data-prevent-row-nav
+                  className="rounded px-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStartEditQuantity()
+                  }}
+                >
+                  <span suppressHydrationWarning>{product.quantity ?? '—'}</span>
+                </button>
+              )}
+            </dd>
+          </dl>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+          <Link
+            href={`/${base}/products/${product.id}/edit`}
+            className="inline-flex flex-1 min-w-24 items-center justify-center rounded-full bg-highlight-blue px-3 py-2 text-sm font-medium text-(--color-text) hover:opacity-90"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Редактировать
+          </Link>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={isDeleting}
+            className="min-w-24 flex-1"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(product)
+            }}
+          >
+            {isDeleting ? '…' : 'Удалить'}
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -404,6 +658,26 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     } catch (e) {
       console.error(e)
       alert('Не удалось сохранить')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const saveInlineSku = async (productId: string, nextSku: string | null) => {
+    setEditing(null)
+    setSavingId(productId)
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: productId, sku: nextSku }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      onRefresh()
+    } catch (e) {
+      console.error(e)
+      alert('Не удалось сохранить SKU')
     } finally {
       setSavingId(null)
     }
@@ -601,9 +875,20 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
       </div>
 
       <div className="admin-table-wrap w-full min-w-0 p-3 sm:p-4">
+        <div className="hidden lg:grid lg:grid-cols-[2rem_10fr_35fr_15fr_15fr_10fr_10fr_5fr_3rem] lg:gap-3 lg:px-3 lg:py-2 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:lg:border-gray-800">
+          <div />
+          <div className="min-w-0">Фото</div>
+          <div className="min-w-0">Заголовок</div>
+          <div className="min-w-0">Артикул</div>
+          <div className="flex min-w-0 w-full items-center justify-center">Цена</div>
+          <div className="flex min-w-0 w-full items-center justify-center">Кол-во</div>
+          <div className="min-w-0">Бренд</div>
+          <div className="min-w-0">Видимость</div>
+          <div className="min-w-0 text-right"> </div>
+        </div>
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <SortableContext items={filteredAndSorted.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-            <div className="flex w-full min-w-0 flex-col gap-3">
+            <div className="flex w-full min-w-0 flex-col gap-3 lg:gap-0">
               {filteredAndSorted.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center text-gray-500 dark:border-gray-700">
                   <span className="text-4xl opacity-50">📦</span>
@@ -639,8 +924,16 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                         value: String(product.quantity ?? ''),
                       })
                     }
+                    onStartEditSku={() =>
+                      setEditing({
+                        productId: product.id,
+                        field: 'sku',
+                        value: product.sku ?? '',
+                      })
+                    }
                     onDelete={handleDelete}
                     saveInline={saveInline}
+                    saveInlineSku={saveInlineSku}
                     onToggleDraft={toggleDraft}
                   />
                 ))

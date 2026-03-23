@@ -161,7 +161,7 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
             />
           ) : (
             // Natural aspect ratio; max-w-full + max-h scale down oversized assets inside the article column.
-            // eslint-disable-next-line @next/next/no-img-element -- dimensions unknown in stored JSON; native img preserves ratio
+            // Dimensions unknown in stored JSON; native img preserves ratio.
             <img
               src={src}
               alt={node.attrs?.alt ?? ''}

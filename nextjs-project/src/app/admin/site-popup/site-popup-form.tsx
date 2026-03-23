@@ -255,7 +255,6 @@ export function SitePopupForm({ initialValue }: SitePopupFormProps) {
         <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-md overflow-hidden border border-gray-100">
           {value.imageUrl && (
             <div className="relative h-36 w-full bg-gray-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={value.imageUrl} alt={value.title} className="w-full h-full object-cover" />
             </div>
           )}
