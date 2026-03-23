@@ -251,6 +251,37 @@ export async function DELETE(request: Request) {
     return NextResponse.json(deletedProduct);
   } catch (error) {
     console.error('Error deleting product:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : '';
+    const isForeignKeyConstraint =
+      errorCode === 'P2003' || /foreign key constraint|violates foreign key/i.test(errorMessage);
+
+    if (isForeignKeyConstraint) {
+      const dependencyStats = await productService.getProductDeleteDependencyStats(id);
+      const dependencyLabelByKey: Record<keyof typeof dependencyStats, string> = {
+        productCategories: 'Категории товара',
+        cartItems: 'Корзина',
+        orderItems: 'Позиции заказов',
+        quickOrders: 'Быстрые заявки',
+        giftPromotions: 'Подарочные акции',
+      };
+      const dependencyDetails = (Object.keys(dependencyStats) as Array<keyof typeof dependencyStats>)
+        .filter((key) => dependencyStats[key] > 0)
+        .map((key) => `- ${dependencyLabelByKey[key]}: ${dependencyStats[key]}`);
+
+      return NextResponse.json(
+        {
+          error: dependencyDetails.length
+            ? `Нельзя удалить товар: найдены связанные записи.\n${dependencyDetails.join('\n')}\n\nСнимите связи или скройте товар как черновик.`
+            : 'Нельзя удалить товар: он уже используется в связанных данных. Снимите связи или скройте товар как черновик.',
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to delete product' },
       { status: 500 }

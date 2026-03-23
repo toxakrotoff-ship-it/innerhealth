@@ -787,11 +787,15 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
         body: JSON.stringify({ id: product.id }),
         credentials: 'include',
       })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null
+        throw new Error(payload?.error || 'Не удалось удалить товар')
+      }
       onRefresh()
     } catch (e) {
       console.error(e)
-      alert('Не удалось удалить товар')
+      const message = e instanceof Error ? e.message : 'Не удалось удалить товар'
+      alert(message)
     } finally {
       setDeletingId(null)
     }

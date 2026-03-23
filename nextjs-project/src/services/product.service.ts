@@ -406,6 +406,34 @@ export async function deleteProduct(id: string) {
   });
 }
 
+export interface ProductDeleteDependencyStats {
+  productCategories: number
+  cartItems: number
+  orderItems: number
+  quickOrders: number
+  giftPromotions: number
+}
+
+export async function getProductDeleteDependencyStats(
+  productId: string
+): Promise<ProductDeleteDependencyStats> {
+  const [productCategories, cartItems, orderItems, quickOrders, giftPromotions] = await Promise.all([
+    prisma.productCategory.count({ where: { productId } }),
+    prisma.cartItem.count({ where: { productId } }),
+    prisma.orderItem.count({ where: { productId } }),
+    prisma.quickOrder.count({ where: { productId } }),
+    prisma.giftPromotion.count({ where: { giftProductId: productId } }),
+  ])
+
+  return {
+    productCategories,
+    cartItems,
+    orderItems,
+    quickOrders,
+    giftPromotions,
+  }
+}
+
 export async function findProductById(id: string) {
   return prisma.product.findUnique({
     where: { id },
