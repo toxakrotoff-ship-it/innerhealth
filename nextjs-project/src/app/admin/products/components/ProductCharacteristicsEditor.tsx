@@ -1,7 +1,22 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { GripVertical, Trash2 } from 'lucide-react'
 import Button from '@/components/ui/button'
 
 type CharacteristicKeyMode = 'preset' | 'custom'
@@ -154,6 +169,11 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
   }, []) // only for first mount
 
   const [rows, setRows] = useState<CharacteristicRow[]>(initialRows)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    })
+  )
 
   useEffect(() => {
     // Если parent обновил HTML извне (например, сменили товар) — пересобираем строки.
@@ -220,84 +240,138 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
     })
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    setRows((prev) => {
+      const oldIndex = prev.findIndex((row) => row.id === String(active.id))
+      const newIndex = prev.findIndex((row) => row.id === String(over.id))
+      if (oldIndex < 0 || newIndex < 0) return prev
+      return arrayMove(prev, oldIndex, newIndex)
+    })
+  }
+
   return (
     <div className="space-y-3">
-      {rows.map((row) => {
-        const isKeyInOptions = availableKeysSet.has(row.key.trim())
-        const selectValue = row.keyMode === 'preset' && isKeyInOptions ? row.key : '__new__'
-
-        return (
-          <div key={row.id} className="flex items-start gap-3">
-            <div className="w-full max-w-md">
-              <select
-                value={selectValue}
-                onChange={(e) => {
-                  const next = e.target.value
-                  setRows((prev) =>
-                    prev.map((r) => {
-                      if (r.id !== row.id) return r
-                      if (next === '__new__') return { ...r, keyMode: 'custom' }
-                      return { ...r, key: next, keyMode: 'preset' }
-                    })
-                  )
-                }}
-                className="form-input w-full"
-                aria-label="Выбор характеристики"
-              >
-                {availableKeys.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-                <option value="__new__">Новая характеристика</option>
-              </select>
-
-              {row.keyMode === 'custom' && (
-                <input
-                  type="text"
-                  value={row.key}
-                  onChange={(e) => {
-                    const nextKey = e.target.value
-                    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, key: nextKey } : r)))
-                  }}
-                  placeholder="Название характеристики"
-                  className="form-input w-full mt-2"
-                />
-              )}
-            </div>
-
-            <div className="flex-1">
-              <textarea
-                value={row.value}
-                onChange={(e) => {
-                  const nextValue = e.target.value
-                  setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, value: nextValue } : r)))
-                }}
-                placeholder="Значение"
-                className="form-input w-full min-h-[44px] resize-y"
-                rows={2}
-              />
-            </div>
-
-            <div className="pt-1">
-              <button
-                type="button"
-                data-prevent-row-nav
-                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
-                aria-label="Удалить характеристику"
-                onClick={() => deleteRow(row.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )
-      })}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
+          {rows.map((row) => (
+            <SortableCharacteristicRow
+              key={row.id}
+              row={row}
+              availableKeys={availableKeys}
+              availableKeysSet={availableKeysSet}
+              onRowChange={(nextRow) =>
+                setRows((prev) => prev.map((item) => (item.id === nextRow.id ? nextRow : item)))
+              }
+              onDelete={deleteRow}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       <div className="flex">
         <Button type="button" variant="secondary" onClick={addRow}>
           Добавить характеристику
         </Button>
+      </div>
+    </div>
+  )
+}
+
+interface SortableCharacteristicRowProps {
+  row: CharacteristicRow
+  availableKeys: readonly string[]
+  availableKeysSet: ReadonlySet<string>
+  onRowChange: (nextRow: CharacteristicRow) => void
+  onDelete: (id: string) => void
+}
+
+function SortableCharacteristicRow({
+  row,
+  availableKeys,
+  availableKeysSet,
+  onRowChange,
+  onDelete,
+}: SortableCharacteristicRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const isKeyInOptions = availableKeysSet.has(row.key.trim())
+  const selectValue = row.keyMode === 'preset' && isKeyInOptions ? row.key : '__new__'
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-start gap-3 rounded ${isDragging ? 'opacity-70 ring-2 ring-action-blue/30' : ''}`}
+    >
+      <button
+        type="button"
+        className="mt-2 rounded p-1 text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing touch-none"
+        aria-label="Изменить порядок характеристики"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <div className="w-full max-w-md">
+        <select
+          value={selectValue}
+          onChange={(e) => {
+            const next = e.target.value
+            if (next === '__new__') {
+              onRowChange({ ...row, keyMode: 'custom' })
+              return
+            }
+            onRowChange({ ...row, key: next, keyMode: 'preset' })
+          }}
+          className="form-input w-full"
+          aria-label="Выбор характеристики"
+        >
+          {availableKeys.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+          <option value="__new__">Новая характеристика</option>
+        </select>
+
+        {row.keyMode === 'custom' && (
+          <input
+            type="text"
+            value={row.key}
+            onChange={(e) => onRowChange({ ...row, key: e.target.value })}
+            placeholder="Название характеристики"
+            className="form-input w-full mt-2"
+          />
+        )}
+      </div>
+
+      <div className="flex-1">
+        <textarea
+          value={row.value}
+          onChange={(e) => onRowChange({ ...row, value: e.target.value })}
+          placeholder="Значение"
+          className="form-input w-full min-h-[44px] resize-y"
+          rows={2}
+        />
+      </div>
+
+      <div className="pt-1">
+        <button
+          type="button"
+          data-prevent-row-nav
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
+          aria-label="Удалить характеристику"
+          onClick={() => onDelete(row.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   )
