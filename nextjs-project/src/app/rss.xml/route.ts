@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { getSiteBaseUrl } from '@/lib/site-url'
 import { escapeXml } from '@/lib/xml-escape'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
+import { getPostPath } from '@/lib/post-url'
 
 /** RSS для Яндекс.Новостей / лент / агрегаторов; обновление не чаще 10 мин. */
 export const revalidate = 600
@@ -43,7 +44,7 @@ export async function GET(): Promise<Response> {
 
   const itemsXml = posts
     .map((post) => {
-      const link = `${base}/news/${post.slug}`
+      const link = `${base}${getPostPath({ type: post.type, slug: post.slug })}`
       const pubDate = post.updatedAt.toUTCString()
       const category = post.type === 'news' ? 'Новости' : 'Статьи'
       const rawDesc = post.excerpt?.trim() || `${category}: ${post.title}`

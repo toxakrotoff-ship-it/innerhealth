@@ -7,6 +7,7 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
+import { getPostPathByType } from '@/lib/post-url'
 
 export const revalidate = 3600
 
@@ -84,7 +85,7 @@ export default async function InformaciyaPage() {
           {posts.map((post) => (
             <li key={post.id}>
               <Link
-                href={`/news/${post.slug}`}
+                href={getPostPathByType('article', post.slug)}
                 className="flex flex-col sm:flex-row overflow-hidden bg-white rounded-xl border border-gray-200 hover:border-action-blue hover:shadow-sm transition-all"
               >
                 <div className="relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square bg-gray-100 shrink-0">

@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getPostPath } from '@/lib/post-url';
 
 /** Get all posts for admin. */
 export async function getPostsForAdmin() {
@@ -69,6 +70,6 @@ export async function suggestPostsForLink(query: string, limit: number) {
     title: p.title,
     slug: p.slug,
     type: p.type,
-    href: `/news/${p.slug}`,
+    href: getPostPath({ type: p.type, slug: p.slug }),
   }));
 }

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { getSiteBaseUrl } from '@/lib/site-url'
+import { getPostPath } from '@/lib/post-url'
 
 /** Регенерация sitemap не чаще раза в час — при добавлении товаров/статей/категорий ссылки появятся в течение часа. */
 export const revalidate = 3600
@@ -74,7 +75,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (const post of posts) {
       entries.push({
-        url: `${baseUrl}/news/${post.slug}`,
+        url: `${baseUrl}${getPostPath({ type: post.type, slug: post.slug })}`,
         lastModified: post.updatedAt,
         changeFrequency: post.type === 'news' ? ('weekly' as const) : ('monthly' as const),
         priority: post.type === 'news' ? 0.65 : 0.6,

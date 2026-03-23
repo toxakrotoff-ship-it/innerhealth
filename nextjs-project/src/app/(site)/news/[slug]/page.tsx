@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { prisma } from '@/lib/prisma'
@@ -12,6 +12,7 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
 import { ArticleSourceFooter } from '@/components/site/article-source-footer'
+import { getPostPath, getPostPathByType } from '@/lib/post-url'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     post.excerpt?.trim() ||
     (post.type === 'news' ? 'Новости Inner Health.' : 'Статья Inner Health о здоровье и питании.')
 
-  const path = `/news/${slug}`
+  const path = getPostPath({ type: post.type, slug })
   const ogImage = post.previewImage || undefined
 
   const siteOrigin = getSiteBaseUrl()
@@ -76,12 +77,14 @@ export default async function NewsPostPage({ params }: PageProps) {
   })
 
   if (!post) notFound()
+  if (post.type === 'article') redirect(getPostPathByType('article', post.slug))
 
   const settings = await getSettingsMap()
   const schemaUrl = settings.schema_org_url?.trim()
+  const postPath = getPostPath({ type: post.type, slug: post.slug })
   const canonicalUrl = schemaUrl
-    ? `${schemaUrl.replace(/\/+$/, '')}/news/${post.slug}`
-    : toAbsoluteSiteUrl(`/news/${post.slug}`)
+    ? `${schemaUrl.replace(/\/+$/, '')}${postPath}`
+    : toAbsoluteSiteUrl(postPath)
   const articleBodyPlain = extractPlainTextFromPostContent(post.content)
   const geoStructuredData = buildNewsArticleGeoStructuredData({
     settings,
@@ -105,7 +108,7 @@ export default async function NewsPostPage({ params }: PageProps) {
     { label: sectionLabel, href: sectionHref },
     { label: post.title },
   ]
-  const currentPath = `/news/${post.slug}`
+  const currentPath = postPath
 
   return (
     <AdaptiveContainer maxWidth="default" className="py-10">
