@@ -29,6 +29,7 @@ interface ProductPageContentProps {
     photo: string | null
     photos?: unknown
     quantity?: number | null
+    isPreorderEnabled?: boolean
     slug: string | null
     isPromoEligible?: boolean
     discountPrice?: number | null
@@ -50,6 +51,8 @@ interface ProductPageContentProps {
     slug: string | null
     isPromoEligible: boolean
     discountPrice: number | null
+    quantity?: number | null
+    isPreorderEnabled?: boolean
   }>
 }
 
@@ -59,7 +62,8 @@ interface StockBadgeState {
 }
 
 function getStockBadge(quantity: number | null | undefined): StockBadgeState {
-  if (quantity == null || quantity <= 0) return { label: 'Предзаказ', className: 'bg-amber-100 text-amber-700' }
+  if (quantity == null) return { label: 'В наличии', className: 'bg-green-100 text-green-700' }
+  if (quantity <= 0) return { label: 'Товар временно закончился', className: 'bg-gray-100 text-gray-700' }
   if (quantity >= 10) return { label: 'В наличии', className: 'bg-green-100 text-green-700' }
   return { label: 'Заканчивается', className: 'bg-orange-100 text-orange-700' }
 }
@@ -103,7 +107,12 @@ export function ProductPageContent({
   breadcrumbItems,
   relatedProductsCategoryTitle,
 }: ProductPageContentProps) {
-  const stock = getStockBadge(product.quantity)
+  const isOutOfStock = product.quantity != null && product.quantity <= 0
+  const isPreorderEnabled = product.isPreorderEnabled === true
+  const isUnavailable = isOutOfStock && !isPreorderEnabled
+  const stock = isOutOfStock && isPreorderEnabled
+    ? { label: 'Предзаказ', className: 'bg-amber-100 text-amber-700' }
+    : getStockBadge(product.quantity)
   const crumbs: BreadcrumbItemType[] =
     breadcrumbItems ??
     [
@@ -161,9 +170,11 @@ export function ProductPageContent({
               hasPromoPrice={product.priceOld != null && product.priceOld > product.price}
               isPromoEligible={product.isPromoEligible}
               discountPrice={product.discountPrice}
+              disabled={isUnavailable}
+              disabledLabel="Товар закончился"
             />
             <WishlistToggleButton productId={product.id} className="min-h-[44px]" />
-            <QuickOrderDialog productId={product.id} productTitle={product.title} />
+            <QuickOrderDialog productId={product.id} productTitle={product.title} disabled={isUnavailable} />
           </div>
           <div className="mt-3">
             <CompareToggleButton productId={product.id} />
@@ -225,6 +236,8 @@ export function ProductPageContent({
                   slug={item.slug}
                   isPromoEligible={item.isPromoEligible}
                   discountPrice={item.discountPrice}
+                  quantity={item.quantity}
+                  isPreorderEnabled={item.isPreorderEnabled}
                   blurDataURL={getFirstPhotoBlurDataURL(item.photos)}
                 />
               ))}

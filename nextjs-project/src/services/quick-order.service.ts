@@ -22,6 +22,18 @@ export async function createQuickOrder(input: QuickOrderInput) {
   })
 }
 
+export async function getQuickOrderProductAvailability(productId: string) {
+  return prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      id: true,
+      isDraft: true,
+      quantity: true,
+      isPreorderEnabled: true,
+    },
+  })
+}
+
 export interface AdminQuickOrderDto {
   id: string
   name: string | null

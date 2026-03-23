@@ -63,6 +63,8 @@ export default async function SeoHubPage({ params }: PageProps) {
             slug: true,
             isPromoEligible: true,
             discountPrice: true,
+            quantity: true,
+            isPreorderEnabled: true,
             brand: true,
             sku: true,
           },
@@ -114,6 +116,8 @@ export default async function SeoHubPage({ params }: PageProps) {
                   slug={p.slug}
                   isPromoEligible={p.isPromoEligible}
                   discountPrice={p.discountPrice}
+                  quantity={p.quantity}
+                  isPreorderEnabled={p.isPreorderEnabled}
                   priority={index < 2}
                   blurDataURL={getFirstPhotoBlurDataURL(p.photos)}
                 />

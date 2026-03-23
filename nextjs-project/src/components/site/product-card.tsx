@@ -20,6 +20,8 @@ interface ProductCardProps {
   slug?: string | null
   isPromoEligible?: boolean
   discountPrice?: number | null
+  quantity?: number | null
+  isPreorderEnabled?: boolean
   /** Set for above-the-fold images (e.g. first 2 products) to improve LCP */
   priority?: boolean
   /** Base64 blur placeholder from upload pipeline for placeholder="blur" */
@@ -38,12 +40,15 @@ export function ProductCard({
   slug,
   isPromoEligible = true,
   discountPrice = null,
+  quantity = null,
+  isPreorderEnabled = false,
   priority = false,
   blurDataURL = null,
 }: ProductCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const state = useRef({ rotateX: 0, rotateY: 0 })
   const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`
+  const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled
 
   const updateStyles = () => {
     if (ref.current) {
@@ -99,6 +104,8 @@ export function ProductCard({
               slug={slug}
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
+              quantity={quantity}
+              isPreorderEnabled={isPreorderEnabled}
               iconOnly
             />
             <WishlistToggleButton productId={id} iconOnly />
@@ -158,6 +165,7 @@ export function ProductCard({
               hasPromoPrice={priceOld != null && priceOld > price}
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
+              disabled={isUnavailable}
               size="sm"
               className="w-full min-h-[40px] sm:min-h-[36px]"
             />

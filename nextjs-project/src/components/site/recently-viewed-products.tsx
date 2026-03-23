@@ -19,6 +19,8 @@ interface RecentlyViewedProductItem {
   slug: string | null;
   isPromoEligible: boolean | null;
   discountPrice: number | null;
+  quantity: number | null;
+  isPreorderEnabled: boolean;
 }
 
 export function RecentlyViewedProducts({
@@ -68,6 +70,8 @@ export function RecentlyViewedProducts({
             slug={product.slug}
             isPromoEligible={product.isPromoEligible ?? true}
             discountPrice={product.discountPrice}
+            quantity={product.quantity}
+            isPreorderEnabled={product.isPreorderEnabled}
           />
         ))}
       </div>

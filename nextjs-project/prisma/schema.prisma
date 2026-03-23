@@ -71,6 +71,8 @@ model Product {
   discountPrice                        Float?
   /// Участвует в скидке по промокоду (Rule: скидка применяется только к eligible и не к «уже по акции»)
   isPromoEligible                      Boolean           @default(true)
+  /// Разрешить предзаказ при нулевом остатке
+  isPreorderEnabled                    Boolean           @default(false)
   cartItems                            CartItem[]
   orderItems                           OrderItem[]
   categories                           ProductCategory[]

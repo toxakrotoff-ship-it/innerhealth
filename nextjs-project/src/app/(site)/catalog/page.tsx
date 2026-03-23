@@ -264,6 +264,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                   slug={p.slug}
                   isPromoEligible={p.isPromoEligible}
                   discountPrice={p.discountPrice}
+                  quantity={p.quantity}
+                  isPreorderEnabled={p.isPreorderEnabled}
                   priority={index < 2}
                   blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />
@@ -284,6 +286,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                   slug={p.slug}
                   isPromoEligible={p.isPromoEligible}
                   discountPrice={p.discountPrice}
+                  quantity={p.quantity}
+                  isPreorderEnabled={p.isPreorderEnabled}
                 />
               ))}
             </div>

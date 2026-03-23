@@ -105,6 +105,8 @@ export default async function CategoryPage({ params }: PageProps) {
               isDraft: true,
               isPromoEligible: true,
               discountPrice: true,
+              quantity: true,
+              isPreorderEnabled: true,
             },
           },
         },
@@ -316,6 +318,8 @@ export default async function CategoryPage({ params }: PageProps) {
                   slug={p.slug}
                   isPromoEligible={p.isPromoEligible}
                   discountPrice={p.discountPrice}
+                  quantity={p.quantity}
+                  isPreorderEnabled={p.isPreorderEnabled}
                   priority={index < 2}
                   blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />

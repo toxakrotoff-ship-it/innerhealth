@@ -122,6 +122,7 @@ export default async function ProductPage({ params }: PageProps) {
       description: product.description ?? null,
       price: product.price,
       quantity: product.quantity,
+      isPreorderEnabled: product.isPreorderEnabled,
       brand: product.brand ?? null,
       sku: product.sku ?? null,
     },

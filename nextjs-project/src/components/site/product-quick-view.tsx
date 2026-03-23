@@ -17,6 +17,8 @@ interface ProductQuickViewProps {
   slug?: string | null;
   isPromoEligible?: boolean;
   discountPrice?: number | null;
+  quantity?: number | null;
+  isPreorderEnabled?: boolean;
   iconOnly?: boolean;
 }
 
@@ -33,6 +35,8 @@ export function ProductQuickView({
   slug,
   isPromoEligible,
   discountPrice,
+  quantity = null,
+  isPreorderEnabled = false,
   iconOnly = false,
 }: ProductQuickViewProps) {
   const [open, setOpen] = useState(false);
@@ -40,6 +44,7 @@ export function ProductQuickView({
   const [description, setDescription] = useState<string>('');
   const [loadingDescription, setLoadingDescription] = useState(false);
   const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`;
+  const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled;
   const descriptionPreview = useMemo(() => {
     if (!description) return '';
     const plain = stripHtml(description);
@@ -139,6 +144,7 @@ export function ProductQuickView({
                       hasPromoPrice={priceOld != null && priceOld > price}
                       isPromoEligible={isPromoEligible}
                       discountPrice={discountPrice}
+                      disabled={isUnavailable}
                       size="sm"
                       className="w-full"
                     />

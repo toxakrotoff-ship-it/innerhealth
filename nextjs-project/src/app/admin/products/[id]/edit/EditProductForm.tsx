@@ -62,6 +62,7 @@ interface Product {
   tab2Title: string | null;
   tab3Title: string | null;
   tab4Title: string | null;
+  isPreorderEnabled: boolean;
   isDraft: boolean;
   createdAt: string;
   updatedAt: string;
@@ -105,6 +106,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     priceOld: null as number | null,
     discountPrice: null as number | null,
     isPromoEligible: false,
+    isPreorderEnabled: false,
     isDraft: false,
     categories: [] as string[],
     weight: null as number | null,
@@ -174,6 +176,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         priceOld: data.priceOld || null,
         discountPrice: data.discountPrice || null,
         isPromoEligible: data.isPromoEligible ?? true,
+        isPreorderEnabled: data.isPreorderEnabled ?? false,
         isDraft: data.isDraft ?? false,
         categories: data.categories?.map((cat: { categoryId: string }) => cat.categoryId) || [],
         weight: data.weight ?? null,
@@ -255,6 +258,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           priceOld: formData.priceOld,
           discountPrice: formData.discountPrice,
           isPromoEligible: formData.isPromoEligible,
+          isPreorderEnabled: formData.isPreorderEnabled,
           isDraft: formData.isDraft,
           weight: formData.weight ?? null,
           length: formData.length ?? null,
@@ -451,6 +455,18 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                 />
                 <label htmlFor="isPromoEligible" className="text-sm font-medium text-gray-700">
                   Участвует в скидке по промокоду
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isPreorderEnabled"
+                  checked={formData.isPreorderEnabled}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, isPreorderEnabled: e.target.checked }))}
+                  className="form-input h-4 w-4 rounded"
+                />
+                <label htmlFor="isPreorderEnabled" className="text-sm font-medium text-gray-700">
+                  Разрешить предзаказ при отсутствии товара
                 </label>
               </div>
               <div className="flex items-center gap-2">

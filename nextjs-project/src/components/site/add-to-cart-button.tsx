@@ -17,6 +17,8 @@ interface AddToCartButtonProps {
   discountPrice?: number | null
   /** Compact style for product cards; default for product page */
   size?: 'default' | 'sm'
+  disabled?: boolean
+  disabledLabel?: string
   className?: string
 }
 
@@ -30,6 +32,8 @@ export function AddToCartButton({
   isPromoEligible = true,
   discountPrice = null,
   size = 'default',
+  disabled = false,
+  disabledLabel,
   className,
 }: AddToCartButtonProps) {
   const addItem = useCartStore((s) => s.addItem)
@@ -54,14 +58,18 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={handleClick}
+      disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium hover:bg-action-blue/90 transition-colors whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-full font-medium transition-colors whitespace-nowrap',
+        disabled
+          ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+          : 'bg-action-blue text-gray-800 hover:bg-action-blue/90',
         size === 'default' && 'w-full sm:w-auto px-8 py-3 min-h-[44px]',
         size === 'sm' && 'w-full sm:w-auto px-4 py-2 text-sm min-h-[36px]',
         className
       )}
     >
-      В корзину
+      {disabled ? disabledLabel ?? 'Товар закончился' : 'В корзину'}
     </button>
   )
 }

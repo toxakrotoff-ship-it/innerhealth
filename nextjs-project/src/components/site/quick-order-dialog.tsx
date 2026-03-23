@@ -6,9 +6,10 @@ import { ModalLayer } from '@/components/ui/modal-layer'
 interface QuickOrderDialogProps {
   productId: string
   productTitle: string
+  disabled?: boolean
 }
 
-export function QuickOrderDialog({ productId, productTitle }: QuickOrderDialogProps) {
+export function QuickOrderDialog({ productId, productTitle, disabled = false }: QuickOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -54,7 +55,8 @@ export function QuickOrderDialog({ productId, productTitle }: QuickOrderDialogPr
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 transition-colors px-5 py-3 min-h-[44px]"
+        disabled={disabled}
+        className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium transition-colors px-5 py-3 min-h-[44px] disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed hover:bg-gray-50"
       >
         Купить в 1 клик
       </button>

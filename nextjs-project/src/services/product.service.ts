@@ -50,10 +50,12 @@ export const productCardSelect = {
   sku: true,
   price: true,
   priceOld: true,
+  quantity: true,
   photo: true,
   slug: true,
   isPromoEligible: true,
   discountPrice: true,
+  isPreorderEnabled: true,
 } as const;
 
 export interface CatalogQueryOptions {
@@ -238,6 +240,8 @@ export async function getProductQuickViewSummary(productId: string) {
       description: true,
       isPromoEligible: true,
       discountPrice: true,
+      quantity: true,
+      isPreorderEnabled: true,
     },
   });
 }
@@ -305,6 +309,8 @@ export async function getProductsForCart(productIds: string[]) {
       slug: true,
       isPromoEligible: true,
       discountPrice: true,
+      quantity: true,
+      isPreorderEnabled: true,
     },
   });
 }

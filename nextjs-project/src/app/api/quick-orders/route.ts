@@ -72,6 +72,32 @@ export async function POST(request: Request) {
     }
 
     const result = parsed.data
+    const product = await quickOrderService.getQuickOrderProductAvailability(result.productId)
+    if (!product || product.isDraft) {
+      return NextResponse.json(
+        { error: 'Товар недоступен для заказа' },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
+    }
+    const isOutOfStock = product.quantity != null && product.quantity <= 0
+    const canPreorder = product.isPreorderEnabled === true
+    if (isOutOfStock && !canPreorder) {
+      return NextResponse.json(
+        { error: 'Товар временно закончился и недоступен для заказа' },
+        {
+          status: 400,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
+    }
+
     await quickOrderService.createQuickOrder({
       productId: result.productId,
       quantity: result.quantity,

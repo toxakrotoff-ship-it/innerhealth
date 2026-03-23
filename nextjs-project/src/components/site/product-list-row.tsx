@@ -15,6 +15,8 @@ interface ProductListRowProps {
   slug?: string | null;
   isPromoEligible?: boolean;
   discountPrice?: number | null;
+  quantity?: number | null;
+  isPreorderEnabled?: boolean;
 }
 
 export function ProductListRow({
@@ -28,8 +30,11 @@ export function ProductListRow({
   slug,
   isPromoEligible = true,
   discountPrice = null,
+  quantity = null,
+  isPreorderEnabled = false,
 }: ProductListRowProps) {
   const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`;
+  const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled;
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 2xl:p-6 3xl:p-7">
@@ -77,6 +82,7 @@ export function ProductListRow({
               hasPromoPrice={priceOld != null && priceOld > price}
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
+              disabled={isUnavailable}
               size="sm"
             />
             <ProductQuickView
@@ -88,6 +94,8 @@ export function ProductListRow({
               slug={slug}
               isPromoEligible={isPromoEligible}
               discountPrice={discountPrice}
+              quantity={quantity}
+              isPreorderEnabled={isPreorderEnabled}
             />
             <CompareToggleButton productId={id} compact />
           </div>

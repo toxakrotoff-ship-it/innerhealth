@@ -1,0 +1,2 @@
+ALTER TABLE "Product"
+ADD COLUMN "isPreorderEnabled" BOOLEAN NOT NULL DEFAULT false;

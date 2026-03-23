@@ -132,6 +132,7 @@ export function buildProductJsonLd(params: {
     description: string | null
     price: number
     quantity: number | null | undefined
+    isPreorderEnabled?: boolean
     brand: string | null
     sku: string | null
   }
@@ -145,9 +146,11 @@ export function buildProductJsonLd(params: {
   const images = params.images.filter(Boolean)
 
   const availability =
-    params.product.quantity == null || params.product.quantity <= 0
-      ? 'https://schema.org/PreOrder'
-      : 'https://schema.org/InStock'
+    params.product.quantity == null
+      ? 'https://schema.org/InStock'
+      : params.product.quantity <= 0
+        ? (params.product.isPreorderEnabled ? 'https://schema.org/PreOrder' : 'https://schema.org/OutOfStock')
+        : 'https://schema.org/InStock'
 
   const jsonLd: ProductJsonLd = {
     '@context': 'https://schema.org',

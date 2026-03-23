@@ -15,6 +15,8 @@ interface WishlistProduct {
   slug: string | null
   isPromoEligible: boolean | null
   discountPrice: number | null
+  quantity: number | null
+  isPreorderEnabled: boolean
 }
 
 export function WishlistPageContent() {
@@ -72,6 +74,8 @@ export function WishlistPageContent() {
               slug={product.slug}
               isPromoEligible={product.isPromoEligible ?? true}
               discountPrice={product.discountPrice}
+              quantity={product.quantity}
+              isPreorderEnabled={product.isPreorderEnabled}
             />
           ))}
         </div>

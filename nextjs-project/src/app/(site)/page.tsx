@@ -214,6 +214,8 @@ export default async function HomePage() {
                     priceOld={newProducts[0].priceOld}
                     photo={newProducts[0].photo}
                     slug={newProducts[0].slug}
+                    quantity={newProducts[0].quantity}
+                    isPreorderEnabled={newProducts[0].isPreorderEnabled}
                     priority
                     blurDataURL={
                       'photos' in newProducts[0]
@@ -246,6 +248,8 @@ export default async function HomePage() {
                   priceOld={p.priceOld}
                   photo={p.photo}
                   slug={p.slug}
+                  quantity={p.quantity}
+                  isPreorderEnabled={p.isPreorderEnabled}
                   priority={index < 2}
                   blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                 />

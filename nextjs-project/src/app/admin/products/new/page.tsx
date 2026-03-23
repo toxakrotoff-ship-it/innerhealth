@@ -67,6 +67,7 @@ interface Product {
   tab4Title: string | null;
   isDraft: boolean;
   isPromoEligible: boolean;
+  isPreorderEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   categoryIds?: string[];
@@ -128,6 +129,7 @@ export default function NewProductPage() {
     tab4Title: null,
     isDraft: false,
     isPromoEligible: true,
+    isPreorderEnabled: false,
     categoryIds: [],
     photos: []
   });
@@ -149,6 +151,7 @@ export default function NewProductPage() {
       hasNumber(p.price) ||
       (p.categoryIds?.length ?? 0) > 0 ||
       p.isPromoEligible ||
+      p.isPreorderEnabled ||
       hasString(p.brand) ||
       hasString(p.sku) ||
       hasString(p.mark) ||
@@ -534,6 +537,15 @@ export default function NewProductPage() {
         </div>
 
         <div className="flex items-center gap-6">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"
+              checked={product.isPreorderEnabled}
+              onChange={(e) => handleChange('isPreorderEnabled', e.target.checked)}
+            />
+            <span className="text-sm text-gray-700">Разрешить предзаказ при отсутствии товара</span>
+          </label>
           <label className="inline-flex items-center gap-2">
             <input
               type="checkbox"
