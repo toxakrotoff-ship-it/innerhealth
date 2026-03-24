@@ -14,6 +14,7 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { extractPlainTextFromPostContent } from '@/lib/tiptap-plain-text'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -44,7 +45,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SeoHubPage({ params }: PageProps) {
-  const { siteTitle } = await getServerBrandContext()
+  const { siteTitle, brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const { slug } = await params
   const hub = await seoHubService.getPublishedSeoHubBySlug(slug)
   if (!hub) notFound()
@@ -88,62 +90,86 @@ export default async function SeoHubPage({ params }: PageProps) {
   const currentPath = `/guides/${slug}`
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
-      <BreadcrumbJsonLd items={breadcrumbItems} currentPath={currentPath} />
-      <Breadcrumbs items={breadcrumbItems} />
-      <article className="mt-4">
-        <Heading1 className="text-text mb-4">{hub.title}</Heading1>
-        {hub.excerpt && <p className="text-gray-600 mb-6">{hub.excerpt}</p>}
-        <TipTapDocRenderer raw={hub.content} />
-        {products.length > 0 && (
-          <section className="mt-12">
-            <Heading2 className="text-text mb-6">Товары в подборке</Heading2>
-            <FluidGrid
-              cols={2}
-              colsTablet={3}
-              colsDesktop={4}
-              gap="6"
-              adaptiveGap={false}
-              className="gap-6"
-            >
-              {products.map((p, index) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  brand={p.brand}
-                  sku={p.sku}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  isPromoEligible={p.isPromoEligible}
-                  discountPrice={p.discountPrice}
-                  quantity={p.quantity}
-                  isPreorderEnabled={p.isPreorderEnabled}
-                  priority={index < 2}
-                  blurDataURL={getFirstPhotoBlurDataURL(p.photos)}
-                />
-              ))}
-            </FluidGrid>
-          </section>
-        )}
-        <footer className="mt-10 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-          <p className="font-medium text-text mb-1">Источник</p>
-          <p>
-            <span className="text-gray-600">Материал {siteTitle}: </span>
-            <a
-              href={toAbsoluteSiteUrl(currentPath)}
-              className="text-action-blue break-all underline-offset-2 hover:underline"
-            >
-              {toAbsoluteSiteUrl(currentPath)}
-            </a>
-          </p>
-        </footer>
-      </article>
-      <Link href="/informaciya" className="text-action-blue hover:underline text-sm mt-6 inline-block">
-        ← Ко всем статьям
-      </Link>
-    </AdaptiveContainer>
+    <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
+      <AdaptiveContainer
+        maxWidth="default"
+        className={`py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+      >
+        <BreadcrumbJsonLd items={breadcrumbItems} currentPath={currentPath} />
+        <Breadcrumbs items={breadcrumbItems} />
+        <article className="mt-4">
+          <Heading1 className={`mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{hub.title}</Heading1>
+          {hub.excerpt && (
+            <p className={`mb-6 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{hub.excerpt}</p>
+          )}
+          <TipTapDocRenderer raw={hub.content} />
+          {products.length > 0 && (
+            <section className="mt-12">
+              <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+                Товары в подборке
+              </Heading2>
+              <FluidGrid
+                cols={2}
+                colsTablet={3}
+                colsDesktop={4}
+                gap="6"
+                adaptiveGap={false}
+                className="gap-6"
+              >
+                {products.map((p, index) => (
+                  <ProductCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    brand={p.brand}
+                    sku={p.sku}
+                    price={p.price}
+                    priceOld={p.priceOld}
+                    photo={p.photo}
+                    slug={p.slug}
+                    isPromoEligible={p.isPromoEligible}
+                    discountPrice={p.discountPrice}
+                    quantity={p.quantity}
+                    isPreorderEnabled={p.isPreorderEnabled}
+                    priority={index < 2}
+                    blurDataURL={getFirstPhotoBlurDataURL(p.photos)}
+                  />
+                ))}
+              </FluidGrid>
+            </section>
+          )}
+          <footer
+            className={`mt-10 rounded-xl px-4 py-3 text-sm ${
+              isSprintTheme
+                ? 'border border-slate-700 bg-[#0F172A] text-slate-300'
+                : 'border border-gray-200 bg-gray-50 text-gray-700'
+            }`}
+          >
+            <p className={`font-medium mb-1 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>Источник</p>
+            <p>
+              <span className={isSprintTheme ? 'text-slate-400' : 'text-gray-600'}>
+                Материал {siteTitle}:{' '}
+              </span>
+              <a
+                href={toAbsoluteSiteUrl(currentPath)}
+                className={`break-all underline-offset-2 hover:underline ${
+                  isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
+                }`}
+              >
+                {toAbsoluteSiteUrl(currentPath)}
+              </a>
+            </p>
+          </footer>
+        </article>
+        <Link
+          href="/informaciya"
+          className={`text-sm mt-6 inline-block hover:underline ${
+            isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
+          }`}
+        >
+          ← Ко всем статьям
+        </Link>
+      </AdaptiveContainer>
+    </section>
   )
 }

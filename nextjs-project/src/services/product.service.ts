@@ -82,6 +82,7 @@ export interface CatalogQueryOptions {
   maxPrice?: number;
   promoOnly?: boolean;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc';
+  brandId?: BrandId | null;
 }
 
 function buildCatalogOrderBy(sort: CatalogQueryOptions['sort']): Prisma.ProductOrderByWithRelationInput[] {
@@ -93,33 +94,41 @@ function buildCatalogOrderBy(sort: CatalogQueryOptions['sort']): Prisma.ProductO
 
 function buildCatalogWhere(options: CatalogQueryOptions): Prisma.ProductWhereInput {
   const q = options.q?.trim();
-  const where: Prisma.ProductWhereInput = {
-    isDraft: false,
-  };
+  const andClauses: Prisma.ProductWhereInput[] = [];
+
+  if (isSprintPowerBrand(options.brandId)) {
+    andClauses.push({ brand: SPRINT_POWER_PRODUCT_BRAND });
+  } else {
+    andClauses.push({ OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] });
+  }
 
   if (q) {
-    where.OR = [
+    andClauses.push({
+      OR: [
       { title: { contains: q, mode: 'insensitive' } },
       { sku: { contains: q, mode: 'insensitive' } },
-    ];
+      ],
+    });
   }
 
   if (options.brands && options.brands.length > 0) {
-    where.brand = { in: options.brands };
+    andClauses.push({ brand: { in: options.brands } });
   }
 
   if (options.minPrice != null || options.maxPrice != null) {
-    where.price = {
+    andClauses.push({
+      price: {
       gte: options.minPrice ?? undefined,
       lte: options.maxPrice ?? undefined,
-    };
+      },
+    });
   }
 
   if (options.promoOnly) {
-    where.priceOld = { not: null };
+    andClauses.push({ priceOld: { not: null } });
   }
 
-  return where;
+  return { isDraft: false, AND: andClauses };
 }
 
 export async function getCatalogProducts(options: CatalogQueryOptions) {
@@ -149,7 +158,7 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
 
 /** Count products matching catalog filters (SEO robots / thin URLs without loading rows). */
 export async function countCatalogProducts(
-  options: Pick<CatalogQueryOptions, 'q' | 'brands' | 'minPrice' | 'maxPrice' | 'promoOnly'>
+  options: Pick<CatalogQueryOptions, 'q' | 'brands' | 'minPrice' | 'maxPrice' | 'promoOnly' | 'brandId'>
 ): Promise<number> {
   const where = buildCatalogWhere({
     page: 1,
@@ -280,11 +289,20 @@ export async function getProductsForCatalog(skip: number, take: number) {
 /** Get products for home "new products" block. Does not fetch photos Json. */
 export async function getProductsForHome(take: number) {
   const safeTake = Math.max(1, take);
+  return getProductsForHomeInBrandScope(safeTake, null);
+}
+
+export async function getProductsForHomeInBrandScope(take: number, brandId?: BrandId | null) {
+  const safeTake = Math.max(1, take);
+  const brandFilter: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
   const featured = await prisma.product.findMany({
     where: {
       slug: { not: null },
       isDraft: false,
       isFeaturedInNewArrivals: true,
+      ...brandFilter,
     },
     orderBy: { createdAt: 'desc' },
     take: safeTake,
@@ -298,6 +316,7 @@ export async function getProductsForHome(take: number) {
       slug: { not: null },
       isDraft: false,
       id: { notIn: featured.map((item) => item.id) },
+      ...brandFilter,
     },
     orderBy: { createdAt: 'desc' },
     take: safeTake - featured.length,

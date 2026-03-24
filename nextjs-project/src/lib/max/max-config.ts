@@ -1,6 +1,7 @@
 import 'server-only';
 import { getMaxBotSettings } from '@/services/settings.service';
 import { resolveMaxBotConfig } from '@/lib/max/max-config-resolver';
+import type { MaxBotConfig } from '@/lib/max/max-config-resolver';
 export type { MaxBotConfig } from '@/lib/max/max-config-resolver';
 
 export async function getMaxBotConfig(): Promise<MaxBotConfig> {

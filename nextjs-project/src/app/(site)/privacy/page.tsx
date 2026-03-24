@@ -1,11 +1,17 @@
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import type { Metadata } from 'next'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 
-export const metadata = {
-  title: 'Политика конфиденциальности | Inner Health',
-  description:
-    'Политика обработки персональных данных ООО "Органик". Порядок обработки и защиты персональных данных на сайте innerhealth.ru.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { brandId, siteTitle, siteUrl } = await getServerBrandContext()
+  const email = getBrandSiteConfig(brandId).contact.email
+  return {
+    title: `Политика конфиденциальности | ${siteTitle}`,
+    description: `Политика обработки персональных данных. Порядок обработки и защиты персональных данных на сайте ${siteUrl}. Контакты: ${email}.`,
+  }
 }
 
 const breadcrumbItems = [
@@ -15,7 +21,10 @@ const breadcrumbItems = [
 
 export const revalidate = 86400
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const { brandId, siteUrl } = await getServerBrandContext()
+  const email = getBrandSiteConfig(brandId).contact.email
+  const privacyUrl = `${siteUrl.replace(/\/+$/, '')}/privacy`
   return (
     <div className="bg-white min-h-screen">
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
@@ -29,7 +38,7 @@ export default function PrivacyPage() {
             Политика конфиденциальности
           </h1>
             <p className="mt-2 text-gray-500 text-sm">
-            Обработка персональных данных на сайте https://innerhealth.ru/
+            Обработка персональных данных на сайте {siteUrl}
           </p>
         </header>
 
@@ -57,8 +66,7 @@ export default function PrivacyPage() {
             <p>
               <strong>1.2.</strong> Настоящая политика Оператора в отношении
               обработки персональных данных (далее – Политика) применяется ко
-              всей информации, которую Оператор может получить о посетителях
-              веб-сайта https://innerhealth.ru/.
+              всей информации, которую Оператор может получить о посетителях веб-сайта {siteUrl}.
             </p>
           </section>
 
@@ -79,7 +87,7 @@ export default function PrivacyPage() {
                 ],
                 [
                   '2.3.',
-                  'Веб-сайт – совокупность графических и информационных материалов, а также программ для ЭВМ и баз данных, обеспечивающих их доступность в сети интернет по сетевому адресу https://innerhealth.ru/.',
+                  `Веб-сайт – совокупность графических и информационных материалов, а также программ для ЭВМ и баз данных, обеспечивающих их доступность в сети интернет по сетевому адресу ${siteUrl}.`,
                 ],
                 [
                   '2.4.',
@@ -99,7 +107,7 @@ export default function PrivacyPage() {
                 ],
                 [
                   '2.8.',
-                  'Персональные данные – любая информация, относящаяся прямо или косвенно к определенному или определяемому Пользователю веб-сайта https://innerhealth.ru/.',
+                  `Персональные данные – любая информация, относящаяся прямо или косвенно к определенному или определяемому Пользователю веб-сайта ${siteUrl}.`,
                 ],
                 [
                   '2.9.',
@@ -107,7 +115,7 @@ export default function PrivacyPage() {
                 ],
                 [
                   '2.10.',
-                  'Пользователь – любой посетитель веб-сайта https://innerhealth.ru/.',
+                  `Пользователь – любой посетитель веб-сайта ${siteUrl}.`,
                 ],
                 [
                   '2.11.',
@@ -384,7 +392,7 @@ export default function PrivacyPage() {
               </li>
               <li>
                 предоставление доступа Пользователю к сервисам, информации и/или
-                материалам, содержащимся на веб-сайте https://innerhealth.ru/.
+                материалам, содержащимся на веб-сайте {siteUrl}.
               </li>
             </ul>
             <p className="mb-2">
@@ -394,10 +402,10 @@ export default function PrivacyPage() {
               отказаться от получения информационных сообщений, направив
               Оператору письмо на адрес электронной почты{' '}
               <a
-                href="mailto:innerhealth@mail.ru"
+                href={`mailto:${email}`}
                 className="text-action-blue hover:underline"
               >
-                innerhealth@mail.ru
+                {email}
               </a>{' '}
               с пометкой «Отказ от уведомлений о новых продуктах и услугах и
               специальных предложениях».
@@ -442,7 +450,7 @@ export default function PrivacyPage() {
               <strong>8.2.</strong> Оператор обрабатывает персональные данные
               Пользователя только в случае их заполнения и/или отправки
               Пользователем самостоятельно через специальные формы, расположенные
-              на сайте https://innerhealth.ru/ или направленные Оператору
+              на сайте {siteUrl} или направленные Оператору
               посредством электронной почты. Заполняя соответствующие формы и/или
               отправляя свои персональные данные Оператору, Пользователь выражает
               свое согласие с данной Политикой.
@@ -512,10 +520,10 @@ export default function PrivacyPage() {
               направления Оператору уведомление на адрес электронной почты
               Оператора{' '}
               <a
-                href="mailto:innerhealth@mail.ru"
+                href={`mailto:${email}`}
                 className="text-action-blue hover:underline"
               >
-                innerhealth@mail.ru
+                {email}
               </a>{' '}
               с пометкой «Актуализация персональных данных».
             </p>
@@ -528,10 +536,10 @@ export default function PrivacyPage() {
               Оператору уведомление посредством электронной почты на электронный
               адрес Оператора{' '}
               <a
-                href="mailto:innerhealth@mail.ru"
+                href={`mailto:${email}`}
                 className="text-action-blue hover:underline"
               >
-                innerhealth@mail.ru
+                {email}
               </a>{' '}
               с пометкой «Отзыв согласия на обработку персональных данных».
             </p>
@@ -644,10 +652,10 @@ export default function PrivacyPage() {
               персональных данных, обратившись к Оператору с помощью электронной
               почты{' '}
               <a
-                href="mailto:innerhealth@mail.ru"
+                href={`mailto:${email}`}
                 className="text-action-blue hover:underline"
               >
-                innerhealth@mail.ru
+                {email}
               </a>
               .
             </p>
@@ -660,12 +668,12 @@ export default function PrivacyPage() {
               <strong>14.3.</strong> Актуальная версия Политики в свободном
               доступе расположена в сети Интернет по адресу{' '}
               <a
-                href="https://innerhealth.ru/privacy"
+                href={privacyUrl}
                 className="text-action-blue hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                https://innerhealth.ru/privacy
+                {privacyUrl}
               </a>
               .
             </p>

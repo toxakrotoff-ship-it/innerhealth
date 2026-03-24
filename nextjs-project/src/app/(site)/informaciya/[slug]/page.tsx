@@ -14,13 +14,14 @@ import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
 import { ArticleSourceFooter } from '@/components/site/article-source-footer'
 import { getPostPath, getPostPathByType } from '@/lib/post-url'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand, postBelongsToBrandScope } from '@/lib/brand/brand-scope'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { siteTitle, siteUrl } = await getServerBrandContext()
+  const { siteTitle, siteUrl, brandId } = await getServerBrandContext()
   const { slug } = await params
   const post = await prisma.post.findUnique({
     where: { slug, published: true },
@@ -34,6 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
   })
   if (!post) return {}
+  if (!postBelongsToBrandScope(slug, brandId)) return {}
 
   const description =
     post.excerpt?.trim() ||
@@ -70,13 +72,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function InformaciyaPostPage({ params }: PageProps) {
-  const { siteUrl } = await getServerBrandContext()
+  const { siteUrl, brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const { slug } = await params
   const post = await prisma.post.findUnique({
     where: { slug, published: true },
   })
 
   if (!post) notFound()
+  if (!postBelongsToBrandScope(slug, brandId)) notFound()
   if (post.type === 'news') redirect(getPostPathByType('news', post.slug))
 
   const settings = await getSettingsMap()
@@ -111,23 +115,40 @@ export default async function InformaciyaPostPage({ params }: PageProps) {
   const currentPath = postPath
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
+    <AdaptiveContainer
+      maxWidth="default"
+      className={`py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+    >
       <div className="mx-auto max-w-3xl">
         <BreadcrumbJsonLd items={breadcrumbItems} currentPath={currentPath} />
         <Breadcrumbs items={breadcrumbItems} />
-        <article id="geo-article-root" className="bg-white rounded-2xl border border-gray-200 p-8 mt-4">
-          <h1 id="geo-article-title" className="text-2xl font-bold text-text mb-4">
+        <article
+          id="geo-article-root"
+          className={`rounded-2xl p-8 mt-4 ${
+            isSprintTheme ? 'bg-[#0F172A] border border-slate-700' : 'bg-white border border-gray-200'
+          }`}
+        >
+          <h1
+            id="geo-article-title"
+            className={`text-2xl font-bold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
+          >
             {post.title}
           </h1>
-          <p className="text-xs text-gray-500 mb-4">
+          <p className={`text-xs mb-4 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>
             Опубликовано: {post.createdAt.toLocaleDateString('ru-RU')}
             {post.updatedAt.getTime() !== post.createdAt.getTime() && (
               <> · Обновлено: {post.updatedAt.toLocaleDateString('ru-RU')}</>
             )}
           </p>
-          {post.excerpt && <p className="text-gray-600 mb-4">{post.excerpt}</p>}
+          {post.excerpt && (
+            <p className={`mb-4 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{post.excerpt}</p>
+          )}
           {post.previewImage && (
-            <div className="aspect-video rounded-lg bg-gray-100 mb-6 overflow-hidden relative">
+            <div
+              className={`aspect-video rounded-lg mb-6 overflow-hidden relative ${
+                isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
+              }`}
+            >
               <Image
                 src={post.previewImage}
                 alt={post.title}
@@ -146,7 +167,12 @@ export default async function InformaciyaPostPage({ params }: PageProps) {
             dangerouslySetInnerHTML={{ __html: JSON.stringify(geoStructuredData) }}
           />
         </article>
-        <Link href="/" className="text-action-blue hover:underline text-sm mt-6 inline-block">
+        <Link
+          href="/"
+          className={`text-sm mt-6 inline-block hover:underline ${
+            isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
+          }`}
+        >
           ← На главную
         </Link>
       </div>

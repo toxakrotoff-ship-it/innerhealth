@@ -3,6 +3,7 @@ import type { BrandId } from '@/lib/brand/brand';
 export const SPRINT_POWER_PRODUCT_BRAND = 'sprint-power';
 export const SPRINT_POWER_PROMO_PREFIX = 'SP-';
 export const SPRINT_POWER_CATEGORY_SLUG_PREFIX = 'sp-';
+export const SPRINT_POWER_POST_SLUG_PREFIX = 'sp-';
 
 export function isSprintPowerBrand(brandId: BrandId | null | undefined): boolean {
   return brandId === 'sprint-power';
@@ -52,6 +53,14 @@ export function categoryBelongsToBrandScope(
 ): boolean {
   if (isSprintPowerBrand(brandId)) return slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX);
   return !slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX);
+}
+
+export function postBelongsToBrandScope(
+  slug: string,
+  brandId: BrandId | null | undefined
+): boolean {
+  if (isSprintPowerBrand(brandId)) return slug.startsWith(SPRINT_POWER_POST_SLUG_PREFIX);
+  return !slug.startsWith(SPRINT_POWER_POST_SLUG_PREFIX);
 }
 
 export function normalizeCategorySlugForScope(

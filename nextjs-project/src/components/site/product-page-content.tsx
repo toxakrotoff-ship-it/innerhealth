@@ -54,6 +54,7 @@ interface ProductPageContentProps {
     quantity?: number | null
     isPreorderEnabled?: boolean
   }>
+  isSprintTheme?: boolean
 }
 
 interface StockBadgeState {
@@ -106,6 +107,7 @@ export function ProductPageContent({
   relatedProducts,
   breadcrumbItems,
   relatedProductsCategoryTitle,
+  isSprintTheme = false,
 }: ProductPageContentProps) {
   const isOutOfStock = product.quantity != null && product.quantity <= 0
   const isPreorderEnabled = product.isPreorderEnabled === true
@@ -122,7 +124,10 @@ export function ProductPageContent({
     ]
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-6 sm:py-10">
+    <AdaptiveContainer
+      maxWidth="default"
+      className={`py-6 sm:py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+    >
       <Breadcrumbs items={crumbs} />
       <RecentlyViewedTracker productId={product.id} />
       <FluidGrid
@@ -143,7 +148,7 @@ export function ProductPageContent({
         <div>
           <Heading1>{product.title}</Heading1>
           {product.brand && (
-            <p className="mt-2 text-gray-600">{product.brand}</p>
+            <p className={`mt-2 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{product.brand}</p>
           )}
           <div className="mt-3">
             <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${stock.className}`}>
@@ -151,11 +156,11 @@ export function ProductPageContent({
             </span>
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <span className="text-2xl font-semibold text-text">
+            <span className={`text-2xl font-semibold ${isSprintTheme ? 'text-white' : 'text-text'}`}>
               {product.price.toLocaleString('ru-RU')} ₽
             </span>
             {product.priceOld != null && product.priceOld > product.price && (
-              <span className="text-lg text-gray-500 line-through">
+              <span className={`text-lg line-through ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>
                 {product.priceOld.toLocaleString('ru-RU')} ₽
               </span>
             )}
@@ -186,7 +191,9 @@ export function ProductPageContent({
 
       {product.text && (
         <ScalableSpacing size="lg">
-          <section className="border-t border-gray-200 dark:border-gray-700 pt-8">
+          <section
+            className={`pt-8 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200 dark:border-gray-700'}`}
+          >
             <ProductLongTextBlock text={product.text} />
           </section>
         </ScalableSpacing>
@@ -202,7 +209,7 @@ export function ProductPageContent({
         <ScalableSpacing size="lg">
           <section className={tabs.length > 0 ? 'pt-6 sm:pt-8' : 'border-t border-gray-200 pt-6 sm:pt-8'}>
             <Heading2 className="mb-1">Из той же категории</Heading2>
-            <p className="mb-4 max-w-2xl text-sm text-gray-600">
+            <p className={`mb-4 max-w-2xl text-sm ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>
               Подборка похожих позиций из каталога — удобно сравнить состав и цену.
             </p>
             {relatedProductsCategoryTitle ? (

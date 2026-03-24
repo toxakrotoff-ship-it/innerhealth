@@ -11,6 +11,7 @@ import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 
 export const revalidate = 300
 
@@ -49,11 +50,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: true,
       photo: true,
       photos: true,
+      brand: true,
     },
   })
   if (!product) {
     return {}
   }
+  if (!productBelongsToBrandScope(product.brand, brandId)) return {}
 
   const description = product.description
     ? stripHtmlToPlainText(product.description, 158)
@@ -86,6 +89,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProductPage({ params }: PageProps) {
+  const { brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const { slug } = await params
   const product = await prisma.product.findUnique({
     where: { slug },
@@ -93,6 +98,7 @@ export default async function ProductPage({ params }: PageProps) {
   })
 
   if (!product) notFound()
+  if (!productBelongsToBrandScope(product.brand, brandId)) notFound()
 
   const sortedCategoryLinks = [...product.categories].sort((a, b) => {
     const ao = a.category.sortOrder ?? 0
@@ -135,7 +141,7 @@ export default async function ProductPage({ params }: PageProps) {
   })
 
   return (
-    <>
+    <section className={isSprintTheme ? 'bg-[#060A14] py-6' : ''}>
       <BreadcrumbJsonLd items={breadcrumbItems} currentPath={productPath} />
       <ProductPageContent
         product={product}
@@ -144,6 +150,7 @@ export default async function ProductPage({ params }: PageProps) {
         relatedProducts={relatedProducts}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
         breadcrumbItems={breadcrumbItems}
+        isSprintTheme={isSprintTheme}
       />
       {productJsonLd && (
         <script
@@ -152,6 +159,6 @@ export default async function ProductPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
         />
       )}
-    </>
+    </section>
   )
 }

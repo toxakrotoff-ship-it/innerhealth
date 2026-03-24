@@ -20,6 +20,7 @@ import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveBrand } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -94,6 +95,7 @@ export default async function CategoryPage({ params }: PageProps) {
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const dbBrand = resolveDbBrand(activeBrand)
+  const isSprintTheme = isSprintPowerBrand(activeBrand)
   const category = await prisma.category.findUnique({
     where: { brand_slug: { brand: dbBrand, slug: categorySlug } },
     include: {
@@ -211,7 +213,7 @@ export default async function CategoryPage({ params }: PageProps) {
       )}
 
       {/* Хлебные крошки — нейтральный фон, без отдельной «полосы» highlight-blue */}
-      <section className="bg-white">
+      <section className={isSprintTheme ? 'bg-[#060A14]' : 'bg-white'}>
         <AdaptiveContainer maxWidth="default">
           <BreadcrumbJsonLd items={breadcrumbItems} currentPath={`/catalog/${categorySlug}`} />
           <Breadcrumbs
@@ -220,18 +222,30 @@ export default async function CategoryPage({ params }: PageProps) {
         </AdaptiveContainer>
       </section>
 
-      <section className="py-12 bg-white">
+      <section className={`py-12 ${isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}`}>
         <AdaptiveContainer maxWidth="default">
-          <h1 className="text-2xl font-bold text-text mb-6">{category.title}</h1>
+          <h1 className={`text-2xl font-bold mb-6 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+            {category.title}
+          </h1>
           {category.children.length > 0 && (
-            <div className="mb-8 rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <h2 className="text-base font-semibold text-text mb-3">Подкатегории</h2>
+            <div
+              className={`mb-8 rounded-xl p-4 ${
+                isSprintTheme ? 'border border-slate-700 bg-[#0F172A]' : 'border border-gray-200 bg-gray-50'
+              }`}
+            >
+              <h2 className={`text-base font-semibold mb-3 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+                Подкатегории
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {category.children.map((child) => (
                   <Link
                     key={child.id}
                     href={`/catalog/${child.slug}`}
-                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm text-text hover:border-action-blue hover:text-action-blue transition-colors"
+                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      isSprintTheme
+                        ? 'border-slate-600 bg-[#0B1222] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        : 'border-gray-300 bg-white text-text hover:border-action-blue hover:text-action-blue'
+                    }`}
                   >
                     {child.title}
                   </Link>
@@ -261,10 +275,18 @@ export default async function CategoryPage({ params }: PageProps) {
                     return (
                       <div
                         key={promo.id}
-                        className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                        className={`block transition-shadow rounded-2xl ${
+                          isSprintTheme
+                            ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
+                            : 'hover:shadow-md hover:border-action-blue'
+                        }`}
                       >
                         <TiltCard>
-                          <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                          <div
+                            className={`relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden ${
+                              isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background'
+                            }`}
+                          >
                             {imageSrc && (
                               <>
                                 <Image
@@ -315,7 +337,9 @@ export default async function CategoryPage({ params }: PageProps) {
           )}
 
           {products.length === 0 ? (
-            <p className="text-gray-500">В этой категории пока нет товаров.</p>
+            <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
+              В этой категории пока нет товаров.
+            </p>
           ) : (
             <FluidGrid
               cols={2}
@@ -351,21 +375,21 @@ export default async function CategoryPage({ params }: PageProps) {
 
           {/* Описание раздела под каталогом */}
           {hasDescription && content && (
-            <div className="mt-12 pt-10 border-t border-gray-200">
+            <div className={`mt-12 pt-10 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200'}`}>
               {content.descriptionHeading && (
-                <h2 className="text-xl font-bold text-text mb-4">
+                <h2 className={`text-xl font-bold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
                   {content.descriptionHeading}
                 </h2>
               )}
               {content.bullets && content.bullets.length > 0 && (
-                <ul className="list-disc list-inside space-y-2 text-gray-700 mb-6">
+                <ul className={`list-disc list-inside space-y-2 mb-6 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
                   {content.bullets.map((bullet, i) => (
                     <li key={i}>{bullet}</li>
                   ))}
                 </ul>
               )}
               {content.paragraphs && content.paragraphs.length > 0 && (
-                <div className="space-y-3 text-gray-700">
+                <div className={`space-y-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
                   {content.paragraphs.map((paragraph, i) => (
                     <p key={i}>{paragraph}</p>
                   ))}

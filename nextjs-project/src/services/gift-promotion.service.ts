@@ -186,7 +186,7 @@ export async function getGiftPromotionsForAdmin(brandId: BrandId | null = null) 
 }
 
 export async function createGiftPromotionForAdmin(
-  data: Prisma.GiftPromotionCreateInput,
+  data: Prisma.GiftPromotionUncheckedCreateInput,
   brandId: BrandId | null = null
 ) {
   return prisma.giftPromotion.create({
@@ -208,7 +208,7 @@ export async function findGiftPromotionByIdForAdmin(
 
 export async function updateGiftPromotionForAdmin(
   id: string,
-  data: Prisma.GiftPromotionUpdateInput,
+  data: Prisma.GiftPromotionUncheckedUpdateInput,
   brandId: BrandId | null = null
 ) {
   const existing = await findGiftPromotionByIdForAdmin(id, brandId)

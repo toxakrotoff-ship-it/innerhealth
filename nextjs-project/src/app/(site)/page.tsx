@@ -114,11 +114,19 @@ function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBloc
   return blocks.find((block) => block.key === key) ?? null
 }
 
-async function getHomeData() {
+async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
+  const categoryScopeWhere =
+    activeBrand === 'sprint-power'
+      ? { slug: { startsWith: 'sp-' } }
+      : { slug: { not: { startsWith: 'sp-' } } }
+  const postScopeWhere: Prisma.PostWhereInput =
+    activeBrand === 'sprint-power'
+      ? { slug: { startsWith: 'sp-' } }
+      : { slug: { not: { startsWith: 'sp-' } } }
   const categories = await (async () => {
     try {
       const categoriesForBlock = await prisma.category.findMany({
-        where: { showInCategoriesBlock: true },
+        where: { showInCategoriesBlock: true, ...categoryScopeWhere },
         orderBy: { sortOrder: 'asc' },
         include: { _count: { select: { products: true } } },
       })
@@ -127,6 +135,7 @@ async function getHomeData() {
 
       // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
       return prisma.category.findMany({
+        where: categoryScopeWhere,
         orderBy: { sortOrder: 'asc' },
         include: { _count: { select: { products: true } } },
       })
@@ -137,24 +146,20 @@ async function getHomeData() {
 
   const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
     await Promise.allSettled([
-      productService.getProductsForHome(8),
+      productService.getProductsForHomeInBrandScope(8, activeBrand),
       prisma.post.findMany({
-        where: { published: true, type: 'news' } as Prisma.PostWhereInput,
+        where: { published: true, type: 'news', ...postScopeWhere } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
         select: { id: true, title: true, slug: true, previewImage: true },
       }),
       prisma.post.findMany({
-        where: { published: true, type: 'article' } as Prisma.PostWhereInput,
+        where: { published: true, type: 'article', ...postScopeWhere } as Prisma.PostWhereInput,
         orderBy: { createdAt: 'desc' },
         take: 3,
         select: { id: true, title: true, slug: true, previewImage: true },
       }),
-      prisma.review.findMany({
-        where: { status: 'APPROVED' },
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-      }),
+      reviewService.getApprovedReviews(activeBrand).then((items) => items.slice(0, 6)),
     ])
 
   const newProducts =
@@ -418,7 +423,7 @@ export default async function HomePage() {
     return <SprintPowerHome data={sprintHomeData} />
   }
 
-  const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
+  const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData(activeBrand)
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
     getResolvedBlocksForPage('home'),
     getResolvedBlocksForPage('catalog'),

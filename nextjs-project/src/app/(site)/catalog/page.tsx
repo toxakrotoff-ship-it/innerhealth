@@ -57,7 +57,7 @@ function getCatalogDescription(siteTitle: string): string {
 export async function generateMetadata({
   searchParams,
 }: CatalogPageProps): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
+  const { siteTitle, brandId } = await getServerBrandContext()
   const raw = await searchParams
   const p = parseCatalogSearchParams(raw)
   const canonicalPath = buildCatalogListPath({
@@ -76,6 +76,7 @@ export async function generateMetadata({
     minPrice: p.minPrice,
     maxPrice: p.maxPrice,
     promoOnly: p.promoOnly,
+    brandId,
   })
   const robots = getCatalogListingRobots({ parsed: p, matchingTotal })
   const titleBase = 'Каталог'
@@ -98,6 +99,7 @@ const PRODUCTS_PER_PAGE = 24
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const { brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const dbBrand = resolveDbBrand(brandId)
   const sp = await searchParams
   const {
@@ -131,6 +133,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       maxPrice,
       promoOnly,
       sort,
+      brandId,
     }),
   ])
 
@@ -176,13 +179,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   })
 
   return (
-    <AdaptiveContainer maxWidth="default" className="pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24">
+    <AdaptiveContainer
+      maxWidth="default"
+      className={`pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24 ${isSprintTheme ? 'text-slate-100' : ''}`}
+    >
       <BreadcrumbJsonLd items={breadcrumbItems} currentPath={catalogCurrentPath} />
       <Suspense fallback={null}>
         <CatalogZeroHitReporter query={q} hasProducts={products.length > 0} />
       </Suspense>
       <Breadcrumbs items={breadcrumbItems} />
-      <Heading1 className="mb-6 mt-0">
+      <Heading1 className={`mb-6 mt-0 ${isSprintTheme ? 'text-slate-100' : ''}`}>
         {page > 1 ? `Каталог — страница ${page}` : 'Каталог'}
       </Heading1>
       <CatalogControls
@@ -204,11 +210,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               <Link
                 key={cat.id}
                 href={`/catalog/${cat.slug}`}
-                className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                className={`block transition-shadow rounded-2xl ${
+                  isSprintTheme ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : 'hover:shadow-md hover:border-action-blue'
+                }`}
               >
                 <TiltCard>
                   <div
-                    className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
+                    className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
+                      !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
+                    }`}
                   >
                     {bgImage && (
                       <>
@@ -226,12 +236,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       </>
                     )}
                     <span
-                      className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                      className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${
+                        bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
+                      }`}
                     >
                       {cat.title}
                     </span>
                     <span
-                      className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                      className={`relative z-10 text-sm drop-shadow mt-1 ${
+                        bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                      }`}
                     >
                       {cat._count.products} товаров
                     </span>
@@ -244,12 +258,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       </ScalableSpacing>
 
       <ScalableSpacing size="lg">
-        <Heading2 className="mb-6">
+        <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : ''}`}>
           Все товары
         </Heading2>
       </ScalableSpacing>
       {products.length === 0 ? (
-        <p className="text-gray-500">Товары появятся после добавления в админке.</p>
+        <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
+          Товары появятся после добавления в админке.
+        </p>
       ) : (
         <>
           {view === 'grid' ? (
@@ -286,7 +302,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               ))}
             </FluidGrid>
           ) : (
-            <div className="space-y-3">
+            <div className={`space-y-3 ${isSprintTheme ? '**:border-slate-700' : ''}`}>
               {products.map((p) => (
                 <ProductListRow
                   key={p.id}
@@ -314,18 +330,26 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               {page > 1 && (
                 <Link
                   href={buildPageHref(page - 1)}
-                  className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
+                  className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
+                    isSprintTheme
+                      ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                      : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
+                  }`}
                 >
                   ← Назад
                 </Link>
               )}
-              <span className="px-4 py-2 text-gray-600 text-sm">
+              <span className={`px-4 py-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
                 Страница {page}
               </span>
               {hasNextPage && (
                 <Link
                   href={buildPageHref(page + 1)}
-                  className="px-4 py-2 rounded-full border border-gray-300 bg-white text-text font-medium hover:bg-gray-50 hover:border-action-blue transition-colors min-h-[44px] inline-flex items-center justify-center"
+                  className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
+                    isSprintTheme
+                      ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                      : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
+                  }`}
                 >
                   Вперёд →
                 </Link>

@@ -86,7 +86,9 @@ export async function getSettingsMap(
   const map: Record<string, string> = {}
   const missingKeys: Array<string> = []
 
-  for (const [logicalKey, storageKeyCandidates] of storageKeyCandidatesByLogicalKey.entries()) {
+  for (const [logicalKey, storageKeyCandidates] of Array.from(
+    storageKeyCandidatesByLogicalKey.entries()
+  )) {
     const cachedStorageKey = storageKeyCandidates.find((storageKey) => {
       const cached = settingsCacheByKey.get(storageKey)
       if (!cached || cached.expiresAt <= now) return false
@@ -118,7 +120,9 @@ export async function getSettingsMap(
       })
     }
 
-    for (const [logicalKey, storageKeyCandidates] of storageKeyCandidatesByLogicalKey.entries()) {
+    for (const [logicalKey, storageKeyCandidates] of Array.from(
+      storageKeyCandidatesByLogicalKey.entries()
+    )) {
       const resolvedValue = storageKeyCandidates
         .map((storageKey) => rowsByStorageKey.get(storageKey))
         .find((value) => value !== undefined)

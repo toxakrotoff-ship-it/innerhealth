@@ -1,11 +1,16 @@
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import type { Metadata } from 'next'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
-export const metadata = {
-  title: 'Публичная оферта | Inner Health',
-  description:
-    'Публичная оферта ИП Кудимов В.В. Договор розничной купли-продажи товаров дистанционным способом на сайте innerhealth.ru.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle, siteUrl } = await getServerBrandContext()
+  return {
+    title: `Публичная оферта | ${siteTitle}`,
+    description:
+      `Публичная оферта. Договор розничной купли-продажи товаров дистанционным способом на сайте ${siteUrl}.`,
+  }
 }
 
 const breadcrumbItems = [
@@ -13,12 +18,12 @@ const breadcrumbItems = [
   { label: 'Публичная оферта' },
 ]
 
-const PRIVACY_URL = 'https://www.innerhealth.ru/privacy'
-const SITE_URL = 'https://innerhealth.ru/'
-
 export const revalidate = 86400
 
-export default function PublichnayaOfertaPage() {
+export default async function PublichnayaOfertaPage() {
+  const { siteUrl } = await getServerBrandContext()
+  const normalizedSiteUrl = `${siteUrl.replace(/\/+$/, '')}/`
+  const privacyUrl = `${siteUrl.replace(/\/+$/, '')}/privacy`
   return (
     <div className="bg-white min-h-screen">
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
@@ -43,8 +48,8 @@ export default function PublichnayaOfertaPage() {
             </p>
             <p>
               Принимая условия настоящей оферты, Покупатель соглашается с тем, что он ознакомился с политикой персональных данных{' '}
-              <a href={PRIVACY_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">
-                {PRIVACY_URL}
+              <a href={privacyUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">
+                {privacyUrl}
               </a>.
             </p>
           </section>
@@ -56,11 +61,11 @@ export default function PublichnayaOfertaPage() {
             <ul className="space-y-3 list-none pl-0">
               <li className="flex gap-2">
                 <span className="font-semibold text-text shrink-0">1.1.</span>
-                <span><strong>Товар</strong> — объект купли-продажи (вещь), не изъятый и не ограниченный в гражданском обороте и представленный к продаже в Интернет-магазине <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>, посредством размещения в соответствующем разделе Интернет-магазина. Предметом купли-продажи могут быть продовольственные и непродовольственные Товары, отмеченные в Интернет-магазине <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a> как Товары со статусом «в наличии». Изображения продуктов, указанные на сайте, могут отличаться от изображений в действительности.</span>
+                <span><strong>Товар</strong> — объект купли-продажи (вещь), не изъятый и не ограниченный в гражданском обороте и представленный к продаже в Интернет-магазине <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>, посредством размещения в соответствующем разделе Интернет-магазина. Предметом купли-продажи могут быть продовольственные и непродовольственные Товары, отмеченные в Интернет-магазине <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a> как Товары со статусом «в наличии». Изображения продуктов, указанные на сайте, могут отличаться от изображений в действительности.</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-text shrink-0">1.2.</span>
-                <span><strong>Интернет-магазин</strong> — информационный ресурс в сети Интернет, принадлежащий Продавцу, расположенный по адресу: <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>.</span>
+                <span><strong>Интернет-магазин</strong> — информационный ресурс в сети Интернет, принадлежащий Продавцу, расположенный по адресу: <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>.</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-text shrink-0">1.3.</span>
@@ -80,7 +85,7 @@ export default function PublichnayaOfertaPage() {
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-text shrink-0">1.7.</span>
-                <span><strong>Личный кабинет</strong> – совокупность страниц сайта <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>, созданных в результате регистрации Покупателя и связанных с учетной записью Покупателя на сайте <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>, в котором Покупателю доступно взаимодействие с Продавцом на предложенных Продавцом условиях.</span>
+                <span><strong>Личный кабинет</strong> – совокупность страниц сайта <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>, созданных в результате регистрации Покупателя и связанных с учетной записью Покупателя на сайте <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>, в котором Покупателю доступно взаимодействие с Продавцом на предложенных Продавцом условиях.</span>
               </li>
               <li className="flex gap-2">
                 <span className="font-semibold text-text shrink-0">1.8.</span>
@@ -100,7 +105,7 @@ export default function PublichnayaOfertaPage() {
               <strong>2.2.</strong> К отношениям между Покупателем и Продавцом применяются положения ГК РФ, Закона РФ «О защите прав потребителей» от 07.02.1992 № 2300-1, Правила продажи товаров дистанционным способом, утверждённые Постановлением Правительства РФ № 612 от 27.09.2007 года и иные нормативные правовые акты.
             </p>
             <p className="mb-4">
-              <strong>2.3.</strong> Продавец сохраняет за собой право в одностороннем порядке вносить изменения в настоящие Условия с предварительной их публикацией на Сайте. Адрес действующей редакции Условий в сети Интернет: <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>.
+              <strong>2.3.</strong> Продавец сохраняет за собой право в одностороннем порядке вносить изменения в настоящие Условия с предварительной их публикацией на Сайте. Адрес действующей редакции Условий в сети Интернет: <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>.
             </p>
             <p>
               <strong>2.4.</strong> Использование ресурса Интернет-магазина для просмотра и выбора Товара, а также для оформления Заказа является для Покупателя безвозмездным.
@@ -112,7 +117,7 @@ export default function PublichnayaOfertaPage() {
               3. Порядок купли-продажи товаров
             </h2>
             <p className="mb-4">
-              <strong>3.1.</strong> Заказ Покупателя может быть оформлен на сайте Интернет-магазина <a href={SITE_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{SITE_URL}</a>.
+              <strong>3.1.</strong> Заказ Покупателя может быть оформлен на сайте Интернет-магазина <a href={normalizedSiteUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{normalizedSiteUrl}</a>.
             </p>
             <p className="mb-4">
               <strong>3.1.1.</strong> Покупатель оставляет Заказ через сайт. Покупатель подтверждает, что ознакомлен с Условиями продажи Товаров через Интернет-магазин и предоставляет Продавцу достоверную информацию о себе: имя, номер телефона, адрес доставки (не применяется при самовывозе), а также выбирает дату и время доставки (интервал) из предложенных или возможность самовывоза.
@@ -191,7 +196,7 @@ export default function PublichnayaOfertaPage() {
             <p className="mb-2"><strong>6.4.2.</strong> Передать Покупателю Товар в соответствии с выбранным и оформленным заказом и настоящими Условиями;</p>
             <p className="mb-2"><strong>6.4.3.</strong> Нести полную ответственность перед Покупателем за выполнение заказа до передачи Товара Покупателю;</p>
             <p className="mb-2"><strong>6.4.4.</strong> В максимально короткий срок информировать Покупателя о необходимости корректировки Заказа в случае отсутствия Товаров, заказанных Покупателем.</p>
-            <p className="mb-2"><strong>6.4.5.</strong> Соблюдать условия политики конфиденциальности, опубликованные на сайте: <a href={PRIVACY_URL} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{PRIVACY_URL}</a>.</p>
+            <p className="mb-2"><strong>6.4.5.</strong> Соблюдать условия политики конфиденциальности, опубликованные на сайте: <a href={privacyUrl} className="text-action-blue hover:underline" target="_blank" rel="noopener noreferrer">{privacyUrl}</a>.</p>
             <p><strong>6.4.6.</strong> Продавец гарантирует, что передаваемый Покупателю Товар надлежащего качества, не является бывавшим в употреблении и соответствует качественным требованиям, принятым в РФ.</p>
           </section>
 
