@@ -122,24 +122,32 @@ async function bootstrap(): Promise<void> {
   const bot = new Bot(config.token);
 
   bot.on('bot_started', (ctx) => {
-    const startPayload = typeof ctx.startPayload === 'string' ? ctx.startPayload : null;
+    const botStartedContext = ctx as {
+      startPayload?: unknown;
+      user?: { user_id?: string | number };
+      reply: (text: string) => Promise<unknown> | unknown;
+    };
+    const startPayload =
+      typeof botStartedContext.startPayload === 'string' ? botStartedContext.startPayload : null;
     if (startPayload) {
       const safeCode = startPayload.slice(0, MAX_START_CODE_LENGTH);
       if (!VALID_CODE_REGEX.test(safeCode)) {
-        return ctx.reply('Неверный формат кода. Используйте ссылку из админки.');
+        return botStartedContext.reply('Неверный формат кода. Используйте ссылку из админки.');
       }
-      const maxUserId = String(ctx.user?.user_id ?? '');
+      const maxUserId = String(botStartedContext.user?.user_id ?? '');
       if (!maxUserId) {
-        return ctx.reply('Не удалось определить ваш MAX user id. Попробуйте позже.');
+        return botStartedContext.reply('Не удалось определить ваш MAX user id. Попробуйте позже.');
       }
       return confirmLink(safeCode, maxUserId).then((result) => {
         if (result.success) {
-          return ctx.reply('✅ Вас подключили к уведомлениям. Доступны команды /status, /promo, /stats.');
+          return botStartedContext.reply(
+            '✅ Вас подключили к уведомлениям. Доступны команды /status, /promo, /stats.'
+          );
         }
-        return ctx.reply(result.error || 'Не удалось привязать. Попробуйте снова.');
+        return botStartedContext.reply(result.error || 'Не удалось привязать. Попробуйте снова.');
       });
     }
-    return ctx.reply('Используйте ссылку из админки, чтобы подключить уведомления.');
+    return botStartedContext.reply('Используйте ссылку из админки, чтобы подключить уведомления.');
   });
 
   bot.command('ping', (ctx) => ctx.reply('pong'));
