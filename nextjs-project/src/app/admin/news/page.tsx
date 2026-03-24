@@ -124,8 +124,43 @@ export default function NewsPage() {
             {activeTab === 'news' ? 'Новостей пока нет' : 'Статей пока нет'}
           </div>
         ) : (
-          <div className="card overflow-hidden">
-            <div className="table-responsive">
+          <>
+            <div className="md:hidden space-y-3">
+              {filtered.map((post) => (
+                <div key={post.id} className="card p-4">
+                  <p className="font-medium text-gray-900">{post.title}</p>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-sm text-gray-600">
+                      {new Date(post.createdAt).toLocaleDateString('ru-RU')}
+                    </p>
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        post.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {post.published ? 'Опубликовано' : 'Черновик'}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Link href={`/${base}/news/edit/${post.id}`} className="flex-1">
+                      <Button variant="secondary" className="w-full min-h-[40px]">
+                        Редактировать
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="destructive"
+                      className="min-h-[40px]"
+                      onClick={() => handleDeletePost(post.id)}
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block card overflow-hidden">
+              <div className="table-responsive">
               <table className="table table-horizontal">
                 <thead>
                   <tr>
@@ -173,8 +208,9 @@ export default function NewsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

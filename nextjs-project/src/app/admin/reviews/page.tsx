@@ -152,7 +152,102 @@ export default function AdminReviewsPage() {
           ))}
         </div>
 
-        <div className="card overflow-hidden">
+        <div className="md:hidden space-y-3">
+          {filtered.length === 0 ? (
+            <div className="card p-8 text-center text-gray-500">
+              Нет отзывов
+            </div>
+          ) : (
+            filtered.map((review) => {
+              const busy = actingId === review.id;
+              return (
+                <div key={review.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-gray-900">{review.authorName}</p>
+                      <p className="text-sm text-gray-600 mt-0.5">{formatDate(review.createdAt)}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        review.status === 'PENDING'
+                          ? 'bg-amber-100 text-amber-800'
+                          : review.status === 'APPROVED'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {STATUS_LABELS[review.status]}
+                    </span>
+                  </div>
+
+                  {review.socialLink && (
+                    <a
+                      href={review.socialLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 block text-action-blue hover:underline text-xs break-all"
+                    >
+                      {review.socialLink}
+                    </a>
+                  )}
+
+                  <p className="mt-2 text-sm text-gray-700">{truncate(review.text, 220)}</p>
+
+                  {review.imageUrl && (
+                    <a
+                      href={review.imageUrl.startsWith('/') ? review.imageUrl : `/${review.imageUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 block w-14 h-14 rounded overflow-hidden border border-gray-200 bg-gray-50"
+                    >
+                      <img
+                        src={review.imageUrl.startsWith('/') ? review.imageUrl : `/${review.imageUrl}`}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </a>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {review.status !== 'APPROVED' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setStatus(review.id, 'approved')}
+                        className="min-h-[40px]"
+                      >
+                        Опубликовать
+                      </Button>
+                    )}
+                    {review.status !== 'REJECTED' && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => setStatus(review.id, 'rejected')}
+                        className="min-h-[40px]"
+                      >
+                        Отклонить
+                      </Button>
+                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => deleteReview(review.id)}
+                      className="min-h-[40px] text-red-600 hover:text-red-700"
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block card overflow-hidden">
           <div className="table-responsive">
             <table className="table table-horizontal">
               <thead>

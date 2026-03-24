@@ -383,20 +383,20 @@ export default async function AdminPage({
 
   return (
     <div className="admin-container">
-      <div className="admin-content space-y-6">
-        <div className="flex items-center justify-between gap-3">
+      <div className="admin-content space-y-5 sm:space-y-6">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <h1 className="text-3xl font-bold text-gray-900">Статистика</h1>
           <AdminStatsRefreshButton />
         </div>
 
         <div className="card">
           <h2 className="text-sm font-semibold text-gray-700 mb-3">Период</h2>
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600">Быстрый выбор:</span>
               <AdminStatsPeriodPresets adminBasePath={adminBasePath} period={period} />
             </div>
-            <form method="get" className="flex flex-wrap items-end gap-3 border-l border-gray-200 pl-4">
+            <form method="get" className="flex w-full flex-wrap items-end gap-3 border-t border-gray-200 pt-4 lg:w-auto lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
               <AdminDatePicker
                 name="from"
                 id="admin-stats-from"
@@ -431,27 +431,27 @@ export default async function AdminPage({
             </form>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 md:grid-cols-4">
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">Просмотры страниц (суммарно)</p>
+            <p className="text-sm text-gray-500 mb-1.5">Просмотры страниц (суммарно)</p>
             <p className="text-2xl font-semibold">
               {trafficTotal._sum.pageViews ?? 0}
             </p>
           </div>
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">Сессии (условно)</p>
+            <p className="text-sm text-gray-500 mb-1.5">Сессии (условно)</p>
             <p className="text-2xl font-semibold">
               {trafficTotal._sum.sessions ?? 0}
             </p>
           </div>
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">Клики (суммарно)</p>
+            <p className="text-sm text-gray-500 mb-1.5">Клики (суммарно)</p>
             <p className="text-2xl font-semibold">
               {trafficTotal._sum.clicks ?? 0}
             </p>
           </div>
           <div className="card">
-            <p className="text-sm text-gray-500 mb-1">Заказы (всего создано)</p>
+            <p className="text-sm text-gray-500 mb-1.5">Заказы (всего создано)</p>
             <p className="text-2xl font-semibold">
               {ordersCount}
             </p>
@@ -461,7 +461,34 @@ export default async function AdminPage({
         <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
           <div className="card">
             <h2 className="text-lg font-semibold mb-3">Топ страниц по просмотрам</h2>
-            <div className="overflow-x-auto">
+            <div className="space-y-3.5 md:hidden">
+              {pageStats.slice(0, 20).map((row) => {
+                const ctr = row.pageViews > 0 ? Math.round((row.clicks / row.pageViews) * 100) : null
+                return (
+                  <div key={row.path} className="rounded-lg border border-gray-200 bg-white p-4">
+                    <p className="text-xs text-gray-500 break-all">{row.path}</p>
+                    <div className="mt-2.5 flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Просмотры</span>
+                      <span className="font-semibold text-gray-900">{row.pageViews}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Клики</span>
+                      <span className="font-semibold text-gray-900">{row.clicks}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between text-sm">
+                      <span className="text-gray-600">CTR</span>
+                      <span className="font-semibold text-gray-900">{ctr != null ? `${ctr}%` : '—'}</span>
+                    </div>
+                  </div>
+                )
+              })}
+              {pageStats.length === 0 && (
+                <div className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-sm text-gray-500 text-center">
+                  Пока нет данных по страницам за выбранный период.
+                </div>
+              )}
+            </div>
+            <div className="hidden overflow-x-auto md:block">
               <table className="table table-horizontal min-w-[500px]">
                 <thead>
                   <tr>
@@ -584,7 +611,36 @@ export default async function AdminPage({
 
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Воронка за последние дни</h2>
-          <div className="overflow-x-auto">
+          <div className="space-y-3.5 md:hidden">
+            {funnelTotal.map((row) => (
+              <div key={`${row.date.toISOString()}-${row.step}`} className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-gray-600">Дата</span>
+                  <span className="font-medium text-gray-900">{row.date.toISOString().slice(0, 10)}</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-gray-600">Шаг</span>
+                  <span className="font-medium text-gray-900 text-right">{getFunnelStepLabel(row.step)}</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-gray-600">Кол-во</span>
+                  <span className="font-semibold text-gray-900">{row.count}</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-gray-600">Конверсия</span>
+                  <span className="font-semibold text-gray-900">
+                    {row.conversionToNext != null ? `${Math.round(row.conversionToNext * 100)}%` : '—'}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {funnelTotal.length === 0 && (
+              <div className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-sm text-gray-500 text-center">
+                Данных пока нет. После появления событий и запуска агрегации здесь появится воронка.
+              </div>
+            )}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="table table-horizontal min-w-[500px]">
               <thead>
                 <tr>

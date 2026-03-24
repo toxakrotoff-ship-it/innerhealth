@@ -253,11 +253,11 @@ export default function AdminPartnerDetailPage() {
       <section className="card mt-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Расчёт дохода партнёра</h2>
         <p className="text-sm text-gray-500 mb-4">От какой базы считать процент дохода по промокодам для этого партнёра.</p>
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
+          <div className="w-full sm:w-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">Доход считать от</label>
             <select
-              className="form-input min-w-[280px]"
+              className="form-input w-full min-w-0 sm:min-w-[280px]"
               value={partnerIncomeBase}
               onChange={(e) => setPartnerIncomeBase(e.target.value as 'order_total' | 'discount_amount')}
             >
@@ -270,6 +270,7 @@ export default function AdminPartnerDetailPage() {
             type="button"
             onClick={handleSaveIncomeBase}
             disabled={savingIncomeBase}
+            className="min-h-[44px] w-full sm:w-auto"
           >
             {savingIncomeBase ? 'Сохранение…' : 'Сохранить'}
           </Button>
@@ -281,7 +282,89 @@ export default function AdminPartnerDetailPage() {
         {bindings.length === 0 ? (
           <p className="text-sm text-gray-500">Нет привязанных промокодов.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="md:hidden space-y-3">
+              {bindings.map((b) => {
+                const s = statsByPromoId[b.promoCodeId]
+                const isEditing = editId === b.id
+                return (
+                  <div key={b.id} className="rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-base font-semibold text-gray-900">{b.code}</p>
+                      {!isEditing && (
+                        <button
+                          type="button"
+                          className="text-red-600 text-sm hover:underline"
+                          onClick={() => handleUnbind(b.id)}
+                        >
+                          Отвязать
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      <span className="text-gray-600">Заказов</span>
+                      <span className="text-right text-gray-900">{s?.ordersCount ?? 0}</span>
+                      <span className="text-gray-600">Сумма выкупа</span>
+                      <span className="text-right text-gray-900">
+                        {s?.totalAmount != null
+                          ? new Intl.NumberFormat('ru-RU', {
+                              style: 'currency',
+                              currency: 'RUB',
+                              maximumFractionDigits: 0,
+                            }).format(s.totalAmount)
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-600 mb-1">% дохода</p>
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.5}
+                            className="form-input w-24 text-sm"
+                            value={editPercent}
+                            onChange={(e) => setEditPercent(Number(e.target.value))}
+                          />
+                          <button
+                            type="button"
+                            className="text-blue-600 text-sm"
+                            onClick={() => handleUpdatePercent(b.id, editPercent)}
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            type="button"
+                            className="text-gray-500 text-sm"
+                            onClick={() => setEditId(null)}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-900">{b.commissionPercent}%</span>
+                          <button
+                            type="button"
+                            className="text-blue-600 text-xs"
+                            onClick={() => {
+                              setEditId(b.id)
+                              setEditPercent(b.commissionPercent)
+                            }}
+                          >
+                            Изменить
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
             <table className="table table-horizontal min-w-[500px]">
               <thead>
                 <tr>
@@ -366,18 +449,19 @@ export default function AdminPartnerDetailPage() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </section>
 
       <section className="card mt-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Добавить промокод</h2>
         <p className="text-sm text-gray-500 mb-4">Выберите существующий промокод и укажите процент дохода партнёра.</p>
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-4">
+          <div className="w-full sm:w-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">Промокод</label>
             <select
-              className="form-input min-w-[180px]"
+              className="form-input w-full min-w-0 sm:min-w-[180px]"
               value={addPromoId}
               onChange={(e) => setAddPromoId(e.target.value)}
             >
@@ -389,14 +473,14 @@ export default function AdminPartnerDetailPage() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">% дохода</label>
             <input
               type="number"
               min={0}
               max={100}
               step={0.5}
-              className="form-input w-24"
+              className="form-input w-full sm:w-24"
               value={addPercent}
               onChange={(e) => setAddPercent(Number(e.target.value))}
             />
@@ -406,6 +490,7 @@ export default function AdminPartnerDetailPage() {
             type="button"
             onClick={handleAssign}
             disabled={!addPromoId}
+            className="min-h-[44px] w-full sm:w-auto"
           >
             Привязать
           </Button>

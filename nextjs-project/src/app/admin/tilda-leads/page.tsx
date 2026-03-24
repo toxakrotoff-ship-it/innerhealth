@@ -45,12 +45,32 @@ interface CartItem {
   sum?: number
 }
 
+interface OrderMeta {
+  amount?: string | null
+  prodAmount?: string | null
+  discount?: string | null
+  subtotal?: string | null
+  paymentId?: string | null
+  paymentStatus?: string | null
+  paymentMethod?: string | null
+  orderId?: string | null
+  orderCurrency?: string | null
+  deliveryName?: string | null
+}
+
+interface OrderMetaField {
+  label: string
+  value: string | null
+}
+
 /**
  * Пытается извлечь состав заказа из полей Input/Input_2 (часто там JSON от формы корзины Тильды).
  * Поддерживает массив объектов с полями title/name/productName, quantity/qty/amount, price/sum.
  */
 function parseOrderItems(lead: TildaLead): CartItem[] | null {
-  const raw = lead.input?.trim() || lead.input2?.trim()
+  const primaryRaw = lead.input?.trim()
+  const fallbackRaw = lead.input2?.trim()
+  const raw = primaryRaw || fallbackRaw
   if (!raw) return null
   try {
     const data = JSON.parse(raw)
@@ -62,8 +82,82 @@ function parseOrderItems(lead: TildaLead): CartItem[] | null {
     if (hasName && (hasPrice || hasQty)) return arr as CartItem[]
     return null
   } catch {
+    if (!primaryRaw) return null
+    return parseProductLineItems(primaryRaw)
+  }
+}
+
+function parseProductLineItems(raw: string): CartItem[] | null {
+  const parts = raw
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+
+  if (parts.length === 0) return null
+
+  const linePattern = /^(.*?)\s*-\s*(\d+)x(\d+(?:[.,]\d+)?)\s*=\s*(\d+(?:[.,]\d+)?)$/
+  const hasOrderPattern = parts.some((part) => linePattern.test(part))
+  if (!hasOrderPattern) return null
+
+  const items = parts.map((part) => {
+    const match = part.match(linePattern)
+    if (!match) return { title: part, quantity: 1, price: 0, sum: 0 }
+
+    const title = match[1]?.trim() ?? part
+    const quantity = Number(match[2] ?? 1)
+    const price = Number((match[3] ?? '0').replace(',', '.'))
+    const sum = Number((match[4] ?? '0').replace(',', '.'))
+    return { title, quantity, price, sum }
+  })
+
+  return items.length > 0 ? items : null
+}
+
+function parseOrderMeta(lead: TildaLead): OrderMeta | null {
+  const raw = lead.input2?.trim()
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    if (Array.isArray(parsed) || typeof parsed !== 'object' || parsed === null) return null
+
+    const meta: OrderMeta = {
+      amount: toStringOrNull(parsed.amount),
+      prodAmount: toStringOrNull(parsed.prodAmount),
+      discount: toStringOrNull(parsed.discount),
+      subtotal: toStringOrNull(parsed.subtotal),
+      paymentId: toStringOrNull(parsed.paymentId),
+      paymentStatus: toStringOrNull(parsed.paymentStatus),
+      paymentMethod: toStringOrNull(parsed.paymentMethod),
+      orderId: toStringOrNull(parsed.orderId),
+      orderCurrency: toStringOrNull(parsed.orderCurrency),
+      deliveryName: toStringOrNull(parsed.deliveryName),
+    }
+
+    const hasAny = Object.values(meta).some((value) => value && value.trim().length > 0)
+    return hasAny ? meta : null
+  } catch {
     return null
   }
+}
+
+function toStringOrNull(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function formatOrderMoney(value: string | null | undefined, currencyCode: string | null | undefined): string | null {
+  if (!value) return null
+  const normalized = value.replace(',', '.').trim()
+  if (normalized.length === 0) return null
+
+  const currency = (currencyCode || 'RUB').toUpperCase()
+  const numeric = Number(normalized)
+  const currencySymbol = currency === 'RUB' ? '₽' : currency
+
+  if (!Number.isFinite(numeric)) return `${value} ${currencySymbol}`
+  return `${numeric.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currencySymbol}`
 }
 
 function getItemTitle(item: CartItem): string {
@@ -95,8 +189,13 @@ export default function AdminTildaLeadsPage() {
   const [leads, setLeads] = useState<TildaLead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [importMessage, setImportMessage] = useState<string | null>(null)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   useEffect(() => {
     fetchLeads()
@@ -116,15 +215,71 @@ export default function AdminTildaLeadsPage() {
     }
   }
 
-  const filteredLeads = leads.filter(
-    (l) =>
-      (l.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (l.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (l.phone?.includes(searchTerm) ?? false) ||
-      (l.tildaTranId?.includes(searchTerm) ?? false) ||
-      (l.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (l.promoCode?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-  )
+  async function handleCsvImport(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!csvFile) {
+      setImportMessage('Выберите CSV-файл для импорта.')
+      return
+    }
+
+    try {
+      setIsImporting(true)
+      setImportMessage(null)
+      const formData = new FormData()
+      formData.append('file', csvFile)
+      const response = await fetch('/api/admin/tilda-leads', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result?.error || 'Не удалось импортировать CSV')
+      }
+
+      setImportMessage(
+        `Импорт завершён: обновлено/создано ${result.upserted}, пропущено ${result.skipped}, ошибок ${result.errors}.`
+      )
+      setCsvFile(null)
+      await fetchLeads()
+    } catch (importError) {
+      setImportMessage(
+        importError instanceof Error ? importError.message : 'Ошибка импорта CSV'
+      )
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const filteredLeads = leads.filter((lead) => {
+    const searchMatched =
+      !searchTerm ||
+      (lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (lead.phone?.includes(searchTerm) ?? false) ||
+      (lead.tildaTranId?.includes(searchTerm) ?? false) ||
+      (lead.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (lead.promoCode?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+
+    if (!searchMatched) return false
+
+    if (!dateFrom && !dateTo) return true
+
+    const leadDate = new Date(lead.tildaDate)
+    if (Number.isNaN(leadDate.getTime())) return false
+
+    if (dateFrom) {
+      const from = new Date(`${dateFrom}T00:00:00`)
+      if (leadDate < from) return false
+    }
+
+    if (dateTo) {
+      const to = new Date(`${dateTo}T23:59:59.999`)
+      if (leadDate > to) return false
+    }
+
+    return true
+  })
 
   if (loading) {
     return (
@@ -148,6 +303,52 @@ export default function AdminTildaLeadsPage() {
 
   function LeadDetail({ lead }: { lead: TildaLead }) {
     const orderItems = parseOrderItems(lead)
+    const orderMeta = parseOrderMeta(lead)
+    const orderMetaFields: OrderMetaField[] = orderMeta
+      ? [
+          {
+            label: 'Сумма заказа',
+            value: formatOrderMoney(orderMeta.amount, orderMeta.orderCurrency),
+          },
+          {
+            label: 'Сумма товаров',
+            value: formatOrderMoney(orderMeta.prodAmount, orderMeta.orderCurrency),
+          },
+          {
+            label: 'Скидка',
+            value: formatOrderMoney(orderMeta.discount, orderMeta.orderCurrency),
+          },
+          {
+            label: 'Subtotal',
+            value: formatOrderMoney(orderMeta.subtotal, orderMeta.orderCurrency),
+          },
+          {
+            label: 'Статус оплаты',
+            value: orderMeta.paymentStatus ?? null,
+          },
+          {
+            label: 'Способ оплаты',
+            value: orderMeta.paymentMethod ?? null,
+          },
+          {
+            label: 'Order ID',
+            value: orderMeta.orderId ?? null,
+          },
+          {
+            label: 'Payment ID',
+            value: orderMeta.paymentId ?? null,
+          },
+          {
+            label: 'Валюта',
+            value: orderMeta.orderCurrency ?? null,
+          },
+          {
+            label: 'Служба доставки',
+            value: orderMeta.deliveryName ?? null,
+          },
+        ].filter((field) => field.value && field.value.trim().length > 0)
+      : []
+
     return (
       <div className="grid gap-4 sm:grid-cols-2 text-sm">
         <div className="space-y-2">
@@ -209,6 +410,18 @@ export default function AdminTildaLeadsPage() {
               <p className="text-gray-600">{lead.delivery}</p>
             </div>
           )}
+          {orderMetaFields.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-1">Параметры заказа</h3>
+              <div className="grid grid-cols-1 gap-1 text-gray-600 sm:grid-cols-2">
+                {orderMetaFields.map((field) => (
+                  <p key={field.label}>
+                    {field.label}: {field.value}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           {!orderItems?.length && lead.input && (
@@ -217,7 +430,7 @@ export default function AdminTildaLeadsPage() {
               <p className="text-gray-600 break-all whitespace-pre-wrap text-xs">{lead.input}</p>
             </div>
           )}
-          {!orderItems?.length && lead.input2 && (
+          {!orderItems?.length && lead.input2 && !orderMeta && (
             <div>
               <h3 className="font-semibold text-gray-700 mb-1">Input_2 (сырые данные)</h3>
               <p className="text-gray-600 break-all whitespace-pre-wrap text-xs">{lead.input2}</p>
@@ -252,6 +465,34 @@ export default function AdminTildaLeadsPage() {
         </p>
 
         <div className="card mb-6">
+          <form className="mb-4 space-y-3" onSubmit={handleCsvImport}>
+            <label className="block text-sm font-medium text-gray-700">Импорт CSV</label>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="form-input w-full md:max-w-md"
+                onChange={(event) => {
+                  setCsvFile(event.target.files?.[0] ?? null)
+                  setImportMessage(null)
+                }}
+              />
+              <button
+                type="submit"
+                disabled={isImporting}
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isImporting ? 'Импорт...' : 'Загрузить CSV'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              При совпадении данных карточка обновляется, дубликаты не создаются.
+            </p>
+            {importMessage && (
+              <p className="text-sm text-gray-700">{importMessage}</p>
+            )}
+          </form>
+
           <label className="block text-sm font-medium text-gray-700 mb-1">Поиск</label>
           <input
             type="text"
@@ -260,6 +501,26 @@ export default function AdminTildaLeadsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Дата с</label>
+              <input
+                type="date"
+                className="form-input w-full"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Дата по</label>
+              <input
+                type="date"
+                className="form-input w-full"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
         {filteredLeads.length === 0 ? (

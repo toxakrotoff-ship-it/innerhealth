@@ -35,7 +35,7 @@ export function AdminStatsPeriodPresets({ adminBasePath, period }: AdminStatsPer
   return (
     <div
       className={cn(
-        'inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 transition-opacity duration-200',
+        'inline-flex w-full flex-wrap rounded-xl border border-gray-200 bg-gray-50 p-1 sm:w-auto transition-opacity duration-200',
         isPending && 'pointer-events-none opacity-60'
       )}
       aria-busy={isPending}
@@ -55,7 +55,7 @@ export function AdminStatsPeriodPresets({ adminBasePath, period }: AdminStatsPer
               })
             }}
             className={cn(
-              'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+              'rounded-lg px-3 py-2.5 text-sm font-medium transition-colors min-h-[44px] touch-manipulation',
               isActive
                 ? 'border border-gray-200 bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'

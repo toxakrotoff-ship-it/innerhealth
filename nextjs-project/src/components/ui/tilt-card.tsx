@@ -24,7 +24,7 @@ export function TiltCard({ children, className }: TiltCardProps) {
     <div
       ref={ref}
       className={cn(
-        'group relative w-full min-h-[180px] [perspective:600px]',
+        'group relative w-full min-h-[180px] perspective-[600px]',
         className
       )}
       style={
@@ -34,6 +34,7 @@ export function TiltCard({ children, className }: TiltCardProps) {
         } as React.CSSProperties
       }
       onPointerMove={(e) => {
+        if (e.pointerType !== 'mouse') return
         const rect = e.currentTarget.getBoundingClientRect()
         const x = (e.clientX - rect.left) / rect.width
         const y = (e.clientY - rect.top) / rect.height
@@ -42,7 +43,8 @@ export function TiltCard({ children, className }: TiltCardProps) {
         state.current.rotateY = (x - 0.5) * factor
         updateStyles()
       }}
-      onPointerLeave={() => {
+      onPointerLeave={(e) => {
+        if (e.pointerType !== 'mouse') return
         state.current.rotateX = 0
         state.current.rotateY = 0
         updateStyles()
@@ -57,7 +59,7 @@ export function TiltCard({ children, className }: TiltCardProps) {
         {children}
         {/* 30% dark at rest; removed on hover */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/30 transition-opacity duration-300 group-hover:opacity-0"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/12 md:bg-black/30 transition-opacity duration-300 group-hover:opacity-0"
           aria-hidden
         />
       </div>

@@ -61,7 +61,7 @@ export default async function ContactsPage() {
         <Breadcrumbs items={breadcrumbItems} />
       </AdaptiveContainer>
 
-      <AdaptiveContainer maxWidth="default">
+      <AdaptiveContainer maxWidth="default" className="pb-16 sm:pb-20">
         <ResponsiveText as="h1" variant="3xl" weight="bold" className="mb-8">
           Контакты
         </ResponsiveText>

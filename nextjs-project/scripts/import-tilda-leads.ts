@@ -13,6 +13,12 @@ import dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
+import {
+  detectCsvDelimiter,
+  parseCsvLineWithDelimiter,
+  parseTildaLeadRow,
+  resolveTildaLeadColumnIndexes,
+} from '../src/lib/tilda-leads-import'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') })
@@ -25,42 +31,6 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
-
-/** Парсит одну строку CSV с разделителем ; и учётом кавычек */
-function parseCsvLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i]
-    if (c === '"') {
-      inQuotes = !inQuotes
-      continue
-    }
-    if (!inQuotes && c === ';') {
-      result.push(current.trim())
-      current = ''
-      continue
-    }
-    current += c
-  }
-  result.push(current.trim())
-  return result
-}
-
-/** Парсит дату из формата "2026-02-21 11:17:41" */
-function parseTildaDate(s: string): Date | null {
-  const trimmed = s.replace(/^"|"$/g, '').trim()
-  if (!trimmed) return null
-  const d = new Date(trimmed)
-  return isNaN(d.getTime()) ? null : d
-}
-
-function safeStr(val: string | undefined): string | null {
-  if (val === undefined) return null
-  const t = val.replace(/^"|"$/g, '').trim()
-  return t === '' ? null : t
-}
 
 async function main() {
   const csvPath = process.argv[2]
@@ -76,40 +46,29 @@ async function main() {
     process.exit(1)
   }
 
-  const header = parseCsvLine(lines[0])
+  const delimiter = detectCsvDelimiter(lines[0])
+  const header = parseCsvLineWithDelimiter(lines[0], delimiter)
   console.log('Столбцы в файле:', header.length)
-  // Индексы нужных столбцов (0-based): Email=0, Name=1, Phone=2, Date=3, tranid=4, Input=7, Input_2=8, Комментарии=9, Адрес_доставки=10, Отзыв=11, Доставка=12, Промокод=14
-  const col = {
-    email: 0,
-    name: 1,
-    phone: 2,
-    date: 3,
-    tranid: 4,
-    input: 7,
-    input2: 8,
-    comment: 9,
-    deliveryAddress: 10,
-    review: 11,
-    delivery: 12,
-    promoCode: 14,
-  }
+  const col = resolveTildaLeadColumnIndexes(header)
+  console.log('Распознанные индексы:', col)
 
   let created = 0
   let skipped = 0
   let errors = 0
 
   for (let i = 1; i < lines.length; i++) {
-    const row = parseCsvLine(lines[i])
-    const tranid = safeStr(row[col.tranid])
+    const row = parseCsvLineWithDelimiter(lines[i], delimiter)
+    const parsed = parseTildaLeadRow(row, col)
+    const tranid = parsed.tranid
     if (!tranid) {
       skipped++
       continue
     }
 
-    const tildaDate = parseTildaDate(row[col.date] ?? '')
+    const tildaDate = parsed.tildaDate
     if (!tildaDate) {
       errors++
-      console.warn(`Строка ${i + 1}: неверная дата "${row[col.date]}"`)
+      console.warn(`Строка ${i + 1}: неверная дата "${row[col.date] ?? ''}"`)
       continue
     }
 
@@ -117,31 +76,31 @@ async function main() {
       await prisma.tildaLead.upsert({
         where: { tildaTranId: tranid },
         update: {
-          email: safeStr(row[col.email]) ?? undefined,
-          name: safeStr(row[col.name]) ?? undefined,
-          phone: safeStr(row[col.phone]) ?? undefined,
+          email: parsed.email ?? undefined,
+          name: parsed.name ?? undefined,
+          phone: parsed.phone ?? undefined,
           tildaDate,
-          input: safeStr(row[col.input]) ?? undefined,
-          input2: safeStr(row[col.input2]) ?? undefined,
-          comment: safeStr(row[col.comment]) ?? undefined,
-          deliveryAddress: safeStr(row[col.deliveryAddress]) ?? undefined,
-          review: safeStr(row[col.review]) ?? undefined,
-          delivery: safeStr(row[col.delivery]) ?? undefined,
-          promoCode: safeStr(row[col.promoCode]) ?? undefined,
+          input: parsed.input ?? undefined,
+          input2: parsed.input2 ?? undefined,
+          comment: parsed.comment ?? undefined,
+          deliveryAddress: parsed.deliveryAddress ?? undefined,
+          review: parsed.review ?? undefined,
+          delivery: parsed.delivery ?? undefined,
+          promoCode: parsed.promoCode ?? undefined,
         },
         create: {
           tildaTranId: tranid,
-          email: safeStr(row[col.email]) ?? undefined,
-          name: safeStr(row[col.name]) ?? undefined,
-          phone: safeStr(row[col.phone]) ?? undefined,
+          email: parsed.email ?? undefined,
+          name: parsed.name ?? undefined,
+          phone: parsed.phone ?? undefined,
           tildaDate,
-          input: safeStr(row[col.input]) ?? undefined,
-          input2: safeStr(row[col.input2]) ?? undefined,
-          comment: safeStr(row[col.comment]) ?? undefined,
-          deliveryAddress: safeStr(row[col.deliveryAddress]) ?? undefined,
-          review: safeStr(row[col.review]) ?? undefined,
-          delivery: safeStr(row[col.delivery]) ?? undefined,
-          promoCode: safeStr(row[col.promoCode]) ?? undefined,
+          input: parsed.input ?? undefined,
+          input2: parsed.input2 ?? undefined,
+          comment: parsed.comment ?? undefined,
+          deliveryAddress: parsed.deliveryAddress ?? undefined,
+          review: parsed.review ?? undefined,
+          delivery: parsed.delivery ?? undefined,
+          promoCode: parsed.promoCode ?? undefined,
         },
       })
       created++

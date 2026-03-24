@@ -42,14 +42,14 @@ export default async function NewsListPage() {
   const posts = await getNewsList()
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
+    <AdaptiveContainer maxWidth="default" className="pt-10 pb-16 sm:pb-20">
       <BreadcrumbJsonLd items={newsBreadcrumbItems} currentPath="/news" />
       <Breadcrumbs items={newsBreadcrumbItems} />
       <Heading1 className="text-text mb-6 mt-2">Новости</Heading1>
       <ScalableSpacing size="lg" />
       {posts.length > 0 ? (
         <FluidGrid
-          minItemWidth={300}
+          minItemWidth={260}
           gap="lg"
           cols={1}
           colsTablet={1}
@@ -58,7 +58,7 @@ export default async function NewsListPage() {
           cols2xl={3}
           cols3xl={3}
           cols4xl={4}
-          className="auto-rows-min"
+          className="auto-rows-min gap-4 sm:gap-5 md:gap-6"
         >
           {posts.map((post) => (
             <Link

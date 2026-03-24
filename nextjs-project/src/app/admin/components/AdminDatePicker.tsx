@@ -128,7 +128,7 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
         type="button"
         id={id}
         onClick={() => setOpen((v) => !v)}
-        className="form-input w-full min-w-[140px] text-left bg-white cursor-pointer flex items-center justify-between"
+        className="form-input w-full min-w-[140px] min-h-[44px] text-left bg-white cursor-pointer flex items-center justify-between touch-manipulation"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -151,7 +151,7 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
             <button
               type="button"
               onClick={() => setViewMonth((m) => addMonths(m, -1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 touch-manipulation"
               aria-label="Предыдущий месяц"
             >
               <ChevronLeft />
@@ -162,7 +162,7 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
             <button
               type="button"
               onClick={() => setViewMonth((m) => addMonths(m, 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              className="flex h-10 w-10 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900 touch-manipulation"
               aria-label="Следующий месяц"
             >
               <ChevronRight />
@@ -205,7 +205,7 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
                     setValue(toYMD(date))
                     setOpen(false)
                   }}
-                  className={`flex h-8 w-full items-center justify-center rounded-md text-sm transition-colors ${
+                  className={`flex h-10 w-full items-center justify-center rounded-md text-sm transition-colors touch-manipulation ${
                     disabled
                       ? 'cursor-not-allowed text-gray-300 bg-transparent'
                       : !isCurrentMonth
@@ -233,7 +233,7 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
                 setViewMonth(startOfMonth(today))
                 setOpen(false)
               }}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400"
+              className="min-h-[40px] px-2 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-400 touch-manipulation"
             >
               Сегодня
             </button>

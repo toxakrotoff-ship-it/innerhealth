@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 
 const NAV_LINKS = [
   { label: 'О нас', href: '/o-nas' },
@@ -30,7 +31,35 @@ interface HeaderNavMobileProps {
 export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, role }: HeaderNavMobileProps) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const bodyOverflowBeforeLockRef = useRef<string | null>(null)
+  const pathname = usePathname()
   useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!open) {
+      if (bodyOverflowBeforeLockRef.current !== null) {
+        document.body.style.overflow = bodyOverflowBeforeLockRef.current
+        bodyOverflowBeforeLockRef.current = null
+      }
+      return
+    }
+
+    if (bodyOverflowBeforeLockRef.current === null) {
+      bodyOverflowBeforeLockRef.current = document.body.style.overflow
+    }
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      if (bodyOverflowBeforeLockRef.current !== null) {
+        document.body.style.overflow = bodyOverflowBeforeLockRef.current
+        bodyOverflowBeforeLockRef.current = null
+      }
+    }
+  }, [open])
 
   const buttonClass =
     variant === 'dark'
@@ -50,12 +79,12 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
     open && mounted ? (
       <>
         <div
-          className="fixed inset-0 z-[100] bg-black/30"
+          className="fixed inset-0 z-100 bg-black/30"
           aria-hidden
           onClick={() => setOpen(false)}
         />
         <nav
-          className={`fixed left-0 top-0 bottom-0 z-[101] w-[min(280px,85vw)] max-w-full ${navBg} shadow-xl overflow-y-auto`}
+          className={`fixed left-0 top-0 bottom-0 z-101 w-[min(280px,85vw)] max-w-full ${navBg} shadow-xl overflow-y-auto pt-[env(safe-area-inset-top)]`}
           aria-label="Меню"
         >
           <div className="flex flex-col pt-4 pb-4">

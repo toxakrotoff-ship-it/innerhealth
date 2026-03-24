@@ -243,32 +243,32 @@ export default function AdminRedirectsPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-text">Редиректы</h1>
-        <Button onClick={openCreate} disabled={saving}>
+        <Button onClick={openCreate} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
           Добавить редирект
         </Button>
       </div>
 
       <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
         <h2 className="text-lg font-semibold mb-2">Импорт из CSV</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Формат: <code className="bg-gray-200 px-1 rounded">sourcePath,destination,statusCode,statusOnNew,note</code>. Первая строка может быть заголовком. Кодировка UTF-8.
+        <p className="text-sm text-gray-600 mb-4 wrap-break-word">
+          Формат: <code className="bg-gray-200 px-1 rounded break-all">sourcePath,destination,statusCode,statusOnNew,note</code>. Первая строка может быть заголовком. Кодировка UTF-8.
         </p>
         <form onSubmit={handleImportCsv} className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-col gap-1">
+          <label className="flex w-full flex-col gap-1 sm:w-auto">
             <span className="text-sm font-medium text-gray-700">Файл CSV</span>
             <input
               type="file"
               accept=".csv,text/csv,text/plain"
-              className="border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
               onChange={(e) => {
                 setImportFile(e.target.files?.[0] ?? null);
                 setImportResult(null);
               }}
             />
           </label>
-          <Button type="submit" disabled={importing || !importFile}>
+          <Button type="submit" disabled={importing || !importFile} className="w-full sm:w-auto min-h-[44px]">
             {importing ? 'Импорт…' : 'Импортировать'}
           </Button>
         </form>
@@ -467,8 +467,36 @@ export default function AdminRedirectsPage() {
       ) : list.length === 0 ? (
         <p className="text-gray-500">Редиректов пока нет. Добавьте первый — например, старый путь с Тильды и новый путь на сайте.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow">
-          <div className="overflow-x-auto">
+        <>
+          <div className="space-y-3 md:hidden">
+            {list.map((row) => (
+              <div key={row.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow">
+                <p className="text-xs text-gray-500">Источник</p>
+                <p className="font-mono text-sm text-gray-900 break-all">{row.sourcePath}</p>
+                <p className="mt-2 text-xs text-gray-500">Назначение</p>
+                <p className="font-mono text-sm text-gray-900 break-all">{row.destination}</p>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Код</span>
+                  <span className="text-gray-900 font-medium">{row.statusCode}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Комментарий</span>
+                  <span className="text-gray-900 text-right max-w-[65%] truncate">{row.note ?? '—'}</span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => openEdit(row)} className="min-h-[40px] flex-1">
+                    Изменить
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => handleDelete(row.id)} disabled={saving} className="min-h-[40px]">
+                    Удалить
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200 bg-white shadow">
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -501,7 +529,8 @@ export default function AdminRedirectsPage() {
             </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

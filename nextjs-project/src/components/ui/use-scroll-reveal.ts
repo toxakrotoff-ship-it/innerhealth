@@ -89,7 +89,14 @@ export function useScrollReveal<T extends HTMLElement>(
     })
     observer.observe(element)
 
+    // iOS Firefox may occasionally miss IntersectionObserver callbacks.
+    // Fail-safe prevents elements from staying in low-opacity state forever.
+    const fallbackTimeout = window.setTimeout(() => {
+      setIsVisible(true)
+    }, 1200)
+
     return () => {
+      window.clearTimeout(fallbackTimeout)
       observerCallbacks.delete(element)
       observer.unobserve(element)
     }

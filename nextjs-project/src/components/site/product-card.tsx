@@ -69,6 +69,7 @@ export function ProductCard({
           } as React.CSSProperties
         }
         onPointerMove={(e) => {
+          if (e.pointerType !== 'mouse') return
           const rect = e.currentTarget.getBoundingClientRect()
           const x = (e.clientX - rect.left) / rect.width
           const y = (e.clientY - rect.top) / rect.height
@@ -77,7 +78,8 @@ export function ProductCard({
           state.current.rotateY = (x - 0.5) * factor
           updateStyles()
         }}
-        onPointerLeave={() => {
+        onPointerLeave={(e) => {
+          if (e.pointerType !== 'mouse') return
           state.current.rotateX = 0
           state.current.rotateY = 0
           updateStyles()
@@ -179,7 +181,7 @@ export function ProductCard({
         </div>
         {/* Weak overlay: lighter than TiltCard, removed on hover */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/15 transition-opacity duration-300 group-hover:opacity-0"
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/6 md:bg-black/15 transition-opacity duration-300 group-hover:opacity-0"
           aria-hidden
         />
       </article>

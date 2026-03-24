@@ -26,6 +26,7 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'about', label: 'О нас' },
   { id: 'catalog', label: 'Каталог' },
   { id: 'contacts', label: 'Контакты' },
+  { id: 'sotrudnichestvo', label: 'Сотрудничество' },
   { id: 'footer', label: 'Футер' },
 ]
 
@@ -119,6 +120,11 @@ export default function AdminContentPage() {
     setBlocks((prev) => prev.map((b) => (b.key === key ? { ...b, ...patch } : b)))
   }
 
+  function autoResizeTextarea(target: HTMLTextAreaElement): void {
+    target.style.height = 'auto'
+    target.style.height = `${target.scrollHeight}px`
+  }
+
   async function handleSave() {
     try {
       setSaving(true)
@@ -165,16 +171,16 @@ export default function AdminContentPage() {
   return (
     <div className="admin-container">
       <div className="admin-content">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Тексты страниц</h1>
             <p className="text-gray-500 text-sm">
               Выберите страницу, затем блок для редактирования текста, цветов и шрифта.
             </p>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <select
-              className="form-input"
+              className="form-input w-full sm:w-auto sm:min-w-[180px]"
               value={page}
               onChange={(e) => setPage(e.target.value)}
             >
@@ -314,13 +320,12 @@ export default function AdminContentPage() {
                     ) : (
                       <textarea
                         className="form-input w-full"
-                        rows={
-                          selectedBlock.key === 'hero.title'
-                            ? 5
-                            : selectedBlock.key.startsWith('about.image')
-                              ? 1
-                              : 2
-                        }
+                        rows={1}
+                        style={{ minHeight: selectedBlock.key === 'hero.title' ? '120px' : '44px' }}
+                        onInput={(e) => autoResizeTextarea(e.currentTarget)}
+                        ref={(node) => {
+                          if (node) autoResizeTextarea(node)
+                        }}
                         value={selectedBlock.text}
                         onChange={(e) =>
                           updateBlock(selectedBlock.key, {
