@@ -14,6 +14,12 @@ const MAX_SITE_URL =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+interface MaxBotContextLike {
+  user?: { user_id?: string | number };
+  message?: { body?: { text?: string | null } | null } | null;
+  reply: (text: string) => Promise<unknown> | unknown;
+}
+
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -122,11 +128,7 @@ async function bootstrap(): Promise<void> {
   const bot = new Bot(config.token);
 
   bot.on('bot_started', (ctx) => {
-    const botStartedContext = ctx as {
-      startPayload?: unknown;
-      user?: { user_id?: string | number };
-      reply: (text: string) => Promise<unknown> | unknown;
-    };
+    const botStartedContext = ctx as MaxBotContextLike & { startPayload?: unknown };
     const startPayload =
       typeof botStartedContext.startPayload === 'string' ? botStartedContext.startPayload : null;
     if (startPayload) {
@@ -150,53 +152,58 @@ async function bootstrap(): Promise<void> {
     return botStartedContext.reply('Используйте ссылку из админки, чтобы подключить уведомления.');
   });
 
-  bot.command('ping', (ctx) => ctx.reply('pong'));
+  bot.command('ping', (ctx) => (ctx as MaxBotContextLike).reply('pong'));
   bot.command('status', async (ctx) => {
-    const maxUserId = String(ctx.user?.user_id ?? '');
+    const commandContext = ctx as MaxBotContextLike;
+    const maxUserId = String(commandContext.user?.user_id ?? '');
     const whitelist = await getWhitelistIds();
-    if (whitelist.has(maxUserId)) return ctx.reply('✅ Вы подключены к уведомлениям.');
-    return ctx.reply('❌ Вы не подключены. Получите ссылку в админке/личном кабинете.');
+    if (whitelist.has(maxUserId)) return commandContext.reply('✅ Вы подключены к уведомлениям.');
+    return commandContext.reply('❌ Вы не подключены. Получите ссылку в админке/личном кабинете.');
   });
 
   bot.command('promo', async (ctx) => {
-    const maxUserId = String(ctx.user?.user_id ?? '');
+    const commandContext = ctx as MaxBotContextLike;
+    const maxUserId = String(commandContext.user?.user_id ?? '');
     const whitelist = await getWhitelistIds();
-    if (!whitelist.has(maxUserId)) return ctx.reply('Доступ только для пользователей из списка уведомлений.');
+    if (!whitelist.has(maxUserId))
+      return commandContext.reply('Доступ только для пользователей из списка уведомлений.');
     const promos = await getPromoStats();
-    if (promos.length === 0) return ctx.reply('Нет промокодов.');
+    if (promos.length === 0) return commandContext.reply('Нет промокодов.');
     const lines = promos.map((promo) => {
       const limit = promo.usageLimit != null ? ` / ${promo.usageLimit}` : '';
       const status = promo.isActive ? '✅' : '❌';
       return `${status} ${promo.code} — использований: ${Number(promo.usedCount) || 0}${limit}`;
     });
-    return ctx.reply(`<b>Промокоды</b>\n\n${lines.join('\n')}`);
+    return commandContext.reply(`<b>Промокоды</b>\n\n${lines.join('\n')}`);
   });
 
   bot.command('stats', async (ctx) => {
-    const maxUserId = String(ctx.user?.user_id ?? '');
+    const commandContext = ctx as MaxBotContextLike;
+    const maxUserId = String(commandContext.user?.user_id ?? '');
     const result = await getPartnerStats(maxUserId);
-    if ('error' in result) return ctx.reply(result.error);
-    if (result.stats.length === 0) return ctx.reply('У вас пока нет статистики.');
+    if ('error' in result) return commandContext.reply(result.error);
+    if (result.stats.length === 0) return commandContext.reply('У вас пока нет статистики.');
     const totalOrders = result.stats.reduce((sum, row) => sum + row.ordersCount, 0);
     const totalIncome = result.stats.reduce((sum, row) => sum + row.partnerIncome, 0);
     const lines = result.stats.map((row) =>
       `• ${row.code} — применений: ${row.applicationsCount}, оплачено: ${row.ordersCount}, доход: ${row.partnerIncome.toFixed(0)} ₽`
     );
-    return ctx.reply(
+    return commandContext.reply(
       `<b>Ваша статистика</b>\n\nОплачено заказов: <b>${totalOrders}</b>\nВаш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n${lines.join('\n')}`
     );
   });
 
   bot.on('message_created', async (ctx) => {
-    const userId = String(ctx.user?.user_id ?? '');
-    const text = String(ctx.message?.body?.text ?? '').trim().slice(0, MAX_MESSAGE_LENGTH);
+    const messageContext = ctx as MaxBotContextLike;
+    const userId = String(messageContext.user?.user_id ?? '');
+    const text = String(messageContext.message?.body?.text ?? '').trim().slice(0, MAX_MESSAGE_LENGTH);
     if (!text) return;
     if (!checkRateLimit(userId)) {
-      await ctx.reply('⏳ Слишком много запросов. Подождите минуту.');
+      await messageContext.reply('⏳ Слишком много запросов. Подождите минуту.');
       return;
     }
     if (text.startsWith('/')) return;
-    await ctx.reply('Доступные команды: /status, /promo, /stats');
+    await messageContext.reply('Доступные команды: /status, /promo, /stats');
   });
 
   bot.catch((error) => {
