@@ -27,6 +27,9 @@ import {
   parseCatalogSearchParams,
 } from '@/lib/catalog-list-path'
 import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -44,12 +47,17 @@ interface CatalogPageProps {
   }>
 }
 
-const CATALOG_DESCRIPTION =
-  'Каталог товаров Inner Health: нутриенты, коллаген, БАДы и специализированное питание. Фильтры по цене и бренду, доставка по России.'
+function getCatalogDescription(siteTitle: string): string {
+  if (siteTitle === 'Sprint Power') {
+    return 'Каталог Sprint Power: спортивное питание и нутриенты для силы, восстановления и выносливости.'
+  }
+  return 'Каталог товаров Inner Health: нутриенты, коллаген, БАДы и специализированное питание. Фильтры по цене и бренду, доставка по России.'
+}
 
 export async function generateMetadata({
   searchParams,
 }: CatalogPageProps): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
   const raw = await searchParams
   const p = parseCatalogSearchParams(raw)
   const canonicalPath = buildCatalogListPath({
@@ -74,11 +82,11 @@ export async function generateMetadata({
   const title = p.page > 1 ? `${titleBase} — страница ${p.page}` : titleBase
   return {
     title,
-    description: CATALOG_DESCRIPTION,
+    description: getCatalogDescription(siteTitle),
     alternates: { canonical: canonicalPath },
     robots,
     openGraph: {
-      title: `${title} | Inner Health`,
+      title: `${title} | ${siteTitle}`,
       description:
         'Выберите категорию и оформите заказ онлайн. Акции, подарки и консультации по ассортименту.',
       url: canonicalPath,
@@ -89,6 +97,8 @@ export async function generateMetadata({
 const PRODUCTS_PER_PAGE = 24
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
+  const { brandId } = await getServerBrandContext()
+  const dbBrand = resolveDbBrand(brandId)
   const sp = await searchParams
   const {
     page,
@@ -103,11 +113,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
   const [categories, brandOptions, catalogResult] = await Promise.all([
     prisma.category.findMany({
-      where: { showInCategoriesBlock: true },
+      where: { showInCategoriesBlock: true, brand: dbBrand },
       orderBy: { sortOrder: 'asc' },
       include: { _count: { select: { products: true } } },
     }),
-    productService.getCatalogBrandOptions(),
+    productService.getCatalogBrandOptions().then((options) =>
+      isSprintPowerBrand(brandId)
+        ? options.filter((b) => b === 'sprint-power')
+        : options.filter((b) => b !== 'sprint-power')
+    ),
     productService.getCatalogProducts({
       page,
       pageSize: PRODUCTS_PER_PAGE,

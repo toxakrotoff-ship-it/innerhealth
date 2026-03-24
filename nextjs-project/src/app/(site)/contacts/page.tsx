@@ -6,11 +6,15 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import type { Metadata } from 'next'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
-export const metadata = {
-  title: 'Контакты | Inner Health',
-  description:
-    'Телефон, электронная почта и адрес шоурума Inner Health. Москва, набережная Новикова-Прибоя. Режим работы.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: `Контакты | ${siteTitle}`,
+    description: `Телефон, электронная почта и адрес шоурума ${siteTitle}. Москва, набережная Новикова-Прибоя. Режим работы.`,
+  }
 }
 
 const breadcrumbItems = [
@@ -20,8 +24,7 @@ const breadcrumbItems = [
 
 const DEFAULT_PHONE = '+7 (989) 103-91-92'
 const DEFAULT_EMAIL = 'innerhealth@mail.ru'
-const DEFAULT_ADDRESS =
-  'г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис Inner Health'
+const DEFAULT_ADDRESS_PREFIX = 'г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис'
 const DEFAULT_WORKING_WEEKDAYS = 'Будние дни: с 10 до 22'
 const DEFAULT_WORKING_WEEKENDS = 'Выходные: с 12 до 18'
 const DEFAULT_WORKING_NOTE = '*по предварительному звонку'
@@ -34,12 +37,13 @@ function getText(block: { text: string | null } | undefined, fallback: string): 
 }
 
 export default async function ContactsPage() {
+  const { siteTitle } = await getServerBrandContext()
   const blocks = await getResolvedBlocksForPage('contacts')
   const byKey = (key: string) => blocks.find((b) => b.key === key)
 
   const phone = getText(byKey('contacts.phone'), DEFAULT_PHONE)
   const email = getText(byKey('contacts.email'), DEFAULT_EMAIL)
-  const address = getText(byKey('contacts.address'), DEFAULT_ADDRESS)
+  const address = getText(byKey('contacts.address'), `${DEFAULT_ADDRESS_PREFIX} ${siteTitle}`)
   const workingWeekdays = getText(
     byKey('contacts.working_weekdays'),
     DEFAULT_WORKING_WEEKDAYS

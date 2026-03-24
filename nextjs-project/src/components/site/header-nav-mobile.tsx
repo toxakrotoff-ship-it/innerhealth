@@ -5,30 +5,25 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
-
-const NAV_LINKS = [
-  { label: 'О нас', href: '/o-nas' },
-  { label: 'Новости', href: '/news' },
-  { label: 'Статьи', href: '/informaciya' },
-  { label: 'Каталог', href: '/catalog' },
-  { label: 'АКЦИИ', href: '/catalog/aktsii' },
-  { label: 'Сотрудничество', href: '/sotrudnichestvo' },
-  { label: 'Контакты', href: '/contacts' },
-  { label: 'FAQ', href: '/faq' },
-] as const
-
-const PHONE = '+7 (989) 103-91-92'
-const EMAIL = 'innerhealth@mail.ru'
-const WHATSAPP_URL = 'https://wa.me/79891039192'
-const TELEGRAM_URL = 'https://t.me/innerhealth_ih'
+import type { BrandContactConfig, BrandNavLink } from '@/lib/brand/site-branding'
 
 interface HeaderNavMobileProps {
   variant?: 'light' | 'dark'
   isAuthenticated?: boolean
   role?: string
+  logoText: string
+  navLinks: readonly BrandNavLink[]
+  contact: BrandContactConfig
 }
 
-export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, role }: HeaderNavMobileProps) {
+export function HeaderNavMobile({
+  variant = 'light',
+  isAuthenticated = false,
+  role,
+  logoText,
+  navLinks,
+  contact,
+}: HeaderNavMobileProps) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const bodyOverflowBeforeLockRef = useRef<string | null>(null)
@@ -92,12 +87,12 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
               href="/"
               onClick={() => setOpen(false)}
               className={`flex items-center px-5 pb-4 border-b ${navBorder} font-semibold uppercase tracking-tighter ${variant === 'dark' ? 'text-white' : 'text-slate-900'}`}
-              aria-label="Inner Health — на главную"
+              aria-label={`${logoText} — на главную`}
             >
-              INNER HEALTH
+              {logoText}
             </Link>
             <div className="flex flex-col">
-              {NAV_LINKS.map(({ label, href }) => (
+              {navLinks.map(({ label, href }) => (
                   <Link
                     key={href}
                     href={href}
@@ -141,17 +136,17 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
               )}
             </div>
             <div className={`mt-auto pt-4 pb-2 px-5 border-t ${navBorder}`}>
-              <a
-                href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
+                <a
+                  href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
                 className={`flex items-center gap-2 mb-3 text-sm font-medium ${variant === 'dark' ? 'text-white' : 'text-slate-900'}`}
                 onClick={() => setOpen(false)}
               >
                 <PhoneIcon />
-                {PHONE}
+                  {contact.phone}
               </a>
               <div className="flex items-center gap-0.5 2xl:gap-1 3xl:gap-2">
                 <a
-                  href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
+                    href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
                   className={iconButtonClass}
                   aria-label="Позвонить"
                   onClick={() => setOpen(false)}
@@ -159,7 +154,7 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
                   <PhoneIcon />
                 </a>
                 <a
-                  href={`mailto:${EMAIL}`}
+                    href={`mailto:${contact.email}`}
                   className={iconButtonClass}
                   aria-label="Написать на почту"
                   onClick={() => setOpen(false)}
@@ -167,7 +162,7 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
                   <MailIcon />
                 </a>
                 <a
-                  href={WHATSAPP_URL}
+                  href={contact.whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={iconButtonClass}
@@ -177,7 +172,7 @@ export function HeaderNavMobile({ variant = 'light', isAuthenticated = false, ro
                   <WhatsAppIcon />
                 </a>
                 <a
-                  href={TELEGRAM_URL}
+                  href={contact.telegramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={iconButtonClass}

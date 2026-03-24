@@ -4,19 +4,22 @@ import { ReviewsSection } from './reviews-section'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 export const revalidate = 1800
 
-export const metadata: Metadata = {
-  title: 'Отзывы',
-  description:
-    'Отзывы покупателей Inner Health о нутриентах, доставке и сервисе. Реальные мнения клиентов магазина.',
-  alternates: { canonical: '/otzyvy' },
-  openGraph: {
-    title: 'Отзывы | Inner Health',
-    description: 'Читайте отзывы о товарах и работе магазина Inner Health.',
-    url: '/otzyvy',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: 'Отзывы',
+    description: `Отзывы покупателей ${siteTitle} о нутриентах, доставке и сервисе. Реальные мнения клиентов магазина.`,
+    alternates: { canonical: '/otzyvy' },
+    openGraph: {
+      title: `Отзывы | ${siteTitle}`,
+      description: `Читайте отзывы о товарах и работе магазина ${siteTitle}.`,
+      url: '/otzyvy',
+    },
+  }
 }
 
 type ReviewRow = {

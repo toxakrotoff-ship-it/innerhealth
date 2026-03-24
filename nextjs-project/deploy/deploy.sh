@@ -8,28 +8,38 @@ cd "$(dirname "$0")/.."
 echo "==> Pulling latest code..."
 git pull
 
-# Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl
+# Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):
-#   export CERT_DOMAIN=innerhaealth.inetrnet.pp.ru
+#   export CERT_DOMAINS="innerhaealth.inetrnet.pp.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
 #   export CERT_EMAIL=you@example.com
-if [ -n "${CERT_DOMAIN:-}" ] && [ -n "${CERT_EMAIL:-}" ]; then
-  echo "==> Issuing/renewing TLS certificate for ${CERT_DOMAIN} via certbot..."
+# Backward compatibility: CERT_DOMAIN is still supported for a single domain.
+DOMAINS_INPUT="${CERT_DOMAINS:-${CERT_DOMAIN:-}}"
+if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
+  DOMAINS_NORMALIZED="$(echo "${DOMAINS_INPUT}" | tr ',' ' ')"
+  FIRST_DOMAIN="$(echo "${DOMAINS_NORMALIZED}" | awk '{print $1}')"
+  CERTBOT_DOMAIN_ARGS=""
+  for d in ${DOMAINS_NORMALIZED}; do
+    CERTBOT_DOMAIN_ARGS="${CERTBOT_DOMAIN_ARGS} -d ${d}"
+  done
+
+  echo "==> Issuing/renewing TLS certificate for: ${DOMAINS_NORMALIZED}"
   if command -v certbot >/dev/null 2>&1; then
     # Standalone mode: certbot binds to :80, so make sure nginx is stopped beforehand.
+    # shellcheck disable=SC2086
     sudo certbot certonly --standalone --non-interactive --agree-tos \
-      -d "${CERT_DOMAIN}" -m "${CERT_EMAIL}" || echo "WARN: certbot failed, continuing without updating certificate."
+      ${CERTBOT_DOMAIN_ARGS} -m "${CERT_EMAIL}" || echo "WARN: certbot failed, continuing without updating certificate."
 
-    if [ -d "/etc/letsencrypt/live/${CERT_DOMAIN}" ]; then
+    if [ -d "/etc/letsencrypt/live/${FIRST_DOMAIN}" ]; then
       echo "==> Copying certificate to deploy/nginx/ssl/ ..."
       mkdir -p deploy/nginx/ssl
-      sudo cp "/etc/letsencrypt/live/${CERT_DOMAIN}/fullchain.pem" "deploy/nginx/ssl/fullchain.pem"
-      sudo cp "/etc/letsencrypt/live/${CERT_DOMAIN}/privkey.pem" "deploy/nginx/ssl/privkey.pem"
+      sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/fullchain.pem" "deploy/nginx/ssl/fullchain.pem"
+      sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/privkey.pem" "deploy/nginx/ssl/privkey.pem"
       sudo chmod 600 deploy/nginx/ssl/privkey.pem || true
     else
-      echo "WARN: /etc/letsencrypt/live/${CERT_DOMAIN} not found; certificate was not copied."
+      echo "WARN: /etc/letsencrypt/live/${FIRST_DOMAIN} not found; certificate was not copied."
     fi
   else
-    echo "WARN: certbot not installed; skip certificate issuance. Install certbot or unset CERT_DOMAIN/CERT_EMAIL."
+    echo "WARN: certbot not installed; skip certificate issuance. Install certbot or unset CERT_DOMAINS/CERT_EMAIL."
   fi
 fi
 
@@ -45,6 +55,9 @@ docker compose run --rm app npx prisma migrate deploy
 
 echo "==> Starting app and remaining services..."
 docker compose up -d
+
+echo "==> Reloading nginx with current config..."
+docker compose up -d --force-recreate nginx
 
 echo "==> Waiting for app to be up..."
 sleep 5

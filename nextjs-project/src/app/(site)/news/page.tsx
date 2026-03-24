@@ -9,19 +9,22 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 export const revalidate = 900
 
-export const metadata: Metadata = {
-  title: 'Новости',
-  description:
-    'Новости Inner Health: акции, поступления, события и полезные материалы о здоровье и нутриентах.',
-  alternates: { canonical: '/news' },
-  openGraph: {
-    title: 'Новости | Inner Health',
-    description: 'Актуальные новости магазина и полезная информация для клиентов.',
-    url: '/news',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: 'Новости',
+    description: `Новости ${siteTitle}: акции, поступления, события и полезные материалы о здоровье и нутриентах.`,
+    alternates: { canonical: '/news' },
+    openGraph: {
+      title: `Новости | ${siteTitle}`,
+      description: 'Актуальные новости магазина и полезная информация для клиентов.',
+      url: '/news',
+    },
+  }
 }
 
 async function getNewsList() {

@@ -31,6 +31,7 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
+const IMPORT_BRAND = 'inner' as const
 
 async function main() {
   const csvPath = process.argv[2]
@@ -74,7 +75,12 @@ async function main() {
 
     try {
       await prisma.tildaLead.upsert({
-        where: { tildaTranId: tranid },
+        where: {
+          brand_tildaTranId: {
+            brand: IMPORT_BRAND,
+            tildaTranId: tranid,
+          },
+        },
         update: {
           email: parsed.email ?? undefined,
           name: parsed.name ?? undefined,
@@ -89,6 +95,7 @@ async function main() {
           promoCode: parsed.promoCode ?? undefined,
         },
         create: {
+          brand: IMPORT_BRAND,
           tildaTranId: tranid,
           email: parsed.email ?? undefined,
           name: parsed.name ?? undefined,

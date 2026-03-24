@@ -2,10 +2,10 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Inner Health',
+    name: 'Inner Health / Sprint Power',
     short_name: 'Inner Health',
     description:
-      'Интернет-магазин нутриентов и продуктов для здоровья. Каталог, доставка по России.',
+      'Интернет-магазины Inner Health и Sprint Power: нутриенты и спортивное питание.',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

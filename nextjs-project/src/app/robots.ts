@@ -1,15 +1,10 @@
 import type { MetadataRoute } from 'next'
-import { getSiteBaseUrl } from '@/lib/site-url'
+import { getBrandSiteUrl } from '@/lib/brand/site-branding'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = getSiteBaseUrl()
   const adminPath = process.env.ADMIN_SECRET_PATH || 'admin'
-  let host: string | undefined
-  try {
-    host = new URL(baseUrl).host
-  } catch {
-    host = undefined
-  }
+  const innerUrl = getBrandSiteUrl('inner')
+  const sprintUrl = getBrandSiteUrl('sprint-power')
 
   return {
     rules: [
@@ -28,7 +23,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
-    ...(host ? { host } : {}),
+    sitemap: [`${innerUrl}/sitemap.xml`, `${sprintUrl}/sitemap.xml`],
   }
 }

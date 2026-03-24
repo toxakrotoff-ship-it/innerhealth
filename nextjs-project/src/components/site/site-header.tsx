@@ -7,11 +7,8 @@ import { HeaderNavMobile } from './header-nav-mobile'
 import { HeaderProfileMenu } from './header-profile-menu'
 import { AdaptiveNav } from './adaptive-nav'
 import { ClearInvalidSession } from './clear-invalid-session'
-
-const PHONE = '+7 (989) 103-91-92'
-const EMAIL = 'innerhealth@mail.ru'
-const WHATSAPP_URL = 'https://wa.me/79891039192'
-const TELEGRAM_URL = 'https://t.me/innerhealth_ih'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import type { BrandId } from '@/lib/brand/brand'
 
 const headerIconLink =
   'rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2'
@@ -24,7 +21,9 @@ const headerIconLink =
  * - Адаптивные отступы и промежутки
  * - Масштабирование типографики
  */
-export async function SiteHeader() {
+export async function SiteHeader({ brandId }: { brandId: BrandId }) {
+  const siteConfig = getBrandSiteConfig(brandId)
+  const { contact } = siteConfig
   let session = null
   let hasInvalidSession = false
 
@@ -77,7 +76,14 @@ export async function SiteHeader() {
         `}
       >
         <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
-          <HeaderNavMobile variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
+          <HeaderNavMobile
+            variant="light"
+            isAuthenticated={isAuthenticated}
+            role={session?.user?.role}
+            logoText={siteConfig.logoText}
+            navLinks={siteConfig.mobileNavLinks}
+            contact={siteConfig.contact}
+          />
           <Link
             href="/"
             className={`
@@ -85,39 +91,39 @@ export async function SiteHeader() {
               text-lg 2xl:text-xl 3xl:text-2xl 4xl:text-3xl 5xl:text-4xl 6xl:text-5xl
               hover:opacity-90 transition-opacity shrink-0
             `}
-            aria-label="Inner Health — на главную"
+            aria-label={`${siteConfig.title} — на главную`}
           >
-            INNER HEALTH
+            {siteConfig.logoText}
           </Link>
-          <AdaptiveNav />
+          <AdaptiveNav links={siteConfig.navLinks} />
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 2xl:gap-6 3xl:gap-8 4xl:gap-10 5xl:gap-12 6xl:gap-16 shrink-0">
           <div className="hidden xl:flex flex-col items-end mr-1 sm:mr-4 2xl:mr-6 3xl:mr-8">
             <a
-              href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
+              href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
               className={`
                 font-medium text-slate-900 hover:text-slate-700
                 text-sm 2xl:text-base 3xl:text-lg 4xl:text-xl 5xl:text-2xl 6xl:text-3xl
               `}
             >
-              {PHONE}
+              {contact.phone}
             </a>
             <span className="desktop-microtext-scale text-slate-400 uppercase tracking-tighter">
               Ежедневно 9:00 — 21:00
             </span>
           </div>
           <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 3xl:gap-2">
-            <a href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`} className={headerIconLink} aria-label="Позвонить">
+            <a href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`} className={headerIconLink} aria-label="Позвонить">
               <PhoneIcon />
             </a>
-            <a href={`mailto:${EMAIL}`} className={headerIconLink} aria-label="Написать на почту">
+            <a href={`mailto:${contact.email}`} className={headerIconLink} aria-label="Написать на почту">
               <MailIcon />
             </a>
-            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="WhatsApp">
+            <a href={contact.whatsappUrl} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="WhatsApp">
               <WhatsAppIcon />
             </a>
-            <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="Telegram">
+            <a href={contact.telegramUrl} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="Telegram">
               <TelegramIcon />
             </a>
           </div>

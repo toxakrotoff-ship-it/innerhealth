@@ -13,6 +13,7 @@ import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { extractPlainTextFromPostContent } from '@/lib/tiptap-plain-text'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -21,20 +22,21 @@ interface PageProps {
 export const revalidate = 600
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
   const { slug } = await params
   const hub = await seoHubService.getPublishedSeoHubBySlug(slug)
   if (!hub) return {}
   const fromBody = extractPlainTextFromPostContent(hub.content, 200)
   const description =
     hub.excerpt?.trim() ||
-    (fromBody.length > 0 ? fromBody.slice(0, 158) : `${hub.title} — подборка Inner Health.`)
+    (fromBody.length > 0 ? fromBody.slice(0, 158) : `${hub.title} — подборка ${siteTitle}.`)
   const path = `/guides/${slug}`
   return {
     title: hub.title,
     description,
     alternates: { canonical: path },
     openGraph: {
-      title: `${hub.title} | Inner Health`,
+      title: `${hub.title} | ${siteTitle}`,
       description,
       url: path,
     },
@@ -42,6 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SeoHubPage({ params }: PageProps) {
+  const { siteTitle } = await getServerBrandContext()
   const { slug } = await params
   const hub = await seoHubService.getPublishedSeoHubBySlug(slug)
   if (!hub) notFound()
@@ -128,7 +131,7 @@ export default async function SeoHubPage({ params }: PageProps) {
         <footer className="mt-10 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
           <p className="font-medium text-text mb-1">Источник</p>
           <p>
-            <span className="text-gray-600">Материал Inner Health: </span>
+            <span className="text-gray-600">Материал {siteTitle}: </span>
             <a
               href={toAbsoluteSiteUrl(currentPath)}
               className="text-action-blue break-all underline-offset-2 hover:underline"

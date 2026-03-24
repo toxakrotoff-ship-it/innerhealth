@@ -1,18 +1,12 @@
 'use client'
 
 import { useMediaConflictDetection } from '@/hooks/use-overlap-detection'
-
-const NAV_LINKS = [
-  { label: 'Каталог', href: '/catalog' },
-  { label: 'О нас', href: '/o-nas' },
-  { label: 'Акции', href: '/catalog/aktsii' },
-  { label: 'Статьи', href: '/informaciya' },
-  { label: 'Контакты', href: '/contacts' },
-] as const
+import type { BrandNavLink } from '@/lib/brand/site-branding'
 
 interface AdaptiveNavProps {
   /** Принудительно использовать мобильный вариант (переопределяет автоматическое определение) */
   forceMobile?: boolean
+  links: readonly BrandNavLink[]
 }
 
 /**
@@ -21,7 +15,7 @@ interface AdaptiveNavProps {
  *
  * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт) с адаптивным масштабированием.
  */
-export function AdaptiveNav({ forceMobile = false }: AdaptiveNavProps) {
+export function AdaptiveNav({ forceMobile = false, links }: AdaptiveNavProps) {
   const hasConflict = useMediaConflictDetection()
   const useMobile = forceMobile || hasConflict
 
@@ -40,7 +34,7 @@ export function AdaptiveNav({ forceMobile = false }: AdaptiveNavProps) {
       `}
       aria-label="Основное меню"
     >
-      {NAV_LINKS.map(({ label, href }) => (
+      {links.map(({ label, href }) => (
         <a
           key={href}
           href={href}

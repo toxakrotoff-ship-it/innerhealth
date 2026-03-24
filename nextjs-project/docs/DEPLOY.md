@@ -127,6 +127,18 @@ node .next/standalone/server.js
 proxy_set_header X-Accel-Buffering no;
 ```
 
+### Multi-brand domains (one app, multiple hosts)
+
+For host-based brand routing (e.g. `inner...` + `sprintpower...`) point all domains to one VPS IP and include all of them in TLS cert:
+
+```bash
+export CERT_DOMAINS="innerhaealth.inetrnet.pp.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
+export CERT_EMAIL="you@example.com"
+./deploy/deploy.sh
+```
+
+Nginx must forward `Host` and `X-Forwarded-Host` so the app can resolve brand by incoming domain.
+
 ## Если в dev появляются ошибки
 
 - **«Persisting failed» / SST (Turbopack):** удалите `.next` и снова запустите `npm run dev`, либо используйте `npm run dev:webpack`.

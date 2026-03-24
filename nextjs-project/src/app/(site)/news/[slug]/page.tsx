@@ -6,19 +6,21 @@ import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getSettingsMap } from '@/services/settings.service'
 import { buildNewsArticleGeoStructuredData } from '@/lib/schema-org'
-import { getSiteBaseUrl, toAbsoluteSiteUrl } from '@/lib/site-url'
+import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { extractPlainTextFromPostContent } from '@/lib/tiptap-plain-text'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
 import { ArticleSourceFooter } from '@/components/site/article-source-footer'
 import { getPostPath, getPostPathByType } from '@/lib/post-url'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 interface PageProps {
   params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { siteTitle, siteUrl } = await getServerBrandContext()
   const { slug } = await params
   const post = await prisma.post.findUnique({
     where: { slug, published: true },
@@ -37,18 +39,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const description =
     post.excerpt?.trim() ||
-    (post.type === 'news' ? 'Новости Inner Health.' : 'Статья Inner Health о здоровье и питании.')
+    (post.type === 'news' ? `Новости ${siteTitle}.` : `Статья ${siteTitle} о здоровье и питании.`)
 
   const path = getPostPath({ type: post.type, slug })
   const ogImage = post.previewImage || undefined
 
-  const siteOrigin = getSiteBaseUrl()
+  const siteOrigin = siteUrl
 
   return {
     title: post.title,
     description: description.length > 160 ? `${description.slice(0, 157)}…` : description,
     alternates: { canonical: path },
-    authors: [{ name: 'Inner Health', url: siteOrigin }],
+    authors: [{ name: siteTitle, url: siteOrigin }],
     openGraph: {
       type: 'article',
       title: post.title,
@@ -56,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: path,
       publishedTime: post.createdAt.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-      authors: ['Inner Health'],
+      authors: [siteTitle],
       section: post.type === 'news' ? 'Новости' : 'Статьи',
       locale: 'ru_RU',
       ...(ogImage ? { images: [{ url: ogImage, alt: post.title }] } : {}),
@@ -97,7 +99,7 @@ export default async function NewsPostPage({ params }: PageProps) {
       previewImage: post.previewImage ?? null,
     },
     canonicalUrl,
-    siteOrigin: getSiteBaseUrl(),
+    siteOrigin: siteUrl,
     articleBodyPlain,
   })
 

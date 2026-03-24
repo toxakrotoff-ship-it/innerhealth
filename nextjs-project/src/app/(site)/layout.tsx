@@ -91,11 +91,11 @@ export default async function SiteLayout({
           dangerouslySetInnerHTML={{ __html: bodyCode }}
         />
       ) : null}
-      <SiteHeader />
+      <SiteHeader brandId={activeBrand} />
       <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] 2xl:pt-[calc(4.5rem+env(safe-area-inset-top))] 3xl:pt-[calc(5rem+env(safe-area-inset-top))] 4xl:pt-[calc(6rem+env(safe-area-inset-top))] 5xl:pt-[calc(7rem+env(safe-area-inset-top))] 6xl:pt-[calc(8rem+env(safe-area-inset-top))]">
         {children}
       </main>
-      <SiteFooter />
+      <SiteFooter brandId={activeBrand} />
       <BackToTopButton />
       <SiteLayoutJsonLd />
       <CartDrawer />

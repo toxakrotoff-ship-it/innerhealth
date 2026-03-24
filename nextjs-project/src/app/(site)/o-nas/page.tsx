@@ -4,6 +4,8 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import type { Metadata } from 'next'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 const IMAGE_FACE_DEFAULT = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
@@ -17,13 +19,17 @@ const PARTNERS = [
   'Первым Московским государственным медицинским университетом им. И.М. Сеченова',
 ] as const
 
-export const metadata = {
-  title: 'О нас | Inner Health',
-  description:
-    'Inner Health – инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Разработка и производство в России.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: `О нас | ${siteTitle}`,
+    description:
+      `${siteTitle} – инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Разработка и производство в России.`,
+  }
 }
 
 export default async function AboutPage() {
+  const { siteTitle } = await getServerBrandContext()
   const breadcrumbItems = [
     { label: 'Главная', href: '/' },
     { label: 'О нас' },
@@ -60,7 +66,7 @@ export default async function AboutPage() {
                 Здоровые люди обворожительны по-особому.
               </p>
               <p>
-                Inner Health – это инновационные здоровьесберегающие продукты с
+                {siteTitle} – это инновационные здоровьесберегающие продукты с
                 нутрикосметическим эффектом. Они расширяют границы вашего потенциала.
                 С ними ваш белковый статус в норме. А ухоженная, упругая кожа, густые,
                 блестящие волосы, легкая походка, стройное тело вне времени, вне
@@ -108,12 +114,12 @@ export default async function AboutPage() {
                 fontFamily="display"
                 className="mb-6"
               >
-                {block2Title?.text ?? 'Inner Health'}
+                {block2Title?.text ?? siteTitle}
               </ResponsiveText>
               <div className="space-y-4 text-gray-700 leading-relaxed">
                 <>
                   <p>
-                    Inner Health на рынке с 2022 года, но уже сыскала доверие
+                    {siteTitle} на рынке с 2022 года, но уже сыскала доверие
                     покупателей. Более 5000 человек каждый день становятся с нами
                     здоровее и возвращаются вновь и вновь. Особая гордость – более
                     2000 положительных отзывов, которые вдохновляют нас идти дальше.

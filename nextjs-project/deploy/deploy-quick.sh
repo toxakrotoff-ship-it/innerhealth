@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Быстрое обновление приложения и бота без полной пересборки (db, nginx не трогаем).
+# Быстрое обновление приложения и бота без полной пересборки DB (nginx пересоздаём для актуального host-конфига).
 # Использование: из каталога nextjs-project: ./deploy/deploy-quick.sh
 
 set -e
@@ -31,6 +31,9 @@ docker compose up -d --force-recreate app
 echo "==> Restarting telegram-bot (no separate build)..."
 # В текущей конфигурации `telegram-bot` использует тот же image, что и `app`.
 docker compose up -d --no-build telegram-bot
+
+echo "==> Recreating nginx (pick up new host/domain config)..."
+docker compose up -d --force-recreate nginx
 
 echo "==> Removing old telegram-bot image (if still present)..."
 docker image rm nextjs-project-telegram-bot:latest || true

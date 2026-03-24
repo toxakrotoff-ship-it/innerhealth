@@ -4,20 +4,12 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import type { BrandId } from '@/lib/brand/brand'
 
-const FOOTER_LINKS = [
-  { label: 'О нас', href: '/o-nas' },
-  { label: 'Контакты', href: '/contacts' },
-  { label: 'Сертификаты соответствия', href: '/sertifikaty-sootvetstviya' },
-  { label: 'Сотрудничество', href: '/sotrudnichestvo' },
-  { label: 'Отзывы', href: '/otzyvy' },
-  { label: 'FAQ', href: '/faq' },
-  { label: 'Информация', href: '/informaciya' },
-  { label: 'Политика конфиденциальности', href: '/privacy' },
-  { label: 'Публичная оферта', href: '/oferta' },
-] as const
-
-export async function SiteFooter() {
+export async function SiteFooter({ brandId }: { brandId: BrandId }) {
+  const siteConfig = getBrandSiteConfig(brandId)
+  const footerLinks = siteConfig.footerLinks
   const blocks = await getResolvedBlocksForPage('footer')
   const fullName = blocks.find((b) => b.key === 'footer.legal.fullName')
   const address = blocks.find((b) => b.key === 'footer.legal.address')
@@ -64,7 +56,7 @@ export async function SiteFooter() {
                 className="mb-3 2xl:mb-4"
                 adaptive
               >
-                Inner Health
+                {siteConfig.title}
               </ResponsiveText>
               <ResponsiveText
                 as="p"
@@ -93,7 +85,7 @@ export async function SiteFooter() {
                 Информация
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {FOOTER_LINKS.slice(0, 3).map(({ label, href }) => (
+                {footerLinks.slice(0, 3).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
@@ -129,7 +121,7 @@ export async function SiteFooter() {
                 Покупателям
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
+                {footerLinks.slice(3, 7).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
@@ -165,7 +157,7 @@ export async function SiteFooter() {
                 Юридическое
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
+                {footerLinks.slice(7, 9).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
@@ -267,7 +259,7 @@ export async function SiteFooter() {
                 color="secondary"
                 adaptive
               >
-                © 2022 INNER HEALTH
+                © 2022 {siteConfig.logoText}
               </ResponsiveText>
               <span className="text-slate-300" aria-hidden>
                 |

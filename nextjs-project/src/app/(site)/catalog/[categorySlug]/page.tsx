@@ -19,6 +19,7 @@ import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveBrand } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -61,7 +62,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const content = getCategoryPageContent(categorySlug)
-  let description = `${category.title} — товары в каталоге Inner Health. Доставка по России.`
+  const brandSite = getBrandSiteConfig(activeBrand)
+  let description = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
   if (content?.paragraphs?.length) {
     description = stripHtmlToPlainText(content.paragraphs[0] ?? '', 158)
   } else if (content?.bullets?.length) {
@@ -75,7 +77,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     alternates: { canonical: path },
     openGraph: {
-      title: `${category.title} | Inner Health`,
+      title: `${category.title} | ${brandSite.title}`,
       description,
       url: path,
     },

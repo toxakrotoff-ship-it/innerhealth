@@ -8,19 +8,22 @@ import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { getPostPathByType } from '@/lib/post-url'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'Статьи',
-  description:
-    'Статьи Inner Health о нутриентах, питании и здоровье. Экспертные материалы и обзоры продуктов.',
-  alternates: { canonical: '/informaciya' },
-  openGraph: {
-    title: 'Статьи | Inner Health',
-    description: 'Полезные статьи о здоровье, БАДах и сбалансированном питании.',
-    url: '/informaciya',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: 'Статьи',
+    description: `Статьи ${siteTitle} о нутриентах, питании и здоровье. Экспертные материалы и обзоры продуктов.`,
+    alternates: { canonical: '/informaciya' },
+    openGraph: {
+      title: `Статьи | ${siteTitle}`,
+      description: 'Полезные статьи о здоровье, БАДах и сбалансированном питании.',
+      url: '/informaciya',
+    },
+  }
 }
 
 async function getArticlesList() {

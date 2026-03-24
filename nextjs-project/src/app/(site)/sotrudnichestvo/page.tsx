@@ -2,11 +2,16 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { PartnershipForm } from '@/components/site/partnership-form'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import type { Metadata } from 'next'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
-export const metadata = {
-  title: 'Сотрудничество | Inner Health',
-  description:
-    'Партнёрская программа Inner Health: скидки, кешбэк, оптовые условия. Сотрудничаем с врачами, нутрициологами, health-coach, косметологами и фитнес-тренерами.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: `Сотрудничество | ${siteTitle}`,
+    description:
+      `Партнёрская программа ${siteTitle}: скидки, кешбэк, оптовые условия. Сотрудничаем с врачами, нутрициологами, health-coach, косметологами и фитнес-тренерами.`,
+  }
 }
 
 const breadcrumbItems = [
@@ -26,12 +31,13 @@ function getText(
 }
 
 export default async function SotrudnichestvoPage() {
+  const { siteTitle } = await getServerBrandContext()
   const blocks = await getResolvedBlocksForPage('sotrudnichestvo')
   const pageTitle = getText(blocks, 'cooperation.title', 'Сотрудничество')
   const pageSubtitle = getText(
     blocks,
     'cooperation.subtitle',
-    'Inner Health: внешние трансформации через красоту изнутри'
+    `${siteTitle}: внешние трансформации через красоту изнутри`
   )
   const formTitle = getText(blocks, 'cooperation.form.title', 'Оставить заявку')
   const formSubtitle = getText(
@@ -39,7 +45,7 @@ export default async function SotrudnichestvoPage() {
     'cooperation.form.subtitle',
     'Заполните форму — мы свяжемся с вами и обсудим условия сотрудничества.'
   )
-  const introTitle = getText(blocks, 'cooperation.intro.title', 'Вступайте в команду Inner Health!')
+  const introTitle = getText(blocks, 'cooperation.intro.title', `Вступайте в команду ${siteTitle}!`)
   const introP1 = getText(
     blocks,
     'cooperation.intro.p1',

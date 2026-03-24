@@ -9,6 +9,8 @@ import { buildProductJsonLd } from '@/lib/schema-org'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
 import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 
 export const revalidate = 300
 
@@ -37,6 +39,8 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { brandId } = await getServerBrandContext()
+  const siteTitle = getBrandSiteConfig(brandId).title
   const { slug } = await params
   const product = await prisma.product.findUnique({
     where: { slug },
@@ -53,7 +57,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const description = product.description
     ? stripHtmlToPlainText(product.description, 158)
-    : `Купить ${product.title} в интернет-магазине Inner Health. Доставка по России.`
+    : `Купить ${product.title} в интернет-магазине ${siteTitle}. Доставка по России.`
 
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
   const primaryImage = photos[0]?.url

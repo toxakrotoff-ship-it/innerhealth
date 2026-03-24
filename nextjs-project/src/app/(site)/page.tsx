@@ -2,10 +2,11 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
 import { cookies, headers } from 'next/headers'
-import type { Metadata } from 'next'
-import type { Prisma } from '@prisma/client'
+import type { Metadata, ResolvingMetadata } from 'next'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
+import * as reviewService from '@/services/review.service'
 import { ProductCard } from '@/components/site/product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
@@ -32,6 +33,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { resolveBrand } from '@/lib/brand/brand'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
+import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -54,17 +56,47 @@ const ReviewCtaBlock = dynamic(
   { ssr: true }
 )
 
-export const metadata: Metadata = {
-  title: 'Главная',
-  description:
-    'Inner Health: нутриенты, коллаген, грибные комплексы и здоровое питание. Акции, доставка по России, сертифицированная продукция.',
-  alternates: { canonical: '/' },
-  openGraph: {
-    title: 'Inner Health — нутриенты и здоровое питание',
+export async function generateMetadata(
+  _props: unknown,
+  _parent: ResolvingMetadata
+): Promise<Metadata> {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+  const siteConfig = getBrandSiteConfig(activeBrand)
+  const siteUrl = getBrandSiteUrl(activeBrand)
+
+  if (activeBrand === 'sprint-power') {
+    return {
+      title: 'Главная',
+      description:
+        'Sprint Power: спортивное питание и нутриенты для силы, восстановления и результата.',
+      alternates: { canonical: `${siteUrl}/` },
+      openGraph: {
+        title: 'Sprint Power — спортивное питание',
+        description:
+          'Линейка спортивного питания Sprint Power: протеин, восстановление, продукты для активной формы.',
+        url: `${siteUrl}/`,
+      },
+    }
+  }
+
+  return {
+    title: 'Главная',
     description:
-      'Интернет-магазин нутриентов и продуктов для здоровья: каталог, новости и выгодные предложения.',
-    url: '/',
-  },
+      'Inner Health: нутриенты, коллаген, грибные комплексы и здоровое питание. Акции, доставка по России, сертифицированная продукция.',
+    alternates: { canonical: `${siteUrl}/` },
+    openGraph: {
+      title: `${siteConfig.title} — нутриенты и здоровое питание`,
+      description:
+        'Интернет-магазин нутриентов и продуктов для здоровья: каталог, новости и выгодные предложения.',
+      url: `${siteUrl}/`,
+    },
+  }
 }
 
 export const revalidate = 300
@@ -169,6 +201,24 @@ type SprintHomeData = {
 }
 
 async function getSprintHomeData(): Promise<SprintHomeData> {
+  const categoriesRaw = await prisma.$queryRaw<
+    Array<{ id: string; title: string; slug: string; productsCount: number }>
+  >(
+    Prisma.sql`
+      SELECT
+        c.id,
+        c.title,
+        c.slug,
+        COUNT(pc."productId")::int AS "productsCount"
+      FROM "Category" c
+      LEFT JOIN "ProductCategory" pc ON pc."categoryId" = c.id
+      WHERE c.brand = 'sprint-power'
+      GROUP BY c.id, c.title, c.slug, c."sortOrder"
+      ORDER BY c."sortOrder" ASC NULLS LAST, c.title ASC
+      LIMIT 6
+    `
+  )
+
   const [products, categories, reviews] = await Promise.all([
     prisma.product.findMany({
       where: { isDraft: false, brand: SPRINT_POWER_PRODUCT_BRAND },
@@ -183,27 +233,33 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         brand: true,
       },
     }),
-    prisma.category.findMany({
-      where: { brand: 'sprint-power' },
-      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-      include: { _count: { select: { products: true } } },
-      take: 6,
-    }),
-    prisma.review.findMany({
-      where: { status: 'APPROVED', brand: 'sprint-power' },
-      orderBy: { createdAt: 'desc' },
-      take: 2,
-      select: { id: true, authorName: true, text: true },
-    }),
+    Promise.resolve(
+      categoriesRaw.map((item) => ({
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        _count: { products: item.productsCount },
+      }))
+    ),
+    reviewService.getApprovedReviews('sprint-power').then((items) =>
+      items.slice(0, 2).map((item) => ({
+        id: item.id,
+        authorName: item.authorName,
+        text: item.text,
+      }))
+    ),
   ])
 
   return { products, categories, reviews }
 }
 
 function SprintPowerHome({ data }: { data: SprintHomeData }) {
+  const heroImage = data.products[0]?.photo ?? null
+  const innerSiteUrl = getBrandSiteUrl('inner')
+
   return (
     <section className="bg-[#060A14] py-10 md:py-12">
-      <AdaptiveContainer maxWidth="wide">
+      <AdaptiveContainer maxWidth="full">
         <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
@@ -232,7 +288,11 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
             </div>
             <div
               className="min-h-[240px] rounded-2xl border border-slate-700 bg-cover bg-center p-5"
-              style={{ backgroundImage: "url('/uploads/home/sprint-hero.jpg')" }}
+              style={
+                heroImage
+                  ? { backgroundImage: `url('${heroImage}')` }
+                  : { backgroundImage: 'linear-gradient(135deg, #0b132b 0%, #1c2541 100%)' }
+              }
             >
               <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100">
                 Hydro Protein - флагман линейки
@@ -308,12 +368,12 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
             <p className="mt-2 text-sm text-slate-300">
               Активное долголетие, превентивная медицина, нутрицевтика.
             </p>
-            <Link
-              href="/"
+            <a
+              href={innerSiteUrl}
               className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
             >
               На Inner Health
-            </Link>
+            </a>
           </div>
 
           <div className="rounded-3xl bg-white p-6 md:p-8">

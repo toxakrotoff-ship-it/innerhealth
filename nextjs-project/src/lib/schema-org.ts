@@ -70,7 +70,8 @@ function parseSameAsLinks(raw: string | undefined): string[] | undefined {
 }
 
 export function buildOrganizationJsonLd(
-  settings: Record<string, string>
+  settings: Record<string, string>,
+  overrides?: { name?: string; url?: string; logo?: string }
 ): OrganizationJsonLd | null {
   const enabled = parseBooleanFlag(settings.schema_org_enabled)
   if (!enabled) {
@@ -82,10 +83,10 @@ export function buildOrganizationJsonLd(
 
   const legalName = settings.schema_org_legal_name?.trim()
   const siteName = settings.site_name?.trim()
-  const name = legalName || siteName
+  const name = overrides?.name?.trim() || legalName || siteName
 
-  const url = settings.schema_org_url?.trim()
-  const logo = settings.schema_org_logo_url?.trim()
+  const url = overrides?.url?.trim() || settings.schema_org_url?.trim()
+  const logo = overrides?.logo?.trim() || settings.schema_org_logo_url?.trim()
   const telephone = settings.schema_org_phone?.trim()
   const addressRaw = settings.schema_org_address?.trim()
   const sameAs = parseSameAsLinks(settings.schema_org_social_links)
@@ -431,6 +432,40 @@ export function buildWebSiteJsonLd(settings: Record<string, string>): WebSiteJso
   const url = settings.schema_org_url?.trim()
   const name =
     settings.schema_org_legal_name?.trim() || settings.site_name?.trim() || 'Inner Health'
+
+  if (!url) return null
+
+  const catalogSearchTemplate = `${url.replace(/\/+$/, '')}/catalog?q={search_term_string}`
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name,
+    url,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: catalogSearchTemplate,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+}
+
+export function buildWebSiteJsonLdWithOverrides(
+  settings: Record<string, string>,
+  overrides?: { name?: string; url?: string }
+): WebSiteJsonLd | null {
+  const enabled = parseBooleanFlag(settings.schema_org_enabled)
+  if (!enabled) return null
+
+  const url = overrides?.url?.trim() || settings.schema_org_url?.trim()
+  const name =
+    overrides?.name?.trim() ||
+    settings.schema_org_legal_name?.trim() ||
+    settings.site_name?.trim() ||
+    'Inner Health'
 
   if (!url) return null
 

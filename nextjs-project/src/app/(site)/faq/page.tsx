@@ -7,19 +7,22 @@ import { FaqAccordion } from '@/components/site/faq-accordion'
 import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 export const revalidate = 86400
 
-export const metadata: Metadata = {
-  title: 'Часто задаваемые вопросы',
-  description:
-    'Ответы на популярные вопросы Inner Health: доставка, оплата, товары, возврат и оформление заказа.',
-  alternates: { canonical: '/faq' },
-  openGraph: {
-    title: 'FAQ | Inner Health',
-    description: 'Часто задаваемые вопросы о магазине, доставке и заказах.',
-    url: '/faq',
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: 'Часто задаваемые вопросы',
+    description: `Ответы на популярные вопросы ${siteTitle}: доставка, оплата, товары, возврат и оформление заказа.`,
+    alternates: { canonical: '/faq' },
+    openGraph: {
+      title: `FAQ | ${siteTitle}`,
+      description: 'Часто задаваемые вопросы о магазине, доставке и заказах.',
+      url: '/faq',
+    },
+  }
 }
 
 export default async function FaqPage() {
