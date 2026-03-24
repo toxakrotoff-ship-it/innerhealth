@@ -31,8 +31,8 @@ function getText(
 }
 
 export default async function SotrudnichestvoPage() {
-  const { siteTitle } = await getServerBrandContext()
-  const blocks = await getResolvedBlocksForPage('sotrudnichestvo')
+  const { siteTitle, brandId } = await getServerBrandContext()
+  const blocks = await getResolvedBlocksForPage('sotrudnichestvo', brandId)
   const pageTitle = getText(blocks, 'cooperation.title', 'Сотрудничество')
   const pageSubtitle = getText(
     blocks,

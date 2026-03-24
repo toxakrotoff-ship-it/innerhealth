@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { requireAdminSession } from '@/lib/require-admin'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import {
   getBlocksForPage,
   upsertBlocks,
@@ -33,6 +34,7 @@ const savePayloadSchema = z.object({
 export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   const { searchParams } = new URL(request.url)
   const parseResult = pageQuerySchema.safeParse({ page: searchParams.get('page') })
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
 
   try {
     // Возвращаем блоки, объединённые с дефолтами, чтобы админ видел текущие тексты
-    const blocks = await getResolvedBlocksForPage(parseResult.data.page)
+    const blocks = await getResolvedBlocksForPage(parseResult.data.page, brandId)
     return NextResponse.json(blocks)
   } catch (error) {
     console.error('Error fetching content blocks:', error)
@@ -54,6 +56,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   let body: z.infer<typeof savePayloadSchema>
   try {
@@ -72,10 +75,11 @@ export async function PUT(request: Request) {
       body.blocks.map((b) => ({
         ...b,
         richJson: (b.richJson ?? null) as Prisma.JsonValue | null,
-      }))
+      })),
+      brandId
     )
 
-    const refreshed = await getBlocksForPage(body.page)
+    const refreshed = await getBlocksForPage(body.page, brandId)
     return NextResponse.json(refreshed)
   } catch (error) {
     console.error('Error saving content blocks:', error)

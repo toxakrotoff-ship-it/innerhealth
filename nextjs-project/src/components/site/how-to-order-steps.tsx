@@ -28,27 +28,46 @@ interface HowToOrderStepsProps {
   embedded?: boolean
   /** When false, hide outer section borders (useful when adjacent sections have mismatched spacing). */
   showBorders?: boolean
+  isSprintTheme?: boolean
 }
 
-export function HowToOrderSteps({ embedded = false, showBorders = true }: HowToOrderStepsProps) {
+export function HowToOrderSteps({
+  embedded = false,
+  showBorders = true,
+  isSprintTheme = false,
+}: HowToOrderStepsProps) {
   const inner = (
     <>
       {!embedded && (
-        <Heading2 className="text-text mb-6 text-center sm:text-left">Как заказать</Heading2>
+        <Heading2 className={`mb-6 text-center sm:text-left ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+          Как заказать
+        </Heading2>
       )}
-      {embedded && <p className="font-semibold text-text mb-4">Как заказать — три шага</p>}
+      {embedded && (
+        <p className={`font-semibold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+          Как заказать — три шага
+        </p>
+      )}
       <ol className="grid gap-6 sm:grid-cols-3">
         {steps.map((step, i) => (
           <li
             key={step.title}
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm flex flex-col"
+            className={`rounded-2xl border p-5 shadow-sm flex flex-col ${
+              isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-white'
+            }`}
           >
             <span className="text-xs font-semibold text-action-blue mb-2">Шаг {i + 1}</span>
-            <h3 className="text-lg font-semibold text-text mb-2">{step.title}</h3>
-            <p className="text-sm text-gray-600 flex-1 mb-3">{step.text}</p>
+            <h3 className={`text-lg font-semibold mb-2 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+              {step.title}
+            </h3>
+            <p className={`text-sm flex-1 mb-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>
+              {step.text}
+            </p>
             <Link
               href={step.href}
-              className="text-sm font-medium text-action-blue underline-offset-2 hover:underline inline-block"
+              className={`text-sm font-medium underline-offset-2 hover:underline inline-block ${
+                isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
+              }`}
             >
               {step.linkLabel} →
             </Link>
@@ -66,8 +85,8 @@ export function HowToOrderSteps({ embedded = false, showBorders = true }: HowToO
     <section
       className={[
         'py-12 sm:py-16',
-        'bg-gray-50',
-        showBorders ? 'border-y border-gray-100' : '',
+        isSprintTheme ? 'bg-[#060A14]' : 'bg-gray-50',
+        showBorders ? (isSprintTheme ? 'border-y border-slate-800' : 'border-y border-gray-100') : '',
       ].join(' ')}
     >
       <AdaptiveContainer maxWidth="default">{inner}</AdaptiveContainer>

@@ -8,18 +8,19 @@ import { ScalableSpacing } from '@/components/ui/scalable-spacing';
 
 interface ReviewsSectionProps {
   initialReviews: ReviewItem[];
+  isSprintTheme?: boolean;
 }
 
-export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
+export function ReviewsSection({ initialReviews, isSprintTheme = false }: ReviewsSectionProps) {
   const router = useRouter();
 
   return (
     <>
       <section>
-        <Heading2 className="text-slate-900 mb-6">
+        <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
           Отзывы наших клиентов
         </Heading2>
-        <ReviewsCarousel reviews={initialReviews} />
+        <ReviewsCarousel reviews={initialReviews} isSprintTheme={isSprintTheme} />
       </section>
       <ScalableSpacing size="lg" />
       <section id="review-form" className="scroll-mt-6">

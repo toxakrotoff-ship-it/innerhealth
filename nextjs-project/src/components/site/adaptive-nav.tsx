@@ -7,6 +7,7 @@ interface AdaptiveNavProps {
   /** Принудительно использовать мобильный вариант (переопределяет автоматическое определение) */
   forceMobile?: boolean
   links: readonly BrandNavLink[]
+  variant?: 'light' | 'dark'
 }
 
 /**
@@ -15,7 +16,7 @@ interface AdaptiveNavProps {
  *
  * Поддерживает экраны до 5K+ (5120px / 6xl брейкпоинт) с адаптивным масштабированием.
  */
-export function AdaptiveNav({ forceMobile = false, links }: AdaptiveNavProps) {
+export function AdaptiveNav({ forceMobile = false, links, variant = 'light' }: AdaptiveNavProps) {
   const hasConflict = useMediaConflictDetection()
   const useMobile = forceMobile || hasConflict
 
@@ -30,7 +31,7 @@ export function AdaptiveNav({ forceMobile = false, links }: AdaptiveNavProps) {
         hidden xl:flex items-center
         gap-8 2xl:gap-10 3xl:gap-12 4xl:gap-14 5xl:gap-16 6xl:gap-20
         text-sm 2xl:text-base 3xl:text-lg 4xl:text-xl 5xl:text-2xl 6xl:text-3xl
-        font-medium uppercase tracking-widest text-slate-500
+        font-medium uppercase tracking-widest ${variant === 'dark' ? 'text-slate-300' : 'text-slate-500'}
       `}
       aria-label="Основное меню"
     >
@@ -38,7 +39,7 @@ export function AdaptiveNav({ forceMobile = false, links }: AdaptiveNavProps) {
         <a
           key={href}
           href={href}
-          className="hover:text-slate-900 transition-colors whitespace-nowrap"
+          className={`transition-colors whitespace-nowrap ${variant === 'dark' ? 'hover:text-white' : 'hover:text-slate-900'}`}
         >
           {label}
         </a>

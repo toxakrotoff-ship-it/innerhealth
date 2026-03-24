@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { CONTENT_BLOCK_DEFAULTS, type ContentBlockDefault } from '@/config/content-blocks-defaults'
+import type { BrandId } from '@/lib/brand/brand'
 
 export interface ContentBlockDto {
   id: string
@@ -15,9 +16,24 @@ export interface ContentBlockDto {
   fontWeight: string | null
 }
 
-export async function getBlocksForPage(page: string): Promise<ContentBlockDto[]> {
+function getScopedPage(page: string, brandId: BrandId): string {
+  return brandId === 'sprint-power' ? `sprint-power::${page}` : page
+}
+
+function shouldIncludeDefaultForBrand(def: ContentBlockDefault, brandId: BrandId): boolean {
+  const isSprintOnly = def.key.startsWith('sprint.') || def.key.startsWith('faq.sprint.')
+  if (brandId === 'sprint-power') {
+    if (def.page === 'home') return def.key.startsWith('sprint.')
+    if (def.page === 'faq') return def.key.startsWith('faq.sprint.')
+    return !def.key.startsWith('home.') && !def.key.startsWith('hero.')
+  }
+  return !isSprintOnly
+}
+
+export async function getBlocksForPage(page: string, brandId: BrandId = 'inner'): Promise<ContentBlockDto[]> {
+  const scopedPage = getScopedPage(page, brandId)
   const blocks = await prisma.contentBlock.findMany({
-    where: { page },
+    where: { page: scopedPage },
     orderBy: { createdAt: 'asc' },
   })
 
@@ -40,12 +56,16 @@ export interface UpsertBlockInput {
   fontWeight?: string | null
 }
 
-export async function upsertBlocks(inputs: UpsertBlockInput[]): Promise<ContentBlockDto[]> {
+export async function upsertBlocks(
+  inputs: UpsertBlockInput[],
+  brandId: BrandId = 'inner'
+): Promise<ContentBlockDto[]> {
   const result: ContentBlockDto[] = []
 
   for (const input of inputs) {
+    const scopedPage = getScopedPage(input.page, brandId)
     const data: Prisma.ContentBlockUncheckedCreateInput = {
-      page: input.page,
+      page: scopedPage,
       key: input.key,
       label: input.label,
       type: input.type,
@@ -65,7 +85,7 @@ export async function upsertBlocks(inputs: UpsertBlockInput[]): Promise<ContentB
         : await prisma.contentBlock.upsert({
             where: {
               page_key: {
-                page: input.page,
+                page: scopedPage,
                 key: input.key,
               },
             },
@@ -90,9 +110,15 @@ export interface ContentBlockResolved {
   fontWeight: string | null
 }
 
-export async function getResolvedBlocksForPage(page: string): Promise<ContentBlockResolved[]> {
-  const defaults = CONTENT_BLOCK_DEFAULTS.filter((d) => d.page === page)
-  const existing = await prisma.contentBlock.findMany({ where: { page } })
+export async function getResolvedBlocksForPage(
+  page: string,
+  brandId: BrandId = 'inner'
+): Promise<ContentBlockResolved[]> {
+  const scopedPage = getScopedPage(page, brandId)
+  const defaults = CONTENT_BLOCK_DEFAULTS.filter(
+    (d) => d.page === page && shouldIncludeDefaultForBrand(d, brandId)
+  )
+  const existing = await prisma.contentBlock.findMany({ where: { page: scopedPage } })
 
   return defaults.map((def): ContentBlockResolved => {
     const found = existing.find((b) => b.key === def.key)
@@ -134,9 +160,10 @@ export async function getResolvedBlocksForPage(page: string): Promise<ContentBlo
 
 export async function getResolvedBlock(
   page: string,
-  key: string
+  key: string,
+  brandId: BrandId = 'inner'
 ): Promise<ContentBlockResolved | null> {
-  const all = await getResolvedBlocksForPage(page)
+  const all = await getResolvedBlocksForPage(page, brandId)
   return all.find((b) => b.key === key) ?? null
 }
 

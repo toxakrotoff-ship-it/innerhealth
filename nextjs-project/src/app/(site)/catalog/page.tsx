@@ -141,7 +141,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const hasNextPage = catalogResult.hasNextPage
   const products = catalogResult.items
 
-  const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant')
+  const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant', brandId)
   const categoryTitleFont =
     categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
       ? 'font-sans'
@@ -179,185 +179,187 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   })
 
   return (
-    <AdaptiveContainer
-      maxWidth="default"
-      className={`pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24 ${isSprintTheme ? 'text-slate-100' : ''}`}
-    >
-      <BreadcrumbJsonLd items={breadcrumbItems} currentPath={catalogCurrentPath} />
-      <Suspense fallback={null}>
-        <CatalogZeroHitReporter query={q} hasProducts={products.length > 0} />
-      </Suspense>
-      <Breadcrumbs items={breadcrumbItems} />
-      <Heading1 className={`mb-6 mt-0 ${isSprintTheme ? 'text-slate-100' : ''}`}>
-        {page > 1 ? `Каталог — страница ${page}` : 'Каталог'}
-      </Heading1>
-      <CatalogControls
-        initialQuery={q}
-        brandOptions={brandOptions}
-        selectedBrands={selectedBrands}
-        minPrice={minPrice}
-        maxPrice={maxPrice}
-        promoOnly={promoOnly}
-        sort={sort}
-        view={view}
-      />
-      <ScalableSpacing size="lg">
-        <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
-          {catalogBlockCategories.map((cat) => {
-            const bgImage = getCategoryBackgroundImage(cat.slug)
-            const imagePosition = getCategoryImageObjectPosition(cat.slug)
-            return (
-              <Link
-                key={cat.id}
-                href={`/catalog/${cat.slug}`}
-                className={`block transition-shadow rounded-2xl ${
-                  isSprintTheme ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : 'hover:shadow-md hover:border-action-blue'
-                }`}
+    <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
+      <AdaptiveContainer
+        maxWidth="default"
+        className={`pt-2 md:pt-3 pb-12 sm:pb-16 md:pb-20 lg:pb-24 ${isSprintTheme ? 'text-slate-100' : ''}`}
+      >
+        <BreadcrumbJsonLd items={breadcrumbItems} currentPath={catalogCurrentPath} />
+        <Suspense fallback={null}>
+          <CatalogZeroHitReporter query={q} hasProducts={products.length > 0} />
+        </Suspense>
+        <Breadcrumbs items={breadcrumbItems} />
+        <Heading1 className={`mb-6 mt-0 ${isSprintTheme ? 'text-slate-100' : ''}`}>
+          {page > 1 ? `Каталог — страница ${page}` : 'Каталог'}
+        </Heading1>
+        <CatalogControls
+          initialQuery={q}
+          brandOptions={brandOptions}
+          selectedBrands={selectedBrands}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          promoOnly={promoOnly}
+          sort={sort}
+          view={view}
+        />
+        <ScalableSpacing size="lg">
+          <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
+            {catalogBlockCategories.map((cat) => {
+              const bgImage = getCategoryBackgroundImage(cat.slug)
+              const imagePosition = getCategoryImageObjectPosition(cat.slug)
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/catalog/${cat.slug}`}
+                  className={`block transition-shadow rounded-2xl ${
+                    isSprintTheme ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : 'hover:shadow-md hover:border-action-blue'
+                  }`}
+                >
+                  <TiltCard>
+                    <div
+                      className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
+                        !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
+                      }`}
+                    >
+                      {bgImage && (
+                        <>
+                          <Image
+                            src={bgImage}
+                            alt=""
+                            fill
+                            className={imagePosition}
+                            sizes="(max-width: 768px) 50vw, 33vw"
+                          />
+                          <div
+                            className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
+                            aria-hidden
+                          />
+                        </>
+                      )}
+                      <span
+                        className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${
+                          bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
+                        }`}
+                      >
+                        {cat.title}
+                      </span>
+                      <span
+                        className={`relative z-10 text-sm drop-shadow mt-1 ${
+                          bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                        }`}
+                      >
+                        {cat._count.products} товаров
+                      </span>
+                    </div>
+                  </TiltCard>
+                </Link>
+              )
+            })}
+          </FluidGrid>
+        </ScalableSpacing>
+
+        <ScalableSpacing size="lg">
+          <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : ''}`}>
+            Все товары
+          </Heading2>
+        </ScalableSpacing>
+        {products.length === 0 ? (
+          <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
+            Товары появятся после добавления в админке.
+          </p>
+        ) : (
+          <>
+            {view === 'grid' ? (
+              <FluidGrid
+                cols={2}
+                colsTablet={3}
+                colsDesktop={4}
+                colsXl={5}
+                cols2xl={5}
+                cols3xl={6}
+                cols4xl={6}
+                gap="6"
+                adaptiveGap={false}
+                className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
               >
-                <TiltCard>
-                  <div
-                    className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
-                      !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
+                {products.map((p, index) => (
+                  <ProductCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    brand={p.brand}
+                    sku={p.sku}
+                    price={p.price}
+                    priceOld={p.priceOld}
+                    photo={p.photo}
+                    slug={p.slug}
+                    isPromoEligible={p.isPromoEligible}
+                    discountPrice={p.discountPrice}
+                    quantity={p.quantity}
+                    isPreorderEnabled={p.isPreorderEnabled}
+                    priority={index < 2}
+                    blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                  />
+                ))}
+              </FluidGrid>
+            ) : (
+              <div className={`space-y-3 ${isSprintTheme ? '**:border-slate-700' : ''}`}>
+                {products.map((p) => (
+                  <ProductListRow
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    brand={p.brand}
+                    sku={p.sku}
+                    price={p.price}
+                    priceOld={p.priceOld}
+                    photo={p.photo}
+                    slug={p.slug}
+                    isPromoEligible={p.isPromoEligible}
+                    discountPrice={p.discountPrice}
+                    quantity={p.quantity}
+                    isPreorderEnabled={p.isPreorderEnabled}
+                  />
+                ))}
+              </div>
+            )}
+            {(page > 1 || hasNextPage) && (
+              <nav
+                className="mt-10 md:mt-12 flex flex-wrap items-center justify-center gap-2"
+                aria-label="Пагинация каталога"
+              >
+                {page > 1 && (
+                  <Link
+                    href={buildPageHref(page - 1)}
+                    className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
+                      isSprintTheme
+                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
                     }`}
                   >
-                    {bgImage && (
-                      <>
-                        <Image
-                          src={bgImage}
-                          alt=""
-                          fill
-                          className={imagePosition}
-                          sizes="(max-width: 768px) 50vw, 33vw"
-                        />
-                        <div
-                          className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
-                          aria-hidden
-                        />
-                      </>
-                    )}
-                    <span
-                      className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${
-                        bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
-                      }`}
-                    >
-                      {cat.title}
-                    </span>
-                    <span
-                      className={`relative z-10 text-sm drop-shadow mt-1 ${
-                        bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
-                      }`}
-                    >
-                      {cat._count.products} товаров
-                    </span>
-                  </div>
-                </TiltCard>
-              </Link>
-            )
-          })}
-        </FluidGrid>
-      </ScalableSpacing>
-
-      <ScalableSpacing size="lg">
-        <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : ''}`}>
-          Все товары
-        </Heading2>
-      </ScalableSpacing>
-      {products.length === 0 ? (
-        <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
-          Товары появятся после добавления в админке.
-        </p>
-      ) : (
-        <>
-          {view === 'grid' ? (
-            <FluidGrid
-              cols={2}
-              colsTablet={3}
-              colsDesktop={4}
-              colsXl={5}
-              cols2xl={5}
-              cols3xl={6}
-              cols4xl={6}
-              gap="6"
-              adaptiveGap={false}
-              className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
-            >
-              {products.map((p, index) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  brand={p.brand}
-                  sku={p.sku}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  isPromoEligible={p.isPromoEligible}
-                  discountPrice={p.discountPrice}
-                  quantity={p.quantity}
-                  isPreorderEnabled={p.isPreorderEnabled}
-                  priority={index < 2}
-                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                />
-              ))}
-            </FluidGrid>
-          ) : (
-            <div className={`space-y-3 ${isSprintTheme ? '**:border-slate-700' : ''}`}>
-              {products.map((p) => (
-                <ProductListRow
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  brand={p.brand}
-                  sku={p.sku}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  isPromoEligible={p.isPromoEligible}
-                  discountPrice={p.discountPrice}
-                  quantity={p.quantity}
-                  isPreorderEnabled={p.isPreorderEnabled}
-                />
-              ))}
-            </div>
-          )}
-          {(page > 1 || hasNextPage) && (
-            <nav
-              className="mt-10 md:mt-12 flex flex-wrap items-center justify-center gap-2"
-              aria-label="Пагинация каталога"
-            >
-              {page > 1 && (
-                <Link
-                  href={buildPageHref(page - 1)}
-                  className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
-                    isSprintTheme
-                      ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
-                      : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
-                  }`}
-                >
-                  ← Назад
-                </Link>
-              )}
-              <span className={`px-4 py-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
-                Страница {page}
-              </span>
-              {hasNextPage && (
-                <Link
-                  href={buildPageHref(page + 1)}
-                  className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
-                    isSprintTheme
-                      ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
-                      : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
-                  }`}
-                >
-                  Вперёд →
-                </Link>
-              )}
-            </nav>
-          )}
-        </>
-      )}
-    </AdaptiveContainer>
+                    ← Назад
+                  </Link>
+                )}
+                <span className={`px-4 py-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
+                  Страница {page}
+                </span>
+                {hasNextPage && (
+                  <Link
+                    href={buildPageHref(page + 1)}
+                    className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
+                      isSprintTheme
+                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
+                    }`}
+                  >
+                    Вперёд →
+                  </Link>
+                )}
+              </nav>
+            )}
+          </>
+        )}
+      </AdaptiveContainer>
+    </section>
   )
 }

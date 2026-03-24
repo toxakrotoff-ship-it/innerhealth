@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
-import { prisma } from '@/lib/prisma'
 import { ReviewsSection } from './reviews-section'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import * as reviewService from '@/services/review.service'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export const revalidate = 1800
 
@@ -32,10 +33,9 @@ type ReviewRow = {
 };
 
 export default async function ReviewsPage() {
-  const reviews: ReviewRow[] = await prisma.review.findMany({
-    where: { status: 'APPROVED' },
-    orderBy: { createdAt: 'desc' },
-  });
+  const { brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
+  const reviews: ReviewRow[] = await reviewService.getApprovedReviews(brandId)
 
   const serialized = reviews.map((r) => ({
     id: r.id,
@@ -47,12 +47,14 @@ export default async function ReviewsPage() {
   }));
 
   return (
-    <AdaptiveContainer maxWidth="default">
-      <ScalableSpacing size="lg" />
-      <Heading1 className="text-slate-900 mb-10">
-        Отзывы
-      </Heading1>
-      <ReviewsSection initialReviews={serialized} />
-    </AdaptiveContainer>
+    <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
+      <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'text-slate-100' : ''}>
+        <ScalableSpacing size="lg" />
+        <Heading1 className={`mb-10 ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
+          Отзывы
+        </Heading1>
+        <ReviewsSection initialReviews={serialized} isSprintTheme={isSprintTheme} />
+      </AdaptiveContainer>
+    </section>
   );
 }

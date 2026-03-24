@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { cn } from '@/lib/utils'
 
 const YandexMapPvz = dynamic(
   () => import('./yandex-map-pvz').then((m) => ({ default: m.YandexMapPvz })),
@@ -83,6 +84,7 @@ interface DeliverySectionProps {
   onCommentChange: (value: string) => void
   /** Ошибка (калькулятор или ПВЗ) */
   error: string | null
+  isSprintTheme?: boolean
 }
 
 const SearchIcon = () => (
@@ -112,6 +114,7 @@ export function DeliverySection({
   comment,
   onCommentChange,
   error,
+  isSprintTheme = false,
 }: DeliverySectionProps) {
   const [cityQuery, setCityQuery] = useState(selectedCity?.city ?? '')
   const [citySuggestions, setCitySuggestions] = useState<CdekCityOption[]>([])
@@ -205,8 +208,13 @@ export function DeliverySection({
         })
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
-      <h2 className="font-semibold text-text text-lg">Доставка</h2>
+    <div
+      className={cn(
+        'rounded-2xl border p-6 space-y-6',
+        isSprintTheme ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-200 bg-white'
+      )}
+    >
+      <h2 className={cn('text-lg font-semibold', isSprintTheme ? 'text-slate-100' : 'text-text')}>Доставка</h2>
 
       {/* Способ доставки */}
       <div>

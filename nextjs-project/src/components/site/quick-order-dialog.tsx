@@ -2,14 +2,21 @@
 
 import { useState } from 'react'
 import { ModalLayer } from '@/components/ui/modal-layer'
+import { cn } from '@/lib/utils'
 
 interface QuickOrderDialogProps {
   productId: string
   productTitle: string
   disabled?: boolean
+  isSprintTheme?: boolean
 }
 
-export function QuickOrderDialog({ productId, productTitle, disabled = false }: QuickOrderDialogProps) {
+export function QuickOrderDialog({
+  productId,
+  productTitle,
+  disabled = false,
+  isSprintTheme = false,
+}: QuickOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -56,7 +63,12 @@ export function QuickOrderDialog({ productId, productTitle, disabled = false }: 
         type="button"
         onClick={() => setIsOpen(true)}
         disabled={disabled}
-        className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium transition-colors px-5 py-3 min-h-[44px] disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed hover:bg-gray-50"
+        className={cn(
+          'inline-flex min-h-[44px] items-center justify-center rounded-full border px-5 py-3 font-medium transition-colors disabled:cursor-not-allowed',
+          isSprintTheme
+            ? 'border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700 disabled:border-slate-700 disabled:bg-slate-900 disabled:text-slate-500'
+            : 'border-gray-300 bg-white text-text hover:bg-gray-50 disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400'
+        )}
       >
         Купить в 1 клик
       </button>

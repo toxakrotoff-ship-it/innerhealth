@@ -83,6 +83,10 @@ export default function NewProductPage() {
     : base.includes('inner')
       ? 'inner'
       : null;
+  const featuredBlockLabel =
+    activeBrand === 'sprint-power'
+      ? 'Показывать в блоке "Хиты продаж"'
+      : 'Показывать в блоке "Новинки ассортимента"';
   const [product, setProduct] = useState<Omit<Product, 'id' | 'tildaUid' | 'createdAt' | 'updatedAt'>>({
     slug: null,
     brand: null,
@@ -560,7 +564,7 @@ export default function NewProductPage() {
               checked={product.isFeaturedInNewArrivals}
               onChange={(e) => handleChange('isFeaturedInNewArrivals', e.target.checked)}
             />
-            <span className="text-sm text-gray-700">Показывать в блоке "Новинки ассортимента"</span>
+            <span className="text-sm text-gray-700">{featuredBlockLabel}</span>
           </label>
           <label className="inline-flex items-center gap-2">
             <input

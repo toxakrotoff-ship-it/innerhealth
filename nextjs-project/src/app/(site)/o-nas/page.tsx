@@ -29,13 +29,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const { siteTitle } = await getServerBrandContext()
+  const { siteTitle, brandId } = await getServerBrandContext()
   const breadcrumbItems = [
     { label: 'Главная', href: '/' },
     { label: 'О нас' },
   ]
 
-  const blocks = await getResolvedBlocksForPage('about')
+  const blocks = await getResolvedBlocksForPage('about', brandId)
   const block1 = blocks.find((b) => b.key === 'about.block1')
   const block2Title = blocks.find((b) => b.key === 'about.block2.title')
   const block2Text = blocks.find((b) => b.key === 'about.block2.text')

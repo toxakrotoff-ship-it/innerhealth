@@ -10,9 +10,6 @@ import { ClearInvalidSession } from './clear-invalid-session'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import type { BrandId } from '@/lib/brand/brand'
 
-const headerIconLink =
-  'rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2'
-
 /**
  * Заголовок сайта с адаптивной поддержкой экранов до 5K+ (5120px).
  * 
@@ -23,6 +20,7 @@ const headerIconLink =
  */
 export async function SiteHeader({ brandId }: { brandId: BrandId }) {
   const siteConfig = getBrandSiteConfig(brandId)
+  const isSprintTheme = brandId === 'sprint-power'
   const { contact } = siteConfig
   let session = null
   let hasInvalidSession = false
@@ -65,7 +63,11 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
     {/* Клиентский компонент для очистки поврежденных cookies */}
     <ClearInvalidSession hasInvalidSession={hasInvalidSession} />
     <header
-      className="fixed top-0 left-0 right-0 z-50 w-full border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] backdrop-blur-md supports-backdrop-filter:bg-white/80 pt-[env(safe-area-inset-top)]"
+      className={`fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-md pt-[env(safe-area-inset-top)] ${
+        isSprintTheme
+          ? 'border-b border-slate-800 bg-[#060A14]/85 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.85)] supports-backdrop-filter:bg-[#060A14]/80'
+          : 'border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] supports-backdrop-filter:bg-white/80'
+      }`}
     >
       <div 
         className={`
@@ -77,7 +79,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
       >
         <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
           <HeaderNavMobile
-            variant="light"
+            variant={isSprintTheme ? 'dark' : 'light'}
             isAuthenticated={isAuthenticated}
             role={session?.user?.role}
             logoText={siteConfig.logoText}
@@ -87,15 +89,16 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
           <Link
             href="/"
             className={`
-              font-display font-semibold text-slate-900 tracking-tighter uppercase
+              font-display font-semibold tracking-tighter uppercase
               text-lg 2xl:text-xl 3xl:text-2xl 4xl:text-3xl 5xl:text-4xl 6xl:text-5xl
               hover:opacity-90 transition-opacity shrink-0
+              ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}
             `}
             aria-label={`${siteConfig.title} — на главную`}
           >
             {siteConfig.logoText}
           </Link>
-          <AdaptiveNav links={siteConfig.navLinks} />
+          <AdaptiveNav links={siteConfig.navLinks} variant={isSprintTheme ? 'dark' : 'light'} />
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 2xl:gap-6 3xl:gap-8 4xl:gap-10 5xl:gap-12 6xl:gap-16 shrink-0">
@@ -103,7 +106,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
             <a
               href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
               className={`
-                font-medium text-slate-900 hover:text-slate-700
+                font-medium ${isSprintTheme ? 'text-slate-100 hover:text-slate-300' : 'text-slate-900 hover:text-slate-700'}
                 text-sm 2xl:text-base 3xl:text-lg 4xl:text-xl 5xl:text-2xl 6xl:text-3xl
               `}
             >
@@ -114,22 +117,54 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
             </span>
           </div>
           <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 3xl:gap-2">
-            <a href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`} className={headerIconLink} aria-label="Позвонить">
+            <a
+              href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
+              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
+                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              aria-label="Позвонить"
+            >
               <PhoneIcon />
             </a>
-            <a href={`mailto:${contact.email}`} className={headerIconLink} aria-label="Написать на почту">
+            <a
+              href={`mailto:${contact.email}`}
+              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
+                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              aria-label="Написать на почту"
+            >
               <MailIcon />
             </a>
-            <a href={contact.whatsappUrl} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="WhatsApp">
+            <a
+              href={contact.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
+                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              aria-label="WhatsApp"
+            >
               <WhatsAppIcon />
             </a>
-            <a href={contact.telegramUrl} target="_blank" rel="noopener noreferrer" className={headerIconLink} aria-label="Telegram">
+            <a
+              href={contact.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
+                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              aria-label="Telegram"
+            >
               <TelegramIcon />
             </a>
           </div>
-          <HeaderCartButton variant="light" />
+          <HeaderCartButton variant={isSprintTheme ? 'dark' : 'light'} />
           <div className="hidden xl:block">
-            <HeaderProfileMenu variant="light" isAuthenticated={isAuthenticated} role={session?.user?.role} />
+            <HeaderProfileMenu
+              variant={isSprintTheme ? 'dark' : 'light'}
+              isAuthenticated={isAuthenticated}
+              role={session?.user?.role}
+            />
           </div>
         </div>
       </div>

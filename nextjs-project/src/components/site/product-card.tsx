@@ -49,6 +49,8 @@ export function ProductCard({
   const state = useRef({ rotateX: 0, rotateY: 0 })
   const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`
   const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled
+  const normalizedBrand = (brand ?? '').trim().toLowerCase()
+  const isSprintTheme = normalizedBrand === 'sprint-power' || normalizedBrand.includes('sprint')
 
   const updateStyles = () => {
     if (ref.current) {
@@ -87,15 +89,16 @@ export function ProductCard({
       >
       <article
         className={cn(
-          'relative flex h-full w-full flex-col rounded-2xl border border-gray-200 overflow-hidden',
-          'bg-white shadow-sm transition-[transform,border-color,box-shadow] duration-200 ease-out',
-          'group-hover:shadow-md'
+          'relative flex h-full w-full flex-col overflow-hidden rounded-2xl border transition-[transform,border-color,box-shadow] duration-200 ease-out',
+          isSprintTheme
+            ? 'border-slate-700/80 bg-slate-900 shadow-[0_10px_30px_rgba(2,6,23,0.45)] group-hover:border-[#7AA2FF]/70 group-hover:shadow-[0_16px_40px_rgba(2,6,23,0.65)]'
+            : 'border-gray-200 bg-white shadow-sm group-hover:shadow-md'
         )}
         style={{
           transform: 'rotateX(var(--r-y)) rotateY(var(--r-x))',
         }}
       >
-        <div className="relative aspect-3/4 overflow-hidden bg-highlight-blue">
+        <div className={cn('relative aspect-3/4 overflow-hidden', isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue')}>
           <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
             <ProductQuickView
               id={id}
@@ -138,20 +141,25 @@ export function ProductCard({
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
           <div className="flex-1 min-h-0 min-w-0">
-            <h3 className="line-clamp-2 text-sm font-medium text-text transition-colors group-hover:text-action-blue 2xl:text-[0.95rem] 3xl:text-base">
+            <h3
+              className={cn(
+                'line-clamp-2 text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
+                isSprintTheme ? 'text-slate-100 group-hover:text-[#7AA2FF]' : 'text-text group-hover:text-action-blue'
+              )}
+            >
               {title}
             </h3>
             {(brand || sku) && (
-              <p className="desktop-microtext-scale mt-1 line-clamp-1 text-gray-500">
+              <p className={cn('desktop-microtext-scale mt-1 line-clamp-1', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
                 {brand ? `Бренд: ${brand}` : ''}{brand && sku ? ' • ' : ''}{sku ? `SKU: ${sku}` : ''}
               </p>
             )}
             <div className="mt-1.5 flex items-center gap-1.5">
-              <span className="text-base font-semibold text-text 2xl:text-lg 3xl:text-xl">
+              <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
                 {price.toLocaleString('ru-RU')} ₽
               </span>
               {priceOld != null && priceOld > price && (
-                <span className="desktop-microtext-scale text-gray-500 line-through">
+                <span className={cn('desktop-microtext-scale line-through', isSprintTheme ? 'text-slate-500' : 'text-gray-500')}>
                   {priceOld.toLocaleString('ru-RU')} ₽
                 </span>
               )}
@@ -169,11 +177,19 @@ export function ProductCard({
               discountPrice={discountPrice}
               disabled={isUnavailable}
               size="sm"
-              className="desktop-button-scale min-h-[40px] w-full sm:min-h-[36px] 2xl:min-h-[40px] 3xl:min-h-[44px]"
+              className={cn(
+                'desktop-button-scale min-h-[40px] w-full sm:min-h-[36px] 2xl:min-h-[40px] 3xl:min-h-[44px]',
+                isSprintTheme && 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
+              )}
             />
             <Link
               href={detailHref}
-              className="desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-center text-sm font-medium text-text transition-colors hover:border-action-blue hover:bg-gray-50 hover:text-action-blue sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base"
+              className={cn(
+                'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
+                isSprintTheme
+                  ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
+                  : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
+              )}
             >
               Подробнее
             </Link>
@@ -181,7 +197,10 @@ export function ProductCard({
         </div>
         {/* Weak overlay: lighter than TiltCard, removed on hover */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/6 md:bg-black/15 transition-opacity duration-300 group-hover:opacity-0"
+          className={cn(
+            'pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 group-hover:opacity-0',
+            isSprintTheme ? 'bg-slate-950/10 md:bg-slate-950/25' : 'bg-black/6 md:bg-black/15'
+          )}
           aria-hidden
         />
       </article>

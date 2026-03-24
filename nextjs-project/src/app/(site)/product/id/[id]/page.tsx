@@ -5,6 +5,8 @@ import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 import { slugify, slugifyUnique } from '@/lib/slugify'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 
 export const revalidate = 300
 
@@ -56,6 +58,8 @@ async function ensureProductSlug(product: { id: string; title: string; slug: str
 }
 
 export default async function ProductByIdPage({ params }: PageProps) {
+  const { brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const { id } = await params
   const product = await prisma.product.findUnique({
     where: { id },
@@ -63,6 +67,7 @@ export default async function ProductByIdPage({ params }: PageProps) {
   })
 
   if (!product) notFound()
+  if (!productBelongsToBrandScope(product.brand, brandId)) notFound()
 
   const resolvedSlug = await ensureProductSlug(product)
   if (resolvedSlug) redirect(`/product/${resolvedSlug}`)
@@ -76,7 +81,7 @@ export default async function ProductByIdPage({ params }: PageProps) {
   const primaryCategory = sortedCategoryLinks[0]?.category
 
   const categoryIds = product.categories.map((item) => item.categoryId)
-  const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8)
+  const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
   return (
@@ -86,6 +91,7 @@ export default async function ProductByIdPage({ params }: PageProps) {
       photos={photos}
       relatedProducts={relatedProducts}
       relatedProductsCategoryTitle={primaryCategory?.title ?? null}
+      isSprintTheme={isSprintTheme}
     />
   )
 }

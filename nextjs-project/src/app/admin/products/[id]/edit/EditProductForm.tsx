@@ -85,6 +85,10 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       : null;
   const id = productId;
   const selectedCategoryId = searchParams.get('categoryId');
+  const featuredBlockLabel =
+    activeBrand === 'sprint-power'
+      ? 'Показывать в блоке "Хиты продаж"'
+      : 'Показывать в блоке "Новинки ассортимента"';
   const catalogHref = selectedCategoryId
     ? `/${base}/catalog?categoryId=${encodeURIComponent(selectedCategoryId)}`
     : `/${base}/catalog`;
@@ -487,7 +491,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
                   className="form-input h-4 w-4 rounded"
                 />
                 <label htmlFor="isFeaturedInNewArrivals" className="text-sm font-medium text-gray-700">
-                  Показывать в блоке "Новинки ассортимента"
+                  {featuredBlockLabel}
                 </label>
               </div>
               <div className="flex items-center gap-2">

@@ -14,9 +14,10 @@ export interface ReviewItem {
 
 interface ReviewsCarouselProps {
   reviews: ReviewItem[];
+  isSprintTheme?: boolean;
 }
 
-export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
+export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollIndex, setScrollIndex] = useState(0);
 
@@ -41,7 +42,13 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
 
   if (reviews.length === 0) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-gray-50/50 p-8 text-center text-gray-600">
+      <div
+        className={`rounded-2xl p-8 text-center ${
+          isSprintTheme
+            ? 'border border-slate-700 bg-[#0F172A] text-slate-300'
+            : 'border border-gray-200 bg-gray-50/50 text-gray-600'
+        }`}
+      >
         Пока нет отзывов. Будьте первым — оставьте отзыв ниже.
       </div>
     );
@@ -97,7 +104,9 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
             type="button"
             onClick={() => scrollTo(Math.max(0, scrollIndex - 1))}
             disabled={scrollIndex === 0}
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+            className={`rounded-full p-2 disabled:opacity-40 ${
+              isSprintTheme ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'
+            }`}
             aria-label="Предыдущий отзыв"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +120,11 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
                 type="button"
                 onClick={() => scrollTo(index)}
                 className={`h-2 w-2 rounded-full transition-colors ${
-                  index === scrollIndex ? 'bg-action-blue' : 'bg-gray-300 hover:bg-gray-400'
+                  index === scrollIndex
+                    ? 'bg-action-blue'
+                    : isSprintTheme
+                      ? 'bg-slate-600 hover:bg-slate-500'
+                      : 'bg-gray-300 hover:bg-gray-400'
                 }`}
                 aria-label={`Отзыв ${index + 1}`}
               />
@@ -121,7 +134,9 @@ export function ReviewsCarousel({ reviews }: ReviewsCarouselProps) {
             type="button"
             onClick={() => scrollTo(Math.min(reviews.length - 1, scrollIndex + 1))}
             disabled={scrollIndex === reviews.length - 1}
-            className="rounded-full p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+            className={`rounded-full p-2 disabled:opacity-40 ${
+              isSprintTheme ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-600 hover:bg-gray-100'
+            }`}
             aria-label="Следующий отзыв"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

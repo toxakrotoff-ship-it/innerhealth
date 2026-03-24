@@ -13,6 +13,7 @@ interface RecentlyViewedProductsProps {
 interface RecentlyViewedProductItem {
   id: string;
   title: string;
+  brand: string | null;
   price: number;
   priceOld: number | null;
   photo: string | null;
@@ -64,6 +65,7 @@ export function RecentlyViewedProducts({
             key={product.id}
             id={product.id}
             title={product.title}
+            brand={product.brand}
             price={product.price}
             priceOld={product.priceOld}
             photo={product.photo}

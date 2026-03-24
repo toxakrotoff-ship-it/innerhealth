@@ -8,6 +8,7 @@ import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteTitle } = await getServerBrandContext()
@@ -37,8 +38,9 @@ function getText(block: { text: string | null } | undefined, fallback: string): 
 }
 
 export default async function ContactsPage() {
-  const { siteTitle } = await getServerBrandContext()
-  const blocks = await getResolvedBlocksForPage('contacts')
+  const { siteTitle, brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
+  const blocks = await getResolvedBlocksForPage('contacts', brandId)
   const byKey = (key: string) => blocks.find((b) => b.key === key)
 
   const phone = getText(byKey('contacts.phone'), DEFAULT_PHONE)
@@ -60,13 +62,18 @@ export default async function ContactsPage() {
   const phoneHref = `tel:${phone.replace(/\s|\(|\)|-/g, '')}`
 
   return (
-    <div className="bg-white">
+    <div className={isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}>
       <AdaptiveContainer maxWidth="default">
         <Breadcrumbs items={breadcrumbItems} />
       </AdaptiveContainer>
 
       <AdaptiveContainer maxWidth="default" className="pb-16 sm:pb-20">
-        <ResponsiveText as="h1" variant="3xl" weight="bold" className="mb-8">
+        <ResponsiveText
+          as="h1"
+          variant="3xl"
+          weight="bold"
+          className={`mb-8 ${isSprintTheme ? 'text-slate-100' : ''}`}
+        >
           Контакты
         </ResponsiveText>
 
@@ -78,28 +85,42 @@ export default async function ContactsPage() {
             adaptiveGap={false}
             className="lg:gap-5 xl:gap-6 2xl:gap-6 3xl:gap-8 4xl:gap-8"
           >
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 min-h-[320px]">
+            <div
+              className={`rounded-2xl overflow-hidden border min-h-[320px] ${
+                isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-gray-100'
+              }`}
+            >
               <YandexMapDynamic className="w-full h-full min-h-[320px]" />
             </div>
 
-            <div className="flex flex-col justify-center space-y-5 text-gray-700">
+            <div className={`flex flex-col justify-center space-y-5 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               <div>
-                <ResponsiveText as="h2" variant="lg" weight="semibold" className="mb-3">
+                <ResponsiveText
+                  as="h2"
+                  variant="lg"
+                  weight="semibold"
+                  className={`mb-3 ${isSprintTheme ? 'text-slate-100' : ''}`}
+                >
                   Контакты
                 </ResponsiveText>
                 <p>
-                  <span className="font-medium text-gray-600">Телефон:</span>{' '}
-                  <a href={phoneHref} className="text-action-blue hover:underline">
+                  <span className={`font-medium ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
+                    Телефон:
+                  </span>{' '}
+                  <a
+                    href={phoneHref}
+                    className={isSprintTheme ? 'text-[#7AA2FF] hover:underline' : 'text-action-blue hover:underline'}
+                  >
                     {phone}
                   </a>
                 </p>
                 <p>
-                  <span className="font-medium text-gray-600">
+                  <span className={`font-medium ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
                     Электронная почта:
                   </span>{' '}
                   <a
                     href={`mailto:${email}`}
-                    className="text-action-blue hover:underline"
+                    className={isSprintTheme ? 'text-[#7AA2FF] hover:underline' : 'text-action-blue hover:underline'}
                   >
                     {email}
                   </a>
@@ -107,21 +128,28 @@ export default async function ContactsPage() {
               </div>
 
               <div>
-                <ResponsiveText as="h2" variant="lg" weight="semibold" className="mb-2">
+                <ResponsiveText
+                  as="h2"
+                  variant="lg"
+                  weight="semibold"
+                  className={`mb-2 ${isSprintTheme ? 'text-slate-100' : ''}`}
+                >
                   Наш шоурум находится по адресу:
                 </ResponsiveText>
-                <p className="text-gray-700">{address}</p>
+                <p className={isSprintTheme ? 'text-slate-300' : 'text-gray-700'}>{address}</p>
               </div>
 
               <div>
-                <p className="font-medium text-gray-900 mb-1">Режим работы:</p>
+                <p className={`font-medium mb-1 ${isSprintTheme ? 'text-slate-100' : 'text-gray-900'}`}>
+                  Режим работы:
+                </p>
                 <p>{workingWeekdays}</p>
                 <p>{workingWeekends}</p>
-                <p className="text-gray-500 text-sm mt-1">{workingNote}</p>
+                <p className={`text-sm mt-1 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>{workingNote}</p>
               </div>
 
               <div className="pt-2">
-                <p className="text-sm font-medium text-gray-600 mb-2">
+                <p className={`text-sm font-medium mb-2 ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
                   Написать или позвонить:
                 </p>
                 <ContactLinks />

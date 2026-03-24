@@ -22,6 +22,7 @@ import {
 import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
+import { cn } from '@/lib/utils'
 
 interface PromoResult {
   valid: boolean
@@ -45,7 +46,11 @@ function applyPromoToSubtotal(subtotal: number, promo: PromoResult | null): numb
   return Math.max(0, subtotal - promo.discountValue)
 }
 
-export function CartPageContent() {
+interface CartPageContentProps {
+  isSprintTheme?: boolean
+}
+
+export function CartPageContent({ isSprintTheme = false }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -450,19 +455,22 @@ export function CartPageContent() {
   if (!mounted) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-32 bg-gray-200 rounded-xl" />
-        <div className="h-32 bg-gray-200 rounded-xl" />
+        <div className={cn('h-32 rounded-xl', isSprintTheme ? 'bg-slate-800' : 'bg-gray-200')} />
+        <div className={cn('h-32 rounded-xl', isSprintTheme ? 'bg-slate-800' : 'bg-gray-200')} />
       </div>
     )
   }
 
   if (items.length === 0 && !orderSuccess) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 xl:p-10 2xl:p-12 3xl:p-16 4xl:p-20 5xl:p-24 6xl:p-32 text-center">
-        <p className="text-gray-600 mb-4">Корзина пуста</p>
+      <div className={cn('rounded-2xl border p-8 text-center xl:p-10 2xl:p-12 3xl:p-16 4xl:p-20 5xl:p-24 6xl:p-32', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+        <p className={cn('mb-4', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>Корзина пуста</p>
         <Link
           href="/catalog"
-          className="inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-3 min-h-[44px] hover:bg-action-blue/90"
+          className={cn(
+            'inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-3 font-medium',
+            isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
+          )}
         >
           Перейти в каталог
         </Link>
@@ -472,12 +480,15 @@ export function CartPageContent() {
 
   if (orderSuccess) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 xl:p-10 2xl:p-12 3xl:p-16 4xl:p-20 5xl:p-24 6xl:p-32 text-center">
-        <p className="text-lg font-medium text-text mb-2">Заказ успешно оформлен</p>
-        <p className="text-gray-600 mb-4">Мы свяжемся с вами для подтверждения.</p>
+      <div className={cn('rounded-2xl border p-8 text-center xl:p-10 2xl:p-12 3xl:p-16 4xl:p-20 5xl:p-24 6xl:p-32', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+        <p className={cn('mb-2 text-lg font-medium', isSprintTheme ? 'text-slate-100' : 'text-text')}>Заказ успешно оформлен</p>
+        <p className={cn('mb-4', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>Мы свяжемся с вами для подтверждения.</p>
         <Link
           href="/catalog"
-          className="inline-flex items-center justify-center rounded-full bg-action-blue text-gray-800 font-medium px-6 py-3 min-h-[44px] hover:bg-action-blue/90"
+          className={cn(
+            'inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-3 font-medium',
+            isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
+          )}
         >
           Вернуться в каталог
         </Link>
@@ -507,6 +518,7 @@ export function CartPageContent() {
               key={line.productId}
               line={line}
               lineTotalAfterPromo={lineTotalAfterPromo}
+              isSprintTheme={isSprintTheme}
               onRemove={() => removeItem(line.productId)}
               onQuantityChange={(q) => updateQuantity(line.productId, q)}
             />
@@ -517,21 +529,29 @@ export function CartPageContent() {
       <ScalableSpacing size="lg" />
 
       {/* Промокод на всю ширину */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24">
-        <Heading2 className="mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20">Промокод</Heading2>
+      <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+        <Heading2 className={cn('mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20', isSprintTheme && 'text-slate-100')}>
+          Промокод
+        </Heading2>
         <div className="flex gap-2 xl:gap-3 2xl:gap-4 3xl:gap-5 4xl:gap-6 5xl:gap-8 6xl:gap-10 flex-wrap">
           <input
             type="text"
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value)}
             placeholder="Введите код"
-            className="flex-1 min-w-[200px] form-input rounded-lg text-base min-h-[44px]"
+            className={cn(
+              'form-input min-h-[44px] min-w-[200px] flex-1 rounded-lg text-base',
+              isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+            )}
           />
           <button
             type="button"
             onClick={handleApplyPromo}
             disabled={promoLoading}
-            className="rounded-lg bg-action-blue text-gray-800 px-5 py-2 min-h-[44px] font-medium hover:bg-action-blue/90 disabled:opacity-50"
+            className={cn(
+              'min-h-[44px] rounded-lg px-5 py-2 font-medium disabled:opacity-50',
+              isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
+            )}
           >
             {promoLoading ? '...' : 'Применить'}
           </button>
@@ -566,9 +586,11 @@ export function CartPageContent() {
         ) : null}
 
         {usingSavedAddress ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24">
-            <Heading2 className="mb-2 xl:mb-3 2xl:mb-4 3xl:mb-5 4xl:mb-6 5xl:mb-8 6xl:mb-10">Доставка</Heading2>
-            <p className="text-sm text-gray-600">
+          <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+            <Heading2 className={cn('mb-2 xl:mb-3 2xl:mb-4 3xl:mb-5 4xl:mb-6 5xl:mb-8 6xl:mb-10', isSprintTheme && 'text-slate-100')}>
+              Доставка
+            </Heading2>
+            <p className={cn('text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
               Используется сохранённый адрес. Чтобы заполнить поля вручную, выберите
               {' '}«Использовать другой адрес».
             </p>
@@ -595,14 +617,17 @@ export function CartPageContent() {
               comment={comment}
               onCommentChange={setComment}
               error={deliveryError}
+              isSprintTheme={isSprintTheme}
             />
         )}
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24">
-            <Heading2 className="mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20">Контактные данные</Heading2>
+          <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+            <Heading2 className={cn('mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20', isSprintTheme && 'text-slate-100')}>
+              Контактные данные
+            </Heading2>
             <div className="space-y-3 xl:space-y-4 2xl:space-y-5 3xl:space-y-6 4xl:space-y-7 5xl:space-y-8 6xl:space-y-10">
               <div>
-                <label htmlFor="cart-phone" className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+                <label htmlFor="cart-phone" className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>Телефон</label>
                 <input
                   id="cart-phone"
                   type="tel"
@@ -619,7 +644,11 @@ export function CartPageContent() {
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
                   }}
-                  className={`form-input w-full rounded-lg text-base min-h-[44px] ${phoneError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    phoneError ? 'border-red-500 focus:ring-red-500' : '',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
                   placeholder="+7 (999) 999-99-99"
                   aria-invalid={!!phoneError}
                   aria-describedby={phoneError ? 'cart-phone-error' : undefined}
@@ -631,7 +660,7 @@ export function CartPageContent() {
                 )}
               </div>
               <div>
-                <label htmlFor="cart-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label htmlFor="cart-email" className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>Email</label>
                 <input
                   id="cart-email"
                   type="email"
@@ -648,7 +677,11 @@ export function CartPageContent() {
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
                   }}
-                  className={`form-input w-full rounded-lg text-base min-h-[44px] ${emailError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    emailError ? 'border-red-500 focus:ring-red-500' : '',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
                   placeholder="example@mail.ru"
                   aria-invalid={!!emailError}
                   aria-describedby={emailError ? 'cart-email-error' : undefined}
@@ -662,11 +695,13 @@ export function CartPageContent() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24">
-            <Heading2 className="mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20">Итого</Heading2>
+          <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-200 bg-white')}>
+            <Heading2 className={cn('mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20', isSprintTheme && 'text-slate-100')}>
+              Итого
+            </Heading2>
             <dl className="space-y-2 xl:space-y-3 2xl:space-y-4 3xl:space-y-5 4xl:space-y-6 5xl:space-y-8 6xl:space-y-10 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">
+                <span className={cn(isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                   {discount > 0 ? 'Стоимость товаров (до скидки)' : 'Товары'}
                 </span>
                 <span>{subtotal.toLocaleString('ru-RU')} ₽</span>
@@ -677,7 +712,7 @@ export function CartPageContent() {
                     <span>Скидка по промокоду</span>
                     <span>-{discount.toLocaleString('ru-RU')} ₽</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
+                  <div className={cn('flex justify-between', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                     <span>Стоимость товаров со скидкой</span>
                     <span>{total.toLocaleString('ru-RU')} ₽</span>
                   </div>
@@ -685,35 +720,35 @@ export function CartPageContent() {
               )}
               {(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && deliverySum > 0 && (
                 <>
-                  <div className="flex justify-between text-gray-600">
+                  <div className={cn('flex justify-between', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                     <span>
                       Доставка СДЭК ({deliveryMethod === 'cdek_pvz' ? 'до ПВЗ' : 'до двери'})
                     </span>
                     <span>{deliverySum.toLocaleString('ru-RU')} ₽</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5 xl:mt-1 2xl:mt-1.5 3xl:mt-2 4xl:mt-2.5 5xl:mt-3 6xl:mt-4">
+                  <p className={cn('mt-0.5 text-xs xl:mt-1 2xl:mt-1.5 3xl:mt-2 4xl:mt-2.5 5xl:mt-3 6xl:mt-4', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
                     Стоимость доставки не зависит от скидки по промокоду.
                   </p>
                 </>
               )}
-              <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-200">
+              <div className={cn('flex justify-between border-t pt-2 text-lg font-semibold', isSprintTheme ? 'border-slate-700' : 'border-gray-200')}>
                 <span>К оплате</span>
                 <span>{totalWithDelivery.toLocaleString('ru-RU')} ₽</span>
               </div>
             </dl>
           </div>
 
-        <label className="flex items-center justify-center gap-2 xl:gap-3 2xl:gap-4 3xl:gap-5 4xl:gap-6 5xl:gap-8 6xl:gap-10 text-sm text-gray-700 mb-3 xl:mb-4 2xl:mb-5 3xl:mb-6 4xl:mb-8 5xl:mb-10 6xl:mb-12">
+        <label className={cn('mb-3 flex items-center justify-center gap-2 text-sm xl:mb-4 xl:gap-3 2xl:mb-5 2xl:gap-4 3xl:mb-6 3xl:gap-5 4xl:mb-8 4xl:gap-6 5xl:mb-10 5xl:gap-8 6xl:mb-12 6xl:gap-10', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>
           <input
             type="checkbox"
             checked={isPrivacyAccepted}
             onChange={(e) => setIsPrivacyAccepted(e.target.checked)}
             required
-            className="h-4 w-4 rounded border-gray-300 shrink-0"
+            className={cn('h-4 w-4 shrink-0 rounded', isSprintTheme ? 'border-slate-500 bg-slate-800' : 'border-gray-300')}
           />
           <span>
             Ознакомлен(а) с{' '}
-            <Link href="/privacy" className="text-action-blue hover:underline">
+            <Link href="/privacy" className={cn('hover:underline', isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue')}>
               политикой конфиденциальности
             </Link>
             .
@@ -722,7 +757,10 @@ export function CartPageContent() {
         <button
           type="submit"
           disabled={submitting || !isPrivacyAccepted}
-          className="w-full rounded-full bg-action-blue text-gray-800 font-medium py-3 min-h-[44px] hover:bg-action-blue/90 disabled:opacity-50"
+          className={cn(
+            'min-h-[44px] w-full rounded-full py-3 font-medium disabled:opacity-50',
+            isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
+          )}
         >
           {submitting ? 'Оформление...' : 'Оформить заказ'}
         </button>
@@ -734,20 +772,22 @@ export function CartPageContent() {
 function CartLineRow({
   line,
   lineTotalAfterPromo,
+  isSprintTheme = false,
   onRemove,
   onQuantityChange,
 }: {
   line: CartLine
   /** Сумма по строке после скидки по промокоду (если применена). */
   lineTotalAfterPromo: number
+  isSprintTheme?: boolean
   onRemove: () => void
   onQuantityChange: (q: number) => void
 }) {
   const lineTotalOriginal = (line.price ?? 0) * line.quantity
   const hasDiscount = lineTotalAfterPromo < lineTotalOriginal && lineTotalOriginal > 0
   return (
-    <div className="flex gap-4 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 5xl:gap-16 6xl:gap-20 bg-white rounded-xl border border-gray-200 p-4 xl:p-6 2xl:p-8 3xl:p-10 4xl:p-12 5xl:p-16 6xl:p-20">
-      <div className="relative w-20 h-20 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
+    <div className={cn('flex gap-4 rounded-xl border p-4 xl:gap-6 xl:p-6 2xl:gap-8 2xl:p-8 3xl:gap-10 3xl:p-10 4xl:gap-12 4xl:p-12 5xl:gap-16 5xl:p-16 6xl:gap-20 6xl:p-20', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+      <div className={cn('relative h-20 w-20 shrink-0 overflow-hidden rounded-lg', isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue')}>
         {line.photo ? (
           <Image
             src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
@@ -762,12 +802,12 @@ function CartLineRow({
       <div className="flex-1 min-w-0">
         <Link
           href={line.slug ? `/product/${line.slug}` : `/product/id/${line.productId}`}
-          className="font-medium text-text hover:text-action-blue line-clamp-2"
+          className={cn('line-clamp-2 font-medium', isSprintTheme ? 'text-slate-100 hover:text-[#7AA2FF]' : 'text-text hover:text-action-blue')}
         >
           {line.title ?? 'Загрузка...'}
         </Link>
         <div className="mt-1 flex items-center gap-3">
-          <span className="text-gray-600">
+          <span className={cn(isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
             {line.price != null
               ? `${line.price.toLocaleString('ru-RU')} ₽ × `
               : '— × '}
@@ -776,7 +816,7 @@ function CartLineRow({
               min={1}
               value={line.quantity}
               onChange={(e) => onQuantityChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-14 inline-block text-center border border-gray-300 rounded px-1 py-0.5 text-base"
+              className={cn('inline-block w-14 rounded border px-1 py-0.5 text-center text-base', isSprintTheme ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-gray-300')}
             />
           </span>
           <button type="button" onClick={onRemove} className="text-sm text-red-600 hover:underline">
@@ -784,10 +824,10 @@ function CartLineRow({
           </button>
         </div>
       </div>
-      <div className="font-medium text-text text-right">
+      <div className={cn('text-right font-medium', isSprintTheme ? 'text-slate-100' : 'text-text')}>
         {hasDiscount ? (
           <span className="flex flex-col items-end gap-0.5">
-            <span className="text-gray-400 line-through text-sm">
+            <span className={cn('text-sm line-through', isSprintTheme ? 'text-slate-500' : 'text-gray-400')}>
               {lineTotalOriginal.toLocaleString('ru-RU')} ₽
             </span>
             <span className="text-green-600">

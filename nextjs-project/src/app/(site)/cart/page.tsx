@@ -6,6 +6,8 @@ import { RecentlyViewedProducts } from '@/components/site/recently-viewed-produc
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 interface CartPageProps {
   searchParams: Promise<{ payment?: string }>
@@ -18,16 +20,20 @@ export const metadata: Metadata = {
 
 /** Payment return from YooKassa is read from searchParams on the server and passed to CartReturnMessage (RSC). */
 export default async function CartPage({ searchParams }: CartPageProps) {
+  const { brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const { payment } = await searchParams
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
-      <Heading1 className="mb-6">Корзина</Heading1>
-      <CheckoutTrustStrip />
+    <section className={isSprintTheme ? 'bg-[#060A14] py-10' : ''}>
+      <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'py-0 text-slate-100' : 'py-10'}>
+      <Heading1 className={isSprintTheme ? 'mb-6 text-slate-100' : 'mb-6'}>Корзина</Heading1>
+      <CheckoutTrustStrip isSprintTheme={isSprintTheme} />
       <CartReturnMessage payment={payment} />
       <ScalableSpacing size="lg" />
-      <CartPageContent />
+      <CartPageContent isSprintTheme={isSprintTheme} />
       <ScalableSpacing size="lg" />
       <RecentlyViewedProducts title="Вы недавно смотрели" />
     </AdaptiveContainer>
+    </section>
   )
 }

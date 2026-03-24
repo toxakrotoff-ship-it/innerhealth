@@ -118,7 +118,7 @@ export default async function ProductPage({ params }: PageProps) {
   const productPath = `/product/${slug}`
 
   const categoryIds = product.categories.map((item) => item.categoryId)
-  const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8)
+  const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
   const settings = await getSettingsMap()

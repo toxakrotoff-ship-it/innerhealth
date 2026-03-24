@@ -16,6 +16,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { cn } from '@/lib/utils'
 
 interface ProductPageContentProps {
   product: {
@@ -146,7 +147,7 @@ export function ProductPageContent({
       >
         <ProductMediaGallery title={product.title} photos={photos} />
         <div>
-          <Heading1>{product.title}</Heading1>
+          <Heading1 className={isSprintTheme ? 'text-slate-100' : undefined}>{product.title}</Heading1>
           {product.brand && (
             <p className={`mt-2 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{product.brand}</p>
           )}
@@ -177,14 +178,27 @@ export function ProductPageContent({
               discountPrice={product.discountPrice}
               disabled={isUnavailable}
               disabledLabel="Товар закончился"
+              className={isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : undefined}
             />
-            <WishlistToggleButton productId={product.id} className="min-h-[44px]" />
-            <QuickOrderDialog productId={product.id} productTitle={product.title} disabled={isUnavailable} />
+            <WishlistToggleButton
+              productId={product.id}
+              className={cn(
+                'min-h-[44px]',
+                isSprintTheme &&
+                  'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
+              )}
+            />
+            <QuickOrderDialog
+              productId={product.id}
+              productTitle={product.title}
+              disabled={isUnavailable}
+              isSprintTheme={isSprintTheme}
+            />
           </div>
           <div className="mt-3">
-            <CompareToggleButton productId={product.id} />
+            <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
-          <PurchaseTrustStrip />
+          <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
           {product.description && <ProductDescriptionBlock description={product.description} />}
         </div>
       </FluidGrid>

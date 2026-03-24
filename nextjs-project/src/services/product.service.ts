@@ -361,13 +361,18 @@ export async function getProductsForCdek(productIds: string[]) {
 }
 
 /** Get minimal product fields for cart display (enrichment after rehydration). */
-export async function getProductsForCart(productIds: string[]) {
+export async function getProductsForCart(productIds: string[], brandId?: BrandId | null) {
   if (productIds.length === 0) return []
+  const brandWhere: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] }
+
   return prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where: { id: { in: productIds }, ...brandWhere },
     select: {
       id: true,
       title: true,
+      brand: true,
       price: true,
       priceOld: true,
       photo: true,
@@ -384,13 +389,19 @@ export async function getProductsForCart(productIds: string[]) {
 export async function getRelatedProductsByCategory(
   productId: string,
   categoryIds: string[],
-  take: number
+  take: number,
+  brandId?: BrandId | null
 ) {
   if (categoryIds.length === 0) return []
+  const brandWhere: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] }
+
   return prisma.product.findMany({
     where: {
       id: { not: productId },
       isDraft: false,
+      ...brandWhere,
       categories: {
         some: {
           categoryId: { in: categoryIds },

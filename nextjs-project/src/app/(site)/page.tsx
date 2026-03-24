@@ -114,6 +114,11 @@ function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBloc
   return blocks.find((block) => block.key === key) ?? null
 }
 
+function getBlockText(blocks: ContentBlockResolved[], key: string, fallback: string): string {
+  const text = getBlockByKey(blocks, key)?.text?.trim()
+  return text && text.length > 0 ? text : fallback
+}
+
 async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
   const categoryScopeWhere =
     activeBrand === 'sprint-power'
@@ -226,7 +231,11 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
 
   const [products, categories, reviews] = await Promise.all([
     prisma.product.findMany({
-      where: { isDraft: false, brand: SPRINT_POWER_PRODUCT_BRAND },
+      where: {
+        isDraft: false,
+        brand: SPRINT_POWER_PRODUCT_BRAND,
+        isFeaturedInNewArrivals: true,
+      },
       orderBy: { createdAt: 'desc' },
       take: 2,
       select: {
@@ -258,9 +267,19 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
   return { products, categories, reviews }
 }
 
-function SprintPowerHome({ data }: { data: SprintHomeData }) {
+function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: ContentBlockResolved[] }) {
   const heroImage = data.products[0]?.photo ?? null
   const innerSiteUrl = getBrandSiteUrl('inner')
+  const markers = [
+    getBlockText(blocks, 'sprint.markers.item1', 'GMP и HACCP стандарты'),
+    getBlockText(blocks, 'sprint.markers.item2', 'Прозрачный состав'),
+    getBlockText(blocks, 'sprint.markers.item3', 'Регулярные обзоры'),
+  ]
+  const faqItems = [
+    getBlockText(blocks, 'sprint.faq.item1', 'Как выбрать продукт под цель?'),
+    getBlockText(blocks, 'sprint.faq.item2', 'Можно ли сочетать протеин и коллаген?'),
+    getBlockText(blocks, 'sprint.faq.item3', 'Сколько протеина нужно в день?'),
+  ]
 
   return (
     <section className="bg-[#060A14] py-10 md:py-12">
@@ -268,26 +287,31 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
         <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
-              <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">SPRINT POWER</p>
+              <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">
+                {getBlockText(blocks, 'sprint.hero.badge', 'SPRINT POWER')}
+              </p>
               <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
-                Почувствуй разницу с первой тренировки
+                {getBlockText(blocks, 'sprint.hero.title', 'Почувствуй разницу с первой тренировки')}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
-                Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без
-                компромиссов.
+                {getBlockText(
+                  blocks,
+                  'sprint.hero.subtitle',
+                  'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
+                )}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/catalog"
                   className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
                 >
-                  Выбрать продукт
+                  {getBlockText(blocks, 'sprint.hero.cta.primary', 'Выбрать продукт')}
                 </Link>
                 <Link
                   href="/otzyvy"
                   className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100"
                 >
-                  Читать отзывы
+                  {getBlockText(blocks, 'sprint.hero.cta.secondary', 'Читать отзывы')}
                 </Link>
               </div>
             </div>
@@ -300,41 +324,47 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
               }
             >
               <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100">
-                Hydro Protein - флагман линейки
+                {getBlockText(blocks, 'sprint.hero.featured', 'Hydro Protein - флагман линейки')}
               </div>
             </div>
           </div>
 
-          <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
-            <h2 className="mb-4 text-2xl font-bold text-slate-100">Хиты продаж</h2>
-            <div className="grid gap-3 md:grid-cols-2">
-              {data.products.map((product) => (
-                <div key={product.id} className="rounded-2xl bg-[#1E293B] p-3">
-                  {product.photo ? (
-                    <div className="relative mb-3 h-24 overflow-hidden rounded-lg">
-                      <Image src={product.photo} alt={product.title} fill className="object-cover" />
-                    </div>
-                  ) : null}
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-slate-100">{product.title}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-[#7AA2FF]">{product.price} ₽</span>
-                      <Link
-                        href={product.slug ? `/product/${product.slug}` : '/catalog'}
-                        className="rounded-full bg-[#3B82F6] px-4 py-1.5 text-xs font-semibold text-white"
-                      >
-                        Купить
-                      </Link>
+          {data.products.length > 0 && (
+            <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
+              <h2 className="mb-4 text-2xl font-bold text-slate-100">
+                {getBlockText(blocks, 'sprint.hits.title', 'Хиты продаж')}
+              </h2>
+              <div className="grid gap-3 md:grid-cols-2">
+                {data.products.map((product) => (
+                  <div key={product.id} className="rounded-2xl bg-[#1E293B] p-3">
+                    {product.photo ? (
+                      <div className="relative mb-3 h-24 overflow-hidden rounded-lg">
+                        <Image src={product.photo} alt={product.title} fill className="object-cover" />
+                      </div>
+                    ) : null}
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-slate-100">{product.title}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-[#7AA2FF]">{product.price} ₽</span>
+                        <Link
+                          href={product.slug ? `/product/${product.slug}` : '/catalog'}
+                          className="rounded-full bg-[#3B82F6] px-4 py-1.5 text-xs font-semibold text-white"
+                        >
+                          Купить
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-3">
-              <h3 className="text-xl font-bold text-slate-900">Отзывы спортсменов</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {getBlockText(blocks, 'sprint.reviews.title', 'Отзывы спортсменов')}
+              </h3>
               {data.reviews.map((review) => (
                 <div key={review.id} className="rounded-xl bg-slate-50 p-4">
                   <p className="text-sm font-semibold text-slate-900">{review.authorName}</p>
@@ -343,8 +373,10 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
               ))}
             </div>
             <div className="space-y-3">
-              <h3 className="text-xl font-bold text-slate-900">Доверительные маркеры</h3>
-              {['GMP и HACCP стандарты', 'Прозрачный состав', 'Регулярные обзоры'].map((item) => (
+              <h3 className="text-xl font-bold text-slate-900">
+                {getBlockText(blocks, 'sprint.markers.title', 'Доверительные маркеры')}
+              </h3>
+              {markers.map((item) => (
                 <div key={item} className="rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700">
                   {item}
                 </div>
@@ -353,7 +385,9 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
           </div>
 
           <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
-            <h3 className="mb-4 text-2xl font-bold text-slate-100">Вся линейка</h3>
+            <h3 className="mb-4 text-2xl font-bold text-slate-100">
+              {getBlockText(blocks, 'sprint.lineup.title', 'Вся линейка')}
+            </h3>
             <div className="grid gap-3 md:grid-cols-3">
               {data.categories.map((category) => (
                 <Link
@@ -369,25 +403,29 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
           </div>
 
           <div className="rounded-3xl bg-[#111D3A] p-6 md:p-8">
-            <p className="text-2xl font-bold text-white">Inner Health</p>
+            <p className="text-2xl font-bold text-white">
+              {getBlockText(blocks, 'sprint.inner.title', 'Inner Health')}
+            </p>
             <p className="mt-2 text-sm text-slate-300">
-              Активное долголетие, превентивная медицина, нутрицевтика.
+              {getBlockText(
+                blocks,
+                'sprint.inner.text',
+                'Активное долголетие, превентивная медицина, нутрицевтика.'
+              )}
             </p>
             <a
               href={innerSiteUrl}
               className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
             >
-              На Inner Health
+              {getBlockText(blocks, 'sprint.inner.cta', 'На Inner Health')}
             </a>
           </div>
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
-            <h3 className="mb-4 text-2xl font-bold text-slate-900">Частые вопросы</h3>
-            {[
-              'Как выбрать продукт под цель?',
-              'Можно ли сочетать протеин и коллаген?',
-              'Сколько протеина нужно в день?',
-            ].map((item) => (
+            <h3 className="mb-4 text-2xl font-bold text-slate-900">
+              {getBlockText(blocks, 'sprint.faq.title', 'Частые вопросы')}
+            </h3>
+            {faqItems.map((item) => (
               <div
                 key={item}
                 className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
@@ -400,7 +438,7 @@ function SprintPowerHome({ data }: { data: SprintHomeData }) {
               href="/catalog"
               className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white"
             >
-              Выбрать продукт сейчас
+              {getBlockText(blocks, 'sprint.faq.cta', 'Выбрать продукт сейчас')}
             </Link>
           </div>
         </div>
@@ -419,14 +457,17 @@ export default async function HomePage() {
   })
 
   if (activeBrand === 'sprint-power') {
-    const sprintHomeData = await getSprintHomeData()
-    return <SprintPowerHome data={sprintHomeData} />
+    const [sprintHomeData, sprintHomeBlocks] = await Promise.all([
+      getSprintHomeData(),
+      getResolvedBlocksForPage('home', activeBrand),
+    ])
+    return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} />
   }
 
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData(activeBrand)
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
-    getResolvedBlocksForPage('home'),
-    getResolvedBlocksForPage('catalog'),
+    getResolvedBlocksForPage('home', activeBrand),
+    getResolvedBlocksForPage('catalog', activeBrand),
     getActiveSitePopup(),
   ])
 

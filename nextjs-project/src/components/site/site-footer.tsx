@@ -9,8 +9,9 @@ import type { BrandId } from '@/lib/brand/brand'
 
 export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const siteConfig = getBrandSiteConfig(brandId)
+  const isSprintTheme = brandId === 'sprint-power'
   const footerLinks = siteConfig.footerLinks
-  const blocks = await getResolvedBlocksForPage('footer')
+  const blocks = await getResolvedBlocksForPage('footer', brandId)
   const fullName = blocks.find((b) => b.key === 'footer.legal.fullName')
   const address = blocks.find((b) => b.key === 'footer.legal.address')
   const correspondentAccount = blocks.find(
@@ -21,7 +22,11 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const inn = blocks.find((b) => b.key === 'footer.bank.inn')
 
   return (
-    <footer className="bg-slate-50 border-t border-slate-200 mt-auto">
+    <footer
+      className={`mt-auto ${
+        isSprintTheme ? 'bg-[#060A14] border-t border-slate-800' : 'bg-slate-50 border-t border-slate-200'
+      }`}
+    >
       <ScalableSpacing direction="vertical" size={96} usePadding adaptive>
         <AdaptiveContainer
           maxWidth="6xl"
@@ -53,7 +58,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-3 2xl:mb-4"
+                className={isSprintTheme ? 'mb-3 text-slate-100 2xl:mb-4' : 'mb-3 2xl:mb-4'}
                 adaptive
               >
                 {siteConfig.title}
@@ -79,7 +84,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6 2xl:mb-7"
+                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
                 adaptive
               >
                 Информация
@@ -89,7 +94,9 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
+                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
+                    }`}
                     >
                       <ResponsiveText
                         as="span"
@@ -115,7 +122,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6 2xl:mb-7"
+                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
                 adaptive
               >
                 Покупателям
@@ -125,7 +132,9 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
+                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
+                    }`}
                     >
                       <ResponsiveText
                         as="span"
@@ -151,7 +160,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6 2xl:mb-7"
+                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
                 adaptive
               >
                 Юридическое
@@ -161,7 +170,9 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
+                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
+                    }`}
                     >
                       <ResponsiveText
                         as="span"
@@ -181,7 +192,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
 
           {/* Реквизиты */}
           <ScalableSpacing direction="vertical" size={96} adaptive>
-            <div className="border-t border-slate-200 pt-8 2xl:pt-10">
+            <div className={`pt-8 2xl:pt-10 ${isSprintTheme ? 'border-t border-slate-800' : 'border-t border-slate-200'}`}>
               <FluidGrid
                 cols={1}
                 colsTablet={2}
@@ -199,18 +210,18 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
               >
                 <div className="space-y-2 2xl:space-y-3">
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
                       Название полное:
                     </span>{' '}
-                    <span className="text-slate-600">
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {fullName?.text ?? 'ИП Кудимов Валерий Валерьевич'}
                     </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
                       Юридический адрес:
                     </span>{' '}
-                    <span className="text-slate-600">
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {address?.text ??
                         '196140, г. Санкт-Петербург, Пулковское шоссе, д. 73, корп. 2, стр. 1, кв. 85'}
                     </span>
@@ -218,30 +229,30 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 </div>
                 <div className="space-y-2 2xl:space-y-3">
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
                       Корреспондентский счёт:
                     </span>{' '}
-                    <span className="text-slate-600">
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {correspondentAccount?.text ?? '30101 810 4 0000 0000225'}
                     </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">БИК:</span>{' '}
-                    <span className="text-slate-600">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>БИК:</span>{' '}
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {bic?.text ?? '044525225'}
                     </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
                       ОГРНИП:
                     </span>{' '}
-                    <span className="text-slate-600">
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {ogrnip?.text ?? '322784700221371'}
                     </span>
                   </ResponsiveText>
                   <ResponsiveText as="p" variant="sm" adaptive>
-                    <span className="font-semibold text-slate-900">ИНН:</span>{' '}
-                    <span className="text-slate-600">
+                    <span className={`font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>ИНН:</span>{' '}
+                    <span className={isSprintTheme ? 'text-slate-300' : 'text-slate-600'}>
                       {inn?.text ?? '550622300904'}
                     </span>
                   </ResponsiveText>
@@ -252,7 +263,11 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
 
           {/* Копирайт */}
           <ScalableSpacing direction="vertical" size={96} adaptive>
-            <div className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-200 pt-8 2xl:pt-10">
+            <div
+              className={`flex flex-wrap items-center justify-center gap-2 pt-8 2xl:pt-10 ${
+                isSprintTheme ? 'border-t border-slate-800' : 'border-t border-slate-200'
+              }`}
+            >
               <ResponsiveText
                 as="span"
                 variant="sm"
@@ -261,17 +276,20 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
               >
                 © 2022 {siteConfig.logoText}
               </ResponsiveText>
-              <span className="text-slate-300" aria-hidden>
+              <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
                 |
               </span>
               <Link
                 href="/privacy"
-                className="desktop-microtext-scale inline-flex min-h-[36px] items-center text-orange-600 transition-colors hover:text-orange-700"
+                className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                  isSprintTheme ? 'text-[#7AA2FF] hover:text-[#93b7ff]' : 'text-orange-600 hover:text-orange-700'
+                }`}
               >
                 <ResponsiveText
                   as="span"
                   variant="sm"
                   weight="medium"
+                  className={isSprintTheme ? 'text-[#7AA2FF]' : undefined}
                   adaptive
                 >
                   Политика конфиденциальности
