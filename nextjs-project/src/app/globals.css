@@ -2,6 +2,7 @@
 
 /* Адаптивные CSS-переменные из системы токенов */
 :root {
+  color-scheme: light;
   /* Контейнеры */
   --container-default: 92vw;
   --container-xl: min(92vw, 240vh);
@@ -71,6 +72,7 @@ html.preloader-skip .preloader-overlay {
   /* Фиксированный базовый размер шрифта для предотвращения конфликтов адаптивного clamp.
      Адаптивное масштабирование реализуется через медиа-запросы и tailwind config. */
   html {
+    color-scheme: light;
     font-size: clamp(16px, calc(0.2vw + 0.14vh + 13.6px), 22px);
     text-size-adjust: 100%;
     -webkit-text-size-adjust: 100%;
@@ -88,9 +90,19 @@ html.preloader-skip .preloader-overlay {
   }
 
   body {
+    color-scheme: light;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html,
+    body {
+      color-scheme: light;
+      background-color: #ffffff;
+      color: #222222;
+    }
   }
 
   /* Дополнительный буст типографики для широких экранов с низким DPI. */

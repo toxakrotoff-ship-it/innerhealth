@@ -38,7 +38,7 @@ export function PartnersBlock() {
         <ScrollReveal
           as="div"
           variant="fade-up"
-          className="grid gap-8 sm:gap-12 sm:grid-cols-2 lg:grid-cols-2 xl:gap-14 2xl:gap-16 3xl:gap-18 4xl:gap-20"
+          className="grid gap-8 sm:grid-cols-2 sm:gap-12 lg:grid-cols-2 xl:gap-14 2xl:gap-16 3xl:gap-18 4xl:gap-20"
         >
           {PARTNERS.map((partner) => (
             <Link
@@ -46,7 +46,7 @@ export function PartnersBlock() {
               href={partner.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col sm:flex-row gap-4 p-6 rounded-2xl border border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+              className="group flex min-h-[360px] flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50/50 p-6 transition-colors hover:border-gray-300 hover:bg-gray-50 sm:min-h-[420px] sm:flex-row 2xl:min-h-[460px]"
             >
               <div className="relative shrink-0 w-full sm:w-40 lg:w-48 2xl:w-56 3xl:w-64 h-32 lg:h-36 2xl:h-40 3xl:h-44 bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <Image
@@ -58,13 +58,13 @@ export function PartnersBlock() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-text mb-2 group-hover:text-primary transition-colors">
+                <h3 className="mb-2 font-semibold text-text transition-colors group-hover:text-primary 2xl:text-2xl">
                   {partner.name}
                 </h3>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm leading-relaxed text-gray-600 2xl:text-base [display:-webkit-box] [-webkit-line-clamp:11] [-webkit-box-orient:vertical] overflow-hidden">
                   {partner.description}
                 </p>
-                <span className="inline-block mt-2 text-sm text-primary font-medium">
+                <span className="mt-2 inline-block text-sm font-medium text-primary 2xl:text-base">
                   Перейти на сайт →
                 </span>
               </div>
