@@ -78,6 +78,11 @@ export function EditProductForm({ productId }: EditProductFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const base = useAdminBasePath();
+  const activeBrand: 'inner' | 'sprint-power' | null = base.includes('sprint-power')
+    ? 'sprint-power'
+    : base.includes('inner')
+      ? 'inner'
+      : null;
   const id = productId;
   const selectedCategoryId = searchParams.get('categoryId');
   const catalogHref = selectedCategoryId
@@ -130,11 +135,11 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     }
     fetchProduct(id);
     fetchCategories();
-  }, [id]);
+  }, [id, activeBrand]);
 
   const fetchCategories = async () => {
     try {
-      const categories = await getCategories();
+      const categories = await getCategories({ brandId: activeBrand });
       setAvailableCategories(categories);
     } catch (err) {
       console.error('Error fetching categories:', err);

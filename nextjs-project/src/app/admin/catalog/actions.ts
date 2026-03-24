@@ -2,8 +2,14 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { cookies, headers } from 'next/headers';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
+import { resolveBrand, type BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
+import {
+  productBelongsToBrandScope,
+} from '@/lib/brand/brand-scope';
 
 export interface Category {
   id: string;
@@ -26,6 +32,21 @@ interface CategoryInput {
   showInCategoriesBlock?: boolean;
 }
 
+interface BrandScopeOptions {
+  brandId?: BrandId | null;
+}
+
+async function resolveEffectiveBrandId(brandId?: BrandId | null): Promise<BrandId> {
+  if (brandId) return brandId;
+  const headerStore = await headers();
+  const cookieStore = await cookies();
+  return resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  });
+}
+
 const categoryInputSchema = z.object({
   title: z.string().trim().min(1, 'Название категории обязательно'),
   slug: z.string().trim().min(1, 'Slug обязателен'),
@@ -37,15 +58,18 @@ const categoryInputSchema = z.object({
 
 const categoryUpdateSchema = categoryInputSchema.partial();
 
-async function ensureCategoryParentExists(parentId: string | null | undefined): Promise<void> {
+async function ensureCategoryParentExists(
+  parentId: string | null | undefined,
+  brandId: BrandId
+): Promise<void> {
   if (!parentId) return;
 
   const parent = await prisma.category.findUnique({
     where: { id: parentId },
-    select: { id: true },
+    select: { id: true, brand: true },
   });
 
-  if (!parent) {
+  if (!parent || parent.brand !== resolveDbBrand(brandId)) {
     throw new Error('Выбранная родительская категория не найдена');
   }
 }
@@ -89,7 +113,11 @@ export interface ProductCategory {
 type ProductEntity = Prisma.ProductGetPayload<Record<string, never>>;
 
 // Получение всех категорий с количеством товаров
-export async function getCategoriesWithCounts(): Promise<(Category & { productCount: number })[]> {
+export async function getCategoriesWithCounts(
+  options: BrandScopeOptions = {}
+): Promise<(Category & { productCount: number })[]> {
+  const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+  const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
@@ -98,6 +126,7 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
     
     // Используем Prisma для получения категорий с количеством товаров
     const categories = await prisma.category.findMany({
+      where: { brand: dbBrand },
       select: {
         id: true,
         title: true,
@@ -108,11 +137,15 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
         showInCategoriesBlock: true,
         createdAt: true,
         updatedAt: true,
-        _count: {
+        products: {
           select: {
-            products: true
-          }
-        }
+            product: {
+              select: {
+                brand: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [
         { parentId: 'asc' },
@@ -124,7 +157,9 @@ export async function getCategoriesWithCounts(): Promise<(Category & { productCo
     // Преобразуем результат в нужный формат
     return categories.map(category => ({
       ...category,
-      productCount: category._count.products
+      productCount: category.products.filter((item) =>
+        productBelongsToBrandScope(item.product.brand, effectiveBrandId)
+      ).length
     }));
   } catch (error) {
     console.error('Error fetching categories with counts:', error);
@@ -199,7 +234,9 @@ export async function setProductCategories(productId: string, categoryIds: strin
 }
 
 // Получение списка всех категорий
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(options: BrandScopeOptions = {}): Promise<Category[]> {
+  const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+  const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
@@ -209,6 +246,7 @@ export async function getCategories(): Promise<Category[]> {
     console.log('Fetching categories from DB...');
     // Используем Prisma напрямую для получения категорий
     const categories = await prisma.category.findMany({
+      where: { brand: dbBrand },
       orderBy: [
         { parentId: 'asc' },
         { sortOrder: 'asc' },
@@ -245,7 +283,12 @@ export async function getCategory(id: string): Promise<Category | null> {
 }
 
 // Создание новой категории
-export async function createCategory(data: CategoryInput): Promise<Category> {
+export async function createCategory(
+  data: CategoryInput,
+  options: BrandScopeOptions = {}
+): Promise<Category> {
+  const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+  const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
@@ -262,18 +305,20 @@ export async function createCategory(data: CategoryInput): Promise<Category> {
     
     const parsed = categoryInputSchema.parse({
       ...data,
+      slug: data.slug.trim().toLowerCase(),
       image: data.image?.trim() ? data.image.trim() : null,
       parentId: data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
       showInCategoriesBlock: data.showInCategoriesBlock ?? true,
     });
 
-    await ensureCategoryParentExists(parsed.parentId);
+    await ensureCategoryParentExists(parsed.parentId, effectiveBrandId);
     await ensureNoCategoryCycle(null, parsed.parentId);
 
     // Используем Prisma напрямую для создания категории, чтобы избежать проблем с генерацией ID
     const category = await prisma.category.create({
       data: {
+        brand: dbBrand,
         title: parsed.title,
         slug: parsed.slug,
         image: parsed.image,
@@ -300,15 +345,33 @@ export async function createCategory(data: CategoryInput): Promise<Category> {
 }
 
 // Обновление категории
-export async function updateCategory(id: string, data: Partial<CategoryInput>): Promise<Category> {
+export async function updateCategory(
+  id: string,
+  data: Partial<CategoryInput>,
+  options: BrandScopeOptions = {}
+): Promise<Category> {
+  const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+  const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {
       throw new Error('Database connection is not initialized');
     }
     
+    const existingCategory = await prisma.category.findUnique({
+      where: { id },
+      select: { brand: true },
+    });
+    if (!existingCategory || existingCategory.brand !== dbBrand) {
+      throw new Error('Категория не найдена в выбранном бренде');
+    }
+
     const parsed = categoryUpdateSchema.parse({
       ...data,
+      slug:
+        data.slug === undefined
+          ? undefined
+          : data.slug.trim().toLowerCase(),
       image: data.image === undefined ? undefined : data.image?.trim() ? data.image.trim() : null,
       parentId: data.parentId === undefined ? undefined : data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
@@ -316,7 +379,7 @@ export async function updateCategory(id: string, data: Partial<CategoryInput>): 
     });
 
     if (parsed.parentId !== undefined) {
-      await ensureCategoryParentExists(parsed.parentId);
+      await ensureCategoryParentExists(parsed.parentId, effectiveBrandId);
       await ensureNoCategoryCycle(id, parsed.parentId);
     }
 
@@ -360,10 +423,22 @@ const categorySortUpdateSchema = z.array(
 
 /** Обновление порядка сортировки нескольких категорий (для drag-and-drop). */
 export async function updateCategoriesSortOrder(
-  updates: { id: string; sortOrder: number }[]
+  updates: { id: string; sortOrder: number }[],
+  options: BrandScopeOptions = {}
 ): Promise<void> {
+  const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+  const dbBrand = resolveDbBrand(effectiveBrandId);
   const parsed = categorySortUpdateSchema.parse(updates);
   if (!prisma) throw new Error('Database connection is not initialized');
+
+  const categories = await prisma.category.findMany({
+    where: { id: { in: parsed.map((item) => item.id) } },
+    select: { id: true, brand: true },
+  });
+  const allInScope = categories.every((category) => category.brand === dbBrand);
+  if (!allInScope) {
+    throw new Error('Нельзя менять порядок категорий другого бренда');
+  }
 
   await prisma.$transaction(
     parsed.map(({ id, sortOrder }) =>
@@ -379,7 +454,20 @@ export async function updateCategoriesSortOrder(
 }
 
 // Удаление категории
-export async function deleteCategory(id: string): Promise<void> {
+export async function deleteCategory(
+  id: string,
+  options: BrandScopeOptions = {}
+): Promise<void> {
+    const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
+    const dbBrand = resolveDbBrand(effectiveBrandId);
+    const existingCategory = await prisma.category.findUnique({
+      where: { id },
+      select: { brand: true },
+    });
+    if (!existingCategory || existingCategory.brand !== dbBrand) {
+      throw new Error('Категория не найдена в выбранном бренде');
+    }
+
   try {
     // Проверяем, что prisma инициализирован
     if (!prisma) {

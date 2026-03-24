@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Button from '@/components/ui/button';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
@@ -22,6 +22,7 @@ interface Post {
 export default function NewsPage() {
   const base = useAdminBasePath();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const typeFromUrl = searchParams.get('type');
   const initialTab: PostType = typeFromUrl === 'article' ? 'article' : 'news';
 
@@ -30,18 +31,31 @@ export default function NewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PostType>(initialTab);
 
+  const resolveBrandFromPathname = (value: string): 'inner' | 'sprint-power' | null => {
+    if (value.includes('/sprint-power')) return 'sprint-power';
+    if (value.includes('/inner')) return 'inner';
+    return null;
+  };
+
+  const activeBrand = resolveBrandFromPathname(pathname);
+
+  function buildPostsEndpoint(): string {
+    if (!activeBrand) return '/api/admin/posts';
+    return `/api/admin/posts?brand=${encodeURIComponent(activeBrand)}`;
+  }
+
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [pathname]);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/posts', { credentials: 'include' });
+      const response = await fetch(buildPostsEndpoint(), { credentials: 'include' });
       if (!response.ok) throw new Error('Ошибка загрузки');
       const data = await response.json();
       setPosts(Array.isArray(data) ? data : []);
@@ -55,7 +69,8 @@ export default function NewsPage() {
   const handleDeletePost = async (id: string) => {
     if (!confirm('Удалить эту запись?')) return;
     try {
-      const res = await fetch(`/api/admin/posts/${id}`, {
+      const query = activeBrand ? `?brand=${encodeURIComponent(activeBrand)}` : '';
+      const res = await fetch(`/api/admin/posts/${id}${query}`, {
         method: 'DELETE',
         credentials: 'include',
       });

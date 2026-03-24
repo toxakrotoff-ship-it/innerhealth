@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as partnerService from '@/services/partner.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 /**
  * GET /api/account/partner-stats
  * Only for authenticated user with role PARTNER. Returns stats per promo: code, ordersCount, partnerIncome (no totalAmount).
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -33,7 +34,8 @@ export async function GET() {
   }
 
   try {
-    const stats = await partnerService.getPartnerStatsForPartner(session.user.id);
+    const brandId = resolveBrandOrDefaultFromRequest(request);
+    const stats = await partnerService.getPartnerStatsForPartner(session.user.id, brandId);
     return NextResponse.json(stats, {
       headers: {
         'Cache-Control': 'no-store',

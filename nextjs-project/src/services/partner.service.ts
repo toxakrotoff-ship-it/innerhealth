@@ -1,6 +1,8 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { Role } from '@prisma/client';
+import type { BrandId } from '@/lib/brand/brand';
+import { promoBelongsToBrandScope } from '@/lib/brand/brand-scope';
 
 const PAID_STATUSES = ['paid', 'completed'] as const;
 
@@ -33,7 +35,8 @@ export interface PartnerPromoCodeWithDetails {
  * For admin: per partner's promo code — ordersCount and totalAmount (orders status in paid/completed).
  */
 export async function getPartnerStatsByUserId(
-  userId: string
+  userId: string,
+  brandId?: BrandId | null
 ): Promise<PartnerStatForAdmin[]> {
   const bindings = await prisma.partnerPromoCode.findMany({
     where: { userId },
@@ -45,6 +48,7 @@ export async function getPartnerStatsByUserId(
   const results: PartnerStatForAdmin[] = [];
 
   for (const b of bindings) {
+    if (!promoBelongsToBrandScope(b.promoCode.code, brandId)) continue;
     const agg = await prisma.order.aggregate({
       where: {
         promoCodeId: b.promoCodeId,
@@ -68,7 +72,8 @@ export async function getPartnerStatsByUserId(
  * For partner LK: per promo — ordersCount and partnerIncome. Base for income: per-partner setting (order total or discount amount).
  */
 export async function getPartnerStatsForPartner(
-  userId: string
+  userId: string,
+  brandId?: BrandId | null
 ): Promise<PartnerStatForPartner[]> {
   const incomeBase = await getPartnerIncomeBaseForUser(userId);
   const bindings = await prisma.partnerPromoCode.findMany({
@@ -81,6 +86,7 @@ export async function getPartnerStatsForPartner(
   const results: PartnerStatForPartner[] = [];
 
   for (const b of bindings) {
+    if (!promoBelongsToBrandScope(b.promoCode.code, brandId)) continue;
     const [paidAgg, applicationsAgg] = await Promise.all([
       prisma.order.aggregate({
         where: {
@@ -180,7 +186,8 @@ export async function removePromoCodeFromPartner(
  * List partner's promo code bindings with code and commission for admin.
  */
 export async function getPartnerPromoCodes(
-  userId: string
+  userId: string,
+  brandId?: BrandId | null
 ): Promise<PartnerPromoCodeWithDetails[]> {
   const list = await prisma.partnerPromoCode.findMany({
     where: { userId },
@@ -189,7 +196,9 @@ export async function getPartnerPromoCodes(
     },
     orderBy: { createdAt: 'desc' },
   });
-  return list.map((p) => ({
+  return list
+    .filter((p) => promoBelongsToBrandScope(p.promoCode.code, brandId))
+    .map((p) => ({
     id: p.id,
     promoCodeId: p.promoCode.id,
     code: p.promoCode.code,
@@ -240,4 +249,31 @@ export async function updatePartnerIncomeBase(
     data: { partnerIncomeBase },
   });
   return { ok: true };
+}
+
+/** Check that partner has at least one promo binding in brand scope. */
+export async function hasPartnerPromoInBrandScope(
+  userId: string,
+  brandId?: BrandId | null
+): Promise<boolean> {
+  const bindings = await prisma.partnerPromoCode.findMany({
+    where: { userId },
+    include: { promoCode: { select: { code: true } } },
+    take: 100,
+  });
+  return bindings.some((binding) => promoBelongsToBrandScope(binding.promoCode.code, brandId));
+}
+
+/** Check that partner promo binding belongs to partner and current brand scope. */
+export async function isPartnerPromoInBrandScope(
+  partnerPromoId: string,
+  userId: string,
+  brandId?: BrandId | null
+): Promise<boolean> {
+  const binding = await prisma.partnerPromoCode.findFirst({
+    where: { id: partnerPromoId, userId },
+    include: { promoCode: { select: { code: true } } },
+  });
+  if (!binding) return false;
+  return promoBelongsToBrandScope(binding.promoCode.code, brandId);
 }

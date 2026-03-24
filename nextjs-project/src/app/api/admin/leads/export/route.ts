@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
 import { getAllLeadsForExport, buildLeadsCsv, LeadExportFilter } from '@/services/leads-export.service'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const presetSchema = z
   .enum(['all', 'today', 'last7', 'last30', 'thisMonth', 'prevMonth'])
@@ -26,8 +27,6 @@ interface ParsedQuery {
 }
 
 function buildFilterFromQuery(data: ParsedQuery): LeadExportFilter | undefined {
-  const now = new Date()
-
   const setDayBounds = (date: Date, isStart: boolean): Date => {
     const result = new Date(date)
     if (isStart) {
@@ -111,6 +110,7 @@ function buildFilterFromQuery(data: ParsedQuery): LeadExportFilter | undefined {
 export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   try {
     const url = new URL(request.url)
@@ -124,11 +124,11 @@ export async function GET(request: Request) {
     let filter: LeadExportFilter | undefined
     try {
       filter = buildFilterFromQuery(parseResult.data)
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: 'Неверный диапазон дат' }, { status: 400 })
     }
 
-    const rows = await getAllLeadsForExport(filter)
+    const rows = await getAllLeadsForExport(filter, brandId)
     const csv = buildLeadsCsv(rows)
     const date = new Date().toISOString().slice(0, 10)
     const filename = `leads-${date}.csv`

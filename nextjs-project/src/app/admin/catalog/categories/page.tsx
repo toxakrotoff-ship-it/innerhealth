@@ -27,6 +27,7 @@ import {
   type FlatCategoryTreeNode,
 } from '@/lib/category-tree';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 
 interface CategoryFormState {
   title: string;
@@ -108,6 +109,8 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
 }
 
 export default function AdminCategoriesPage() {
+  const adminBasePath = useAdminBasePath();
+  const [activeBrand, setActiveBrand] = useState<'inner' | 'sprint-power' | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -121,6 +124,42 @@ export default function AdminCategoriesPage() {
     showInCategoriesBlock: true,
   });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const normalizedBase = adminBasePath.toLowerCase();
+    if (normalizedBase.includes('sprint-power')) {
+      setActiveBrand('sprint-power');
+      return;
+    }
+    if (normalizedBase.includes('inner')) {
+      setActiveBrand('inner');
+      return;
+    }
+
+    const rawPathname = window.location.pathname.toLowerCase();
+    if (rawPathname.includes('/sprint-power')) {
+      setActiveBrand('sprint-power');
+      return;
+    }
+    if (rawPathname.includes('/inner')) {
+      setActiveBrand('inner');
+      return;
+    }
+    const fromCookie = document.cookie
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith('ih_active_brand='))
+      ?.split('=')[1];
+    if (fromCookie === 'sprint-power') {
+      setActiveBrand('sprint-power');
+      return;
+    }
+    if (fromCookie === 'inner') {
+      setActiveBrand('inner');
+      return;
+    }
+    setActiveBrand(null);
+  }, [adminBasePath]);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(
@@ -145,14 +184,11 @@ export default function AdminCategoriesPage() {
     return descendants;
   }, [categoryTree, editingCategory]);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const fetchCategories = async () => {
+    if (!activeBrand) return;
     try {
       setIsLoading(true);
-      const cats = await getCategories();
+      const cats = await getCategories({ brandId: activeBrand });
       setCategories(cats);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -161,6 +197,10 @@ export default function AdminCategoriesPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeBrand) void fetchCategories();
+  }, [activeBrand]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +212,7 @@ export default function AdminCategoriesPage() {
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
         showInCategoriesBlock: formData.showInCategoriesBlock,
-      });
+      }, { brandId: activeBrand });
       
       setCategories([...categories, newCategory]);
       setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
@@ -199,7 +239,7 @@ export default function AdminCategoriesPage() {
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
         showInCategoriesBlock: formData.showInCategoriesBlock,
-      });
+      }, { brandId: activeBrand });
       
       const updatedCategories = categories.map(cat =>
         cat.id === editingCategory.id ? updatedCategory : cat
@@ -221,7 +261,7 @@ export default function AdminCategoriesPage() {
   const handleDeleteCategory = async (id: string) => {
     if (!confirm('Вы уверены, что хотите удалить эту категорию?')) return;
     try {
-      await deleteCategory(id);
+      await deleteCategory(id, { brandId: activeBrand });
       setCategories(categories.filter(cat => cat.id !== id));
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -274,7 +314,7 @@ export default function AdminCategoriesPage() {
       }));
 
       try {
-        await updateCategoriesSortOrder(updates);
+        await updateCategoriesSortOrder(updates, { brandId: activeBrand });
         setCategories((prev) =>
           prev.map((c) => {
             const u = updates.find((x) => x.id === c.id);

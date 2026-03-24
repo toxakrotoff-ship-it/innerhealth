@@ -1,5 +1,7 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 import {
   detectCsvDelimiter,
   parseCsvLineWithDelimiter,
@@ -8,8 +10,9 @@ import {
 } from '@/lib/tilda-leads-import';
 
 /** Get all Tilda leads for admin. */
-export async function getTildaLeads() {
+export async function getTildaLeads(brandId: BrandId | null = null) {
   return prisma.tildaLead.findMany({
+    where: { brand: resolveDbBrand(brandId) },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -30,15 +33,16 @@ async function findLeadByMatchingContacts(params: {
   email: string | null
   name: string | null
   phone: string | null
+  brandId: BrandId | null
 }) {
-  const { email, name, phone } = params
+  const { email, name, phone, brandId } = params
   const whereConditions = []
   if (email) whereConditions.push({ email: { equals: email, mode: 'insensitive' as const } })
   if (name) whereConditions.push({ name: { equals: name, mode: 'insensitive' as const } })
   if (!email && !name) return null
 
   const candidates = await prisma.tildaLead.findMany({
-    where: { OR: whereConditions },
+    where: { brand: resolveDbBrand(brandId), OR: whereConditions },
     orderBy: { createdAt: 'desc' },
     take: 20,
   })
@@ -56,7 +60,10 @@ async function findLeadByMatchingContacts(params: {
   )
 }
 
-export async function importTildaLeadsFromCsv(csvContent: string): Promise<ImportTildaLeadsResult> {
+export async function importTildaLeadsFromCsv(
+  csvContent: string,
+  brandId: BrandId | null = null
+): Promise<ImportTildaLeadsResult> {
   const lines = csvContent
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -100,9 +107,15 @@ export async function importTildaLeadsFromCsv(csvContent: string): Promise<Impor
     try {
       if (parsed.tranid) {
         await prisma.tildaLead.upsert({
-          where: { tildaTranId: parsed.tranid },
+          where: {
+            brand_tildaTranId: {
+              brand: resolveDbBrand(brandId),
+              tildaTranId: parsed.tranid,
+            },
+          },
           update: payload,
           create: {
+            brand: resolveDbBrand(brandId),
             tildaTranId: parsed.tranid,
             ...payload,
           },
@@ -115,6 +128,7 @@ export async function importTildaLeadsFromCsv(csvContent: string): Promise<Impor
         email: parsed.email,
         name: parsed.name,
         phone: normalizePhone(parsed.phone),
+        brandId,
       })
 
       if (!matchedLead) {

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import { reorderProductsInCategory } from '@/services/product.service';
+import { prisma } from '@/lib/prisma';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
+import { productBelongsToBrandScope } from '@/lib/brand/brand-scope';
 
 const reorderSchema = z.object({
   categoryId: z.string().min(1, 'Category ID is required'),
@@ -18,6 +22,8 @@ const reorderSchema = z.object({
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
+  const dbBrand = resolveDbBrand(brandId);
 
   let parsed: z.infer<typeof reorderSchema>;
   try {
@@ -34,6 +40,32 @@ export async function POST(request: Request) {
   const { categoryId, items } = parsed;
 
   try {
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { id: true, brand: true },
+    });
+    if (!category || category.brand !== dbBrand) {
+      return NextResponse.json(
+        { error: 'Category not found in selected brand' },
+        { status: 404 }
+      );
+    }
+
+    const productIds = items.map((item) => item.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, brand: true },
+    });
+    if (
+      products.length !== productIds.length ||
+      products.some((product) => !productBelongsToBrandScope(product.brand, brandId))
+    ) {
+      return NextResponse.json(
+        { error: 'Some products are out of selected brand scope' },
+        { status: 400 }
+      );
+    }
+
     await reorderProductsInCategory(
       categoryId,
       items.map((item, index) => ({

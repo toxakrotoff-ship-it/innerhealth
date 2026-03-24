@@ -8,6 +8,7 @@ import {
   getBaseUrl,
 } from '@/lib/yookassa'
 import { notifyTelegramOrder, notifyTelegramPaymentError } from '@/lib/telegram-notify'
+import { notifyMaxOrder, notifyMaxPaymentError } from '@/lib/max-notify'
 import { sendOrderEmailsWithDelay } from '@/lib/email'
 import { randomUUID } from 'crypto'
 import * as productService from '@/services/product.service'
@@ -17,6 +18,7 @@ import * as userService from '@/services/user.service'
 import * as settingsService from '@/services/settings.service'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 /** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
 function parseVatCode(value: string | undefined, fallback: number): number {
@@ -40,6 +42,7 @@ function applyPromoToSubtotal(
 const ORDER_RATE_LIMIT = 10 // orders per minute per IP
 
 export async function POST(request: Request) {
+  const brandId = resolveBrandOrDefaultFromRequest(request)
   const clientId = getClientIdentifier(request)
   const rate = await checkRateLimit(clientId, 'order', ORDER_RATE_LIMIT)
   if (!rate.success) {
@@ -74,7 +77,7 @@ export async function POST(request: Request) {
     const { items, promoCodeId, deliverySum = 0, shipping } = parsed.data
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
-    const products = await productService.getProductsForOrder(productIds)
+    const products = await productService.getProductsForOrder(productIds, brandId)
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     let sumPromoPrice = 0
@@ -140,6 +143,7 @@ export async function POST(request: Request) {
       promoCodeId: promoCodeId || null,
       promoDiscountAmount: promoDiscountAmount > 0 ? promoDiscountAmount : null,
       userId,
+      brandId,
       items: items.map((i) => {
         const product = productMap.get(i.productId)!
         return {
@@ -187,6 +191,27 @@ export async function POST(request: Request) {
       promoCode: promoCodeStr,
       promoCodeId: order.promoCodeId ?? undefined,
     })
+    void notifyMaxOrder({
+      orderId: order.id,
+      total: order.total,
+      items: order.items.map((oi) => ({
+        title: oi.product.title,
+        quantity: oi.quantity,
+        price: oi.price,
+      })),
+      shipping: {
+        fullName: shipping.fullName.trim(),
+        phone: shipping.phone.trim(),
+        email: shipping.email.trim(),
+        address: shipping.address.trim(),
+        city: shipping.city.trim(),
+        zipCode: (shipping.zipCode ?? '').toString().trim(),
+        country: (shipping.country ?? 'Россия').trim(),
+      },
+      promoCode: promoCodeStr,
+      promoCodeId: order.promoCodeId ?? undefined,
+      customerUserId: userId,
+    })
 
     const orderNotificationPayload = {
       orderId: order.id,
@@ -215,7 +240,7 @@ export async function POST(request: Request) {
       orderNotificationPayload
     )
 
-    const yookassaSettings = await settingsService.getYookassaSettingsMap()
+    const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
     const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
     const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
     const hasYookassaFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
@@ -280,6 +305,12 @@ export async function POST(request: Request) {
         console.error('YooKassa create payment error:', yooErr)
         const errorMessage = yooErr instanceof Error ? yooErr.message : String(yooErr)
         notifyTelegramPaymentError({
+          orderId: order.id,
+          total,
+          errorMessage,
+          context: 'create',
+        })
+        void notifyMaxPaymentError({
           orderId: order.id,
           total,
           errorMessage,

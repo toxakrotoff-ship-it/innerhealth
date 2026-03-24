@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
 import * as promoService from '@/services/promo.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 const dateOptional = z
   .union([z.string(), z.date()])
@@ -29,11 +30,12 @@ const postPromoCodeSchema = z.union([
 ]);
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   const { userId } = await params;
 
@@ -46,7 +48,7 @@ export async function GET(
   }
 
   try {
-    const list = await partnerService.getPartnerPromoCodes(userId);
+    const list = await partnerService.getPartnerPromoCodes(userId, brandId);
     return NextResponse.json(list);
   } catch (error) {
     console.error('Error fetching partner promo codes:', error);
@@ -63,6 +65,7 @@ export async function POST(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   const { userId } = await params;
 
@@ -90,7 +93,7 @@ export async function POST(
 
   if ('createPromo' in body && body.createPromo) {
     const createBody = body as Extract<z.infer<typeof postPromoCodeSchema>, { createPromo: true }>;
-    const existingByCode = await promoService.findPromoByCode(createBody.code);
+    const existingByCode = await promoService.findPromoByCode(createBody.code, brandId);
     if (existingByCode) {
       return NextResponse.json(
         { error: 'Promo code with this code already exists' },
@@ -104,11 +107,18 @@ export async function POST(
       usageLimit: createBody.usageLimit ?? undefined,
       validFrom: createBody.validFrom,
       validTo: createBody.validTo,
-    });
+    }, brandId);
     promoCodeId = promo.id;
   } else {
     const assignBody = body as Extract<z.infer<typeof postPromoCodeSchema>, { promoCodeId: string }>;
     promoCodeId = assignBody.promoCodeId;
+    const promoInScope = await promoService.findPromoById(promoCodeId, brandId);
+    if (!promoInScope) {
+      return NextResponse.json(
+        { error: 'Promo code not found in selected brand scope' },
+        { status: 404 }
+      );
+    }
   }
 
   const result = await partnerService.assignPromoCodeToPartner(

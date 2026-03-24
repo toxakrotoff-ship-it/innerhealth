@@ -1,242 +1,2267 @@
 {
-  "version": "2.8",
+  "version": "2.9",
   "children": [
     {
       "type": "frame",
       "id": "t7G9f",
       "x": 461,
       "y": -722,
-      "name": "Frame 1",
+      "name": "Sprint Power Redesign — Variant A (Minimal)",
       "clip": true,
-      "width": 772,
-      "height": 528,
-      "fill": "#FFFFFF",
-      "layout": "none",
+      "width": 1440,
+      "fill": "#F6F8FB",
+      "layout": "vertical",
+      "gap": 28,
+      "padding": [
+        40,
+        64,
+        80,
+        64
+      ],
       "children": [
         {
           "type": "frame",
-          "id": "Nlu8v",
-          "x": 106,
-          "y": 54,
-          "name": "cardCopy",
-          "width": 560,
-          "height": 420,
+          "id": "zuFnU",
+          "name": "01 Hero",
+          "width": "fill_container",
           "fill": "#FFFFFF",
-          "cornerRadius": 32,
-          "effect": {
-            "type": "shadow",
-            "shadowType": "outer",
-            "color": "#00000026",
-            "offset": {
-              "x": 0,
-              "y": 18
-            },
-            "blur": 40
-          },
-          "layout": "vertical",
-          "gap": 32,
+          "cornerRadius": 24,
+          "gap": 28,
           "padding": 40,
-          "justifyContent": "center",
-          "alignItems": "center",
           "children": [
             {
               "type": "frame",
-              "id": "T1oIE",
-              "name": "v1_404row",
-              "gap": 16,
-              "alignItems": "center",
+              "id": "pwCKQ",
+              "name": "heroLeft",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
               "children": [
                 {
                   "type": "text",
-                  "id": "OLMiB",
-                  "name": "v1_4left",
-                  "fill": "#1a2332",
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#00000080",
-                    "offset": {
-                      "x": 0,
-                      "y": 4
-                    },
-                    "blur": 20
-                  },
-                  "content": "4",
-                  "fontFamily": "Unbounded",
-                  "fontSize": 128,
-                  "fontWeight": "800",
-                  "letterSpacing": 8
+                  "id": "9DEhI",
+                  "fill": "#3B5BFF",
+                  "content": "SPRINT POWER",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.6
+                },
+                {
+                  "type": "text",
+                  "id": "cRC3o",
+                  "fill": "#0F172A",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Спортивное питание нового поколения с научно подтвержденной эффективностью",
+                  "lineHeight": 1.06,
+                  "fontFamily": "Inter",
+                  "fontSize": 50,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Mh9ql",
+                  "fill": "#334155",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Разработано биологами и спортивными врачами. Составы для силы, восстановления и защиты суставов.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "frame",
-                  "id": "KEvPI",
-                  "name": "v1_compassFrame",
-                  "width": 110,
-                  "height": 110,
-                  "layout": "none",
+                  "id": "OnjLv",
+                  "name": "heroBadges",
+                  "gap": 10,
                   "children": [
                     {
-                      "type": "ellipse",
-                      "id": "VaQy5",
-                      "x": 0,
-                      "y": 0,
-                      "name": "v1_compassOuter",
-                      "fill": "#00000000",
-                      "width": 110,
-                      "height": 110,
-                      "stroke": {
-                        "thickness": 3,
-                        "fill": "#38BDF8"
-                      }
+                      "type": "frame",
+                      "id": "U99RV",
+                      "name": "bg1",
+                      "fill": "#EEF2FF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "5xYaP",
+                          "fill": "#243B99",
+                          "content": "Российское производство",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
                     },
                     {
-                      "type": "ellipse",
-                      "id": "gBpbO",
-                      "x": 10,
-                      "y": 10,
-                      "name": "v1_compassInner",
-                      "fill": "#00000000",
-                      "width": 90,
-                      "height": 90,
-                      "stroke": {
-                        "thickness": 1,
-                        "fill": "#38BDF850"
-                      }
-                    },
-                    {
-                      "type": "path",
-                      "id": "2wvHU",
-                      "x": 45,
-                      "y": 20,
-                      "name": "v1_needle",
-                      "geometry": "M10 0l10 35-10 35-10-35z",
-                      "fill": "#38BDF8",
-                      "width": 20,
-                      "height": 70
-                    },
-                    {
-                      "type": "ellipse",
-                      "id": "SaP1F",
-                      "x": 20,
-                      "y": 20,
-                      "name": "v1_animRing",
-                      "fill": "#00000000",
-                      "width": 70,
-                      "height": 70,
-                      "stroke": {
-                        "thickness": 2,
-                        "fill": "#38BDF840"
-                      }
-                    },
-                    {
-                      "type": "ellipse",
-                      "id": "7mIDC",
-                      "x": 49,
-                      "y": 4,
-                      "name": "v1_animDot1",
-                      "fill": "#38BDF8",
-                      "width": 12,
-                      "height": 12
-                    },
-                    {
-                      "type": "ellipse",
-                      "id": "pCpaj",
-                      "x": 4,
-                      "y": 49.5,
-                      "name": "v1_animDot2",
-                      "fill": "#22C55E",
-                      "width": 12,
-                      "height": 12
-                    },
-                    {
-                      "type": "ellipse",
-                      "id": "2obNE",
-                      "x": 95,
-                      "y": 49,
-                      "name": "v1_animDot3",
-                      "fill": "#F97316",
-                      "width": 12,
-                      "height": 12
-                    },
-                    {
-                      "type": "ellipse",
-                      "id": "uuSrT",
-                      "x": 49,
-                      "y": 94,
-                      "name": "v1_animDot1",
-                      "fill": "#38BDF8",
-                      "width": 12,
-                      "height": 12
+                      "type": "frame",
+                      "id": "uWnZv",
+                      "name": "bg2",
+                      "fill": "#ECFDF3",
+                      "cornerRadius": 999,
+                      "padding": [
+                        8,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "0MLpz",
+                          "fill": "#166534",
+                          "content": "Хондропротекторный фокус",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
                     }
                   ]
                 },
                 {
-                  "type": "text",
-                  "id": "zixp5",
-                  "name": "v1_4right",
-                  "fill": "#1a2332",
-                  "effect": {
-                    "type": "shadow",
-                    "shadowType": "outer",
-                    "color": "#00000080",
-                    "offset": {
-                      "x": 0,
-                      "y": 4
+                  "type": "frame",
+                  "id": "mJA6S",
+                  "name": "ctaA",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "7CofK",
+                      "name": "ctaBtn1",
+                      "fill": "#2F46FF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        14,
+                        22
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "OK7S6",
+                          "fill": "#FFFFFF",
+                          "content": "Выбрать продукт",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
                     },
-                    "blur": 20
-                  },
-                  "content": "4",
-                  "fontFamily": "Unbounded",
-                  "fontSize": 128,
-                  "fontWeight": "800",
-                  "letterSpacing": 8
+                    {
+                      "type": "frame",
+                      "id": "89XYk",
+                      "name": "ctaBtn2",
+                      "fill": "#EEF2FF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        14,
+                        22
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YsAcz",
+                          "fill": "#1E3A8A",
+                          "content": "Сравнить линейки",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "VDRT5",
+                  "name": "heroStats",
+                  "gap": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TvDHu",
+                      "name": "stat1",
+                      "width": 170,
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lnkoC",
+                          "fill": "#0F172A",
+                          "content": "9+",
+                          "fontFamily": "Inter",
+                          "fontSize": 28,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "unO9B",
+                          "fill": "#64748B",
+                          "content": "ключевых категорий",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
             {
-              "type": "text",
-              "id": "snN1u",
-              "name": "v1_title",
-              "fill": "#1a2332",
-              "effect": {
-                "type": "shadow",
-                "shadowType": "outer",
-                "color": "#00000040",
-                "offset": {
-                  "x": 0,
-                  "y": 2
-                },
-                "blur": 10
+              "type": "frame",
+              "id": "yi5xM",
+              "name": "heroRight",
+              "width": 460,
+              "height": 420,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1774353314420.png",
+                "mode": "fill"
               },
-              "content": "Похоже, мы свернули не туда.",
-              "textAlign": "center",
-              "fontFamily": "Inter",
-              "fontSize": 24,
-              "fontWeight": "600",
-              "letterSpacing": 0.5
-            },
+              "cornerRadius": 24,
+              "layout": "vertical",
+              "gap": 12,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "el21m",
+                  "fill": "#FFFFFF",
+                  "content": "Флагман: Hydro Protein",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "aMV7l",
+                  "fill": "#E2E8F0",
+                  "content": "95% пептидного белка • 19 аминокислот • без лактозы",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Z70i1",
+          "name": "02 Категории",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
             {
               "type": "text",
-              "id": "3c7Gw",
-              "name": "v1_subtitle",
-              "fill": "#475569",
-              "content": "Страница потерялась, но путь домой — по кнопке ниже.",
-              "textAlign": "center",
+              "id": "CtHCb",
+              "fill": "#0F172A",
+              "content": "Категории продуктов",
               "fontFamily": "Inter",
-              "fontSize": 15,
-              "fontWeight": "normal",
-              "letterSpacing": 0.3
+              "fontSize": 30,
+              "fontWeight": "700"
             },
             {
               "type": "frame",
-              "id": "HJQLB",
-              "name": "v1_btn",
-              "fill": "#22C55E",
+              "id": "2JrvJ",
+              "name": "catGrid",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ZjY7k",
+                  "name": "catRow1",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "8XNz9",
+                      "name": "cat1",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hfCl7",
+                          "fill": "#0F172A",
+                          "content": "Протеины",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "SPTqa",
+                          "fill": "#475467",
+                          "content": "Multi / Hydro",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EJAo8",
+                      "name": "cat2",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WrUn3",
+                          "fill": "#0F172A",
+                          "content": "Коллаген",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "BQHk2",
+                          "fill": "#475467",
+                          "content": "Type II peptides",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "R7RCb",
+                      "name": "cat3",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "sdMpC",
+                          "fill": "#0F172A",
+                          "content": "BCAA",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "30qPR",
+                          "fill": "#475467",
+                          "content": "Recovery complex",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "FKi2D",
+                  "name": "catRow2",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aN3Ll",
+                      "name": "cat4",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "5iVTb",
+                          "fill": "#0F172A",
+                          "content": "Креатин",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "RLhiv",
+                      "name": "cat5",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "6Croq",
+                          "fill": "#0F172A",
+                          "content": "L-карнитин",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SqmzM",
+                      "name": "cat6",
+                      "width": "fill_container",
+                      "fill": "#F8FAFC",
+                      "cornerRadius": 14,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XsgFR",
+                          "fill": "#0F172A",
+                          "content": "Нутриенты",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "1Jpyi",
+          "name": "03 Почему Sprint Power",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "esgos",
+              "fill": "#0F172A",
+              "content": "Почему Sprint Power",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "ToC1t",
+              "name": "whyRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "x4Bpr",
+                  "name": "w1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "zHIMr",
+                      "fill": "#0F172A",
+                      "content": "Научная команда",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "o2ylP",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Биологи, спортивные врачи, превентивная медицина",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "kewWN",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Биологи, спортивные врачи, превентивная медицина",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "sH3Ym",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Биологи, спортивные врачи, превентивная медицина",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yY1ye",
+                  "name": "w2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l6Pix",
+                      "fill": "#0F172A",
+                      "content": "Эффективные составы",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QGh7U",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Синергия компонентов и рабочие дозировки",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "F9evH",
+                      "fill": "#0F172A",
+                      "content": "Эффективные составы",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "8UHqV",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Синергия компонентов и рабочие дозировки",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ka4uf",
+                      "fill": "#0F172A",
+                      "content": "Эффективные составы",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "XoNBO",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Синергия компонентов и рабочие дозировки",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "TIVb3",
+                  "name": "w3",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "EVV4t",
+                      "fill": "#0F172A",
+                      "content": "Контроль качества",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "u14tW",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Сырье, производство и финальный контроль в РФ",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "2gR84",
+          "name": "04 Хиты и новинки",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "E65zi",
+              "fill": "#0F172A",
+              "content": "Хиты и новинки",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "7VKPD",
+              "name": "hitsRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "yj6pI",
+                  "name": "h1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SNI9C",
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": "#E2E8F0",
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "CQTMy",
+                      "fill": "#0F172A",
+                      "content": "Multi Protein",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "dkcYb",
+                      "fill": "#475467",
+                      "content": "4 вкуса, пребиотик Floracia",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "RCnV6",
+                  "name": "h2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "wWgIB",
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": "#E2E8F0",
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "l7TPB",
+                      "fill": "#0F172A",
+                      "content": "Collagen Type II",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FYoJN",
+                      "fill": "#475467",
+                      "content": "Хондропротекторный фокус",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "lA0Z7",
+          "name": "05 Сертификаты и доверительные маркеры",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "aiuyS",
+              "fill": "#0F172A",
+              "content": "Сертификаты и доверительные маркеры",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "XKKFC",
+              "name": "certRow",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ql9dG",
+                  "name": "c1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "izFjI",
+                      "fill": "#0F172A",
+                      "content": "GMP / HACCP",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DF9jt",
+                  "name": "c2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "oinXi",
+                      "fill": "#0F172A",
+                      "content": "Проверка сырья",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "9v40Z",
+                  "name": "c3",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "EUtCn",
+                      "fill": "#0F172A",
+                      "content": "Экспертная команда",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "N7PzF",
+          "name": "06 Отзывы",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "bGqce",
+              "fill": "#0F172A",
+              "content": "Отзывы клиентов",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "HaSax",
+              "name": "revRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "UEBvJ",
+                  "name": "r1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kFBfD",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Лучшее восстановление после тяжелых тренировок\"",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "LMr7r",
+                  "name": "r2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AlAr7",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Заметно легче суставам на цикле\"",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KltXs",
+          "name": "07 Партнеры",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "x1vYI",
+              "fill": "#0F172A",
+              "content": "Партнеры",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "f1V4v",
+              "name": "partnerRow",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uAPUI",
+                  "name": "p1",
+                  "width": "fill_container",
+                  "height": 72,
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "j0DqF",
+                      "fill": "#334155",
+                      "content": "Moscow Volleyball",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Vvdo4",
+                  "name": "p2",
+                  "width": "fill_container",
+                  "height": 72,
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "c5YRZ",
+                      "fill": "#334155",
+                      "content": "Taekwondo MO",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JrCrk",
+          "name": "08 Inner Health",
+          "width": "fill_container",
+          "fill": "#EEF2FF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "Olzy1",
+              "fill": "#0F172A",
+              "content": "Inner Health",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "M8qyw",
+              "fill": "#334155",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Второй проект бренда про активное долголетие, превентивную медицину и нутрицевтику.",
+              "lineHeight": 1.45,
+              "fontFamily": "Inter",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "Hl8fi",
+              "name": "ihRow",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "cIiwp",
+                  "name": "ihBtn",
+                  "fill": "#2F46FF",
+                  "cornerRadius": 999,
+                  "padding": [
+                    12,
+                    18
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "J1RZR",
+                      "fill": "#FFFFFF",
+                      "content": "Перейти на innerhealth.ru",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ilNo9",
+          "name": "09 FAQ + финальный CTA",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "HAZRR",
+              "fill": "#0F172A",
+              "content": "FAQ и финальный CTA",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Bkv3S",
+              "name": "faq1",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "8gWbt",
+                  "fill": "#0F172A",
+                  "content": "Как выбрать продукт под цель?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "RudEA",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "XXloD",
+              "name": "faq2",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bE32L",
+                  "fill": "#0F172A",
+                  "content": "Можно ли сочетать протеин и коллаген?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "kwwcb",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "J8iXI",
+              "name": "ctaFinal",
+              "fill": "#2F46FF",
+              "cornerRadius": 999,
+              "padding": [
+                14,
+                20
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "MG9tI",
+                  "fill": "#FFFFFF",
+                  "content": "Подобрать продукт сейчас",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Eim0e",
+              "name": "stA",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "A9Vsf",
+                  "name": "aDef",
+                  "fill": "#2F46FF",
+                  "cornerRadius": 999,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "4ZhSS",
+                      "fill": "#FFFFFF",
+                      "content": "Default",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "asc4t",
+                  "name": "aHover",
+                  "fill": "#1D34E0",
+                  "cornerRadius": 999,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "9fmsb",
+                      "fill": "#FFFFFF",
+                      "content": "Hover",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "4iAvj",
+                  "name": "aPress",
+                  "fill": "#1529B8",
+                  "cornerRadius": 999,
+                  "padding": [
+                    10,
+                    14
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "2wRoC",
+                      "fill": "#FFFFFF",
+                      "content": "Pressed",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tdluk",
+      "x": 2061,
+      "y": -722,
+      "name": "Sprint Power Redesign — Variant B (Emotional)",
+      "clip": true,
+      "width": 1440,
+      "fill": "#060A14",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        40,
+        64,
+        80,
+        64
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "iegCY",
+          "name": "01 Hero",
+          "width": "fill_container",
+          "height": 500,
+          "fill": "#0A1128",
+          "cornerRadius": 24,
+          "gap": 32,
+          "padding": [
+            48,
+            56
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "5SBuE",
+              "name": "bHL",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "70YpN",
+                  "fill": "#7AA2FF",
+                  "content": "SPRINT POWER",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.6
+                },
+                {
+                  "type": "text",
+                  "id": "v8k7Q",
+                  "fill": "#FFFFFF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Почувствуй разницу с первой тренировки",
+                  "lineHeight": 1.04,
+                  "fontFamily": "Inter",
+                  "fontSize": 52,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "6ime0",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "uBicl",
+                  "name": "bHCTA",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "YP0BB",
+                      "name": "bBtn1",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#3B82F640",
+                        "offset": {
+                          "x": 0,
+                          "y": 6
+                        },
+                        "blur": 20
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "csoUk",
+                          "fill": "#FFFFFF",
+                          "content": "Выбрать продукт",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "H26ny",
+                      "name": "bBtn2",
+                      "fill": "#1E293B",
+                      "cornerRadius": 999,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#334155"
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wqsiL",
+                          "fill": "#E2E8F0",
+                          "content": "Почему мы",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Lu9Sx",
+                  "name": "bSocial",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MRKet",
+                      "fill": "#64748B",
+                      "content": "9 продуктов • 2 спортивные федерации • производство в России с 2022",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Mv5bd",
+              "name": "bHR",
+              "width": 480,
+              "height": "fill_container",
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1774353878630.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RRdj6",
+                  "fill": "#FFFFFF",
+                  "content": "Hydro Protein — флагман линейки",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "H78wb",
+                  "fill": "#94A3B8",
+                  "content": "95% пептидного белка • 19 аминокислот • без лактозы",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Uj1kv",
+          "name": "02 Продукты (прямой выбор)",
+          "width": "fill_container",
+          "fill": "#0F172A",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "8mw9m",
+              "fill": "#F1F5F9",
+              "content": "Хиты продаж",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Zk6F6",
+              "name": "bProdRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "rcaHT",
+                  "name": "pc1",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "RwTGs",
+                      "name": "pc1img",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "alexsaks",
+                        "link": "https://unsplash.com/@alexsaks",
+                        "author": "Alex Saks"
+                      },
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1704650312022-ed1a76dbed1b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTM5MDB8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "51rRI",
+                      "fill": "#F1F5F9",
+                      "content": "Multi Protein",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "7uYvz",
+                      "fill": "#94A3B8",
+                      "content": "4 вкуса • пребиотик Floracia",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "2wlvG",
+                      "fill": "#3B82F6",
+                      "content": "2 490 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IYiJ6",
+                      "name": "pc1btn",
+                      "width": "fill_container",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QJfU2",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qCVHl",
+                  "name": "pc2",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kxRMO",
+                      "name": "pc2img",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "afterave",
+                        "link": "https://unsplash.com/@afterave",
+                        "author": "Afterave Essentials"
+                      },
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1729704166657-9a5744b7200c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTM5MDF8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "uJXhC",
+                      "fill": "#F1F5F9",
+                      "content": "Collagen Type II",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "1O7Hc",
+                      "fill": "#94A3B8",
+                      "content": "Хондропротекция суставов",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jwz3y",
+                      "fill": "#3B82F6",
+                      "content": "1 990 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "nNeRD",
+                      "name": "pc2btn",
+                      "width": "fill_container",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "y7d31",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "1F0HV",
+          "name": "03 Соцдоказательство",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "weTg9",
+              "name": "bSocRev",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cMYSm",
+                  "fill": "#0F172A",
+                  "content": "Отзывы спортсменов",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "JwlAX",
+                  "name": "br1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hHpp3",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Лучшее восстановление после тяжелых тренировок. Суставы перестали беспокоить.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "odEtV",
+                      "fill": "#64748B",
+                      "content": "Виталий, CrossFit",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lo6IL",
+                  "name": "br2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "1zGdt",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Перешел с импортного протеина — качество выше, цена ниже.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "5yXPw",
+                      "fill": "#64748B",
+                      "content": "Александр, силовой спорт",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "7Xqg4",
+              "name": "bSocCert",
+              "width": 360,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "4kMIl",
+                  "fill": "#0F172A",
+                  "content": "Доверительные маркеры",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "l4BKm",
+                  "name": "bc1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "fzswf",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "shield-check",
+                      "iconFontFamily": "lucide",
+                      "fill": "#22C55E"
+                    },
+                    {
+                      "type": "text",
+                      "id": "9Ak0T",
+                      "fill": "#0F172A",
+                      "content": "GMP / HACCP сертификация",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EvcAQ",
+                  "name": "bc2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "gigCW",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "flask-conical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#3B82F6"
+                    },
+                    {
+                      "type": "text",
+                      "id": "M4xhG",
+                      "fill": "#0F172A",
+                      "content": "Клиническая экспертиза состава",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KTDy4",
+                  "name": "bc3",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "ptGS0",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "award",
+                      "iconFontFamily": "lucide",
+                      "fill": "#F59E0B"
+                    },
+                    {
+                      "type": "text",
+                      "id": "MCznN",
+                      "fill": "#0F172A",
+                      "content": "Производство в России",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "m4Ds3",
+          "name": "04 Каталог",
+          "width": "fill_container",
+          "fill": "#0F172A",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "QAYO1",
+              "fill": "#F1F5F9",
+              "content": "Вся линейка",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "246KV",
+              "name": "bCatRow",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "f4GM2",
+                  "name": "bc1",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "d1TXD",
+                      "fill": "#F1F5F9",
+                      "content": "Протеины",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "kflpy",
+                      "fill": "#94A3B8",
+                      "content": "Multi / Hydro",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "QVyZg",
+                  "name": "bc2",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xyEWv",
+                      "fill": "#F1F5F9",
+                      "content": "Коллаген",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "InTLe",
+                  "name": "bc3",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ahB4f",
+                      "fill": "#F1F5F9",
+                      "content": "BCAA",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "0cKqc",
+                  "name": "bc4",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ZXaGb",
+                      "fill": "#F1F5F9",
+                      "content": "Креатин",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "4364X",
+                  "name": "bc5",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fFAB7",
+                      "fill": "#F1F5F9",
+                      "content": "L-карнитин",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pC6I0",
+                  "name": "bc6",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "H2Urw",
+                      "fill": "#F1F5F9",
+                      "content": "Нутриенты",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CsHQF",
+          "name": "05 Inner Health",
+          "width": "fill_container",
+          "fill": "#111D3A",
+          "cornerRadius": 20,
+          "gap": 20,
+          "padding": 28,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "SIjn2",
+              "name": "bIHL",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FEBES",
+                  "fill": "#FFFFFF",
+                  "content": "Inner Health",
+                  "fontFamily": "Inter",
+                  "fontSize": 26,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "kuyDA",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Активное долголетие, превентивная медицина, нутрицевтика.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "CxU0U",
+                  "name": "bIHBtn",
+                  "fill": "#3B82F6",
+                  "cornerRadius": 999,
+                  "padding": [
+                    12,
+                    18
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "OfLEL",
+                      "fill": "#FFFFFF",
+                      "content": "Подробнее",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "4kKB0",
+          "name": "06 FAQ + CTA",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "93rWK",
+              "fill": "#0F172A",
+              "content": "Частые вопросы",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "k6uhT",
+              "name": "bf1",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RGkCV",
+                  "fill": "#0F172A",
+                  "content": "Как выбрать продукт под цель?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "VZKy9",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "583KR",
+              "name": "bf2",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "bFkwV",
+                  "fill": "#0F172A",
+                  "content": "Можно ли сочетать протеин и коллаген?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "rXzMG",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "8Pmb7",
+              "name": "bf3",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H2IJi",
+                  "fill": "#0F172A",
+                  "content": "Сколько протеина нужно в день?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "SCZyG",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Ajh3a",
+              "name": "bFinalCTA",
+              "width": "fill_container",
+              "fill": "#3B82F6",
               "cornerRadius": 999,
               "effect": {
                 "type": "shadow",
                 "shadowType": "outer",
-                "color": "#22C55E40",
+                "color": "#3B82F640",
                 "offset": {
                   "x": 0,
                   "y": 6
@@ -244,57 +2269,2275 @@
                 "blur": 20
               },
               "padding": [
-                14,
-                28
+                16,
+                0
               ],
               "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
                   "type": "text",
-                  "id": "0Tdq9",
-                  "name": "v1_btnText",
-                  "fill": "#0f172a",
-                  "content": "Вернуться на главную",
+                  "id": "NrTBD",
+                  "fill": "#FFFFFF",
+                  "content": "Выбрать продукт сейчас",
                   "fontFamily": "Inter",
                   "fontSize": 15,
-                  "fontWeight": "600",
-                  "letterSpacing": 0.5
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "xvaOA",
+          "name": "07 Multi-brand integration",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "cojzu",
+              "name": "multiTitle",
+              "fill": "#0F172A",
+              "content": "Интеграция второго бренда (Sprint Power)",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "6JzjH",
+              "name": "multiLead",
+              "fill": "#334155",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Один код приложения, отдельный домен, brand-aware роутинг и общий кабинет/админка с переключателем бренда.",
+              "lineHeight": 1.4,
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "YHJck",
+              "name": "adaptiveCard",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 14,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "lB1Re",
+                  "name": "adaptiveTitle",
+                  "fill": "#0F172A",
+                  "content": "AdaptiveContainer-ready layout",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "Yoeqi",
+                  "name": "adaptiveText",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Используем текущие контейнеры и компоненты проекта для ускорения релиза: единые брейкпоинты, без дублирования верстки и с безопасной изоляцией brand-context.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "UxAfe",
+      "x": 3661,
+      "y": -722,
+      "name": "Sprint Power Redesign — Variant C (Balanced)",
+      "clip": true,
+      "width": 1440,
+      "fill": "#EDF1F7",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        40,
+        64,
+        80,
+        64
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "dumqO",
+          "name": "01 Hero + Квиз",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 24,
+          "gap": 32,
+          "padding": 48,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "3zbui",
+              "name": "cHL",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 18,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "AgvhD",
+                  "fill": "#335CFF",
+                  "content": "SPRINT POWER",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.6
+                },
+                {
+                  "type": "text",
+                  "id": "rwbsf",
+                  "fill": "#0F172A",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Подберем идеальный продукт под вашу цель",
+                  "lineHeight": 1.06,
+                  "fontFamily": "Inter",
+                  "fontSize": 46,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "LrNt8",
+                  "fill": "#475467",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Ответьте на 3 вопроса — мы покажем то, что реально работает для вас.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Inter",
+                  "fontSize": 17,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "11Kvu",
+                  "name": "cQBtn",
+                  "fill": "#335CFF",
+                  "cornerRadius": 999,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#335CFF30",
+                    "offset": {
+                      "x": 0,
+                      "y": 6
+                    },
+                    "blur": 18
+                  },
+                  "padding": [
+                    16,
+                    28
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "9UYjD",
+                      "fill": "#FFFFFF",
+                      "content": "Пройти квиз за 2 минуты",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
                 }
               ]
             },
             {
               "type": "frame",
-              "id": "OlLGB",
-              "name": "v1_decorDots",
-              "opacity": 0.5,
+              "id": "c9lOx",
+              "name": "cHR",
+              "metadata": {
+                "type": "unsplash",
+                "username": "akramhuseyn",
+                "link": "https://unsplash.com/@akramhuseyn",
+                "author": "Akram Huseyn"
+              },
+              "width": 440,
+              "height": 380,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "https://images.unsplash.com/photo-1634735274669-113558eb6b8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTQwMjB8&ixlib=rb-4.1.0&q=80&w=1080",
+                "mode": "fill"
+              },
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Hq4Jd",
+                  "fill": "#0F172A",
+                  "content": "Полная линейка Sprint Power",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "mchgM",
+          "name": "02 Почему Sprint Power",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "sSAID",
+              "fill": "#0F172A",
+              "content": "Почему Sprint Power",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "A8jrt",
+              "fill": "#475467",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Команда биологов и спортивных врачей создала составы, где каждый компонент усиливает другой. Принцип синергии + хондропротекторный фокус.",
+              "lineHeight": 1.5,
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "Qyq7v",
+              "name": "cWhyRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "NuJTO",
+                  "name": "cw1",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "pww8r",
+                      "width": 24,
+                      "height": 24,
+                      "iconFontName": "microscope",
+                      "iconFontFamily": "lucide",
+                      "fill": "#335CFF"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gpjj8",
+                      "fill": "#0F172A",
+                      "content": "Наука",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "IZC0A",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Биологи + врачи",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "kFHMf",
+                  "name": "cw2",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "v9Fzi",
+                      "width": 24,
+                      "height": 24,
+                      "iconFontName": "shield-check",
+                      "iconFontFamily": "lucide",
+                      "fill": "#22C55E"
+                    },
+                    {
+                      "type": "text",
+                      "id": "fjJEq",
+                      "fill": "#0F172A",
+                      "content": "Контроль",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Dwi2U",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "GMP / HACCP",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JylyZ",
+                  "name": "cw3",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "wRZLZ",
+                      "width": 24,
+                      "height": 24,
+                      "iconFontName": "zap",
+                      "iconFontFamily": "lucide",
+                      "fill": "#F59E0B"
+                    },
+                    {
+                      "type": "text",
+                      "id": "dKClm",
+                      "fill": "#0F172A",
+                      "content": "Эффективность",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "GOKPb",
+                      "fill": "#475467",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Рабочие дозировки",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LNmGE",
+          "name": "03 Каталог с ценами",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "hQv9z",
+              "fill": "#0F172A",
+              "content": "Линейка продуктов",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "kYlQa",
+              "name": "cPR",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "U1JAv",
+                  "name": "cp1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "0j05R",
+                      "name": "cp1i",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "nutraseller",
+                        "link": "https://unsplash.com/@nutraseller",
+                        "author": "NutraSeller Manufacturing"
+                      },
+                      "width": "fill_container",
+                      "height": 140,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1763674520528-68bcd439906e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTQwNDZ8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "CRiTY",
+                      "fill": "#0F172A",
+                      "content": "Multi Protein",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "lpRZO",
+                      "fill": "#475467",
+                      "content": "4 вкуса, пребиотик Floracia",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "04D9P",
+                      "fill": "#335CFF",
+                      "content": "2 490 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tyhcv",
+                      "name": "cp1b",
+                      "width": "fill_container",
+                      "fill": "#335CFF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "vgIBB",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jXUG8",
+                  "name": "cp2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nzBh2",
+                      "name": "cp2i",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "zemos",
+                        "link": "https://unsplash.com/@zemos",
+                        "author": "Zemos"
+                      },
+                      "width": "fill_container",
+                      "height": 140,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1760024885367-7ecc228cf744?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTQwNDd8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "5qSHU",
+                      "fill": "#0F172A",
+                      "content": "Collagen Type II",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "2qkJ1",
+                      "fill": "#475467",
+                      "content": "Защита суставов",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "GaMiZ",
+                      "fill": "#335CFF",
+                      "content": "1 990 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yuH4q",
+                      "name": "cp2b",
+                      "width": "fill_container",
+                      "fill": "#335CFF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "H9pvJ",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Vv4wa",
+                  "name": "cp3",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 14,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 18,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "5tmWO",
+                      "name": "cp3i",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "mockupfreenet",
+                        "link": "https://unsplash.com/@mockupfreenet",
+                        "author": "Mockup Free"
+                      },
+                      "width": "fill_container",
+                      "height": 140,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1702776102021-657894e2033c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTQwNDh8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "3cL1n",
+                      "fill": "#0F172A",
+                      "content": "BCAA 6000",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TUurC",
+                      "fill": "#475467",
+                      "content": "Восстановление мышц",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "daLF8",
+                      "fill": "#335CFF",
+                      "content": "1 790 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vXE9k",
+                      "name": "cp3b",
+                      "width": "fill_container",
+                      "fill": "#335CFF",
+                      "cornerRadius": 999,
+                      "padding": [
+                        10,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "J2rfx",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R3CGR",
+          "name": "04 Отзывы + сертификаты",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "SOhO0",
+              "name": "cRevs",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "p50H3",
+                  "fill": "#0F172A",
+                  "content": "Отзывы",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "aaUPu",
+                  "name": "cr1",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "640qy",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Протеин мягкий, приятный. На диете спасает.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tHBX2",
+                      "fill": "#64748B",
+                      "content": "Виталий, CrossFit",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nbB4q",
+                  "name": "cr2",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Cb3aa",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Суставы перестали беспокоить на цикле с коллагеном.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Odcq8",
+                      "fill": "#64748B",
+                      "content": "Александр, пауэрлифтинг",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Gujpt",
+              "name": "cCerts",
+              "width": 340,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "kq4Tk",
+                  "fill": "#0F172A",
+                  "content": "Доверительные маркеры",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "xhKxb",
+                  "name": "cc1",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "zzbaR",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "shield-check",
+                      "iconFontFamily": "lucide",
+                      "fill": "#22C55E"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VlIl3",
+                      "fill": "#0F172A",
+                      "content": "GMP / HACCP",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Q6bic",
+                  "name": "cc2",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "WYJW2",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "flask-conical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#335CFF"
+                    },
+                    {
+                      "type": "text",
+                      "id": "8k0hR",
+                      "fill": "#0F172A",
+                      "content": "Клиническая экспертиза",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "nQMsg",
+                  "name": "cc3",
+                  "width": "fill_container",
+                  "fill": "#F1F5FF",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "cxLQf",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "award",
+                      "iconFontFamily": "lucide",
+                      "fill": "#F59E0B"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yTDWf",
+                      "fill": "#0F172A",
+                      "content": "Производство в России",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "LuIOe",
+          "name": "05 Inner Health",
+          "width": "fill_container",
+          "fill": "#E8EEFF",
+          "cornerRadius": 20,
+          "gap": 20,
+          "padding": 28,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "WY3aE",
+              "name": "cIHL",
+              "width": "fill_container",
+              "layout": "vertical",
               "gap": 8,
               "children": [
                 {
-                  "type": "ellipse",
-                  "id": "ULMLQ",
-                  "name": "v1_dot1",
-                  "fill": "#4299E1",
-                  "width": 8,
-                  "height": 8
+                  "type": "text",
+                  "id": "9C9yA",
+                  "fill": "#0F172A",
+                  "content": "Inner Health",
+                  "fontFamily": "Inter",
+                  "fontSize": 26,
+                  "fontWeight": "700"
                 },
                 {
-                  "type": "ellipse",
-                  "id": "2cLM2",
-                  "name": "v1_dot2",
-                  "fill": "#48BB78",
-                  "width": 8,
-                  "height": 8
+                  "type": "text",
+                  "id": "LSZs6",
+                  "fill": "#334155",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Второй проект бренда: коллаген, суперфуды, превентивные протоколы.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
                 },
                 {
-                  "type": "ellipse",
-                  "id": "QfGZ5",
-                  "name": "v1_dot3",
-                  "fill": "#E53E3E",
-                  "width": 8,
-                  "height": 8
+                  "type": "frame",
+                  "id": "qYWq6",
+                  "name": "cIHBtn",
+                  "fill": "#335CFF",
+                  "cornerRadius": 999,
+                  "padding": [
+                    12,
+                    18
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "uBV2b",
+                      "fill": "#FFFFFF",
+                      "content": "Перейти на innerhealth.ru",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "8OhLy",
+          "name": "06 FAQ + CTA",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "I6VEY",
+              "fill": "#0F172A",
+              "content": "Частые вопросы",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "6RQzd",
+              "name": "cf1",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E1xGp",
+                  "fill": "#0F172A",
+                  "content": "Как выбрать продукт под цель?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "tSRYr",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "g7dwh",
+              "name": "cf2",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "SN62C",
+                  "fill": "#0F172A",
+                  "content": "Можно ли сочетать протеин и коллаген?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "wkhxp",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ILF7K",
+              "name": "cf3",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Q24PL",
+                  "fill": "#0F172A",
+                  "content": "Есть ли доставка по всей России?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "RUwJh",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "3leo9",
+              "name": "cFinalCTA",
+              "width": "fill_container",
+              "fill": "#335CFF",
+              "cornerRadius": 999,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#335CFF30",
+                "offset": {
+                  "x": 0,
+                  "y": 6
+                },
+                "blur": 18
+              },
+              "padding": [
+                16,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "RPpuK",
+                  "fill": "#FFFFFF",
+                  "content": "Подобрать продукт сейчас",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "2ldxb",
+      "x": 5261,
+      "y": -722,
+      "name": "Sprint Power — Main Page (Final)",
+      "clip": true,
+      "width": 1440,
+      "fill": "#060A14",
+      "layout": "vertical",
+      "gap": 24,
+      "padding": [
+        40,
+        64,
+        80,
+        64
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "WwTND",
+          "name": "01 Hero",
+          "width": "fill_container",
+          "height": 500,
+          "fill": "#0A1128",
+          "cornerRadius": 24,
+          "gap": 32,
+          "padding": [
+            48,
+            56
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "bMSId",
+              "name": "bHL",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "O92U0",
+                  "fill": "#7AA2FF",
+                  "content": "SPRINT POWER · MAIN",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.6
+                },
+                {
+                  "type": "text",
+                  "id": "xPPJx",
+                  "fill": "#FFFFFF",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Главная страница бренда Sprint Power",
+                  "lineHeight": 1.04,
+                  "fontFamily": "Inter",
+                  "fontSize": 52,
+                  "fontWeight": "800"
+                },
+                {
+                  "type": "text",
+                  "id": "8drJH",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Фокус на конверсию: Hero, хиты, доверие, FAQ и быстрый переход в экосистему Inner Health.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "omImO",
+                  "name": "bHCTA",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "sHIeq",
+                      "name": "bBtn1",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#3B82F640",
+                        "offset": {
+                          "x": 0,
+                          "y": 6
+                        },
+                        "blur": 20
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Nk9YE",
+                          "fill": "#FFFFFF",
+                          "content": "Выбрать продукт",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "2FlL7",
+                      "name": "bBtn2",
+                      "fill": "#1E293B",
+                      "cornerRadius": 999,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "#334155"
+                      },
+                      "padding": [
+                        16,
+                        28
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "8qHEv",
+                          "fill": "#E2E8F0",
+                          "content": "Почему мы",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aNPIO",
+                  "name": "bSocial",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "UBlnd",
+                      "fill": "#64748B",
+                      "content": "9 SKU • brand-aware checkout • единая админка",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "1yfpi",
+              "name": "bHR",
+              "width": 480,
+              "height": "fill_container",
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "./images/generated-1774353878630.png",
+                "mode": "fill"
+              },
+              "cornerRadius": 20,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JvkZg",
+                  "fill": "#FFFFFF",
+                  "content": "Hydro Protein — флагман линейки",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "QDIEQ",
+                  "fill": "#94A3B8",
+                  "content": "95% пептидного белка • 19 аминокислот • без лактозы",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "6CDsI",
+          "name": "02 Продукты (прямой выбор)",
+          "width": "fill_container",
+          "fill": "#0F172A",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "glff6",
+              "fill": "#F1F5F9",
+              "content": "Хиты и лидеры продаж",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "zEkqV",
+              "name": "bProdRow",
+              "width": "fill_container",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YAiRr",
+                  "name": "pc1",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "aA1mB",
+                      "name": "pc1img",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "alexsaks",
+                        "link": "https://unsplash.com/@alexsaks",
+                        "author": "Alex Saks"
+                      },
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1704650312022-ed1a76dbed1b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTM5MDB8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "LvZhV",
+                      "fill": "#F1F5F9",
+                      "content": "Multi Protein",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DC8Pa",
+                      "fill": "#94A3B8",
+                      "content": "4 вкуса • пребиотик Floracia",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aVA5a",
+                      "fill": "#3B82F6",
+                      "content": "2 490 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AYu65",
+                      "name": "pc1btn",
+                      "width": "fill_container",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nK3ay",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "zli4j",
+                  "name": "pc2",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 16,
+                  "layout": "vertical",
+                  "gap": 10,
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "2fIBL",
+                      "name": "pc2img",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "afterave",
+                        "link": "https://unsplash.com/@afterave",
+                        "author": "Afterave Essentials"
+                      },
+                      "width": "fill_container",
+                      "height": 160,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1729704166657-9a5744b7200c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzQzNTM5MDF8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      },
+                      "cornerRadius": 10
+                    },
+                    {
+                      "type": "text",
+                      "id": "BZHRm",
+                      "fill": "#F1F5F9",
+                      "content": "Collagen Type II",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NaNRm",
+                      "fill": "#94A3B8",
+                      "content": "Хондропротекция суставов",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QRqSN",
+                      "fill": "#3B82F6",
+                      "content": "1 990 ₽",
+                      "fontFamily": "Inter",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "UAnhQ",
+                      "name": "pc2btn",
+                      "width": "fill_container",
+                      "fill": "#3B82F6",
+                      "cornerRadius": 999,
+                      "padding": [
+                        12,
+                        0
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CV1wT",
+                          "fill": "#FFFFFF",
+                          "content": "В корзину",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "iFspH",
+          "name": "03 Соцдоказательство",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "gap": 16,
+          "padding": 28,
+          "children": [
+            {
+              "type": "frame",
+              "id": "gnIN7",
+              "name": "bSocRev",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sW2zE",
+                  "fill": "#0F172A",
+                  "content": "Отзывы спортсменов",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "N6PcS",
+                  "name": "br1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "wjqIm",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Лучшее восстановление после тяжелых тренировок. Суставы перестали беспокоить.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TzYfs",
+                      "fill": "#64748B",
+                      "content": "Виталий, CrossFit",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "daJnl",
+                  "name": "br2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "pql4P",
+                      "fill": "#1E293B",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "\"Перешел с импортного протеина — качество выше, цена ниже.\"",
+                      "lineHeight": 1.5,
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "RzsUJ",
+                      "fill": "#64748B",
+                      "content": "Александр, силовой спорт",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FbU9J",
+              "name": "bSocCert",
+              "width": 360,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YVpZP",
+                  "fill": "#0F172A",
+                  "content": "Доверительные маркеры",
+                  "fontFamily": "Inter",
+                  "fontSize": 24,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "hPExS",
+                  "name": "bc1",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "VEJxx",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "shield-check",
+                      "iconFontFamily": "lucide",
+                      "fill": "#22C55E"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gTcqJ",
+                      "fill": "#0F172A",
+                      "content": "GMP / HACCP сертификация",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rCVYJ",
+                  "name": "bc2",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "XHU47",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "flask-conical",
+                      "iconFontFamily": "lucide",
+                      "fill": "#3B82F6"
+                    },
+                    {
+                      "type": "text",
+                      "id": "y3hyp",
+                      "fill": "#0F172A",
+                      "content": "Клиническая экспертиза состава",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "K0xIt",
+                  "name": "bc3",
+                  "width": "fill_container",
+                  "fill": "#F8FAFC",
+                  "cornerRadius": 12,
+                  "gap": 10,
+                  "padding": 14,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon_font",
+                      "id": "bKXvP",
+                      "width": 20,
+                      "height": 20,
+                      "iconFontName": "award",
+                      "iconFontFamily": "lucide",
+                      "fill": "#F59E0B"
+                    },
+                    {
+                      "type": "text",
+                      "id": "WlvbX",
+                      "fill": "#0F172A",
+                      "content": "Производство в России",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Dz1Cz",
+          "name": "04 Каталог",
+          "width": "fill_container",
+          "fill": "#0F172A",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 32,
+          "children": [
+            {
+              "type": "text",
+              "id": "9LQZW",
+              "fill": "#F1F5F9",
+              "content": "Вся линейка",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "SFSIV",
+              "name": "bCatRow",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "5SBH4",
+                  "name": "bc1",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "jOeHM",
+                      "fill": "#F1F5F9",
+                      "content": "Протеины",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "jVXld",
+                      "fill": "#94A3B8",
+                      "content": "Multi / Hydro",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "3cYBn",
+                  "name": "bc2",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "3WFva",
+                      "fill": "#F1F5F9",
+                      "content": "Коллаген",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GvtTM",
+                  "name": "bc3",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "die6v",
+                      "fill": "#F1F5F9",
+                      "content": "BCAA",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lWs4Y",
+                  "name": "bc4",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FuZVu",
+                      "fill": "#F1F5F9",
+                      "content": "Креатин",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bvncc",
+                  "name": "bc5",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "ZJyil",
+                      "fill": "#F1F5F9",
+                      "content": "L-карнитин",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ULytg",
+                  "name": "bc6",
+                  "width": "fill_container",
+                  "fill": "#1E293B",
+                  "cornerRadius": 12,
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "YeDhQ",
+                      "fill": "#F1F5F9",
+                      "content": "Нутриенты",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "pLEvG",
+          "name": "05 Inner Health",
+          "width": "fill_container",
+          "fill": "#111D3A",
+          "cornerRadius": 20,
+          "gap": 20,
+          "padding": 28,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "8L39c",
+              "name": "bIHL",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GVLlr",
+                  "fill": "#FFFFFF",
+                  "content": "Inner Health",
+                  "fontFamily": "Inter",
+                  "fontSize": 26,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "WcOrF",
+                  "fill": "#94A3B8",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Активное долголетие, превентивная медицина, нутрицевтика.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "8k7zF",
+                  "name": "bIHBtn",
+                  "fill": "#3B82F6",
+                  "cornerRadius": 999,
+                  "padding": [
+                    12,
+                    18
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "eft20",
+                      "fill": "#FFFFFF",
+                      "content": "Подробнее",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "VNY0N",
+          "name": "06 FAQ + CTA",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 10,
+          "padding": 28,
+          "children": [
+            {
+              "type": "text",
+              "id": "e0QRp",
+              "fill": "#0F172A",
+              "content": "FAQ перед оформлением",
+              "fontFamily": "Inter",
+              "fontSize": 30,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "eVDob",
+              "name": "bf1",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pcZDP",
+                  "fill": "#0F172A",
+                  "content": "Как выбрать продукт под цель?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "KgTxG",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "1y1Hk",
+              "name": "bf2",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YQs8k",
+                  "fill": "#0F172A",
+                  "content": "Можно ли сочетать протеин и коллаген?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "BfF7m",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "0QqGh",
+              "name": "bf3",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 12,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E6TOc",
+                  "fill": "#0F172A",
+                  "content": "Сколько протеина нужно в день?",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Ou033",
+                  "fill": "#475467",
+                  "content": "+",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "94vFv",
+              "name": "bFinalCTA",
+              "width": "fill_container",
+              "fill": "#3B82F6",
+              "cornerRadius": 999,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#3B82F640",
+                "offset": {
+                  "x": 0,
+                  "y": 6
+                },
+                "blur": 20
+              },
+              "padding": [
+                16,
+                0
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "fANXP",
+                  "fill": "#FFFFFF",
+                  "content": "Перейти к каталогу Sprint Power",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "7jQ7K",
+          "name": "07 Multi-brand integration",
+          "width": "fill_container",
+          "fill": "#FFFFFF",
+          "cornerRadius": 20,
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "kCPI4",
+              "name": "multiTitle",
+              "fill": "#0F172A",
+              "content": "Архитектура второго бренда",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "B93YF",
+              "name": "multiLead",
+              "fill": "#334155",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Второй сайт работает рядом с основным Inner Health в одном коде: отдельный домен, единый auth и админ-панель с brand-context.",
+              "lineHeight": 1.4,
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "500"
+            },
+            {
+              "type": "frame",
+              "id": "y5ZlU",
+              "name": "adaptiveCard",
+              "width": "fill_container",
+              "fill": "#F8FAFC",
+              "cornerRadius": 14,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sEWJr",
+                  "name": "adaptiveTitle",
+                  "fill": "#0F172A",
+                  "content": "Production-ready main layout",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "A3ZW0",
+                  "name": "adaptiveText",
+                  "fill": "#475569",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Макет собран на текущих паттернах проекта: общие контейнеры, адаптивная сетка и быстрый rollout без дублирования продукта.",
+                  "lineHeight": 1.5,
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TgYQy",
+          "name": "08 Footer",
+          "width": "fill_container",
+          "fill": "#0B1327",
+          "cornerRadius": 16,
+          "padding": [
+            24,
+            28
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "O7LkP",
+              "name": "footerLeft",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nXMUX",
+                  "name": "footerBrand",
+                  "fill": "#7AA2FF",
+                  "content": "SPRINT POWER",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700",
+                  "letterSpacing": 1.2
+                },
+                {
+                  "type": "text",
+                  "id": "bjDdJ",
+                  "name": "footerCopy",
+                  "fill": "#94A3B8",
+                  "content": "© 2026 Inner Health Group",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "7e9Pw",
+              "name": "footerRight",
+              "fill": "#CBD5E1",
+              "content": "sprintpower.ru · support@sprintpower.ru",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "600"
             }
           ]
         }

@@ -1,6 +1,9 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
+import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope';
 import {
   rankRedirectCandidates,
   type RedirectSuggestCandidate,
@@ -17,6 +20,10 @@ export interface RedirectRule {
   statusCode: RedirectStatusCode;
 }
 
+interface RedirectBrandScope {
+  brandId?: BrandId | null;
+}
+
 /** Нормализация пути для сравнения: без query, с ведущим слэшем. */
 function normalizePath(pathname: string): string {
   const path = pathname.split('?')[0]?.trim() || '/';
@@ -24,11 +31,12 @@ function normalizePath(pathname: string): string {
 }
 
 /** Карта редиректов для middleware/API (кэш 60 с). */
-export async function getRedirectMap(): Promise<RedirectRule[]> {
+export async function getRedirectMap(options: RedirectBrandScope = {}): Promise<RedirectRule[]> {
+  const dbBrand = resolveDbBrand(options.brandId);
   return unstable_cache(
     async () => {
       const rows = await prisma.redirect.findMany({
-        where: {},
+        where: { brand: dbBrand },
         select: { sourcePath: true, destination: true, statusCode: true },
       });
       return rows.map((r) => ({
@@ -37,45 +45,50 @@ export async function getRedirectMap(): Promise<RedirectRule[]> {
         statusCode: Math.min(308, Math.max(301, r.statusCode)) as RedirectStatusCode,
       }));
     },
-    ['redirect-map'],
+    ['redirect-map', dbBrand],
     { revalidate: 60, tags: ['redirects'] }
   )();
 }
 
 /** Найти редирект по пути (точное совпадение). */
-export async function findRedirectByPath(pathname: string): Promise<{
+export async function findRedirectByPath(pathname: string, options: RedirectBrandScope = {}): Promise<{
   destination: string;
   statusCode: RedirectStatusCode;
 } | null> {
   const path = normalizePath(pathname);
-  const map = await getRedirectMap();
+  const map = await getRedirectMap(options);
   const rule = map.find((r) => r.sourcePath === path);
   if (!rule) return null;
   return { destination: rule.destination, statusCode: rule.statusCode };
 }
 
 /** Список редиректов для админки. */
-export async function listRedirects() {
+export async function listRedirects(options: RedirectBrandScope = {}) {
   return prisma.redirect.findMany({
+    where: { brand: resolveDbBrand(options.brandId) },
     orderBy: { sourcePath: 'asc' },
   });
 }
 
 /** Создать редирект. */
-export async function createRedirect(data: {
+export async function createRedirect(
+  data: {
   sourcePath: string;
   destination: string;
   statusCode?: number;
   entityType?: string | null;
   entityId?: string | null;
   note?: string | null;
-}) {
+},
+  options: RedirectBrandScope = {}
+) {
   const statusCode = data.statusCode ?? 301;
   if (!REDIRECT_STATUS_CODES.includes(statusCode as RedirectStatusCode)) {
     throw new Error(`statusCode must be one of ${REDIRECT_STATUS_CODES.join(', ')}`);
   }
   return prisma.redirect.create({
     data: {
+      brand: resolveDbBrand(options.brandId),
       sourcePath: normalizePath(data.sourcePath),
       destination: data.destination,
       statusCode,
@@ -96,7 +109,8 @@ export async function updateRedirect(
     entityType: string | null;
     entityId: string | null;
     note: string | null;
-  }>
+  }>,
+  options: RedirectBrandScope = {}
 ) {
   type UpdateData = Parameters<typeof prisma.redirect.update>[0]['data'];
   const payload: UpdateData = { ...data };
@@ -106,12 +120,24 @@ export async function updateRedirect(
       throw new Error(`statusCode must be one of ${REDIRECT_STATUS_CODES.join(', ')}`);
     }
   }
-  return prisma.redirect.update({ where: { id }, data: payload });
+  const existing = await prisma.redirect.findFirst({
+    where: { id, brand: resolveDbBrand(options.brandId) },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new Error('Redirect not found');
+  }
+  return prisma.redirect.update({ where: { id: existing.id }, data: payload });
 }
 
 /** Удалить редирект. */
-export async function deleteRedirect(id: string) {
-  return prisma.redirect.delete({ where: { id } });
+export async function deleteRedirect(id: string, options: RedirectBrandScope = {}) {
+  const existing = await prisma.redirect.findFirst({
+    where: { id, brand: resolveDbBrand(options.brandId) },
+    select: { id: true },
+  });
+  if (!existing) throw new Error('Redirect not found');
+  return prisma.redirect.delete({ where: { id: existing.id } });
 }
 
 /** Строка CSV для импорта: sourcePath,destination,statusCode,statusOnNew,note */
@@ -149,7 +175,10 @@ function parseCsvLine(line: string): string[] {
  * Формат: sourcePath,destination,statusCode,statusOnNew,note (заголовок опционален).
  * Возвращает количество созданных, пропущенных (дубли) и список ошибок.
  */
-export async function importRedirectsFromCsv(csvText: string): Promise<{
+export async function importRedirectsFromCsv(
+  csvText: string,
+  options: RedirectBrandScope = {}
+): Promise<{
   created: number;
   skipped: number;
   errors: string[];
@@ -189,6 +218,7 @@ export async function importRedirectsFromCsv(csvText: string): Promise<{
     try {
       await prisma.redirect.create({
         data: {
+          brand: resolveDbBrand(options.brandId),
           sourcePath: normalizePath(sourcePath),
           destination,
           statusCode,
@@ -225,14 +255,22 @@ const staticRedirectTargets: RedirectSuggestCandidate[] = [
   { path: '/otzyvy', title: 'Отзывы', type: 'static' },
 ];
 
-async function listSuggestionCandidates(): Promise<RedirectSuggestCandidate[]> {
+async function listSuggestionCandidates(options: RedirectBrandScope = {}): Promise<RedirectSuggestCandidate[]> {
+  const dbBrand = resolveDbBrand(options.brandId);
   const [products, categories, posts, seoHubs] = await Promise.all([
     prisma.product.findMany({
-      where: { slug: { not: null }, isDraft: false },
+      where: {
+        slug: { not: null },
+        isDraft: false,
+        ...(isSprintPowerBrand(options.brandId)
+          ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+          : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] }),
+      },
       select: { slug: true, title: true, description: true },
       take: 3000,
     }),
     prisma.category.findMany({
+      where: { brand: dbBrand },
       select: { slug: true, title: true },
       take: 1000,
     }),
@@ -289,8 +327,9 @@ export async function suggestRedirectDestinations(params: {
   sourcePath: string;
   query?: string;
   limit?: number;
+  brandId?: BrandId | null;
 }): Promise<RedirectSuggestion[]> {
-  const candidates = await listSuggestionCandidates();
+  const candidates = await listSuggestionCandidates({ brandId: params.brandId });
   return rankRedirectCandidates({
     sourcePath: params.sourcePath,
     query: params.query,

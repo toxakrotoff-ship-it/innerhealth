@@ -5,6 +5,8 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { ReactNode } from 'react'
 import AdminLayoutClient from './components/AdminLayoutClient'
+import { cookies, headers } from 'next/headers'
+import { resolveBrand } from '@/lib/brand/brand'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -30,9 +32,16 @@ export default async function AdminLayout({
   }
 
   const adminBasePath = process.env.ADMIN_SECRET_PATH || 'admin'
+  const headersStore = await headers()
+  const cookiesStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headersStore.get('x-brand'),
+    cookieBrand: cookiesStore.get('ih_active_brand')?.value,
+    host: headersStore.get('x-forwarded-host') || headersStore.get('host'),
+  })
 
   return (
-    <AdminLayoutClient session={session} adminBasePath={adminBasePath}>
+    <AdminLayoutClient session={session} adminBasePath={adminBasePath} activeBrand={activeBrand}>
       {children}
     </AdminLayoutClient>
   )

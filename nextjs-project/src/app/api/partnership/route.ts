@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
+import { notifyMaxForm } from '@/lib/max-notify'
 import * as partnershipService from '@/services/partnership.service'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const PARTNERSHIP_RATE_LIMIT = 5
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -38,6 +40,7 @@ const socialLinksMax = 2000
 const messageMax = 2000
 
 export async function POST(request: Request) {
+  const brandId = resolveBrandOrDefaultFromRequest(request)
   const clientId = getClientId(request)
   if (!checkRateLimit(clientId).success) {
     return NextResponse.json(
@@ -92,9 +95,20 @@ export async function POST(request: Request) {
       role: role || undefined,
       socialLinks: socialLinks || undefined,
       message: message || undefined,
-    })
+    }, brandId)
 
     notifyTelegramForm({
+      formName: 'Партнёрская заявка',
+      fields: {
+        Имя: name,
+        Email: email,
+        Телефон: phone,
+        Роль: role ?? '—',
+        'Ссылки на соцсети': socialLinks ?? '—',
+        Сообщение: message ?? '—',
+      },
+    })
+    void notifyMaxForm({
       formName: 'Партнёрская заявка',
       fields: {
         Имя: name,

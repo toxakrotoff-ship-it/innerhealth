@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { requireAdminSession } from '@/lib/require-admin';
 import { importRedirectsFromCsv } from '@/services/redirect.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   let formData: FormData;
   try {
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await importRedirectsFromCsv(text);
+    const result = await importRedirectsFromCsv(text, { brandId });
     revalidateTag('redirects', 'max');
     return NextResponse.json({
       created: result.created,

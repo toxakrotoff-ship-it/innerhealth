@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as promoService from '@/services/promo.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 const dateOptional = z.union([z.string(), z.date()]).nullable().optional().transform((v) => (v ? new Date(v) : null));
 
@@ -28,12 +29,13 @@ const putPromoCodeSchema = z.object({
 
 const deletePromoCodeSchema = z.object({ id: z.string().min(1, 'ID is required') });
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   try {
-    const promoCodes = await promoService.getPromoCodesForAdmin();
+    const promoCodes = await promoService.getPromoCodesForAdmin(brandId);
     const formattedCodes = promoCodes.map((code) => ({
       id: code.id,
       code: code.code,
@@ -60,6 +62,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let data: z.infer<typeof postPromoCodeSchema>;
   try {
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
       usageLimit: data.usageLimit ?? undefined,
       validFrom: data.validFrom,
       validTo: data.validTo,
-    });
+    }, brandId);
     
     return NextResponse.json(promoCode);
   } catch (error) {
@@ -94,6 +97,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let data: z.infer<typeof putPromoCodeSchema>;
   try {
@@ -105,7 +109,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const existingCode = await promoService.findPromoCodeById(data.id);
+    const existingCode = await promoService.findPromoCodeById(data.id, brandId);
     if (!existingCode) {
       return NextResponse.json(
         { error: 'Promo code not found' },
@@ -124,7 +128,7 @@ export async function PUT(request: Request) {
       usageLimit: data.usageLimit ?? existingCode.usageLimit,
       validFrom,
       validTo,
-    });
+    }, brandId);
     
     return NextResponse.json(promoCode);
   } catch (error) {
@@ -139,6 +143,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let parsed: z.infer<typeof deletePromoCodeSchema>;
   try {
@@ -152,7 +157,7 @@ export async function DELETE(request: Request) {
   const { id } = parsed;
 
   try {
-    const existingCode = await promoService.findPromoCodeById(id);
+    const existingCode = await promoService.findPromoCodeById(id, brandId);
     if (!existingCode) {
       return NextResponse.json(
         { error: 'Promo code not found' },
@@ -160,7 +165,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await promoService.deletePromoCode(id);
+    await promoService.deletePromoCode(id, brandId);
     
     return NextResponse.json({ message: 'Promo code deleted successfully' });
   } catch (error) {

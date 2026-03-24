@@ -226,6 +226,23 @@ export async function getAdminsWithTelegramWhitelist() {
   });
 }
 
+export async function getAdminsWithMaxWhitelist() {
+  return prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      lastName: true,
+      infraAlertsEnabled: true,
+      maxWhitelist: {
+        select: { maxUserId: true, linkedAt: true },
+      },
+    },
+    orderBy: { email: 'asc' },
+  });
+}
+
 /** Get admins for settings list (email, notificationEmail). */
 export async function getAdminsForSettingsList() {
   return prisma.user.findMany({
@@ -248,6 +265,15 @@ export async function getInfraAlertTelegramChatIds(): Promise<string[]> {
     orderBy: { email: 'asc' },
   })
   return rows.map((r) => r.telegramWhitelist?.telegramUserId).filter((v): v is string => Boolean(v))
+}
+
+export async function getInfraAlertMaxUserIds(): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN', infraAlertsEnabled: true },
+    select: { maxWhitelist: { select: { maxUserId: true } } },
+    orderBy: { email: 'asc' },
+  })
+  return rows.map((r) => r.maxWhitelist?.maxUserId).filter((v): v is string => Boolean(v))
 }
 
 export async function updateAdminInfraAlertsEnabled(params: {

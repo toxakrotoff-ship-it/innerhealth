@@ -144,6 +144,86 @@ function TelegramBlock() {
   );
 }
 
+function MaxBlock() {
+  const [status, setStatus] = useState<{ linked: boolean; linkedAt: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [linkResult, setLinkResult] = useState<{ startUrl: string; expiresInMinutes: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadStatus() {
+    const res = await fetch('/api/admin/max/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    setStatus({ linked: data.linked, linkedAt: data.linkedAt });
+    if (data.linked) setLinkResult(null);
+  }
+
+  useEffect(() => {
+    loadStatus()
+      .catch(() => setStatus({ linked: false, linkedAt: null }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleConnect() {
+    setCreating(true);
+    setError(null);
+    setLinkResult(null);
+    try {
+      const res = await fetch('/api/admin/max/link-code', { method: 'POST' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Не удалось создать ссылку');
+      }
+      const data = await res.json();
+      setLinkResult({
+        startUrl: data.startUrl,
+        expiresInMinutes: data.expiresInMinutes ?? 10,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Уведомления MAX</h2>
+        <p className="text-gray-500 text-sm">Загрузка…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <h2 className="text-lg font-semibold text-gray-900 mb-2">Уведомления MAX</h2>
+      {error ? <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800 text-sm">{error}</div> : null}
+      {status?.linked ? (
+        <div className="space-y-3">
+          <p className="text-sm text-green-700">MAX подключён.</p>
+          <Button type="button" variant="outline" size="sm" onClick={async () => { setRefreshing(true); await loadStatus(); setRefreshing(false); }} disabled={refreshing}>
+            {refreshing ? 'Проверка…' : 'Обновить статус'}
+          </Button>
+        </div>
+      ) : linkResult ? (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700">Ссылка действительна {linkResult.expiresInMinutes} мин.</p>
+          <a href={linkResult.startUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+            Открыть бота в MAX
+          </a>
+        </div>
+      ) : (
+        <Button type="button" onClick={handleConnect} disabled={creating}>
+          {creating ? 'Создание ссылки…' : 'Подключить MAX'}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface ProfileData {
   email: string;
   firstName: string;
@@ -309,6 +389,7 @@ export default function AdminProfilePage() {
           </div>
 
           <TelegramBlock />
+          <MaxBlock />
 
           <div className="flex gap-3">
             <Button type="submit" disabled={saving}>

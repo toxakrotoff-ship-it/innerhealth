@@ -78,6 +78,11 @@ interface Product {
 export default function NewProductPage() {
   const router = useRouter();
   const base = useAdminBasePath();
+  const activeBrand: 'inner' | 'sprint-power' | null = base.includes('sprint-power')
+    ? 'sprint-power'
+    : base.includes('inner')
+      ? 'inner'
+      : null;
   const [product, setProduct] = useState<Omit<Product, 'id' | 'tildaUid' | 'createdAt' | 'updatedAt'>>({
     slug: null,
     brand: null,
@@ -179,8 +184,8 @@ export default function NewProductPage() {
   usePreventLeaveWhenDirty(isDirty);
 
   useEffect(() => {
-    getCategoriesWithCounts().then((data) => setCategories(data));
-  }, []);
+    getCategoriesWithCounts({ brandId: activeBrand }).then((data) => setCategories(data));
+  }, [activeBrand]);
 
   const handleChange = (field: keyof Product, value: Product[keyof Product]) => {
     setProduct({

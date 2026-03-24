@@ -2,17 +2,20 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAdminSession } from '@/lib/require-admin';
+import * as orderService from '@/services/order.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const paramsSchema = z.object({
   id: z.string().min(1),
 });
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: unknown }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const parsedParams = paramsSchema.safeParse(context.params);
   if (!parsedParams.success) {
@@ -25,6 +28,14 @@ export async function POST(
   const { id } = parsedParams.data;
 
   try {
+    const order = await orderService.getOrderDetailForAdmin(id, brandId);
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Заказ не найден в выбранном бренде' },
+        { status: 404 }
+      );
+    }
+
     const updated = await prisma.order.updateMany({
       where: {
         id,

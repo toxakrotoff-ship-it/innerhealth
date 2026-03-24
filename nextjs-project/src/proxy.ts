@@ -1,9 +1,14 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 
-const adminSecretPath = process.env.ADMIN_SECRET_PATH || 'admin'
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
+const BRAND_COOKIE_NAME = 'ih_active_brand'
+const BRAND_IDS = new Set(['inner', 'sprint-power'])
+
+function getAdminSecretPath(): string {
+  return process.env.ADMIN_SECRET_PATH || 'admin'
+}
 
 /** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats, reviews PATCH). */
 function isTelegramServiceRequest(request: Request): boolean {
@@ -45,6 +50,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 /** Редиректы из БД (Tilda → сайт): запрос к /api/redirect-check, при совпадении — 301 и др. */
 async function applyRedirectIfMatched(request: Request): Promise<NextResponse | null> {
+  const adminSecretPath = getAdminSecretPath()
   // In dev, avoid internal self-fetch in proxy to prevent local startup hangs.
   if (process.env.NODE_ENV !== 'production') return null
 
@@ -70,9 +76,35 @@ async function applyRedirectIfMatched(request: Request): Promise<NextResponse | 
 }
 
 async function proxyHandler(request: Request) {
+  const adminSecretPath = getAdminSecretPath()
   const pathname = new URL(request.url).pathname
   const redirectRes = await applyRedirectIfMatched(request)
   if (redirectRes) return redirectRes
+
+  if (pathname.startsWith(`/${adminSecretPath}/`)) {
+    const afterPrefix = pathname
+      .slice(1 + adminSecretPath.length)
+      .replace(/^\/+/, '')
+    const [brandSegment, ...restSegments] = afterPrefix.split('/')
+    if (BRAND_IDS.has(brandSegment)) {
+      const url = new URL(request.url)
+      const pathAfterBrand = restSegments.join('/')
+      const canonicalAdminPath = pathAfterBrand ? `/admin/${pathAfterBrand}` : '/admin'
+      url.pathname = canonicalAdminPath
+
+      const res = NextResponse.rewrite(url)
+      res.cookies.set(BRAND_COOKIE_NAME, brandSegment, {
+        path: '/',
+        sameSite: 'lax',
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 365,
+      })
+      res.headers.set('x-brand', brandSegment)
+      return addSecurityHeaders(res)
+    }
+  }
+
   if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
     const rest = pathname.slice(1 + adminSecretPath.length) || ''
     const rewritePath = `/admin${rest}`
@@ -88,6 +120,7 @@ async function proxyHandler(request: Request) {
 const proxyWithAuth = withAuth(proxyHandler, {
   callbacks: {
     authorized: ({ token, req }) => {
+      const adminSecretPath = getAdminSecretPath()
       if (isTelegramServiceRequest(req)) return true
       const pathname = new URL(req.url).pathname
       // Token-protected infra alerts endpoint must be callable without NextAuth session.

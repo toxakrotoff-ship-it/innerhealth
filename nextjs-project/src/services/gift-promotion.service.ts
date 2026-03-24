@@ -1,5 +1,8 @@
 import 'server-only'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import type { BrandId } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 export interface GiftPromotionForCalculation {
   id: string
@@ -38,8 +41,13 @@ function isPromotionActive(promo: GiftPromotionForCalculation, now: Date): boole
   return true
 }
 
-export async function getActiveGiftPromotions(now: Date): Promise<GiftPromotionForCalculation[]> {
-  const raw = await prisma.giftPromotion.findMany()
+export async function getActiveGiftPromotions(
+  now: Date,
+  brandId: BrandId | null = null
+): Promise<GiftPromotionForCalculation[]> {
+  const raw = await prisma.giftPromotion.findMany({
+    where: { brand: resolveDbBrand(brandId) },
+  })
   return raw
     .map<GiftPromotionForCalculation>((p) => ({
       id: p.id,
@@ -63,9 +71,10 @@ export async function getActiveGiftPromotions(now: Date): Promise<GiftPromotionF
 export async function calculateGiftsForOrder(params: {
   items: OrderItemForGiftCalculation[]
   hasPromoCode: boolean
+  brandId?: BrandId | null
 }): Promise<CalculatedGiftLine[]> {
   const now = new Date()
-  const promotions = await getActiveGiftPromotions(now)
+  const promotions = await getActiveGiftPromotions(now, params.brandId ?? null)
   if (promotions.length === 0) return []
 
   const hasPromoProducts = params.items.some((i) => i.hasPromoPrice)
@@ -131,9 +140,13 @@ export async function calculateGiftsForOrder(params: {
   return result
 }
 
-export async function getPublicGiftPromotions(now: Date) {
+export async function getPublicGiftPromotions(
+  now: Date,
+  brandId: BrandId | null = null
+) {
   const promos = await prisma.giftPromotion.findMany({
     where: {
+      brand: resolveDbBrand(brandId),
       status: 'enabled',
       showOnSite: true,
       OR: [
@@ -158,6 +171,61 @@ export async function getPublicGiftPromotions(now: Date) {
   })
 
   return promos
+}
+
+export async function getGiftPromotionsForAdmin(brandId: BrandId | null = null) {
+  return prisma.giftPromotion.findMany({
+    where: { brand: resolveDbBrand(brandId) },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      giftProduct: {
+        select: { id: true, title: true },
+      },
+    },
+  })
+}
+
+export async function createGiftPromotionForAdmin(
+  data: Prisma.GiftPromotionCreateInput,
+  brandId: BrandId | null = null
+) {
+  return prisma.giftPromotion.create({
+    data: {
+      ...data,
+      brand: resolveDbBrand(brandId),
+    },
+  })
+}
+
+export async function findGiftPromotionByIdForAdmin(
+  id: string,
+  brandId: BrandId | null = null
+) {
+  return prisma.giftPromotion.findFirst({
+    where: { id, brand: resolveDbBrand(brandId) },
+  })
+}
+
+export async function updateGiftPromotionForAdmin(
+  id: string,
+  data: Prisma.GiftPromotionUpdateInput,
+  brandId: BrandId | null = null
+) {
+  const existing = await findGiftPromotionByIdForAdmin(id, brandId)
+  if (!existing) return null
+  return prisma.giftPromotion.update({
+    where: { id },
+    data,
+  })
+}
+
+export async function deleteGiftPromotionForAdmin(
+  id: string,
+  brandId: BrandId | null = null
+) {
+  const existing = await findGiftPromotionByIdForAdmin(id, brandId)
+  if (!existing) return null
+  return prisma.giftPromotion.delete({ where: { id } })
 }
 
 

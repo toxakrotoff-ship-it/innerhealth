@@ -9,6 +9,7 @@ export const analyticsEventTypeSchema = z.enum([
 ])
 
 export const analyticsEventInputSchema = z.object({
+  brand: z.enum(['inner', 'sprint-power']).optional(),
   type: analyticsEventTypeSchema,
   path: z.string().min(1).max(1024),
   occurredAt: z.coerce.date(),

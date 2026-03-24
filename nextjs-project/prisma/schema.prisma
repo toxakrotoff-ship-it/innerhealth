@@ -95,8 +95,9 @@ model Product {
 
 model Category {
   id                    String            @id @default(cuid())
+  brand                 String            @default("inner")
   title                 String
-  slug                  String            @unique
+  slug                  String
   image                 String?
   sortOrder             Int?
   /// Показывать категорию в блоке «Разделы каталога» на главной и в каталоге
@@ -109,7 +110,9 @@ model Category {
   products              ProductCategory[]
 
   @@index([parentId])
-  @@index([showInCategoriesBlock, sortOrder])
+  @@unique([brand, slug])
+  @@index([brand, parentId])
+  @@index([brand, showInCategoriesBlock, sortOrder])
 }
 
 model ProductCategory {
@@ -214,6 +217,8 @@ model User {
   setInitialPasswordTokens SetInitialPasswordToken[]
   telegramLinkCodes        TelegramLinkCode[]
   telegramWhitelist        TelegramWhitelist?
+  maxLinkCodes             MaxLinkCode[]
+  maxWhitelist             MaxWhitelist?
   twoFactorGrants          TwoFactorGrant[]
   twoFactorPending         TwoFactorPending?
   addresses                UserAddress[]
@@ -269,6 +274,31 @@ model TelegramWhitelist {
 
 /// Одноразовые коды привязки Telegram (срок жизни 5–10 мин)
 model TelegramLinkCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Вайтлист MAX: какой пользователь привязал какой MAX user ID для уведомлений.
+model MaxWhitelist {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  maxUserId String   @unique
+  linkedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([maxUserId])
+}
+
+/// Одноразовые коды привязки MAX (срок жизни 5–10 мин).
+model MaxLinkCode {
   id        String   @id @default(cuid())
   code      String   @unique
   userId    String
@@ -428,6 +458,7 @@ model PromoCode {
 
 model GiftPromotion {
   id                           String      @id @default(cuid())
+  brand                        String      @default("inner")
   title                        String
   status                       String      @default("enabled")
   validFrom                    DateTime?
@@ -452,6 +483,8 @@ model GiftPromotion {
   updatedAt                    DateTime    @updatedAt
   giftProduct                  Product     @relation(fields: [giftProductId], references: [id])
   orderItems                   OrderItem[]
+
+  @@index([brand, createdAt])
 }
 
 /// Связь партнёр–промокод: один промокод привязан не более чем к одному партнёру; процент дохода по промокоду.
@@ -469,6 +502,7 @@ model PartnerPromoCode {
 
 model PartnershipLead {
   id          String   @id @default(cuid())
+  brand       String   @default("inner")
   name        String
   email       String
   phone       String
@@ -476,6 +510,8 @@ model PartnershipLead {
   socialLinks String?
   message     String?
   createdAt   DateTime @default(now())
+
+  @@index([brand, createdAt])
 }
 
 /// Глобальный FAQ для страницы /faq.
@@ -494,6 +530,7 @@ model Faq {
 /// Быстрые заявки "Купить в 1 клик".
 model QuickOrder {
   id        String   @id @default(cuid())
+  brand     String   @default("inner")
   name      String?
   phone     String
   comment   String?
@@ -504,6 +541,7 @@ model QuickOrder {
   updatedAt DateTime @updatedAt
   product   Product  @relation(fields: [productId], references: [id])
 
+  @@index([brand, status, createdAt])
   @@index([status, createdAt])
   @@index([productId, createdAt])
 }
@@ -558,6 +596,7 @@ model SiteSetting {
 /// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото. На сайте показываются только со статусом APPROVED.
 model Review {
   id         String       @id @default(cuid())
+  brand      String       @default("inner")
   authorName String
   socialLink String?
   text       String
@@ -566,17 +605,19 @@ model Review {
   status     ReviewStatus @default(PENDING)
 
   @@index([status])
+  @@index([brand, status, createdAt])
   @@index([status, createdAt])
 }
 
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.
 model TildaLead {
   id              String   @id @default(cuid())
+  brand           String   @default("inner")
   email           String?
   name            String?
   phone           String?
   tildaDate       DateTime
-  tildaTranId     String   @unique
+  tildaTranId     String
   input           String?
   input2          String?
   comment         String?
@@ -586,6 +627,9 @@ model TildaLead {
   promoCode       String?
   createdAt       DateTime @default(now())
 
+  @@unique([brand, tildaTranId])
+  @@index([brand, createdAt])
+  @@index([brand, tildaDate])
   @@index([tildaDate])
   @@index([email])
 }
@@ -593,8 +637,9 @@ model TildaLead {
 /// Редиректы со старых URL (Tilda и др.) на текущий сайт. statusCode: 301 (по умолчанию), 302, 307, 308.
 model Redirect {
   id          String   @id @default(cuid())
+  brand       String   @default("inner")
   /// Путь-источник (например /page12345), без query
-  sourcePath  String   @unique
+  sourcePath  String
   /// Куда редиректить (например / или /product/slug)
   destination String
   /// 301 | 302 | 307 | 308
@@ -608,11 +653,13 @@ model Redirect {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([sourcePath])
+  @@unique([brand, sourcePath])
+  @@index([brand, sourcePath])
 }
 
 model AnalyticsEvent {
   id         String             @id @default(cuid())
+  brand      String             @default("inner")
   occurredAt DateTime           @default(now())
   userId     String?
   sessionId  String?
@@ -625,13 +672,17 @@ model AnalyticsEvent {
   userAgent  String?
 
   @@index([occurredAt])
+  @@index([brand, occurredAt])
   @@index([type, occurredAt])
+  @@index([brand, type, occurredAt])
   @@index([path, occurredAt])
+  @@index([brand, path, occurredAt])
   @@index([sessionId, occurredAt])
 }
 
 model DailyTrafficStats {
   id        String   @id @default(cuid())
+  brand     String   @default("inner")
   date      DateTime
   path      String?
   pageViews Int
@@ -639,12 +690,14 @@ model DailyTrafficStats {
   users     Int?
   clicks    Int
 
-  @@unique([date, path])
+  @@unique([brand, date, path])
+  @@index([brand, date])
 }
 
 /// Сводка PAGE_VIEW по типу устройства за календарный день (устойчива к удалению сырых AnalyticsEvent).
 model DailyDeviceStats {
   id       String   @id @default(cuid())
+  brand    String   @default("inner")
   date     DateTime
   desktop  Int      @default(0)
   mobile   Int      @default(0)
@@ -652,18 +705,21 @@ model DailyDeviceStats {
   /// События без meta.deviceType или с неизвестным значением
   unknown  Int      @default(0)
 
-  @@unique([date])
+  @@unique([brand, date])
   @@index([date])
+  @@index([brand, date])
 }
 
 model DailyFunnelStats {
   id               String     @id @default(cuid())
+  brand            String     @default("inner")
   date             DateTime
   step             FunnelStep
   count            Int
   conversionToNext Float?
 
-  @@unique([date, step])
+  @@unique([brand, date, step])
+  @@index([brand, date])
 }
 
 enum Role {

@@ -8,6 +8,7 @@ import { buildCatalogRevalidationPaths } from '@/lib/catalog-revalidation';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 import * as productService from '@/services/product.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 async function revalidateCatalogForProduct(options: {
   productId: string;
@@ -45,13 +46,14 @@ async function revalidateCatalogForProduct(options: {
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
   if (id) {
     try {
-      const product = await productService.getProductById(id);
+      const product = await productService.getProductById(id, brandId);
       if (!product) {
         return NextResponse.json(
           { error: 'Product not found' },
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const products = await productService.getProductsWithCategories();
+    const products = await productService.getProductsWithCategories(brandId);
     if (!Array.isArray(products)) {
       console.error('API Error: Expected array but got:', typeof products);
       return NextResponse.json(
@@ -95,6 +97,7 @@ const putProductSchema = z.object({
 export async function PUT(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let parsed: z.infer<typeof putProductSchema>;
   try {
@@ -109,7 +112,7 @@ export async function PUT(request: Request) {
 
   try {
 
-    const existingProduct = await productService.findProductById(id);
+    const existingProduct = await productService.findProductByIdInBrandScope(id, brandId);
     if (!existingProduct) {
       return NextResponse.json(
         { error: 'Product not found' },
@@ -174,6 +177,7 @@ const patchProductSchema = z.object({
 export async function PATCH(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let parsed: z.infer<typeof patchProductSchema>;
   try {
@@ -193,6 +197,13 @@ export async function PATCH(request: Request) {
     if (quantity !== undefined) data.quantity = quantity;
     if (isDraft !== undefined) data.isDraft = isDraft;
 
+    const existingProduct = await productService.findProductByIdInBrandScope(id, brandId);
+    if (!existingProduct) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
     const updated = await productService.patchProductPriceQuantity(id, data);
     await revalidateCatalogForProduct({ productId: id });
     return NextResponse.json(updated);
@@ -212,6 +223,7 @@ const postProductSchema = z.object({
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let parsed: z.infer<typeof postProductSchema>;
   try {
@@ -249,7 +261,8 @@ export async function POST(request: Request) {
 
     const productWithoutCategories = await productService.createProduct(
       sanitizedCreate as Prisma.ProductCreateInput,
-      categoryIds
+      categoryIds,
+      brandId
     );
     await revalidateCatalogForProduct({
       productId: productWithoutCategories.id,
@@ -270,6 +283,7 @@ const deleteProductSchema = z.object({ id: z.string().min(1, 'Product ID is requ
 export async function DELETE(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let parsed: z.infer<typeof deleteProductSchema>;
   try {
@@ -289,7 +303,7 @@ export async function DELETE(request: Request) {
     });
     const categoryIdsToRevalidate = productCategories.map((item) => item.categoryId);
 
-    const existingProduct = await productService.findProductById(id);
+    const existingProduct = await productService.findProductByIdInBrandScope(id, brandId);
     if (!existingProduct) {
       return NextResponse.json(
         { error: 'Product not found' },

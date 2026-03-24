@@ -1,8 +1,12 @@
 import Link from 'next/link'
+import { cookies, headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { AdminDatePicker } from './components/AdminDatePicker'
 import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
 import { AdminStatsRefreshButton } from './components/AdminStatsRefreshButton'
+import type { BrandId } from '@/lib/brand/brand'
+import { resolveBrand } from '@/lib/brand/brand'
+import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,7 +62,12 @@ interface PageStat {
   clicks: number
 }
 
-async function getSummary(period: PeriodKey, customFrom?: string, customTo?: string) {
+async function getSummary(
+  period: PeriodKey,
+  activeBrand: BrandId,
+  customFrom?: string,
+  customTo?: string
+) {
   const anyPrisma = prisma as unknown as {
     dailyTrafficStats?: {
       aggregate: (args: unknown) => Promise<{
@@ -117,19 +126,28 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
 
   const [trafficAggregate, funnelAggregate, ordersCount, deviceAggregate] = await Promise.all([
     anyPrisma.dailyTrafficStats.aggregate({
-      where: dateWhere ? { date: dateWhere } : undefined,
+      where: dateWhere ? { brand: activeBrand, date: dateWhere } : { brand: activeBrand },
       _sum: { pageViews: true, sessions: true, clicks: true },
     }),
     anyPrisma.dailyFunnelStats.findMany({
-      where: dateWhere ? { date: dateWhere } : undefined,
+      where: dateWhere ? { brand: activeBrand, date: dateWhere } : { brand: activeBrand },
       orderBy: { date: 'desc' },
       take: 90,
     }),
     anyPrisma.order.count({
-      where: dateWhere ? { createdAt: dateWhere } : undefined,
+      where: {
+        ...(dateWhere ? { createdAt: dateWhere } : {}),
+        items: {
+          some: {
+            product: isSprintPowerBrand(activeBrand)
+              ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+              : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] },
+          },
+        },
+      },
     }),
     prisma.dailyDeviceStats.aggregate({
-      where: dateWhere ? { date: dateWhere } : undefined,
+      where: dateWhere ? { brand: activeBrand, date: dateWhere } : { brand: activeBrand },
       _sum: {
         desktop: true,
         mobile: true,
@@ -165,6 +183,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       anyPrisma.analyticsEvent.count({
         where: {
           type: 'PAGE_VIEW',
+          brand: activeBrand,
           occurredAt: dateWhere,
           meta: {
             path: ['deviceType'],
@@ -175,6 +194,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       anyPrisma.analyticsEvent.count({
         where: {
           type: 'PAGE_VIEW',
+          brand: activeBrand,
           occurredAt: dateWhere,
           meta: {
             path: ['deviceType'],
@@ -185,6 +205,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       anyPrisma.analyticsEvent.count({
         where: {
           type: 'PAGE_VIEW',
+          brand: activeBrand,
           occurredAt: dateWhere,
           meta: {
             path: ['deviceType'],
@@ -195,6 +216,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
       anyPrisma.analyticsEvent.count({
         where: {
           type: 'PAGE_VIEW',
+          brand: activeBrand,
           occurredAt: dateWhere,
         },
       }),
@@ -220,7 +242,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
           }>
         >
       }).findMany({
-        where: dateWhere ? { date: dateWhere } : undefined,
+        where: dateWhere ? { brand: activeBrand, date: dateWhere } : { brand: activeBrand },
         select: {
           date: true,
           path: true,
@@ -246,12 +268,14 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
         anyPrisma.analyticsEvent.count({
           where: {
             type: 'PAGE_VIEW',
+            brand: activeBrand,
             occurredAt: dateWhere,
           },
         }),
         anyPrisma.analyticsEvent.count({
           where: {
             type: 'CLICK',
+            brand: activeBrand,
             occurredAt: dateWhere,
           },
         }),
@@ -259,6 +283,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
           by: ['path'],
           where: {
             type: 'PAGE_VIEW',
+            brand: activeBrand,
             occurredAt: dateWhere,
           },
           _count: {
@@ -269,6 +294,7 @@ async function getSummary(period: PeriodKey, customFrom?: string, customTo?: str
           by: ['type'],
           where: {
             type: { in: ['PAGE_VIEW', 'CART_ADD', 'CHECKOUT_START', 'ORDER_CREATED'] },
+            brand: activeBrand,
             occurredAt: dateWhere,
           },
           _count: {
@@ -372,14 +398,18 @@ export default async function AdminPage({
 
   const period = resolvePeriod(periodParam)
 
-  const adminBasePath = `/${process.env.ADMIN_SECRET_PATH ?? 'admin'}`
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+
+  const adminBasePath = `/${process.env.ADMIN_SECRET_PATH ?? 'admin'}/${activeBrand}`
 
   const { from, to, isCustom } = getDateRange(period, fromParam, toParam)
-  const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(
-    period,
-    fromParam,
-    toParam
-  )
+  const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(period, activeBrand, fromParam, toParam)
 
   return (
     <div className="admin-container">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as settingsService from '@/services/settings.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 export type { SettingKey } from '@/services/settings.service';
 
@@ -12,12 +13,14 @@ const ADMIN_SETTINGS_KEYS = [
   ...settingsService.SCHEMA_ORG_KEYS,
 ] as const;
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const url = new URL(request.url);
+  const brandId = parseBrandFromSearchParams(url.searchParams);
 
   try {
-    const map = await settingsService.getSettingsMap(ADMIN_SETTINGS_KEYS);
+    const map = await settingsService.getSettingsMap(ADMIN_SETTINGS_KEYS, { brandId });
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings GET error:', err);
@@ -31,6 +34,8 @@ export async function GET() {
 export async function PUT(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const url = new URL(request.url);
+  const brandId = parseBrandFromSearchParams(url.searchParams);
 
   let body: z.infer<typeof putSettingsSchema>;
   try {
@@ -42,7 +47,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const map = await settingsService.upsertSettings(body, ADMIN_SETTINGS_KEYS);
+    const map = await settingsService.upsertSettings(body, ADMIN_SETTINGS_KEYS, { brandId });
     return NextResponse.json(map);
   } catch (err) {
     console.error('Settings PUT error:', err);

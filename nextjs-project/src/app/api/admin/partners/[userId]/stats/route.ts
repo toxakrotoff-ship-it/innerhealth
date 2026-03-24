@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   const { userId } = await params;
 
@@ -20,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const stats = await partnerService.getPartnerStatsByUserId(userId);
+    const stats = await partnerService.getPartnerStatsByUserId(userId, brandId);
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Error fetching partner stats:', error);

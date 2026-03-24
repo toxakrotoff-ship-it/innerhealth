@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service';
 import { maskPhone, shortAddress } from '@/lib/pii-masking';
+import type { BrandId } from '@/lib/brand/brand';
+import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope';
 
 const orderAdminInclude = {
   items: { include: { product: true } },
@@ -78,9 +80,16 @@ export interface AdminOrderDto {
 }
 
 /** Get all orders for admin list with masked PII. */
-export async function getOrdersForAdmin(): Promise<AdminOrderDto[]> {
+export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<AdminOrderDto[]> {
+  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(brandId)
+    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
+    : {
+        NOT: {
+          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
+        },
+      };
   const orders = await prisma.order.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, ...brandWhere },
     include: orderAdminInclude,
     orderBy: { createdAt: 'desc' },
   });
@@ -128,11 +137,20 @@ export interface AdminOrderDetailDto extends AdminOrderDto {
 /** Get orders for admin with optional trash filter. */
 export async function getOrdersForAdminWithTrash(options: {
   mode: 'active' | 'trash';
+  brandId?: BrandId | null;
 }): Promise<AdminOrderWithDeletedDto[]> {
+  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(options.brandId)
+    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
+    : {
+        NOT: {
+          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
+        },
+      };
+
   const where: Prisma.OrderWhereInput =
     options.mode === 'trash'
-      ? { deletedAt: { not: null } }
-      : { deletedAt: null };
+      ? { deletedAt: { not: null }, ...brandWhere }
+      : { deletedAt: null, ...brandWhere };
 
   const orders = await prisma.order.findMany({
     where,
@@ -163,13 +181,21 @@ export async function getOrdersForAdminWithTrash(options: {
 }
 
 /** Get single order details for admin popup. */
-export async function getOrderDetailForAdmin(orderId: string): Promise<AdminOrderDetailDto | null> {
+export async function getOrderDetailForAdmin(
+  orderId: string,
+  brandId?: BrandId | null
+): Promise<AdminOrderDetailDto | null> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: orderAdminInclude,
   });
 
   if (!order) return null;
+  const hasSprintPowerItem = order.items.some(
+    (item) => item.product.brand === SPRINT_POWER_PRODUCT_BRAND
+  );
+  if (isSprintPowerBrand(brandId) && !hasSprintPowerItem) return null;
+  if (!isSprintPowerBrand(brandId) && hasSprintPowerItem) return null;
 
   return {
     id: order.id,
@@ -255,6 +281,7 @@ export async function createOrderWithItemsAndShipping(params: {
   /** Сумма скидки по промокоду (для расчёта дохода партнёра от скидок). */
   promoDiscountAmount?: number | null;
   userId?: string | null;
+  brandId?: BrandId | null;
   items: Array<{ productId: string; quantity: number; price: number }>;
   shipping: CreateOrderShippingParams;
 }) {
@@ -268,6 +295,7 @@ export async function createOrderWithItemsAndShipping(params: {
         hasPromoPrice: false,
       })),
       hasPromoCode,
+      brandId: params.brandId ?? null,
     });
 
     const created = await tx.order.create({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const patchPartnerSchema = z.object({
   partnerIncomeBase: z.enum(['order_total', 'discount_amount']),
@@ -13,6 +14,7 @@ export async function PATCH(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { userId } = await params;
 
@@ -20,6 +22,13 @@ export async function PATCH(
   if (!isPartner) {
     return NextResponse.json(
       { error: 'User is not a partner' },
+      { status: 404 }
+    );
+  }
+  const hasBrandPromo = await partnerService.hasPartnerPromoInBrandScope(userId, brandId);
+  if (!hasBrandPromo) {
+    return NextResponse.json(
+      { error: 'Partner is not available in the selected brand' },
       { status: 404 }
     );
   }

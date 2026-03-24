@@ -1,6 +1,13 @@
 import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import {
+  isSprintPowerBrand,
+  normalizeProductBrandForScope,
+  productBelongsToBrandScope,
+  SPRINT_POWER_PRODUCT_BRAND,
+} from '@/lib/brand/brand-scope';
 
 /** Select only fields needed for admin list — do NOT fetch photos Json or long text. */
 const adminListSelect = {
@@ -27,16 +34,23 @@ const adminListSelect = {
 } as const;
 
 /** Get product by id with categories (for admin edit form). */
-export async function getProductById(id: string) {
-  return prisma.product.findUnique({
+export async function getProductById(id: string, brandId?: BrandId | null) {
+  const product = await prisma.product.findUnique({
     where: { id },
     include: { categories: true },
   });
+  if (!product) return null;
+  if (!productBelongsToBrandScope(product.brand, brandId)) return null;
+  return product;
 }
 
 /** Get all products with categories for admin list (no photos Json, no long text). */
-export async function getProductsWithCategories() {
+export async function getProductsWithCategories(brandId?: BrandId | null) {
+  const where: Prisma.ProductWhereInput | undefined = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
   return prisma.product.findMany({
+    where,
     orderBy: { createdAt: 'desc' },
     select: adminListSelect,
   });
@@ -164,7 +178,7 @@ export async function getCatalogBrandOptions(): Promise<string[]> {
   return rows.map((row) => row.brand).filter((brand): brand is string => Boolean(brand?.trim()));
 }
 
-export async function suggestProducts(query: string, limit = 8) {
+export async function suggestProducts(query: string, limit = 8, brandId?: BrandId | null) {
   const q = query.trim();
   if (!q) return [];
 
@@ -172,6 +186,10 @@ export async function suggestProducts(query: string, limit = 8) {
 
   // Для "смежных" добавляем trigram match (`%`) и similarity-score.
   // Точные подстроки (`ILIKE '%q%'`) остаются и получают более высокий вес в сортировке.
+  const brandFilterSql = isSprintPowerBrand(brandId)
+    ? Prisma.sql`AND "brand" = ${SPRINT_POWER_PRODUCT_BRAND}`
+    : Prisma.sql`AND ("brand" IS NULL OR "brand" <> ${SPRINT_POWER_PRODUCT_BRAND})`;
+
   return prisma.$queryRaw<
     Array<{ id: string; title: string; slug: string | null; sku: string | null; price: number }>
   >(
@@ -184,6 +202,7 @@ export async function suggestProducts(query: string, limit = 8) {
         "price"
       FROM "Product"
       WHERE "isDraft" = false
+        ${brandFilterSql}
         AND (
           "title" ILIKE '%' || ${q} || '%'
           OR "sku" ILIKE '%' || ${q} || '%'
@@ -289,9 +308,15 @@ export async function getProductsForHome(take: number) {
 }
 
 /** Get products by ids with price/promo fields (for order creation). */
-export async function getProductsForOrder(productIds: string[]) {
+export async function getProductsForOrder(productIds: string[], brandId?: BrandId | null) {
+  const where: Prisma.ProductWhereInput = {
+    id: { in: productIds },
+    ...(isSprintPowerBrand(brandId)
+      ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+      : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] }),
+  };
   return prisma.product.findMany({
-    where: { id: { in: productIds } },
+    where,
     select: {
       id: true,
       price: true,
@@ -412,9 +437,17 @@ export async function patchProductPriceQuantity(
 
 export async function createProduct(
   data: Prisma.ProductCreateInput,
-  categoryIds?: string[]
+  categoryIds?: string[],
+  brandId?: BrandId | null
 ) {
-  const newProduct = await prisma.product.create({ data });
+  const normalizedData: Prisma.ProductCreateInput = {
+    ...data,
+    brand: normalizeProductBrandForScope(
+      typeof data.brand === 'string' ? data.brand : null,
+      brandId
+    ) ?? undefined,
+  };
+  const newProduct = await prisma.product.create({ data: normalizedData });
   if (categoryIds?.length) {
     await prisma.productCategory.createMany({
       data: categoryIds.map((categoryId: string) => ({
@@ -467,6 +500,12 @@ export async function findProductById(id: string) {
   return prisma.product.findUnique({
     where: { id },
   });
+}
+
+export async function findProductByIdInBrandScope(id: string, brandId?: BrandId | null) {
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return null;
+  return productBelongsToBrandScope(product.brand, brandId) ? product : null;
 }
 
 interface ReorderItemInput {

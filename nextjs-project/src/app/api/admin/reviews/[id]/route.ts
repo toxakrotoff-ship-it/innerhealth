@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as reviewService from '@/services/review.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -67,9 +68,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   try {
-    const review = await reviewService.findReviewById(id);
+    const review = await reviewService.findReviewById(id, brandId);
     if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
@@ -82,9 +84,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 /** DELETE /api/admin/reviews/[id] — удалить отзыв. Только для ADMIN по сессии. */
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { id } = await context.params;
   if (!id) {
@@ -92,7 +95,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   try {
-    const review = await reviewService.findReviewById(id);
+    const review = await reviewService.findReviewById(id, brandId);
     if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }

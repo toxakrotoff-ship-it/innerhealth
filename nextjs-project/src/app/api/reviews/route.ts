@@ -4,6 +4,9 @@ import path from 'path';
 import { getProjectRoot } from '@/lib/project-root';
 import * as reviewService from '@/services/review.service';
 import { notifyTelegramNewReview } from '@/lib/telegram-notify';
+import { notifyMaxNewReview } from '@/lib/max-notify';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 const REVIEW_RATE_LIMIT = 5;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -55,9 +58,10 @@ function isValidUrl(s: string): boolean {
 /**
  * GET /api/reviews — список одобренных отзывов для карусели (по убыванию даты).
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const reviews = await reviewService.getApprovedReviews();
+    const brandId = resolveBrandOrDefaultFromRequest(request);
+    const reviews = await reviewService.getApprovedReviews(brandId);
     return NextResponse.json(reviews);
   } catch (error) {
     console.error('Reviews GET error:', error);
@@ -72,6 +76,7 @@ export async function GET() {
  * POST /api/reviews — отправка отзыва (multipart: authorName, socialLink, text, photo?).
  */
 export async function POST(request: Request) {
+  const brandId = resolveBrandOrDefaultFromRequest(request);
   const clientId = getClientId(request);
   if (!checkRateLimit(clientId).success) {
     return NextResponse.json(
@@ -134,6 +139,7 @@ export async function POST(request: Request) {
     }
 
     const review = await reviewService.createReview({
+      brand: resolveDbBrand(brandId),
       authorName,
       socialLink: socialLink || undefined,
       text,
@@ -142,6 +148,11 @@ export async function POST(request: Request) {
     });
 
     notifyTelegramNewReview({
+      reviewId: review.id,
+      authorName,
+      text,
+    });
+    void notifyMaxNewReview({
       reviewId: review.id,
       authorName,
       text,

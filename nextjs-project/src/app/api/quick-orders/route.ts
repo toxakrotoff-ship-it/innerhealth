@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import * as quickOrderService from '@/services/quick-order.service'
 import { validatePhoneRu } from '@/lib/phone-mask'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const QUICK_ORDER_RATE_LIMIT = 8
 
@@ -39,6 +40,7 @@ const quickOrderSchema = z.object({
 })
 
 export async function POST(request: Request) {
+  const brandId = resolveBrandOrDefaultFromRequest(request)
   const clientId = getClientIdentifier(request)
   const rate = await checkRateLimit(clientId, 'quick-order', QUICK_ORDER_RATE_LIMIT)
   if (!rate.success) {
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const result = parsed.data
-    const product = await quickOrderService.getQuickOrderProductAvailability(result.productId)
+    const product = await quickOrderService.getQuickOrderProductAvailability(result.productId, brandId)
     if (!product || product.isDraft) {
       return NextResponse.json(
         { error: 'Товар недоступен для заказа' },
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       name: result.name?.trim() ? result.name.trim() : undefined,
       phone: result.phone,
       comment: result.comment?.trim() ? result.comment.trim() : undefined,
-    })
+    }, brandId)
 
     return NextResponse.json(
       { success: true },

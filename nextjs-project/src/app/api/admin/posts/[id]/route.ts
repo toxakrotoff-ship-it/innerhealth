@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as postService from '@/services/post.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 const putPostSchema = z.object({
   title: z.string().min(1).transform((s) => s.trim()).optional(),
@@ -14,15 +15,16 @@ const putPostSchema = z.object({
 });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   try {
     const { id } = await context.params;
-    const post = await postService.findPostById(id);
+    const post = await postService.findPostById(id, brandId);
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
@@ -42,6 +44,7 @@ export async function PUT(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   const { id } = await context.params;
 
@@ -64,7 +67,7 @@ export async function PUT(
     if (body.previewImage !== undefined) data.previewImage = body.previewImage;
     if (body.published !== undefined) data.published = body.published;
 
-    const post = await postService.updatePost(id, data);
+    const post = await postService.updatePost(id, data, brandId);
 
     return NextResponse.json(post);
   } catch (error) {
@@ -77,15 +80,16 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   try {
     const { id } = await context.params;
-    await postService.deletePost(id);
+    await postService.deletePost(id, brandId);
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {
     console.error('Error deleting post:', error);

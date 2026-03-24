@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import * as postService from '@/services/post.service';
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
 const postPostSchema = z.object({
   title: z.string().min(1, 'Title is required').transform((s) => s.trim()),
@@ -15,12 +16,13 @@ const postPostSchema = z.object({
   published: z.boolean().default(false),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   try {
-    const posts = await postService.getPostsForAdmin();
+    const posts = await postService.getPostsForAdmin(brandId);
     return NextResponse.json(posts);
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -34,6 +36,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandFromRequest(request);
 
   let body: z.infer<typeof postPostSchema>;
   try {
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
     let slug = body.slug ?? '';
     if (!slug) {
       const baseSlug = slugify(body.title) || 'post';
-      const existingSlugs = await postService.getExistingPostSlugs();
+      const existingSlugs = await postService.getExistingPostSlugs(brandId);
       slug = slugifyUnique(baseSlug, existingSlugs);
     }
 
@@ -62,7 +65,7 @@ export async function POST(request: Request) {
       content: content as Prisma.InputJsonValue,
       previewImage: body.previewImage ?? null,
       published: body.published,
-    });
+    }, brandId);
 
     return NextResponse.json(post);
   } catch (error) {

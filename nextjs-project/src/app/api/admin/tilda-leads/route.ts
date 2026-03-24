@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import * as tildaLeadsService from '@/services/tilda-leads.service'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   try {
-    const leads = await tildaLeadsService.getTildaLeads()
+    const leads = await tildaLeadsService.getTildaLeads(brandId)
     return NextResponse.json(leads)
   } catch (e) {
     console.error('Admin tilda-leads list error:', e)
@@ -21,6 +23,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   try {
     const formData = await request.formData()
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const csvText = await file.text()
-    const result = await tildaLeadsService.importTildaLeadsFromCsv(csvText)
+    const result = await tildaLeadsService.importTildaLeadsFromCsv(csvText, brandId)
     return NextResponse.json(result, { status: 200 })
   } catch (e) {
     console.error('Admin tilda-leads import error:', e)

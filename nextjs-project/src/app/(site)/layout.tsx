@@ -1,4 +1,5 @@
 import nextDynamic from 'next/dynamic'
+import { cookies, headers } from 'next/headers'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
@@ -6,6 +7,7 @@ import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { getRedirectMap } from '@/services/redirect.service'
+import { resolveBrand } from '@/lib/brand/brand'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -57,9 +59,16 @@ export default async function SiteLayout({
 }: {
   children: React.ReactNode
 }) {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
   const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'])
   const bodyCode = map.yandexMetrikaBodyCode
-  const redirects = await getRedirectMap()
+  const redirects = await getRedirectMap({ brandId: activeBrand })
   const hashRedirects = redirects.reduce<Record<string, string>>((acc, item) => {
     if (!item.sourcePath.startsWith('/#')) return acc
     acc[item.sourcePath] = item.destination

@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import * as promoService from '@/services/promo.service';
 
 const SERVICE_HEADER = 'x-service-key';
-const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
-
 function isServiceRequest(request: Request): boolean {
-  const secret = process.env[SERVICE_SECRET_ENV];
-  if (!secret || typeof secret !== 'string') return false;
   const key = request.headers.get(SERVICE_HEADER);
-  return key === secret;
+  if (!key) return false;
+  const telegramSecret = process.env.TELEGRAM_SERVICE_SECRET;
+  const maxSecret = process.env.MAX_SERVICE_SECRET;
+  return (typeof telegramSecret === 'string' && key === telegramSecret) ||
+    (typeof maxSecret === 'string' && key === maxSecret);
 }
 
 /** GET: статистика промокодов для бота (X-Service-Key). */

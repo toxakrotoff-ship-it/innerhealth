@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const patchSchema = z.object({
   commissionPercent: z.number().min(0).max(100),
@@ -13,6 +14,7 @@ export async function PATCH(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { userId, partnerPromoId } = await params;
 
@@ -20,6 +22,13 @@ export async function PATCH(
   if (!isPartner) {
     return NextResponse.json(
       { error: 'User is not a partner' },
+      { status: 404 }
+    );
+  }
+  const inScope = await partnerService.isPartnerPromoInBrandScope(partnerPromoId, userId, brandId);
+  if (!inScope) {
+    return NextResponse.json(
+      { error: 'Partner promo binding not found in selected brand' },
       { status: 404 }
     );
   }
@@ -51,11 +60,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ userId: string; partnerPromoId: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { userId, partnerPromoId } = await params;
 
@@ -63,6 +73,13 @@ export async function DELETE(
   if (!isPartner) {
     return NextResponse.json(
       { error: 'User is not a partner' },
+      { status: 404 }
+    );
+  }
+  const inScope = await partnerService.isPartnerPromoInBrandScope(partnerPromoId, userId, brandId);
+  if (!inScope) {
+    return NextResponse.json(
+      { error: 'Partner promo binding not found in selected brand' },
       { status: 404 }
     );
   }

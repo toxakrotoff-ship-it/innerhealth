@@ -2,6 +2,7 @@ import 'server-only'
 
 import { z } from 'zod'
 import { notifyTelegramInfraAlert } from '@/lib/telegram-notify'
+import { notifyMaxInfraAlert } from '@/lib/max-notify'
 
 const infraAlertSchema = z.object({
   kind: z.enum(['disk', 'memory', 'cpu', 'container', 'custom']),
@@ -27,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   await notifyTelegramInfraAlert(parsed.data)
+  await notifyMaxInfraAlert(parsed.data)
   return Response.json({ ok: true })
 }
 

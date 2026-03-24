@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { ModalLayer } from '@/components/ui/modal-layer';
 
@@ -19,6 +20,9 @@ interface AdminTelegram {
   linkedAt: string | null;
   infraAlertsEnabled: boolean;
 }
+
+type BotSettingsMode = 'telegram' | 'max';
+type SettingsScope = 'global' | 'inner' | 'sprint-power';
 
 /** Коды НДС для чеков 54-ФЗ (справочник ЮKassa). */
 const VAT_CODE_OPTIONS: Array<{ value: string; label: string }> = [
@@ -45,6 +49,28 @@ const FIELDS: Array<{
   options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'telegram_bot_token', label: 'Токен Telegram-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
+  { key: 'max_bot_token', label: 'Токен MAX-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
+  {
+    key: 'max_bot_mode',
+    label: 'Режим MAX-бота (polling | webhook)',
+    type: 'text',
+    placeholder: 'polling',
+    group: 'telegram',
+  },
+  {
+    key: 'max_bot_webhook_url',
+    label: 'Webhook URL MAX-бота',
+    type: 'text',
+    placeholder: 'https://example.com/api/webhooks/max',
+    group: 'telegram',
+  },
+  {
+    key: 'max_bot_webhook_secret',
+    label: 'Webhook secret MAX-бота',
+    type: 'password',
+    placeholder: '••••••••',
+    group: 'telegram',
+  },
   { key: 'cdek_api_key', label: 'API-ключ СДЭК (Client ID)', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'cdek_client_secret', label: 'Секрет СДЭК (Client Secret)', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
@@ -83,8 +109,13 @@ const FIELDS: Array<{
   },
 ];
 
+const BOT_MODE_FIELDS: Record<BotSettingsMode, string[]> = {
+  telegram: ['telegram_bot_token'],
+  max: ['max_bot_token', 'max_bot_mode', 'max_bot_webhook_url', 'max_bot_webhook_secret'],
+};
+
 const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics'; title: string }> = [
-  { id: 'telegram', title: 'Telegram-бот' },
+  { id: 'telegram', title: 'Боты и каналы уведомлений' },
   { id: 'cdek', title: 'Доставка (СДЭК)' },
   { id: 'yookassa', title: 'Оплата (ЮKassa)' },
   { id: 'site', title: 'Общие настройки сайта' },
@@ -92,6 +123,7 @@ const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics
 ];
 
 export default function AdminSettingsPage() {
+  const pathname = usePathname();
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -116,13 +148,52 @@ export default function AdminSettingsPage() {
   const [yookassaCheckResult, setYookassaCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [cdekCheckLoading, setCdekCheckLoading] = useState(false);
   const [cdekCheckResult, setCdekCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [activeBotMode, setActiveBotMode] = useState<BotSettingsMode>('telegram');
+  const [savingBotMode, setSavingBotMode] = useState<BotSettingsMode | null>(null);
+  const [registeringMaxWebhook, setRegisteringMaxWebhook] = useState(false);
+  const [maxWebhookRegisterResult, setMaxWebhookRegisterResult] = useState<{
+    ok: boolean;
+    message?: string;
+    error?: string;
+  } | null>(null);
+  const [checkingMaxWebhookStatus, setCheckingMaxWebhookStatus] = useState(false);
+  const [maxWebhookStatusResult, setMaxWebhookStatusResult] = useState<{
+    ok: boolean;
+    error?: string;
+    url?: string;
+    updateTypes?: string[];
+  } | null>(null);
+  const [settingsScope, setSettingsScope] = useState<SettingsScope>('global');
+
+  const scopeLabelMap: Record<SettingsScope, string> = {
+    global: 'Global',
+    inner: 'Inner Health',
+    'sprint-power': 'Sprint Power',
+  };
+
+  const resolveScopeFromPathname = (value: string): SettingsScope => {
+    if (value.includes('/admin/') || value.includes('/admin-panel/')) {
+      if (value.includes('/inner')) return 'inner';
+      if (value.includes('/sprint-power')) return 'sprint-power';
+    }
+    return 'global';
+  };
+
+  function buildSettingsEndpoint(): string {
+    if (settingsScope === 'global') return '/api/admin/settings';
+    return `/api/admin/settings?brand=${encodeURIComponent(settingsScope)}`;
+  }
+
+  useEffect(() => {
+    setSettingsScope(resolveScopeFromPathname(pathname));
+  }, [pathname]);
 
   useEffect(() => {
     loadSettings();
     loadAdmins();
     loadTelegram();
     load2FAStatus();
-  }, []);
+  }, [settingsScope]);
 
   async function load2FAStatus() {
     try {
@@ -169,7 +240,7 @@ export default function AdminSettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/admin/settings');
+      const res = await fetch(buildSettingsEndpoint());
       if (!res.ok) throw new Error('Не удалось загрузить настройки');
       const data = await res.json();
       setValues(data);
@@ -186,7 +257,7 @@ export default function AdminSettingsPage() {
       setSaving(true);
       setError(null);
       setSuccess(false);
-      const res = await fetch('/api/admin/settings', {
+      const res = await fetch(buildSettingsEndpoint(), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
@@ -202,6 +273,34 @@ export default function AdminSettingsPage() {
       setError(e instanceof Error ? e.message : 'Ошибка');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveBotModeSettings(mode: BotSettingsMode) {
+    try {
+      setSavingBotMode(mode);
+      setError(null);
+      setSuccess(false);
+      const payload: Record<string, string> = {};
+      for (const key of BOT_MODE_FIELDS[mode]) {
+        payload[key] = values[key] ?? '';
+      }
+      const res = await fetch(buildSettingsEndpoint(), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Не удалось сохранить настройки канала');
+      }
+      const data = await res.json();
+      setValues((prev) => ({ ...prev, ...data }));
+      setSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка');
+    } finally {
+      setSavingBotMode(null);
     }
   }
 
@@ -226,6 +325,22 @@ export default function AdminSettingsPage() {
         <p className="text-gray-500 mb-6">
           API-ключи и параметры доставки и оплаты. Для оплаты корзины используются Shop ID и секретный ключ ЮKassa из этого раздела; чек 54-ФЗ формируется с выбранными ставками НДС для товаров и доставки. Секретные значения хранятся в базе и не отображаются после сохранения.
         </p>
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {(Object.keys(scopeLabelMap) as SettingsScope[]).map((scope) => (
+            <Button
+              key={scope}
+              type="button"
+              variant={settingsScope === scope ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setSettingsScope(scope)}
+            >
+              {scopeLabelMap[scope]}
+            </Button>
+          ))}
+          <span className="text-xs text-gray-500">
+            Режим: {scopeLabelMap[settingsScope]}
+          </span>
+        </div>
 
         {error && (
           <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 text-sm">
@@ -243,7 +358,12 @@ export default function AdminSettingsPage() {
             <div key={group.id} className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{group.title}</h2>
               <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-                {FIELDS.filter((f) => f.group === group.id).map((field) => (
+                {(group.id === 'telegram'
+                  ? FIELDS.filter((f) => f.group === group.id).filter((field) =>
+                      BOT_MODE_FIELDS[activeBotMode].includes(field.key)
+                    )
+                  : FIELDS.filter((f) => f.group === group.id)
+                ).map((field) => (
                   <div key={field.key}>
                     <label htmlFor={field.key} className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label}
@@ -283,6 +403,163 @@ export default function AdminSettingsPage() {
                   </div>
                 ))}
               </div>
+              {group.id === 'telegram' && (
+                <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={activeBotMode === 'telegram' ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveBotMode('telegram')}
+                    >
+                      Режим Telegram
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={activeBotMode === 'max' ? 'secondary' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveBotMode('max')}
+                    >
+                      Режим MAX
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => saveBotModeSettings(activeBotMode)}
+                      disabled={savingBotMode !== null}
+                    >
+                      {savingBotMode === activeBotMode
+                        ? 'Сохранение…'
+                        : activeBotMode === 'telegram'
+                          ? 'Сохранить настройки Telegram'
+                          : 'Сохранить настройки MAX'}
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                      Сохраняет только поля выбранного режима.
+                    </p>
+                  </div>
+                  {activeBotMode === 'max' && (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={registeringMaxWebhook}
+                          onClick={async () => {
+                            setRegisteringMaxWebhook(true);
+                            setMaxWebhookRegisterResult(null);
+                            try {
+                              const res = await fetch('/api/admin/max/webhook/register', {
+                                method: 'POST',
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              setMaxWebhookRegisterResult({
+                                ok: Boolean(data.ok),
+                                message: data.message,
+                                error: data.error,
+                              });
+                            } catch {
+                              setMaxWebhookRegisterResult({
+                                ok: false,
+                                error: 'Ошибка запроса',
+                              });
+                            } finally {
+                              setRegisteringMaxWebhook(false);
+                            }
+                          }}
+                        >
+                          {registeringMaxWebhook
+                            ? 'Регистрация…'
+                            : 'Зарегистрировать webhook в MAX'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={checkingMaxWebhookStatus}
+                          onClick={async () => {
+                            setCheckingMaxWebhookStatus(true);
+                            setMaxWebhookStatusResult(null);
+                            try {
+                              const res = await fetch('/api/admin/max/webhook/status');
+                              const data = await res.json().catch(() => ({}));
+                              if (!res.ok || !data.ok) {
+                                setMaxWebhookStatusResult({
+                                  ok: false,
+                                  error: data.error || 'Ошибка запроса',
+                                });
+                              } else {
+                                const url = data?.data?.url as string | undefined;
+                                const updateTypesRaw = data?.data?.update_types;
+                                const updateTypes = Array.isArray(updateTypesRaw)
+                                  ? updateTypesRaw.map((item) => String(item))
+                                  : undefined;
+                                setMaxWebhookStatusResult({
+                                  ok: true,
+                                  url,
+                                  updateTypes,
+                                });
+                              }
+                            } catch {
+                              setMaxWebhookStatusResult({
+                                ok: false,
+                                error: 'Ошибка запроса',
+                              });
+                            } finally {
+                              setCheckingMaxWebhookStatus(false);
+                            }
+                          }}
+                        >
+                          {checkingMaxWebhookStatus
+                            ? 'Проверка…'
+                            : 'Проверить текущую подписку'}
+                        </Button>
+                      </div>
+                      {maxWebhookRegisterResult && (
+                        <p
+                          className={
+                            maxWebhookRegisterResult.ok
+                              ? 'text-green-600 text-sm'
+                              : 'text-red-600 text-sm'
+                          }
+                        >
+                          {maxWebhookRegisterResult.ok
+                            ? maxWebhookRegisterResult.message || 'Webhook зарегистрирован'
+                            : maxWebhookRegisterResult.error || 'Ошибка регистрации'}
+                        </p>
+                      )}
+                      {maxWebhookStatusResult && (
+                        <div
+                          className={
+                            maxWebhookStatusResult.ok
+                              ? 'text-sm text-gray-700'
+                              : 'text-sm text-red-600'
+                          }
+                        >
+                          {maxWebhookStatusResult.ok ? (
+                            <>
+                              <p>
+                                Текущий URL: {maxWebhookStatusResult.url || 'не задан'}
+                              </p>
+                              <p>
+                                Типы событий:{' '}
+                                {maxWebhookStatusResult.updateTypes?.length
+                                  ? maxWebhookStatusResult.updateTypes.join(', ')
+                                  : 'не заданы'}
+                              </p>
+                            </>
+                          ) : (
+                            <p>{maxWebhookStatusResult.error || 'Не удалось получить подписку'}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               {group.id === 'yookassa' && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <Button

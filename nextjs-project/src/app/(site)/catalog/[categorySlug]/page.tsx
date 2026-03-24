@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { cookies, headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
@@ -16,6 +17,8 @@ import { TiltCard } from '@/components/ui/tilt-card'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
+import { resolveBrand } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -42,8 +45,15 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { categorySlug } = await params
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
   const category = await prisma.category.findUnique({
-    where: { slug: categorySlug },
+    where: { brand_slug: { brand: resolveDbBrand(activeBrand), slug: categorySlug } },
     select: { title: true },
   })
   if (!category) {
@@ -74,10 +84,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CategoryPage({ params }: PageProps) {
   const { categorySlug } = await params
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+  const dbBrand = resolveDbBrand(activeBrand)
   const category = await prisma.category.findUnique({
-    where: { slug: categorySlug },
+    where: { brand_slug: { brand: dbBrand, slug: categorySlug } },
     include: {
       children: {
+        where: { brand: dbBrand },
         select: {
           id: true,
           title: true,
@@ -117,6 +136,7 @@ export default async function CategoryPage({ params }: PageProps) {
   if (!category) notFound()
 
   const allCategories = await prisma.category.findMany({
+    where: { brand: dbBrand },
     select: {
       id: true,
       title: true,
@@ -145,7 +165,7 @@ export default async function CategoryPage({ params }: PageProps) {
     content &&
     (Boolean(content.bullets?.length) || Boolean(content.paragraphs?.length))
 
-  const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date()) : []
+  const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date(), activeBrand) : []
 
   return (
     <>

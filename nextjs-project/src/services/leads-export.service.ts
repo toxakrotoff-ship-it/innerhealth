@@ -1,5 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
+import type { BrandId } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 export type LeadSource = 'partnership' | 'tilda' | 'quick_order'
 
@@ -107,36 +109,43 @@ export function buildLeadsCsv(rows: LeadExportRow[]): string {
 }
 
 /** Fetch all leads from PartnershipLead, TildaLead, QuickOrder and map to unified export rows. */
-export async function getAllLeadsForExport(filter?: LeadExportFilter): Promise<LeadExportRow[]> {
+export async function getAllLeadsForExport(
+  filter?: LeadExportFilter,
+  brandId: BrandId | null = null
+): Promise<LeadExportRow[]> {
+  const dbBrand = resolveDbBrand(brandId)
   const partnershipWhere =
     filter && (filter.from || filter.to)
       ? {
+          brand: dbBrand,
           createdAt: {
             ...(filter.from ? { gte: filter.from } : {}),
             ...(filter.to ? { lte: filter.to } : {}),
           },
         }
-      : undefined
+      : { brand: dbBrand }
 
   const tildaWhere =
     filter && (filter.from || filter.to)
       ? {
+          brand: dbBrand,
           tildaDate: {
             ...(filter.from ? { gte: filter.from } : {}),
             ...(filter.to ? { lte: filter.to } : {}),
           },
         }
-      : undefined
+      : { brand: dbBrand }
 
   const quickOrderWhere =
     filter && (filter.from || filter.to)
       ? {
+          brand: dbBrand,
           createdAt: {
             ...(filter.from ? { gte: filter.from } : {}),
             ...(filter.to ? { lte: filter.to } : {}),
           },
         }
-      : undefined
+      : { brand: dbBrand }
 
   const [partnershipLeads, tildaLeads, quickOrders] = await Promise.all([
     prisma.partnershipLead.findMany({

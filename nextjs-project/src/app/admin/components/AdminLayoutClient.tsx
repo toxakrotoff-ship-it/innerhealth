@@ -7,18 +7,25 @@ import ProfileMenu from './ProfileMenu';
 import AdminNav from './AdminNav';
 import { AdminBasePathProvider } from '@/app/admin/context/admin-base-path';
 import type { Session } from 'next-auth';
+import { AdminBrandSwitcher } from '@/app/admin/components/AdminBrandSwitcher';
+import { getBrandDefinitions, type BrandId } from '@/lib/brand/brand';
 
 export default function AdminLayoutClient({
   session,
   adminBasePath,
+  activeBrand,
   children,
 }: {
   session: Session;
   adminBasePath: string;
+  activeBrand: BrandId;
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const brandDefinition = getBrandDefinitions().find((brand) => brand.id === activeBrand);
+  const brandLabel = brandDefinition?.label ?? 'Inner Health';
+  const brandShortLabel = activeBrand === 'sprint-power' ? 'SP' : 'IH';
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -42,9 +49,9 @@ export default function AdminLayoutClient({
       <aside className="admin-sidebar" aria-hidden={!isSidebarOpen}>
         <div className="admin-sidebar-brand">
           <div className="admin-sidebar-logo">
-            <span className="text-white font-bold text-lg tracking-tight">IH</span>
+            <span className="text-white font-bold text-lg tracking-tight">{brandShortLabel}</span>
           </div>
-          <span className="admin-sidebar-title">Inner Health</span>
+          <span className="admin-sidebar-title">{brandLabel}</span>
           <span className="admin-sidebar-subtitle">Админ-панель</span>
           <button
             type="button"
@@ -96,6 +103,7 @@ export default function AdminLayoutClient({
             </button>
             <div className="admin-header-spacer" />
             <div className="flex items-center gap-3">
+              <AdminBrandSwitcher adminBasePath={adminBasePath} activeBrand={activeBrand} />
               <Link
                 href="/"
                 target="_blank"

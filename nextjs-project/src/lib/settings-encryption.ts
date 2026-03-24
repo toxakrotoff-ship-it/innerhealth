@@ -22,6 +22,8 @@ export const SENSITIVE_SETTING_KEYS = [
   'cdek_api_key',
   'cdek_client_secret',
   'telegram_bot_token',
+  'max_bot_token',
+  'max_bot_webhook_secret',
 ] as const
 
 export type SensitiveSettingKey = (typeof SENSITIVE_SETTING_KEYS)[number]

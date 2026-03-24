@@ -9,6 +9,7 @@ import {
   createAnalyticsEvent,
   createAnalyticsEventsBatch,
 } from '@/lib/analytics/analytics-event-service'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX_EVENTS = 200
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
   const clientIp = getClientIp(request)
   const userAgent = getUserAgent(request)
   const ipHash = getIpHash(clientIp)
+  const requestBrand = resolveBrandOrDefaultFromRequest(request)
 
   try {
     let events: AnalyticsEventInput[]
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       const [input] = events
       await createAnalyticsEvent({
         ...input,
+        brand: input.brand ?? requestBrand,
         ipHash,
         userAgent,
       })
@@ -102,6 +105,7 @@ export async function POST(request: Request) {
     const result = await createAnalyticsEventsBatch(
       events.map((event) => ({
         ...event,
+        brand: event.brand ?? requestBrand,
         ipHash,
         userAgent,
       }))

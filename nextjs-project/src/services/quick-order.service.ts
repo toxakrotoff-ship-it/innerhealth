@@ -1,6 +1,9 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
 import { maskPhone } from '@/lib/pii-masking'
+import type { BrandId } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
+import { productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 
 export interface QuickOrderInput {
   name?: string
@@ -10,9 +13,10 @@ export interface QuickOrderInput {
   quantity: number
 }
 
-export async function createQuickOrder(input: QuickOrderInput) {
+export async function createQuickOrder(input: QuickOrderInput, brandId: BrandId | null = null) {
   return prisma.quickOrder.create({
     data: {
+      brand: resolveDbBrand(brandId),
       name: input.name,
       phone: input.phone,
       comment: input.comment,
@@ -22,16 +26,23 @@ export async function createQuickOrder(input: QuickOrderInput) {
   })
 }
 
-export async function getQuickOrderProductAvailability(productId: string) {
-  return prisma.product.findUnique({
+export async function getQuickOrderProductAvailability(
+  productId: string,
+  brandId: BrandId | null = null
+) {
+  const product = await prisma.product.findUnique({
     where: { id: productId },
     select: {
       id: true,
       isDraft: true,
       quantity: true,
       isPreorderEnabled: true,
+      brand: true,
     },
   })
+  if (!product) return null
+  if (!productBelongsToBrandScope(product.brand, brandId)) return null
+  return product
 }
 
 export interface AdminQuickOrderDto {
@@ -50,8 +61,11 @@ export interface AdminQuickOrderDto {
   }
 }
 
-export async function getQuickOrdersForAdmin(): Promise<AdminQuickOrderDto[]> {
+export async function getQuickOrdersForAdmin(
+  brandId: BrandId | null = null
+): Promise<AdminQuickOrderDto[]> {
   const rows = await prisma.quickOrder.findMany({
+    where: { brand: resolveDbBrand(brandId) },
     orderBy: [{ createdAt: 'desc' }],
     include: {
       product: {

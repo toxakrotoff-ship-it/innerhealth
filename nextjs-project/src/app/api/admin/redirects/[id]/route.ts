@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as redirectService from '@/services/redirect.service';
 import { REDIRECT_STATUS_CODES } from '@/services/redirect.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const updateSchema = z.object({
   sourcePath: z.string().min(1).optional(),
@@ -20,6 +21,7 @@ export async function PATCH(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { id } = await params;
   const body = await request.json();
@@ -36,12 +38,12 @@ export async function PATCH(
   }
 
   try {
-    const updated = await redirectService.updateRedirect(id, parsed.data);
+    const updated = await redirectService.updateRedirect(id, parsed.data, { brandId });
     revalidateTag('redirects', 'max');
     return NextResponse.json(updated);
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
-    if (err?.code === 'P2025') {
+    if (err?.code === 'P2025' || err?.message === 'Redirect not found') {
       return NextResponse.json({ error: 'Redirect not found' }, { status: 404 });
     }
     const msg = err?.message ?? 'Failed to update redirect';
@@ -57,20 +59,21 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { id } = await params;
   try {
-    await redirectService.deleteRedirect(id);
+    await redirectService.deleteRedirect(id, { brandId });
     revalidateTag('redirects', 'max');
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const err = e as { code?: string };
-    if (err?.code === 'P2025') {
+    if (err?.code === 'P2025' || (e instanceof Error && e.message === 'Redirect not found')) {
       return NextResponse.json({ error: 'Redirect not found' }, { status: 404 });
     }
     console.error('DELETE /api/admin/redirects/[id]:', e);

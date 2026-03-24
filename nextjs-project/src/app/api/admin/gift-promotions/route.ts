@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
-import { prisma } from '@/lib/prisma'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import * as productService from '@/services/product.service'
+import * as giftPromotionService from '@/services/gift-promotion.service'
 
 const createSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
@@ -64,19 +66,13 @@ const deleteSchema = z.object({
   id: z.string().min(1, 'ID обязателен'),
 })
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   try {
-    const promos = await prisma.giftPromotion.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        giftProduct: {
-          select: { id: true, title: true },
-        },
-      },
-    })
+    const promos = await giftPromotionService.getGiftPromotionsForAdmin(brandId)
 
     return NextResponse.json(
       promos.map((p) => ({
@@ -96,6 +92,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   let data: z.infer<typeof createSchema>
   try {
@@ -107,8 +104,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await prisma.giftPromotion.create({
-      data: {
+    const giftProduct = await productService.findProductByIdInBrandScope(data.giftProductId, brandId)
+    if (!giftProduct) {
+      return NextResponse.json({ error: 'Подарочный товар не найден в текущем бренде' }, { status: 400 })
+    }
+    if (data.triggerType === 'PRODUCT' && data.triggerProductId) {
+      const triggerProduct = await productService.findProductByIdInBrandScope(data.triggerProductId, brandId)
+      if (!triggerProduct) {
+        return NextResponse.json({ error: 'Триггер-товар не найден в текущем бренде' }, { status: 400 })
+      }
+    }
+
+    const created = await giftPromotionService.createGiftPromotionForAdmin(
+      {
         title: data.title,
         status: data.status,
         validFrom: data.validFrom ? new Date(data.validFrom) : null,
@@ -129,7 +137,8 @@ export async function POST(request: Request) {
         siteDescription: data.siteDescription ?? null,
         coverImage: data.coverImage ?? null,
       },
-    })
+      brandId
+    )
 
     return NextResponse.json(created)
   } catch (error) {
@@ -141,6 +150,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   let data: z.infer<typeof updateSchema>
   try {
@@ -152,14 +162,29 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const existing = await prisma.giftPromotion.findUnique({ where: { id: data.id } })
+    const existing = await giftPromotionService.findGiftPromotionByIdForAdmin(data.id, brandId)
     if (!existing) {
       return NextResponse.json({ error: 'Gift promotion not found' }, { status: 404 })
     }
 
-    const updated = await prisma.giftPromotion.update({
-      where: { id: data.id },
-      data: {
+    const giftProductId = data.giftProductId ?? existing.giftProductId
+    const giftProduct = await productService.findProductByIdInBrandScope(giftProductId, brandId)
+    if (!giftProduct) {
+      return NextResponse.json({ error: 'Подарочный товар не найден в текущем бренде' }, { status: 400 })
+    }
+    const effectiveTriggerType = data.triggerType ?? existing.triggerType
+    const effectiveTriggerProductId =
+      effectiveTriggerType === 'PRODUCT' ? (data.triggerProductId ?? existing.triggerProductId) : null
+    if (effectiveTriggerProductId) {
+      const triggerProduct = await productService.findProductByIdInBrandScope(effectiveTriggerProductId, brandId)
+      if (!triggerProduct) {
+        return NextResponse.json({ error: 'Триггер-товар не найден в текущем бренде' }, { status: 400 })
+      }
+    }
+
+    const updated = await giftPromotionService.updateGiftPromotionForAdmin(
+      data.id,
+      {
         title: data.title ?? existing.title,
         status: data.status ?? existing.status,
         validFrom:
@@ -200,7 +225,12 @@ export async function PUT(request: Request) {
         siteDescription: data.siteDescription ?? existing.siteDescription,
         coverImage: data.coverImage ?? existing.coverImage,
       },
-    })
+      brandId
+    )
+
+    if (!updated) {
+      return NextResponse.json({ error: 'Gift promotion not found' }, { status: 404 })
+    }
 
     return NextResponse.json(updated)
   } catch (error) {
@@ -212,6 +242,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   let data: z.infer<typeof deleteSchema>
   try {
@@ -223,7 +254,10 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await prisma.giftPromotion.delete({ where: { id: data.id } })
+    const removed = await giftPromotionService.deleteGiftPromotionForAdmin(data.id, brandId)
+    if (!removed) {
+      return NextResponse.json({ error: 'Gift promotion not found' }, { status: 404 })
+    }
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('Error deleting gift promotion:', error)

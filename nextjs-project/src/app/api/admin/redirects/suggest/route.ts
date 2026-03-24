@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as redirectService from '@/services/redirect.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const querySchema = z.object({
   sourcePath: z.string().trim().min(1).max(400),
@@ -12,6 +13,7 @@ const querySchema = z.object({
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({
@@ -29,6 +31,7 @@ export async function GET(request: Request) {
       sourcePath: parsed.data.sourcePath,
       query: parsed.data.q,
       limit: parsed.data.limit,
+      brandId,
     });
     return NextResponse.json({ items, recommended: items[0] ?? null });
   } catch (error) {

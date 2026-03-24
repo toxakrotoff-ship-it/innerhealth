@@ -1,6 +1,8 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 /** Get all categories (for admin catalog). */
 export async function getCategories() {
@@ -61,9 +63,9 @@ export async function findCategoryById(id: string) {
 }
 
 /** Find category by slug. */
-export async function findCategoryBySlug(slug: string) {
-  return prisma.category.findUnique({
-    where: { slug },
+export async function findCategoryBySlug(slug: string, brandId: BrandId | null = null) {
+  return prisma.category.findFirst({
+    where: { slug, brand: resolveDbBrand(brandId) },
   });
 }
 

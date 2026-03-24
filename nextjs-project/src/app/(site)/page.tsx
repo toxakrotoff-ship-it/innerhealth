@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
+import { cookies, headers } from 'next/headers'
 import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -29,6 +30,8 @@ import { Heading2 } from '@/components/ui/responsive-text'
 import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { resolveBrand } from '@/lib/brand/brand'
+import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 
 const SprintPowerBlock = dynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -143,7 +146,218 @@ async function getHomeData() {
   return { categories, newProducts, newsPosts, articlePosts, reviews }
 }
 
+type SprintHomeData = {
+  products: Array<{
+    id: string
+    title: string
+    price: number
+    photo: string | null
+    slug: string | null
+    brand: string | null
+  }>
+  categories: Array<{
+    id: string
+    title: string
+    slug: string
+    _count: { products: number }
+  }>
+  reviews: Array<{
+    id: string
+    authorName: string
+    text: string
+  }>
+}
+
+async function getSprintHomeData(): Promise<SprintHomeData> {
+  const [products, categories, reviews] = await Promise.all([
+    prisma.product.findMany({
+      where: { isDraft: false, brand: SPRINT_POWER_PRODUCT_BRAND },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        photo: true,
+        slug: true,
+        brand: true,
+      },
+    }),
+    prisma.category.findMany({
+      where: { brand: 'sprint-power' },
+      orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+      include: { _count: { select: { products: true } } },
+      take: 6,
+    }),
+    prisma.review.findMany({
+      where: { status: 'APPROVED', brand: 'sprint-power' },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      select: { id: true, authorName: true, text: true },
+    }),
+  ])
+
+  return { products, categories, reviews }
+}
+
+function SprintPowerHome({ data }: { data: SprintHomeData }) {
+  return (
+    <section className="bg-[#060A14] py-10 md:py-12">
+      <AdaptiveContainer maxWidth="wide">
+        <div className="space-y-6 rounded-2xl bg-[#060A14]">
+          <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
+            <div className="space-y-4">
+              <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">SPRINT POWER</p>
+              <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
+                Почувствуй разницу с первой тренировки
+              </h1>
+              <p className="max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
+                Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без
+                компромиссов.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/catalog"
+                  className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
+                >
+                  Выбрать продукт
+                </Link>
+                <Link
+                  href="/otzyvy"
+                  className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100"
+                >
+                  Читать отзывы
+                </Link>
+              </div>
+            </div>
+            <div
+              className="min-h-[240px] rounded-2xl border border-slate-700 bg-cover bg-center p-5"
+              style={{ backgroundImage: "url('/uploads/home/sprint-hero.jpg')" }}
+            >
+              <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100">
+                Hydro Protein - флагман линейки
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
+            <h2 className="mb-4 text-2xl font-bold text-slate-100">Хиты продаж</h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              {data.products.map((product) => (
+                <div key={product.id} className="rounded-2xl bg-[#1E293B] p-3">
+                  {product.photo ? (
+                    <div className="relative mb-3 h-24 overflow-hidden rounded-lg">
+                      <Image src={product.photo} alt={product.title} fill className="object-cover" />
+                    </div>
+                  ) : null}
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-slate-100">{product.title}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-[#7AA2FF]">{product.price} ₽</span>
+                      <Link
+                        href={product.slug ? `/product/${product.slug}` : '/catalog'}
+                        className="rounded-full bg-[#3B82F6] px-4 py-1.5 text-xs font-semibold text-white"
+                      >
+                        Купить
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-slate-900">Отзывы спортсменов</h3>
+              {data.reviews.map((review) => (
+                <div key={review.id} className="rounded-xl bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-900">{review.authorName}</p>
+                  <p className="mt-1 text-sm text-slate-600">{review.text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-slate-900">Доверительные маркеры</h3>
+              {['GMP и HACCP стандарты', 'Прозрачный состав', 'Регулярные обзоры'].map((item) => (
+                <div key={item} className="rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
+            <h3 className="mb-4 text-2xl font-bold text-slate-100">Вся линейка</h3>
+            <div className="grid gap-3 md:grid-cols-3">
+              {data.categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/catalog/${category.slug}`}
+                  className="rounded-xl bg-[#1E293B] p-4"
+                >
+                  <p className="text-sm font-semibold text-slate-100">{category.title}</p>
+                  <p className="text-xs text-slate-400">{category._count.products} товаров</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-[#111D3A] p-6 md:p-8">
+            <p className="text-2xl font-bold text-white">Inner Health</p>
+            <p className="mt-2 text-sm text-slate-300">
+              Активное долголетие, превентивная медицина, нутрицевтика.
+            </p>
+            <Link
+              href="/"
+              className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
+            >
+              На Inner Health
+            </Link>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 md:p-8">
+            <h3 className="mb-4 text-2xl font-bold text-slate-900">Частые вопросы</h3>
+            {[
+              'Как выбрать продукт под цель?',
+              'Можно ли сочетать протеин и коллаген?',
+              'Сколько протеина нужно в день?',
+            ].map((item) => (
+              <div
+                key={item}
+                className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
+              >
+                <p className="text-sm font-semibold text-slate-800">{item}</p>
+                <span className="text-slate-400">+</span>
+              </div>
+            ))}
+            <Link
+              href="/catalog"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white"
+            >
+              Выбрать продукт сейчас
+            </Link>
+          </div>
+        </div>
+      </AdaptiveContainer>
+    </section>
+  )
+}
+
 export default async function HomePage() {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+
+  if (activeBrand === 'sprint-power') {
+    const sprintHomeData = await getSprintHomeData()
+    return <SprintPowerHome data={sprintHomeData} />
+  }
+
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData()
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
     getResolvedBlocksForPage('home'),

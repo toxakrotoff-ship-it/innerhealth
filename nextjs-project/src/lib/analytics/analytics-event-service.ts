@@ -2,6 +2,7 @@ import 'server-only'
 
 import { type AnalyticsEvent } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 import {
   analyticsEventInputArraySchema,
   analyticsEventInputSchema,
@@ -30,12 +31,12 @@ export async function createAnalyticsEvent(
   if (!anyPrisma.analyticsEvent) {
     // Модели аналитики ещё не смигрированы в основном Prisma‑клиенте —
     // молча пропускаем запись, чтобы не ломать сайт.
-    // eslint-disable-next-line no-console
     console.debug(
       'AnalyticsEvent model is not available in Prisma client, skipping single write'
     )
     return {
       id: 'noop',
+      brand: resolveDbBrand(parsed.brand),
       occurredAt: parsed.occurredAt,
       userId: parsed.userId ?? null,
       sessionId: parsed.sessionId ?? null,
@@ -53,6 +54,7 @@ export async function createAnalyticsEvent(
     const created = await anyPrisma.analyticsEvent.create({
       data: {
         occurredAt: parsed.occurredAt,
+        brand: resolveDbBrand(parsed.brand),
         userId: parsed.userId,
         sessionId: parsed.sessionId,
         anonId: parsed.anonId,
@@ -93,7 +95,6 @@ export async function createAnalyticsEventsBatch(
   }
 
   if (!anyPrisma.analyticsEvent) {
-    // eslint-disable-next-line no-console
     console.debug(
       'AnalyticsEvent model is not available in Prisma client, skipping batch write'
     )
@@ -104,6 +105,7 @@ export async function createAnalyticsEventsBatch(
     const result = await anyPrisma.analyticsEvent.createMany({
       data: parsedArray.map((item) => ({
         occurredAt: item.occurredAt,
+        brand: resolveDbBrand(item.brand),
         userId: item.userId,
         sessionId: item.sessionId,
         anonId: item.anonId,

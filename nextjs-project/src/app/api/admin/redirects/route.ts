@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as redirectService from '@/services/redirect.service';
 import { REDIRECT_STATUS_CODES } from '@/services/redirect.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const createSchema = z.object({
   sourcePath: z.string().min(1, 'Укажите путь-источник'),
@@ -14,12 +15,13 @@ const createSchema = z.object({
   note: z.string().nullable().optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   try {
-    const list = await redirectService.listRedirects();
+    const list = await redirectService.listRedirects({ brandId });
     return NextResponse.json(list);
   } catch (e) {
     console.error('GET /api/admin/redirects:', e);
@@ -30,6 +32,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   const body = await request.json();
   const parsed = createSchema.safeParse(body);
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await redirectService.createRedirect(parsed.data);
+    const created = await redirectService.createRedirect(parsed.data, { brandId });
     revalidateTag('redirects', 'max');
     return NextResponse.json(created);
   } catch (e: unknown) {
