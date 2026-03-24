@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 
 interface OrderProduct {
   id: string;
@@ -58,18 +59,6 @@ function formatDate(dateString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function statusLabel(status: string): string {
-  const map: Record<string, string> = {
-    pending: 'В обработке',
-    paid: 'Оплачен',
-    completed: 'Завершён',
-    cancelled: 'Отменён',
-    canceled: 'Отменён',
-    shipped: 'Отправлен',
-  };
-  return map[status] ?? status;
 }
 
 export default function AdminOrdersPage() {
@@ -389,9 +378,8 @@ export default function AdminOrdersPage() {
                       <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
                       <span className="text-sm font-medium">{order.total.toFixed(2)} ₽</span>
                       <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                        order.status === 'paid' || order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        order.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'
-                      }`}>{statusLabel(order.status)}</span>
+                        getOrderStatusPresentation(order.status).badgeClassName
+                      }`}>{getOrderStatusPresentation(order.status).label}</span>
                     </div>
                             {mode === 'trash' && order.deletedAt && (
                               <p className="text-xs text-gray-500">
@@ -465,9 +453,8 @@ export default function AdminOrdersPage() {
                           <td className="px-4 py-3 text-sm text-gray-600">{order.total.toFixed(2)} ₽</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              order.status === 'paid' || order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              order.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'
-                            }`}>{statusLabel(order.status)}</span>
+                              getOrderStatusPresentation(order.status).badgeClassName
+                            }`}>{getOrderStatusPresentation(order.status).label}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col items-end gap-1">
@@ -542,7 +529,7 @@ export default function AdminOrdersPage() {
             </div>
             <div className="max-h-[75vh] overflow-y-auto p-4 space-y-4">
               <div className="grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
-                <p><span className="font-medium">Статус:</span> {statusLabel(popupOrder.status)}</p>
+                <p><span className="font-medium">Статус:</span> {getOrderStatusPresentation(popupOrder.status).label}</p>
                 <p><span className="font-medium">Сумма:</span> {popupOrder.total.toFixed(2)} ₽</p>
               </div>
               <div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 
 interface OrderItemRow {
   id: string;
@@ -308,10 +309,9 @@ export default function OrdersStatisticsPage() {
                     <p className="text-sm text-gray-400 mt-0.5">—</p>
                   )}
                   <span className={`inline-flex w-fit mt-2 px-2 py-0.5 text-xs font-semibold rounded-full ${
-                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                    getOrderStatusPresentation(order.status).badgeClassName
                   }`}>
-                    {order.status === 'completed' ? 'Завершен' : order.status === 'pending' ? 'В обработке' : 'Другое'}
+                    {getOrderStatusPresentation(order.status).label}
                   </span>
                 </div>
               ))}
@@ -350,10 +350,9 @@ export default function OrdersStatisticsPage() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                            getOrderStatusPresentation(order.status).badgeClassName
                           }`}>
-                            {order.status === 'completed' ? 'Завершен' : order.status === 'pending' ? 'В обработке' : 'Другое'}
+                            {getOrderStatusPresentation(order.status).label}
                           </span>
                         </td>
                       </tr>
