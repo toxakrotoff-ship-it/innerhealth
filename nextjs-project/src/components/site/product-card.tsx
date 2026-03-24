@@ -136,28 +136,28 @@ export function ProductCard({
             </div>
           )}
         </div>
-        <div className="flex flex-1 min-h-0 min-w-0 flex-col px-3 py-2">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
           <div className="flex-1 min-h-0 min-w-0">
-            <h3 className="text-xs sm:text-sm font-medium text-text line-clamp-2 group-hover:text-action-blue transition-colors">
+            <h3 className="line-clamp-2 text-sm font-medium text-text transition-colors group-hover:text-action-blue 2xl:text-[0.95rem] 3xl:text-base">
               {title}
             </h3>
             {(brand || sku) && (
-              <p className="mt-1 text-xs text-gray-500 line-clamp-1">
+              <p className="desktop-microtext-scale mt-1 line-clamp-1 text-gray-500">
                 {brand ? `Бренд: ${brand}` : ''}{brand && sku ? ' • ' : ''}{sku ? `SKU: ${sku}` : ''}
               </p>
             )}
             <div className="mt-1.5 flex items-center gap-1.5">
-              <span className="text-sm sm:text-base font-semibold text-text">
+              <span className="text-base font-semibold text-text 2xl:text-lg 3xl:text-xl">
                 {price.toLocaleString('ru-RU')} ₽
               </span>
               {priceOld != null && priceOld > price && (
-                <span className="text-sm text-gray-500 line-through">
+                <span className="desktop-microtext-scale text-gray-500 line-through">
                   {priceOld.toLocaleString('ru-RU')} ₽
                 </span>
               )}
             </div>
           </div>
-          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5">
+          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 3xl:mt-3 3xl:gap-2">
             <AddToCartButton
               productId={id}
               title={title}
@@ -169,11 +169,11 @@ export function ProductCard({
               discountPrice={discountPrice}
               disabled={isUnavailable}
               size="sm"
-              className="w-full min-h-[40px] sm:min-h-[36px]"
+              className="desktop-button-scale min-h-[40px] w-full sm:min-h-[36px] 2xl:min-h-[40px] 3xl:min-h-[44px]"
             />
             <Link
               href={detailHref}
-              className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[40px] sm:min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors text-center"
+              className="desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white px-3 py-2 text-center text-sm font-medium text-text transition-colors hover:border-action-blue hover:bg-gray-50 hover:text-action-blue sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base"
             >
               Подробнее
             </Link>

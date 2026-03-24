@@ -34,7 +34,7 @@ export async function SiteFooter() {
         <AdaptiveContainer
           maxWidth="6xl"
           adaptivePadding
-          className="py-6 sm:py-8 lg:py-10"
+          className="py-8 sm:py-10 lg:py-12 2xl:py-14 3xl:py-16"
         >
           {/* Основная сетка с 4 колонками на десктопе и выше */}
           <FluidGrid
@@ -61,7 +61,7 @@ export async function SiteFooter() {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-3"
+                className="mb-3 2xl:mb-4"
                 adaptive
               >
                 Inner Health
@@ -87,17 +87,17 @@ export async function SiteFooter() {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6"
+                className="mb-6 2xl:mb-7"
                 adaptive
               >
                 Информация
               </ResponsiveText>
-              <ul className="space-y-4">
+              <ul className="space-y-4 2xl:space-y-5">
                 {FOOTER_LINKS.slice(0, 3).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
-                      className="hover:text-action-blue transition-colors"
+                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
                     >
                       <ResponsiveText
                         as="span"
@@ -123,17 +123,17 @@ export async function SiteFooter() {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6"
+                className="mb-6 2xl:mb-7"
                 adaptive
               >
                 Покупателям
               </ResponsiveText>
-              <ul className="space-y-4">
+              <ul className="space-y-4 2xl:space-y-5">
                 {FOOTER_LINKS.slice(3, 7).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
-                      className="hover:text-action-blue transition-colors"
+                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
                     >
                       <ResponsiveText
                         as="span"
@@ -159,17 +159,17 @@ export async function SiteFooter() {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className="mb-6"
+                className="mb-6 2xl:mb-7"
                 adaptive
               >
                 Юридическое
               </ResponsiveText>
-              <ul className="space-y-4">
+              <ul className="space-y-4 2xl:space-y-5">
                 {FOOTER_LINKS.slice(7, 9).map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
-                      className="hover:text-action-blue transition-colors"
+                      className="desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors hover:text-action-blue"
                     >
                       <ResponsiveText
                         as="span"
@@ -189,7 +189,7 @@ export async function SiteFooter() {
 
           {/* Реквизиты */}
           <ScalableSpacing direction="vertical" size={96} adaptive>
-            <div className="border-t border-slate-200 pt-8">
+            <div className="border-t border-slate-200 pt-8 2xl:pt-10">
               <FluidGrid
                 cols={1}
                 colsTablet={2}
@@ -205,7 +205,7 @@ export async function SiteFooter() {
                 align="start"
                 justify="between"
               >
-                <div className="space-y-2">
+                <div className="space-y-2 2xl:space-y-3">
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">
                       Название полное:
@@ -224,7 +224,7 @@ export async function SiteFooter() {
                     </span>
                   </ResponsiveText>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 2xl:space-y-3">
                   <ResponsiveText as="p" variant="sm" adaptive>
                     <span className="font-semibold text-slate-900">
                       Корреспондентский счёт:
@@ -260,7 +260,7 @@ export async function SiteFooter() {
 
           {/* Копирайт */}
           <ScalableSpacing direction="vertical" size={96} adaptive>
-            <div className="border-t border-slate-200 pt-8 flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-200 pt-8 2xl:pt-10">
               <ResponsiveText
                 as="span"
                 variant="sm"
@@ -274,7 +274,7 @@ export async function SiteFooter() {
               </span>
               <Link
                 href="/privacy"
-                className="text-orange-600 hover:text-orange-700 transition-colors"
+                className="desktop-microtext-scale inline-flex min-h-[36px] items-center text-orange-600 transition-colors hover:text-orange-700"
               >
                 <ResponsiveText
                   as="span"

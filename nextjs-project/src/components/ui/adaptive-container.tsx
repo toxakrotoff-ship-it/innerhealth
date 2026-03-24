@@ -5,16 +5,11 @@ import { adaptiveTokens } from '@/lib/adaptive-tokens'
 export interface AdaptiveContainerProps extends HTMLAttributes<HTMLDivElement> {
   /**
    * Максимальная ширина контейнера.
-   * - 'default' (1440px)
-   * - 'xl' (1440px)
-   * - '2xl' (1600px)
-   * - '3xl' (1920px)
-   * - '4xl' (2240px)
-   * - '5xl' (2880px) - для 4K экранов (3840px)
-   * - '6xl' (3840px) - для 5K экранов (5120px)
+   * Значения берутся из процентных токенов `containerWidths`
+   * для сохранения стабильных полей по бокам на разных DPI/экранах.
    * - 'full' (100% ширины)
    */
-  maxWidth?: keyof typeof adaptiveTokens.containerFixedWidths | 'full'
+  maxWidth?: keyof typeof adaptiveTokens.containerWidths | 'full'
   /**
    * Включить центрирование контейнера
    * @default true
@@ -50,22 +45,16 @@ export const AdaptiveContainer = forwardRef<HTMLDivElement, AdaptiveContainerPro
     },
     ref
   ) => {
-    // Получаем фиксированную ширину из токенов
-    const maxWidthValue = maxWidth === 'full' 
-      ? '100%' 
-      : `${adaptiveTokens.containerFixedWidths[maxWidth]}px`
+    const maxWidthValue =
+      maxWidth === 'full' ? '100%' : adaptiveTokens.containerWidths[maxWidth]
 
     const containerClasses = cn(
       // Базовые стили
       'w-full',
       // Центрирование
       center && 'mx-auto',
-      // Адаптивные отступы с поддержкой 5xl и 6xl
-      adaptivePadding && [
-        'px-4 sm:px-6 lg:px-8',
-        'xl:px-10 2xl:px-12 3xl:px-16 4xl:px-20',
-        '5xl:px-24 6xl:px-32',
-      ],
+      // Процентные внутренние отступы сохраняют единый ритм при изменении DPI.
+      adaptivePadding && 'px-[max(12px,2vw)]',
       // Максимальная ширина через inline-стиль для корректной работы
       className
     )
@@ -86,7 +75,7 @@ export const AdaptiveContainer = forwardRef<HTMLDivElement, AdaptiveContainerPro
 AdaptiveContainer.displayName = 'AdaptiveContainer'
 
 /**
- * Утилитарные компоненты для быстрого использования контейнеров с фиксированной шириной
+ * Утилитарные компоненты для быстрого использования контейнеров
  */
 
 export const ContainerXL = forwardRef<HTMLDivElement, Omit<AdaptiveContainerProps, 'maxWidth'>>(
@@ -130,8 +119,8 @@ ContainerFull.displayName = 'ContainerFull'
 /**
  * Хук для получения адаптивной ширины контейнера
  */
-export function useContainerWidth(breakpoint: keyof typeof adaptiveTokens.containerFixedWidths = 'default') {
-  return adaptiveTokens.containerFixedWidths[breakpoint]
+export function useContainerWidth(breakpoint: keyof typeof adaptiveTokens.containerWidths = 'default') {
+  return adaptiveTokens.containerWidths[breakpoint]
 }
 
 export default AdaptiveContainer

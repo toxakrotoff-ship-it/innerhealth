@@ -28,7 +28,7 @@ export function CompareToggleButton({ productId, compact = false }: CompareToggl
           setSelected(result.isSelected);
           setError(result.error ?? null);
         }}
-        className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+        className={`desktop-secondary-button-scale inline-flex items-center justify-center rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
           selected
             ? 'border-action-blue bg-highlight-blue text-text'
             : 'border-gray-300 bg-white text-text hover:border-action-blue hover:text-action-blue'
@@ -37,11 +37,11 @@ export function CompareToggleButton({ productId, compact = false }: CompareToggl
         {label}
       </button>
       {selected && (
-        <Link href="/compare" className="text-xs text-action-blue hover:underline">
+        <Link href="/compare" className="desktop-microtext-scale text-action-blue hover:underline">
           открыть
         </Link>
       )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="desktop-microtext-scale text-red-600">{error}</span>}
     </div>
   );
 }

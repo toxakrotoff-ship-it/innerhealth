@@ -122,7 +122,7 @@ export function ProductPageContent({
     ]
 
   return (
-    <AdaptiveContainer maxWidth="default" className="py-10">
+    <AdaptiveContainer maxWidth="default" className="py-6 sm:py-10">
       <Breadcrumbs items={crumbs} />
       <RecentlyViewedTracker productId={product.id} />
       <FluidGrid
@@ -200,9 +200,9 @@ export function ProductPageContent({
 
       {relatedProducts.length > 0 && (
         <ScalableSpacing size="lg">
-          <section className={tabs.length > 0 ? 'pt-8' : 'pt-8 border-t border-gray-200'}>
+          <section className={tabs.length > 0 ? 'pt-6 sm:pt-8' : 'border-t border-gray-200 pt-6 sm:pt-8'}>
             <Heading2 className="mb-1">Из той же категории</Heading2>
-            <p className="text-sm text-gray-600 mb-4 max-w-2xl">
+            <p className="mb-4 max-w-2xl text-sm text-gray-600">
               Подборка похожих позиций из каталога — удобно сравнить состав и цену.
             </p>
             {relatedProductsCategoryTitle ? (

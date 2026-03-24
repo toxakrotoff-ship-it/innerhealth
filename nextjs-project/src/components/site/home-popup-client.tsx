@@ -119,21 +119,21 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
       onClose={handleClose}
       zClass="z-40"
       backdropClassName="bg-black/40"
-      panelClassName="w-full max-w-lg"
+      panelClassName="w-full max-w-[min(94vw,44rem)] 2xl:max-w-[min(90vw,52rem)]"
       lockBodyScroll
       dialogProps={{ 'aria-label': popup.title }}
     >
-      <div className="relative rounded-2xl bg-white shadow-2xl overflow-hidden">
+      <div className="relative rounded-2xl bg-white shadow-2xl 2xl:rounded-3xl">
         <button
           type="button"
           onClick={handleClose}
-          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-red-500 hover:text-white hover:shadow-md hover:scale-105"
+          className="absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md transition hover:scale-105 hover:bg-red-500 hover:text-white hover:shadow-lg 2xl:right-4 2xl:top-4 2xl:h-11 2xl:w-11"
           aria-label="Закрыть уведомление"
         >
-          <span className="text-lg leading-none">&times;</span>
+          <span className="text-lg leading-none 2xl:text-xl">&times;</span>
         </button>
         {popup.imageUrl && (
-          <div className="relative h-40 w-full">
+          <div className="relative h-44 w-full overflow-hidden rounded-t-2xl sm:h-48 2xl:h-60 2xl:rounded-t-3xl 3xl:h-64">
             <Image
               src={popup.imageUrl}
               alt={popup.title}
@@ -143,17 +143,17 @@ export function HomePopupClient({ popup }: HomePopupClientProps) {
             />
           </div>
         )}
-        <div className="p-5 space-y-3">
-          <h2 className="text-lg font-semibold text-gray-900">{popup.title}</h2>
+        <div className="space-y-3 p-5 sm:p-6 2xl:space-y-4 2xl:p-8">
+          <h2 className="text-lg font-semibold text-gray-900 sm:text-xl 2xl:text-2xl">{popup.title}</h2>
           {plainText && (
-            <p className="text-sm text-gray-700 whitespace-pre-line">{plainText}</p>
+            <p className="whitespace-pre-line text-sm text-gray-700 sm:text-base 2xl:text-lg">{plainText}</p>
           )}
           {popup.ctaLabel && popup.ctaUrl && (
             <div className="pt-2 flex justify-center">
               <Link
                 href={popup.ctaUrl}
                 onClick={handleClose}
-                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-action-blue transition-colors"
+                className="desktop-button-scale inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-action-blue"
               >
                 {popup.ctaLabel}
               </Link>

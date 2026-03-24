@@ -24,7 +24,7 @@ interface BreadcrumbsProps {
  */
 export function Breadcrumbs({ items }: BreadcrumbsProps) {
   return (
-    <Breadcrumb className="text-sm text-gray-500 pt-4 pb-1">
+    <Breadcrumb className="pb-1 pt-4 text-sm text-gray-500 2xl:text-base 3xl:text-lg">
       <BreadcrumbList className="text-inherit">
         {items.map((item, index) => {
           const isLast = index === items.length - 1
@@ -35,19 +35,19 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
                   <BreadcrumbLink asChild>
                     <Link
                       href={item.href}
-                      className="hover:text-action-blue transition-colors hover:no-underline"
+                      className="desktop-microtext-scale min-h-[32px] inline-flex items-center hover:text-action-blue transition-colors hover:no-underline"
                     >
                       {item.label}
                     </Link>
                   </BreadcrumbLink>
                 ) : (
-                  <BreadcrumbPage className="text-text font-medium">
+                  <BreadcrumbPage className="desktop-microtext-scale text-text font-medium">
                     {item.label}
                   </BreadcrumbPage>
                 )}
               </BreadcrumbItem>
               {index < items.length - 1 && (
-                <BreadcrumbSeparator className="mx-2 [&>svg]:hidden">
+                <BreadcrumbSeparator className="mx-2 desktop-microtext-scale [&>svg]:hidden">
                   /
                 </BreadcrumbSeparator>
               )}

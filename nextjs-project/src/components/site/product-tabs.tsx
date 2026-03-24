@@ -90,28 +90,40 @@ interface ProductTabsProps {
 
 export function ProductTabs({ tabs, className }: ProductTabsProps) {
   if (tabs.length === 0) return null;
+  const shouldShowSwipeHint = tabs.length > 2
 
   return (
-    <section className={cn('mt-12 pt-8 border-t border-gray-200 dark:border-gray-700', className)}>
+    <section
+      className={cn(
+        'mt-8 border-t border-gray-200 pt-6 dark:border-gray-700 sm:mt-12 sm:pt-8',
+        className
+      )}
+    >
       <Tabs defaultValue="tab-0" className="w-full">
-        <TabsList className="w-full justify-start rounded-none border-b border-transparent bg-transparent p-0 h-auto gap-x-1 [&>button]:rounded-none [&>button]:border-b-2 [&>button]:border-transparent [&>button]:bg-transparent [&>button]:shadow-none data-[state=active]:border-action-blue data-[state=active]:text-action-blue data-[state=active]:bg-transparent">
-          {tabs.map((tab, index) => (
-            <TabsTrigger
-              key={tab.title}
-              value={`tab-${index}`}
-              className="rounded-none border-b-2 border-transparent -mb-px px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:border-action-blue data-[state=active]:text-action-blue data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              {tab.title}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="relative">
+          <TabsList className="h-auto w-full justify-start gap-x-1 overflow-x-auto border-b border-transparent bg-transparent p-0 whitespace-nowrap rounded-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&>button]:rounded-none [&>button]:border-b-2 [&>button]:border-transparent [&>button]:bg-transparent [&>button]:shadow-none data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue">
+            {tabs.map((tab, index) => (
+              <TabsTrigger
+                key={tab.title}
+                value={`tab-${index}`}
+                className="-mb-px shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 sm:px-4 data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue data-[state=active]:shadow-none"
+              >
+                {tab.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-linear-to-l from-white via-white/90 to-transparent dark:from-gray-950 dark:via-gray-950/90 sm:hidden" />
+        </div>
+        {shouldShowSwipeHint && (
+          <p className="mt-1 text-xs text-gray-500 sm:hidden">Свайпните вкладки влево/вправо</p>
+        )}
         {tabs.map((tab, index) => (
           <TabsContent
             key={tab.title}
             value={`tab-${index}`}
             className="mt-4 focus-visible:outline-none"
           >
-            <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 prose-ul:my-2 prose-li:my-0">
+            <div className="prose prose-sm max-w-none text-gray-600 dark:text-gray-300 prose-ul:my-2 prose-li:my-0 leading-relaxed">
               <TabContent text={tab.content} />
             </div>
           </TabsContent>

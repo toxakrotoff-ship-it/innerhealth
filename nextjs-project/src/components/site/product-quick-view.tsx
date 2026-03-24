@@ -146,12 +146,12 @@ export function ProductQuickView({
                       discountPrice={discountPrice}
                       disabled={isUnavailable}
                       size="sm"
-                      className="w-full"
+                      className="desktop-button-scale w-full"
                     />
                     <Link
                       href={detailHref}
                       onClick={() => setOpen(false)}
-                      className="inline-flex w-full items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text hover:border-action-blue hover:text-action-blue transition-colors"
+                      className="desktop-secondary-button-scale inline-flex w-full items-center justify-center rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text transition-colors hover:border-action-blue hover:text-action-blue"
                     >
                       Подробнее
                     </Link>
@@ -172,14 +172,14 @@ export function ProductQuickView({
         onClick={() => setOpen(true)}
         className={
           iconOnly
-            ? 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 hover:border-action-blue hover:text-action-blue transition-colors'
-            : 'inline-flex shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors'
+            ? 'inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 transition-colors hover:border-action-blue hover:text-action-blue 2xl:h-11 2xl:w-11 3xl:h-12 3xl:w-12'
+            : 'desktop-secondary-button-scale inline-flex shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-text font-medium text-sm px-3 py-2 min-h-[36px] hover:bg-gray-50 hover:border-action-blue hover:text-action-blue transition-colors'
         }
         aria-label="Быстрый просмотр"
         title="Быстрый просмотр"
       >
         {iconOnly ? (
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <svg className="h-4 w-4 2xl:h-5 2xl:w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M1.5 12s3.75-6 10.5-6 10.5 6 10.5 6-3.75 6-10.5 6-10.5-6-10.5-6z" stroke="currentColor" strokeWidth="1.5" />
             <circle cx="12" cy="12" r="3.25" stroke="currentColor" strokeWidth="1.5" />
           </svg>

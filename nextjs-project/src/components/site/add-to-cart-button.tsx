@@ -64,8 +64,8 @@ export function AddToCartButton({
         disabled
           ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
           : 'bg-action-blue text-gray-800 hover:bg-action-blue/90',
-        size === 'default' && 'w-full sm:w-auto px-8 py-3 min-h-[44px]',
-        size === 'sm' && 'w-full sm:w-auto px-4 py-2 text-sm min-h-[36px]',
+        size === 'default' && 'w-full sm:w-auto px-8 py-3 min-h-[44px] 2xl:min-h-[50px] 2xl:text-base 3xl:min-h-[56px] 3xl:px-10',
+        size === 'sm' && 'w-full sm:w-auto px-4 py-2 text-sm min-h-[36px] 2xl:min-h-[42px] 2xl:text-base 3xl:min-h-[48px] 3xl:px-5',
         className
       )}
     >

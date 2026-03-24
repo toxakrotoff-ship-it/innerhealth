@@ -211,14 +211,14 @@ export default async function HomePage() {
                   <Heading2 className="font-semibold tracking-tighter text-slate-900">
                     Новинки ассортимента
                   </Heading2>
-                  <p className="text-slate-500 text-sm font-semibold max-w-md">
+                  <p className="max-w-md text-sm font-semibold text-slate-500 2xl:text-base 3xl:text-lg">
                     {newSubtitle?.text ??
                       'Самые актуальные разработки для вашего здоровья и энергии'}
                   </p>
                 </div>
                 <Link
                   href="/catalog"
-                  className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0"
+                  className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm"
                 >
                   СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
                 </Link>
@@ -252,12 +252,13 @@ export default async function HomePage() {
                   cols={Math.min(2, newProducts.length || 1)}
                   colsTablet={Math.min(3, newProducts.length || 1)}
                   colsDesktop={Math.min(4, newProducts.length || 1)}
-                  colsXl={4}
-                  cols2xl={4}
-                  cols3xl={4}
-                  cols4xl={4}
-                  gap={4}
-                  adaptiveGap
+                  colsXl={5}
+                  cols2xl={5}
+                  cols3xl={6}
+                  cols4xl={6}
+                  gap="6"
+                  adaptiveGap={false}
+                  className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
                   justify={newProducts.length < 4 ? 'center' : 'start'}
                 >
                   {newProducts.map((p, index) => (
@@ -289,11 +290,11 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-              <p className="text-slate-500 text-sm font-light">
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
                 {newsSubtitle?.text ?? 'Актуальные события и обновления'}
               </p>
             </div>
-            <Link href="/news" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
               ВСЕ НОВОСТИ
               <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
@@ -304,6 +305,10 @@ export default async function HomePage() {
                 cols={1}
                 colsTablet={2}
                 colsDesktop={3}
+                colsXl={3}
+                cols2xl={3}
+                cols3xl={3}
+                cols4xl={3}
                 gap={4}
                 adaptiveGap
               >
@@ -314,7 +319,7 @@ export default async function HomePage() {
                     className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
                   >
                     <TiltCard>
-                      <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
                         {post.previewImage && (
                           <>
                             <Image
@@ -331,7 +336,7 @@ export default async function HomePage() {
                           </>
                         )}
                         <div className="relative z-10 space-y-2 max-w-xs">
-                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900">
+                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
                             Новость
                           </span>
                           <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
@@ -363,7 +368,7 @@ export default async function HomePage() {
               <Heading2 className="font-semibold tracking-tighter text-slate-900">
                 Разделы каталога
               </Heading2>
-              <p className="text-slate-500 text-sm font-light">
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
                 {catalogSubtitle?.text ??
                   'Выберите категорию для быстрого поиска нужного продукта'}
               </p>
@@ -377,6 +382,10 @@ export default async function HomePage() {
               cols={2}
               colsTablet={3}
               colsDesktop={3}
+              colsXl={3}
+              cols2xl={3}
+              cols3xl={3}
+              cols4xl={3}
               gap={4}
               adaptiveGap
             >
@@ -391,7 +400,7 @@ export default async function HomePage() {
                   >
                     <TiltCard>
                       <div
-                        className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${!bgImage ? 'bg-soft-background' : ''}`}
+                        className={`desktop-card-scale relative flex flex-col items-center justify-center overflow-hidden rounded-2xl text-center ${!bgImage ? 'bg-soft-background' : ''}`}
                       >
                         {bgImage && (
                           <>
@@ -409,12 +418,12 @@ export default async function HomePage() {
                           </>
                         )}
                         <span
-                          className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${bgImage ? 'text-white' : 'text-text'}`}
+                          className={`relative z-10 block text-lg font-medium drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${bgImage ? 'text-white' : 'text-text'}`}
                         >
                           {cat.title}
                         </span>
                         <span
-                          className={`relative z-10 text-sm drop-shadow mt-1 ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                          className={`relative z-10 mt-1 text-sm drop-shadow 2xl:text-base ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
                         >
                           {cat._count.products} товаров
                         </span>
@@ -428,7 +437,7 @@ export default async function HomePage() {
           <div className="mt-8 text-center">
             <Link
               href="/catalog"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 text-white font-semibold text-sm px-8 py-4 hover:bg-action-blue transition-colors"
+              className="desktop-button-scale inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue 2xl:text-base 3xl:px-10 3xl:py-5"
             >
               СМОТРЕТЬ ВЕСЬ КАТАЛОГ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
@@ -443,11 +452,11 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
-              <p className="text-slate-500 text-sm font-light">
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
                 {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
               </p>
             </div>
-            <Link href="/informaciya" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+            <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
               ВСЕ СТАТЬИ
               <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
@@ -458,6 +467,10 @@ export default async function HomePage() {
                 cols={1}
                 colsTablet={2}
                 colsDesktop={3}
+                colsXl={3}
+                cols2xl={3}
+                cols3xl={3}
+                cols4xl={3}
                 gap={4}
                 adaptiveGap
               >
@@ -468,7 +481,7 @@ export default async function HomePage() {
                     className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
                   >
                     <TiltCard>
-                      <div className="relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden bg-soft-background">
+                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
                         {post.previewImage && (
                           <>
                             <Image
@@ -485,7 +498,7 @@ export default async function HomePage() {
                           </>
                         )}
                         <div className="relative z-10 space-y-2 max-w-xs">
-                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900">
+                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
                             Статья
                           </span>
                           <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
@@ -511,11 +524,11 @@ export default async function HomePage() {
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
               <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
-              <p className="text-slate-500 text-sm font-light">
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
                 {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
               </p>
             </div>
-            <Link href="/otzyvy" className="text-xs font-semibold tracking-widest uppercase text-action-blue flex items-center gap-2 hover:gap-3 transition-all shrink-0">
+            <Link href="/otzyvy" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
               ВСЕ ОТЗЫВЫ <ChevronRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>

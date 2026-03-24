@@ -3,13 +3,13 @@
 /* Адаптивные CSS-переменные из системы токенов */
 :root {
   /* Контейнеры */
-  --container-default: min(90rem, 92vw);
-  --container-xl: min(100rem, 90vw);
-  --container-2xl: min(110rem, 85vw);
-  --container-3xl: min(120rem, 80vw);
-  --container-4xl: min(140rem, 75vw);
-  --container-5xl: min(180rem, 70vw);
-  --container-6xl: min(240rem, 65vw);
+  --container-default: 92vw;
+  --container-xl: min(92vw, 240vh);
+  --container-2xl: min(92vw, 235vh);
+  --container-3xl: min(92vw, 225vh);
+  --container-4xl: min(92vw, 215vh);
+  --container-5xl: min(92vw, 205vh);
+  --container-6xl: min(92vw, 195vh);
 
   /* Коэффициенты масштабирования */
   --scale-base: 1;
@@ -71,7 +71,9 @@ html.preloader-skip .preloader-overlay {
   /* Фиксированный базовый размер шрифта для предотвращения конфликтов адаптивного clamp.
      Адаптивное масштабирование реализуется через медиа-запросы и tailwind config. */
   html {
-    font-size: 16px;
+    font-size: clamp(16px, calc(0.2vw + 0.14vh + 13.6px), 22px);
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
@@ -91,10 +93,10 @@ html.preloader-skip .preloader-overlay {
     overflow-x: hidden;
   }
 
-  /* Масштабирование для очень больших экранов (выше 1920px) */
-  @media (min-width: 1920px) {
+  /* Дополнительный буст типографики для широких экранов с низким DPI. */
+  @media (min-width: 1920px) and (max-resolution: 1.25dppx) {
     html {
-      font-size: 18px;
+      font-size: clamp(19px, calc(0.26vw + 0.22vh + 14px), 26px);
     }
   }
 
@@ -120,6 +122,19 @@ html.preloader-skip .preloader-overlay {
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --transition-fast: 150ms ease-in-out;
+    --desktop-ui-scale: 1;
+  }
+
+  @media (min-width: 1440px) {
+    :root {
+      --desktop-ui-scale: 1.15;
+    }
+  }
+
+  @media (min-width: 1920px) and (max-resolution: 1.25dppx) {
+    :root {
+      --desktop-ui-scale: 1.35;
+    }
   }
 }
 
@@ -520,7 +535,7 @@ html.preloader-skip .preloader-overlay {
        Гарантирует, что текст всегда помещается в родительский блок без переносов
        (упор на игру размером шрифта, а не переносы)
     */
-    font-size: clamp(1.1rem, 3vw + 0.6rem, 3rem);
+    font-size: clamp(1.35rem, 2.6vw + 0.8rem, 4.5rem);
     line-height: 1.05;
     display: flex;
     flex-direction: column;
@@ -534,8 +549,30 @@ html.preloader-skip .preloader-overlay {
   }
 
   .text-fluid-subtitle {
-    font-size: clamp(1rem, 1.5vw + 0.5rem, 1.5rem);
-    line-height: 1.6;
+    font-size: clamp(1rem, 0.8vw + 0.75rem, 1.85rem);
+    line-height: 1.55;
+  }
+
+  .desktop-card-scale {
+    min-height: clamp(180px, calc(16vh + 6vw), 360px);
+    padding: clamp(1rem, calc(0.65vw + 0.5vh), 2rem);
+  }
+
+  .desktop-button-scale {
+    font-size: calc(0.875rem * var(--desktop-ui-scale));
+    min-height: clamp(2.5rem, calc(2.2vh + 1.6rem), 3.6rem);
+    padding-inline: clamp(1rem, calc(0.8vw + 0.4vh), 2.4rem);
+  }
+
+  .desktop-secondary-button-scale {
+    font-size: calc(0.84rem * var(--desktop-ui-scale));
+    min-height: clamp(2.35rem, calc(2vh + 1.5rem), 3.4rem);
+    padding-inline: clamp(0.9rem, calc(0.7vw + 0.35vh), 2rem);
+  }
+
+  .desktop-microtext-scale {
+    font-size: clamp(0.78rem, calc(0.38vw + 0.24vh), 1.2rem);
+    line-height: 1.35;
   }
 
   /* Адаптивные максимальные ширины для текста */

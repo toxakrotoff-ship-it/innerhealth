@@ -64,7 +64,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
       : 'font-light'
 
   const badgeClassName =
-    'inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium tracking-wide'
+    'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide sm:text-sm 2xl:px-4 2xl:py-1.5 2xl:text-base 3xl:px-5 3xl:py-2'
 
   /** Подсвечивает слово внутри строки (первое вхождение, без учёта регистра). */
   function renderLineWithHighlight(line: string) {
@@ -92,14 +92,14 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
     >
       <AdaptiveContainer
         maxWidth="default"
-        className="relative w-full grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 xl:gap-16 2xl:gap-20 items-center z-10 overflow-x-hidden"
+        className="relative z-10 grid w-full items-center gap-6 overflow-x-hidden sm:gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16 2xl:gap-20 3xl:gap-24"
       >
         <ScrollReveal
           as="div"
           variant="fade-up"
-          className="max-w-full px-4 sm:px-0 sm:max-w-xl lg:max-w-2xl xl:max-w-3xl space-y-4 sm:space-y-6 lg:space-y-8 py-6 sm:py-8 lg:py-12 min-h-0"
+          className="min-h-0 max-w-full space-y-4 px-4 py-6 sm:max-w-xl sm:space-y-6 sm:px-0 sm:py-8 lg:max-w-2xl lg:space-y-8 lg:py-12 xl:max-w-3xl 3xl:max-w-4xl"
         >
-          <div className={badgeClassName}>
+          <div className={`${badgeClassName} 3xl:text-sm 3xl:px-4 3xl:py-1.5`}>
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
             {badgeText}
           </div>
@@ -117,17 +117,17 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
           >
             {subtitleText}
           </p>
-          <div className="flex flex-wrap gap-4 pt-4">
+          <div className="flex flex-wrap gap-3 pt-4 sm:gap-4 3xl:gap-5">
             <Link
               href="/catalog"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-slate-900 rounded-full text-sm font-semibold hover:bg-blue-50 transition-all"
+              className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-blue-50 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
             >
               ПЕРЕЙТИ В КАТАЛОГ
               <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
             </Link>
             <Link
               href="/informaciya"
-              className="px-8 py-4 bg-transparent border border-white/20 rounded-full text-sm font-semibold hover:bg-white/5 transition-all"
+              className="desktop-button-scale rounded-full border border-white/20 bg-transparent px-7 py-3 text-sm font-semibold transition-all hover:bg-white/5 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
             >
               НАШИ СЕРТИФИКАТЫ
             </Link>

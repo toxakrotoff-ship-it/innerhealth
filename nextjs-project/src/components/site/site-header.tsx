@@ -14,7 +14,7 @@ const WHATSAPP_URL = 'https://wa.me/79891039192'
 const TELEGRAM_URL = 'https://t.me/innerhealth_ih'
 
 const headerIconLink =
-  'p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0'
+  'rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2'
 
 /**
  * Заголовок сайта с адаптивной поддержкой экранов до 5K+ (5120px).
@@ -98,12 +98,12 @@ export async function SiteHeader() {
               href={`tel:${PHONE.replace(/\s|\(|\)|-/g, '')}`}
               className={`
                 font-medium text-slate-900 hover:text-slate-700
-                text-xs 2xl:text-sm 3xl:text-base 4xl:text-lg 5xl:text-xl 6xl:text-2xl
+                text-sm 2xl:text-base 3xl:text-lg 4xl:text-xl 5xl:text-2xl 6xl:text-3xl
               `}
             >
               {PHONE}
             </a>
-            <span className="text-2xs 2xl:text-xs 3xl:text-sm text-slate-400 uppercase tracking-tighter">
+            <span className="desktop-microtext-scale text-slate-400 uppercase tracking-tighter">
               Ежедневно 9:00 — 21:00
             </span>
           </div>
