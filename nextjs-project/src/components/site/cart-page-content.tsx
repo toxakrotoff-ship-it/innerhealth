@@ -23,6 +23,7 @@ import {
 import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
+import { getNextTariff } from '@/lib/cdek-tariff'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
 
@@ -299,30 +300,38 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
       if (!resDoor.ok) throw new Error(dataDoor.error ?? 'Ошибка расчёта до двери')
       const tariffsPvz = dataPvz.tariffs ?? []
       const tariffsDoor = dataDoor.tariffs ?? []
-      if (tariffsPvz.length > 0) {
-        const t = tariffsPvz[0]
-        setPvzTariff({
-          deliverySum: t.deliverySum,
-          periodMin: t.periodMin,
-          periodMax: t.periodMax,
-          tariffCode: t.tariffCode,
+      const mappedTariffsPvz: CdekTariffSummary[] = tariffsPvz.map((t: CdekTariffSummary) => ({
+        deliverySum: t.deliverySum,
+        periodMin: t.periodMin,
+        periodMax: t.periodMax,
+        tariffCode: t.tariffCode,
+      }))
+      const mappedTariffsDoor: CdekTariffSummary[] = tariffsDoor.map((t: CdekTariffSummary) => ({
+        deliverySum: t.deliverySum,
+        periodMin: t.periodMin,
+        periodMax: t.periodMax,
+        tariffCode: t.tariffCode,
+      }))
+      setPvzTariff((prev) =>
+        getNextTariff({
+          currentTariff: prev,
+          nextTariffs: mappedTariffsPvz,
+          preserveCurrentOnEmpty: hasWidgetTariffSelection && deliveryMethod === 'cdek_pvz',
         })
-      } else setPvzTariff(null)
-      if (tariffsDoor.length > 0) {
-        const t = tariffsDoor[0]
-        setDoorTariff({
-          deliverySum: t.deliverySum,
-          periodMin: t.periodMin,
-          periodMax: t.periodMax,
-          tariffCode: t.tariffCode,
+      )
+      setDoorTariff((prev) =>
+        getNextTariff({
+          currentTariff: prev,
+          nextTariffs: mappedTariffsDoor,
+          preserveCurrentOnEmpty: hasWidgetTariffSelection && deliveryMethod === 'cdek_door',
         })
-      } else setDoorTariff(null)
+      )
     } catch (e) {
       setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта доставки')
     } finally {
       setCalculationLoading(false)
     }
-  }, [cityCode, items, brandId, selectedPvz?.code])
+  }, [cityCode, items, brandId, selectedPvz?.code, hasWidgetTariffSelection, deliveryMethod])
 
   useEffect(() => {
     if (!usingSavedAddress || !selectedSavedAddressId) return
@@ -423,7 +432,6 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
       setDeliveryPointsLoading(true)
       setDeliveryPoints([])
       setDeliveryPointsError(null)
-      setSelectedPvz(null)
       fetch(`/api/cdek/deliverypoints?cityCode=${cityCode}&type=PVZ&size=50`)
         .then(async (r) => {
           const data = await r.json()
