@@ -8,6 +8,8 @@ interface AdminBrandSwitcherProps {
   activeBrand: BrandId;
 }
 
+const ACTIVE_BRAND_COOKIE_NAME = 'ih_active_brand';
+
 function buildBrandHref(adminBasePath: string, pathname: string, targetBrand: BrandId): string {
   const adminPrefix = `/${adminBasePath}`;
   if (!pathname.startsWith(adminPrefix)) {
@@ -23,6 +25,13 @@ function buildBrandHref(adminBasePath: string, pathname: string, targetBrand: Br
 
   const restPath = restSegments.length > 0 ? `/${restSegments.join('/')}` : '';
   return `${adminPrefix}/${targetBrand}${restPath}`;
+}
+
+function setActiveBrandCookie(brandId: BrandId): void {
+  // API routes resolve brand from cookie `ih_active_brand`.
+  // We keep it non-HttpOnly so client-side brand switching works.
+  const encoded = encodeURIComponent(brandId);
+  document.cookie = `${ACTIVE_BRAND_COOKIE_NAME}=${encoded}; Path=/; Max-Age=31536000; SameSite=Lax`;
 }
 
 export function AdminBrandSwitcher({ adminBasePath, activeBrand }: AdminBrandSwitcherProps) {
@@ -44,6 +53,7 @@ export function AdminBrandSwitcher({ adminBasePath, activeBrand }: AdminBrandSwi
             onClick={(event) => {
               // Force full page reload when switching brand to reset all client state.
               event.preventDefault();
+              setActiveBrandCookie(brand.id);
               window.location.assign(href);
             }}
             className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
