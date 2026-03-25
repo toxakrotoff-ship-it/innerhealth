@@ -548,6 +548,7 @@ model QuickOrder {
 
 model ContentBlock {
   id          String   @id @default(cuid())
+  brand       String   @default("inner")
   /// Идентификатор страницы: 'home', 'about', 'contacts', 'footer' и т.п.
   page        String
   /// Ключ блока: 'hero.badge', 'hero.title', 'home.news.subtitle' и т.п.
@@ -569,7 +570,8 @@ model ContentBlock {
   /// Жирность шрифта: thin, light, normal, medium, semibold, bold, extrabold
   fontWeight  String?
 
-  @@unique([page, key])
+  @@unique([brand, page, key])
+  @@index([brand, page])
 }
 
 model SitePopup {
