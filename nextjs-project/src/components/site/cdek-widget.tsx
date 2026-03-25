@@ -182,18 +182,6 @@ export function CdekWidget({ brandId, items, onChoose, onCalculate }: CdekWidget
         <div className="text-sm text-gray-600">Загружаем виджет СДЭК…</div>
       ) : null}
       <div id={rootId} style={{ height: 650, width: '100%' }} />
-      <div className="text-xs text-gray-500">
-        Виджет использует Яндекс.Карты и требует ключ `NEXT_PUBLIC_YANDEX_MAPS_API_KEY`. См.{' '}
-        <a
-          className="underline"
-          href="https://github.com/cdek-it/widget/wiki/%D0%A3%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-3.0"
-          target="_blank"
-          rel="noreferrer"
-        >
-          инструкцию
-        </a>
-        .
-      </div>
     </div>
   )
 }
