@@ -237,7 +237,12 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
         : 0
   // Итого к оплате = (сумма товаров со скидкой) + доставка; доставка всегда без скидки
   const totalWithDelivery = total + deliverySum
-  const cityCode = selectedCity?.code ?? (selectedCity as { city_code?: number } | null)?.city_code
+  const selectedDeliveryTariff = deliveryMethod === 'cdek_pvz' ? pvzTariff : doorTariff
+  const rawCityCode = selectedCity?.code ?? (selectedCity as { city_code?: number } | null)?.city_code
+  const cityCode =
+    typeof rawCityCode === 'number' && Number.isFinite(rawCityCode) && rawCityCode > 0
+      ? rawCityCode
+      : null
 
   const applySavedAddress = useCallback(
     (addressId: string) => {
@@ -736,12 +741,18 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
               setPvzTariff(officeTariff ?? null)
               setDoorTariff(doorTariff ?? null)
             }}
+            onModeChange={(method) => {
+              setDeliveryMethod(method)
+            }}
             onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
               setHasWidgetTariffSelection(true)
               setDeliveryMethod(method)
-              if (cdekCityCode != null || cdekCity) {
+              if (
+                (typeof cdekCityCode === 'number' && Number.isFinite(cdekCityCode) && cdekCityCode > 0) ||
+                cdekCity
+              ) {
                 setSelectedCity((prev) => ({
-                  code: cdekCityCode ?? prev?.code ?? 0,
+                  code: cdekCityCode ?? prev?.code ?? Number.NaN,
                   city: cdekCity ?? prev?.city,
                   region: prev?.region,
                   country: prev?.country,
@@ -1022,13 +1033,11 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
                       Доставка СДЭК ({deliveryMethod === 'cdek_pvz' ? 'до ПВЗ' : 'до двери'})
                     </span>
                     <span>
-                      {cityCode == null
-                        ? '—'
+                      {selectedDeliveryTariff?.deliverySum != null
+                        ? `${selectedDeliveryTariff.deliverySum.toLocaleString('ru-RU')} ₽`
                         : calculationLoading
                           ? '…'
-                          : deliveryError
-                            ? '—'
-                            : `${deliverySum.toLocaleString('ru-RU')} ₽`}
+                          : `${deliverySum.toLocaleString('ru-RU')} ₽`}
                     </span>
                   </div>
                   {cityCode != null && !calculationLoading && !deliveryError && (

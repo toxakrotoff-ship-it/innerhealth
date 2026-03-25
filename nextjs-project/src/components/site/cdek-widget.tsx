@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BrandId } from '@/lib/brand/brand'
+import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import type { CartLine } from '@/store/cart-store'
 
 declare global {
@@ -42,6 +43,7 @@ interface CdekWidgetProps {
     office: Array<{ tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }>
     door: Array<{ tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }>
   }) => void
+  onModeChange?: (deliveryMethod: 'cdek_pvz' | 'cdek_door') => void
 }
 
 type WidgetConfigResponse = {
@@ -105,19 +107,23 @@ export function CdekWidget({
   selected,
   onChoose,
   onCalculate,
+  onModeChange,
 }: CdekWidgetProps) {
   const [instanceKey, setInstanceKey] = useState<string>(() => Math.random().toString(16).slice(2))
   const rootId = useMemo(() => `cdek-widget-${instanceKey}`, [instanceKey])
   const widgetRef = useRef<unknown>(null)
   const onChooseRef = useRef<CdekWidgetProps['onChoose']>(onChoose)
   const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
+  const onModeChangeRef = useRef<CdekWidgetProps['onModeChange']>(onModeChange)
+  const lastKnownModeRef = useRef<'cdek_pvz' | 'cdek_door' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     onChooseRef.current = onChoose
     onCalculateRef.current = onCalculate
-  }, [onChoose, onCalculate])
+    onModeChangeRef.current = onModeChange
+  }, [onChoose, onCalculate, onModeChange])
 
   useEffect(() => {
     function reinitWidget() {
@@ -145,6 +151,7 @@ export function CdekWidget({
 
   useEffect(() => {
     let cancelled = false
+    let removeRootInteractionListeners: (() => void) | null = null
 
     async function run() {
       setError(null)
@@ -223,6 +230,8 @@ export function CdekWidget({
         },
         onChoose(mode: unknown, tariff: unknown, address: unknown) {
           const m = mode === 'office' ? 'cdek_pvz' : 'cdek_door'
+          lastKnownModeRef.current = m
+          onModeChangeRef.current?.(m)
           const t = tariff as Record<string, unknown>
           const a = address as Record<string, unknown>
           const cityCodeRaw = a.city_code ?? a.code
@@ -248,6 +257,39 @@ export function CdekWidget({
           })
         },
       })
+
+      const rootEl = document.getElementById(rootId)
+      if (!rootEl) return
+
+      const syncMode = (mode: 'cdek_pvz' | 'cdek_door') => {
+        if (lastKnownModeRef.current === mode) return
+        lastKnownModeRef.current = mode
+        onModeChangeRef.current?.(mode)
+      }
+
+      const detectModeFromEvent = (event: Event): 'cdek_pvz' | 'cdek_door' | null => {
+        const eventPath = typeof event.composedPath === 'function' ? event.composedPath() : []
+        for (const node of eventPath) {
+          if (!(node instanceof HTMLElement)) continue
+          if (!rootEl.contains(node)) continue
+          const mode = detectCdekWidgetModeFromText(node.textContent ?? '')
+          if (mode) return mode
+          if (node === rootEl) break
+        }
+        return null
+      }
+
+      const handleRootInteraction = (event: Event) => {
+        const mode = detectModeFromEvent(event)
+        if (mode) syncMode(mode)
+      }
+
+      rootEl.addEventListener('pointerdown', handleRootInteraction, true)
+      rootEl.addEventListener('click', handleRootInteraction, true)
+      removeRootInteractionListeners = () => {
+        rootEl.removeEventListener('pointerdown', handleRootInteraction, true)
+        rootEl.removeEventListener('click', handleRootInteraction, true)
+      }
     }
 
     run().catch((e) => {
@@ -257,6 +299,7 @@ export function CdekWidget({
 
     return () => {
       cancelled = true
+      removeRootInteractionListeners?.()
       widgetRef.current = null
       const rootEl = document.getElementById(rootId)
       if (rootEl) rootEl.innerHTML = ''
