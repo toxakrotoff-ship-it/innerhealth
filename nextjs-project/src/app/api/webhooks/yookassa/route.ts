@@ -3,6 +3,7 @@ import { createCdekOrder } from '@/lib/cdek'
 import { getYookassaPayment } from '@/lib/yookassa'
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
+import { sendCustomerOrderPaidEmail } from '@/lib/email'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
 
@@ -141,6 +142,36 @@ export async function POST(request: Request) {
       if (lastError) {
         await orderService.updateOrder(orderId, { cdekOrderError: lastError })
         console.error('[webhook/yookassa] CDEK order create failed after retries', orderId, lastError)
+      }
+
+      // Customer "paid" email (includes CDEK track number if already known).
+      try {
+        const paidOrder = await orderService.findOrderForPaidEmail(orderId)
+        if (paidOrder?.shippingInfo?.email && paidOrder.shippingInfo.fullName) {
+          const username = paidOrder.shippingInfo.fullName
+          await sendCustomerOrderPaidEmail(paidOrder.shippingInfo.email, username, {
+            orderId: paidOrder.id,
+            total: paidOrder.total,
+            items: paidOrder.items.map((oi) => ({
+              title: oi.product.title,
+              quantity: oi.quantity,
+              price: oi.price,
+            })),
+            shipping: {
+              fullName: paidOrder.shippingInfo.fullName,
+              phone: paidOrder.shippingInfo.phone,
+              email: paidOrder.shippingInfo.email,
+              address: paidOrder.shippingInfo.address,
+              city: paidOrder.shippingInfo.city,
+              zipCode: paidOrder.shippingInfo.zipCode,
+              country: paidOrder.shippingInfo.country ?? 'Россия',
+            },
+            promoCode: paidOrder.promoCode?.code ?? null,
+            cdekTrackNumber: paidOrder.cdekTrackNumber ?? null,
+          })
+        }
+      } catch (e) {
+        console.warn('[webhook/yookassa] paid email failed', orderId, e instanceof Error ? e.message : String(e))
       }
     }
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {

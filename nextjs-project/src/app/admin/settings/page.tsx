@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { ModalLayer } from '@/components/ui/modal-layer';
+import {
+  CDEK_TARIFF_CODE_TO_DESCRIPTION,
+  CDEK_TARIFF_CODES_ADDRESS,
+  CDEK_TARIFF_CODES_PVZ,
+} from '@/lib/cdek-tariff-codes';
 
 interface AdminMailbox {
   id: string;
@@ -40,6 +45,22 @@ const VAT_CODE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: '12', label: 'НДС 22/122' },
 ];
 
+const CDEK_TARIFF_CODE_OPTIONS_PVZ: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Авто (первый подходящий)' },
+  ...CDEK_TARIFF_CODES_PVZ.map((code) => {
+    const desc = CDEK_TARIFF_CODE_TO_DESCRIPTION[code]
+    return { value: String(code), label: desc ? `${code} - ${desc}` : String(code) }
+  }),
+]
+
+const CDEK_TARIFF_CODE_OPTIONS_ADDRESS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Авто (первый подходящий)' },
+  ...CDEK_TARIFF_CODES_ADDRESS.map((code) => {
+    const desc = CDEK_TARIFF_CODE_TO_DESCRIPTION[code]
+    return { value: String(code), label: desc ? `${code} - ${desc}` : String(code) }
+  }),
+]
+
 const FIELDS: Array<{
   key: string;
   label: string;
@@ -73,6 +94,16 @@ const FIELDS: Array<{
   },
   { key: 'cdek_api_key', label: 'API-ключ СДЭК (Client ID)', type: 'password', placeholder: '••••••••', group: 'cdek' },
   { key: 'cdek_client_secret', label: 'Секрет СДЭК (Client Secret)', type: 'password', placeholder: '••••••••', group: 'cdek' },
+  {
+    key: 'cdek_use_test',
+    label: 'СДЭК: режим API (prod | test)',
+    type: 'select',
+    group: 'cdek',
+    options: [
+      { value: '0', label: 'prod (боевой контур)' },
+      { value: '1', label: 'test (api.edu.cdek.ru)' },
+    ],
+  },
   { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
   { key: 'cdek_sender_phone', label: 'Телефон отправителя (СДЭК)', type: 'text', placeholder: '+7 (999) 123-45-67', group: 'cdek' },
   { key: 'cdek_sender_address', label: 'Адрес отправителя (СДЭК)', type: 'text', placeholder: 'Город, улица, дом', group: 'cdek' },
@@ -82,6 +113,20 @@ const FIELDS: Array<{
   { key: 'cdek_default_package_length_mm', label: 'Дефолтная длина посылки (СДЭК), мм', type: 'text', placeholder: '33', group: 'cdek' },
   { key: 'cdek_default_package_width_mm', label: 'Дефолтная ширина посылки (СДЭК), мм', type: 'text', placeholder: '25', group: 'cdek' },
   { key: 'cdek_default_package_height_mm', label: 'Дефолтная высота посылки (СДЭК), мм', type: 'text', placeholder: '15', group: 'cdek' },
+  {
+    key: 'cdek_preferred_tariff_code_pvz',
+    label: 'Предпочитаемый тариф СДЭК (ПВЗ) — tariff_code',
+    type: 'select',
+    group: 'cdek',
+    options: CDEK_TARIFF_CODE_OPTIONS_PVZ,
+  },
+  {
+    key: 'cdek_preferred_tariff_code_address',
+    label: 'Предпочитаемый тариф СДЭК (до двери) — tariff_code',
+    type: 'select',
+    group: 'cdek',
+    options: CDEK_TARIFF_CODE_OPTIONS_ADDRESS,
+  },
   { key: 'yookassa_shop_id', label: 'Shop ID ЮKassa', type: 'text', placeholder: 'Идентификатор магазина', group: 'yookassa' },
   { key: 'yookassa_secret_key', label: 'Секретный ключ ЮKassa', type: 'password', placeholder: '••••••••', group: 'yookassa' },
   { key: 'yookassa_term_id', label: 'Term ID ЮKassa (терминал)', type: 'text', placeholder: 'ID терминала при необходимости', group: 'yookassa' },
@@ -153,6 +198,7 @@ export default function AdminSettingsPage() {
   const [yookassaCheckResult, setYookassaCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [cdekCheckLoading, setCdekCheckLoading] = useState(false);
   const [cdekCheckResult, setCdekCheckResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [showCdekModal, setShowCdekModal] = useState(false);
   const [activeBotMode, setActiveBotMode] = useState<BotSettingsMode>('telegram');
   const [savingBotMode, setSavingBotMode] = useState<BotSettingsMode | null>(null);
   const [registeringMaxWebhook, setRegisteringMaxWebhook] = useState(false);
@@ -169,6 +215,11 @@ export default function AdminSettingsPage() {
     updateTypes?: string[];
   } | null>(null);
   const [settingsScope, setSettingsScope] = useState<SettingsScope>('global');
+  const [cdekTariffCodeToDescriptionApi, setCdekTariffCodeToDescriptionApi] = useState<
+    Record<number, string>
+  >(CDEK_TARIFF_CODE_TO_DESCRIPTION)
+  const [cdekTariffsLoading, setCdekTariffsLoading] = useState(false)
+  const [cdekTariffsError, setCdekTariffsError] = useState<string | null>(null)
 
   const scopeLabelMap: Record<SettingsScope, string> = {
     global: 'Global',
@@ -204,6 +255,62 @@ export default function AdminSettingsPage() {
     loadTelegram();
     load2FAStatus();
   }, [settingsScope]);
+
+  const parsePositiveIntOrNull = (raw: string | undefined): number | null => {
+    const trimmed = raw?.trim()
+    if (!trimmed) return null
+    const parsed = Number.parseInt(trimmed, 10)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+  }
+
+  const buildTariffOptions = (codes: number[], map: Record<number, string>): Array<{ value: string; label: string }> => [
+    { value: '', label: 'Авто (первый подходящий)' },
+    ...codes.map((code) => {
+      const desc = map[code]
+      return { value: String(code), label: desc ? `${code} - ${desc}` : String(code) }
+    }),
+  ]
+
+  const fromCityCodeValue = values.cdek_from_city_code
+
+  useEffect(() => {
+    if (!showCdekModal) return
+    if (cdekTariffsLoading) return
+
+    const run = async () => {
+      try {
+        setCdekTariffsLoading(true)
+        setCdekTariffsError(null)
+
+        const toCityCode = parsePositiveIntOrNull(fromCityCodeValue)
+        const brandQuery = settingsScope !== 'global' ? `brand=${encodeURIComponent(settingsScope)}` : ''
+        const toQuery = toCityCode != null ? `toCityCode=${encodeURIComponent(String(toCityCode))}` : ''
+        const queryParts = [brandQuery, toQuery].filter(Boolean)
+        const url = `/api/admin/cdek/tariffs${queryParts.length ? `?${queryParts.join('&')}` : ''}`
+
+        const res = await fetch(url)
+        const data = (await res.json()) as {
+          source?: string
+          pvz?: Record<number, string>
+          address?: Record<number, string>
+          error?: string
+        }
+
+        // На этом уровне нам нужен единый map для обоих select'ов.
+        setCdekTariffCodeToDescriptionApi({
+          ...CDEK_TARIFF_CODE_TO_DESCRIPTION,
+          ...(data.pvz ?? {}),
+          ...(data.address ?? {}),
+        })
+      } catch (e) {
+        setCdekTariffsError(e instanceof Error ? e.message : String(e))
+      } finally {
+        setCdekTariffsLoading(false)
+      }
+    }
+
+    void run()
+  }, [showCdekModal, settingsScope, fromCityCodeValue])
 
   async function load2FAStatus() {
     try {
@@ -363,55 +470,71 @@ export default function AdminSettingsPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form id="admin-settings-form" onSubmit={handleSubmit} className="space-y-8">
           {GROUPS.map((group) => (
             <div key={group.id} className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{group.title}</h2>
               <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
-                {(group.id === 'telegram'
-                  ? FIELDS.filter((f) => f.group === group.id).filter((field) =>
-                      BOT_MODE_FIELDS[activeBotMode].includes(field.key)
-                    )
-                  : FIELDS.filter((f) => f.group === group.id)
-                ).map((field) => (
-                  <div key={field.key}>
-                    <label htmlFor={field.key} className="block text-sm font-medium text-gray-700 mb-1">
-                      {field.label}
-                    </label>
-                    {field.type === 'select' && field.options ? (
-                      <select
-                        id={field.key}
-                        className="form-input w-full"
-                        value={(values[field.key] ?? (field.key === 'yookassa_receipt_vat_code' || field.key === 'yookassa_receipt_vat_code_delivery' ? '1' : ''))}
-                        onChange={(e) => updateValue(field.key, e.target.value)}
-                      >
-                        {field.options.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === 'textarea' ? (
-                      <textarea
-                        id={field.key}
-                        className="form-input w-full min-h-[120px] font-mono text-xs"
-                        placeholder={field.placeholder}
-                        value={values[field.key] ?? ''}
-                        onChange={(e) => updateValue(field.key, e.target.value)}
-                      />
-                    ) : (
-                      <input
-                        id={field.key}
-                        type={field.type}
-                        className="form-input w-full"
-                        placeholder={field.placeholder}
-                        value={values[field.key] ?? ''}
-                        onChange={(e) => updateValue(field.key, e.target.value)}
-                        autoComplete="off"
-                      />
-                    )}
+                {group.id === 'cdek' ? (
+                  <div className="col-span-full">
+                    <p className="text-sm text-gray-600 mb-3">
+                      Все настройки СДЭК скрыты под модальным окном (чтобы админка была компактнее).
+                    </p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowCdekModal(true)}>
+                      Открыть настройки СДЭК
+                    </Button>
                   </div>
-                ))}
+                ) : (
+                  (group.id === 'telegram'
+                    ? FIELDS.filter((f) => f.group === group.id).filter((field) =>
+                        BOT_MODE_FIELDS[activeBotMode].includes(field.key)
+                      )
+                    : FIELDS.filter((f) => f.group === group.id)
+                  ).map((field) => (
+                    <div key={field.key}>
+                      <label htmlFor={field.key} className="block text-sm font-medium text-gray-700 mb-1">
+                        {field.label}
+                      </label>
+                      {field.type === 'select' && field.options ? (
+                        <select
+                          id={field.key}
+                          className="form-input w-full"
+                          value={
+                            values[field.key] ??
+                            (field.key === 'yookassa_receipt_vat_code' || field.key === 'yookassa_receipt_vat_code_delivery'
+                              ? '1'
+                              : '')
+                          }
+                          onChange={(e) => updateValue(field.key, e.target.value)}
+                        >
+                          {field.options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === 'textarea' ? (
+                        <textarea
+                          id={field.key}
+                          className="form-input w-full min-h-[120px] font-mono text-xs"
+                          placeholder={field.placeholder}
+                          value={values[field.key] ?? ''}
+                          onChange={(e) => updateValue(field.key, e.target.value)}
+                        />
+                      ) : (
+                        <input
+                          id={field.key}
+                          type={field.type}
+                          className="form-input w-full"
+                          placeholder={field.placeholder}
+                          value={values[field.key] ?? ''}
+                          onChange={(e) => updateValue(field.key, e.target.value)}
+                          autoComplete="off"
+                        />
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
               {group.id === 'telegram' && (
                 <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
@@ -1091,6 +1214,80 @@ export default function AdminSettingsPage() {
                 </Button>
               </div>
             </div>
+        </ModalLayer>
+
+        <ModalLayer
+          open={showCdekModal}
+          onClose={() => setShowCdekModal(false)}
+          backdropClassName="bg-black/50"
+          panelClassName="max-w-3xl w-full"
+          dialogProps={{ 'aria-labelledby': 'admin-cdek-settings-title' }}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full p-6 max-h-[80vh] overflow-auto">
+            <h3 id="admin-cdek-settings-title" className="text-lg font-semibold text-gray-900 mb-2">
+              Настройки СДЭК
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              После изменений нажмите «Сохранить настройки» внизу страницы.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
+              {FIELDS.filter((f) => f.group === 'cdek').map((field) => (
+                <div key={field.key}>
+                  <label htmlFor={field.key} className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.label}
+                  </label>
+                  {field.type === 'select' ? (
+                    <select
+                      id={field.key}
+                      className="form-input w-full"
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => updateValue(field.key, e.target.value)}
+                    >
+                      {(field.key === 'cdek_preferred_tariff_code_pvz'
+                        ? buildTariffOptions(CDEK_TARIFF_CODES_PVZ, cdekTariffCodeToDescriptionApi)
+                        : field.key === 'cdek_preferred_tariff_code_address'
+                          ? buildTariffOptions(CDEK_TARIFF_CODES_ADDRESS, cdekTariffCodeToDescriptionApi)
+                          : field.options ?? []
+                      ).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.type === 'textarea' ? (
+                    <textarea
+                      id={field.key}
+                      className="form-input w-full min-h-[120px] font-mono text-xs"
+                      placeholder={field.placeholder}
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => updateValue(field.key, e.target.value)}
+                    />
+                  ) : (
+                    <input
+                      id={field.key}
+                      type={field.type}
+                      className="form-input w-full"
+                      placeholder={field.placeholder}
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => updateValue(field.key, e.target.value)}
+                      autoComplete="off"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-6 gap-2">
+              <Button
+                type="submit"
+                form="admin-settings-form"
+              >
+                {saving ? 'Сохранение…' : 'Сохранить'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setShowCdekModal(false)}>
+                Закрыть
+              </Button>
+            </div>
+          </div>
         </ModalLayer>
       </div>
     </div>

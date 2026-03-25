@@ -3,6 +3,7 @@ import { isBrandId, type BrandId } from '@/lib/brand/brand';
 export const BRAND_SCOPED_SETTING_KEYS = [
   'cdek_api_key',
   'cdek_client_secret',
+  'cdek_use_test',
   'cdek_sender_name',
   'cdek_sender_phone',
   'cdek_sender_address',
@@ -12,6 +13,8 @@ export const BRAND_SCOPED_SETTING_KEYS = [
   'cdek_default_package_length_mm',
   'cdek_default_package_width_mm',
   'cdek_default_package_height_mm',
+  'cdek_preferred_tariff_code_pvz',
+  'cdek_preferred_tariff_code_address',
   'yookassa_shop_id',
   'yookassa_secret_key',
   'yookassa_term_id',

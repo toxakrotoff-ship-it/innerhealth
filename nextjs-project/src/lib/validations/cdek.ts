@@ -23,6 +23,8 @@ export const cdekCalculatorBodySchema = z.object({
     cityCode: z.number().int().positive().optional(),
     /** Почтовый индекс (если нет cityCode) */
     postalCode: z.string().min(1).max(20).optional(),
+    /** Код ПВЗ СДЭК (например, PRO248 / MSK1125) */
+    pvzCode: z.string().min(1).max(20).optional(),
   }).refine((data) => data.cityCode != null || (data.postalCode != null && data.postalCode.trim() !== ''), {
     message: 'Укажите код города (cityCode) или почтовый индекс (postalCode)',
   }),

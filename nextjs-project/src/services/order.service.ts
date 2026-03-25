@@ -60,6 +60,39 @@ export async function findOrderWithItemsAndShippingForCdek(orderId: string) {
   });
 }
 
+/** Get order details for customer "paid" email. */
+export async function findOrderForPaidEmail(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      total: true,
+      status: true,
+      cdekTrackNumber: true,
+      promoCode: { select: { code: true } },
+      items: {
+        select: {
+          quantity: true,
+          price: true,
+          product: { select: { title: true } },
+        },
+      },
+      shippingInfo: {
+        select: {
+          fullName: true,
+          email: true,
+          phone: true,
+          address: true,
+          city: true,
+          zipCode: true,
+          country: true,
+          deliveryMethod: true,
+        },
+      },
+    },
+  });
+}
+
 /** Get order by id for admin CDEK shipment. */
 export async function findOrderForCdekShipment(orderId: string) {
   return prisma.order.findUnique({

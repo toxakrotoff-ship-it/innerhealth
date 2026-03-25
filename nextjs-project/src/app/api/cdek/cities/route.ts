@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getCdekCities } from '@/lib/cdek'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import * as settingsService from '@/services/settings.service'
 
 /**
  * GET /api/cdek/cities
@@ -8,6 +10,8 @@ import { getCdekCities } from '@/lib/cdek'
  */
 export async function GET(request: Request) {
   try {
+    const brandId = resolveBrandOrDefaultFromRequest(request)
+    const cdekCredentials = await settingsService.getCdekCredentials({ brandId })
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.trim()
     const regionCode = searchParams.get('regionCode')
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
       size: requestedSize,
       page: requestedPage,
       lang,
-    })
+    }, cdekCredentials)
 
     /** Если по запросу ничего не вернулось — запрашиваем без фильтра city и фильтруем по названию на своей стороне */
     if (q && raw.length === 0) {
@@ -36,7 +40,7 @@ export async function GET(request: Request) {
         size: 500,
         page: 0,
         lang,
-      })
+      }, cdekCredentials)
       const qLower = q.toLowerCase().trim()
       raw = all.filter((c) => {
         const r = c as unknown as Record<string, unknown>

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { searchCdekDeliveryPoints } from '@/lib/cdek'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import * as settingsService from '@/services/settings.service'
 
 /**
  * GET /api/cdek/deliverypoints
@@ -8,6 +10,8 @@ import { searchCdekDeliveryPoints } from '@/lib/cdek'
  */
 export async function GET(request: Request) {
   try {
+    const brandId = resolveBrandOrDefaultFromRequest(request)
+    const cdekCredentials = await settingsService.getCdekCredentials({ brandId })
     const { searchParams } = new URL(request.url)
     const cityCode = searchParams.get('cityCode')
     const postalCode = searchParams.get('postalCode')?.trim()
@@ -32,7 +36,7 @@ export async function GET(request: Request) {
       size: size ? Math.min(50, Math.max(1, parseInt(size, 10))) : 20,
       page: page ? Math.max(0, parseInt(page, 10)) : 0,
       lang,
-    })
+    }, cdekCredentials)
 
     const withCoords = deliveryPoints.filter(
       (p) => p.location?.latitude != null && p.location?.longitude != null

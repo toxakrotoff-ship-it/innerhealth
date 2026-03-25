@@ -2,17 +2,19 @@ import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import { checkCdekConnection } from '@/lib/cdek'
 import * as settingsService from '@/services/settings.service'
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
 
 /**
  * GET /api/admin/check-cdek
  * Проверяет подключение к API СДЭК. Учётные данные из настроек админки или из env.
  * Только для администраторов.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
-  const creds = await settingsService.getCdekCredentials()
+  const brandId = resolveBrandFromRequest(request)
+  const creds = await settingsService.getCdekCredentials({ brandId })
   if (!creds) {
     return NextResponse.json(
       {
@@ -26,11 +28,11 @@ export async function GET() {
 
   const result = await checkCdekConnection(creds)
   if (result.ok) {
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, mode: creds.useTest ? 'test' : 'prod' })
   }
   const isMissingCreds = result.error?.includes('задайте')
   return NextResponse.json(
-    { ok: false, error: result.error },
+    { ok: false, error: result.error, mode: creds.useTest ? 'test' : 'prod' },
     { status: isMissingCreds ? 400 : 502 }
   )
 }

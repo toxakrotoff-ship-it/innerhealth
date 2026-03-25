@@ -44,6 +44,7 @@ export interface CdekPvzOption {
 export type DeliveryMethod = 'cdek_pvz' | 'cdek_door' | 'pickup'
 
 interface DeliverySectionProps {
+  brandId?: string
   /** Выбранный город (для отображения и расчёта) */
   selectedCity: CdekCityOption | null
   onCitySelect: (city: CdekCityOption | null) => void
@@ -94,6 +95,7 @@ const SearchIcon = () => (
 )
 
 export function DeliverySection({
+  brandId,
   selectedCity,
   onCitySelect,
   pvzTariff,
@@ -133,7 +135,8 @@ export function DeliverySection({
     }
     setCitySearchLoading(true)
     try {
-      const res = await fetch(`/api/cdek/cities?q=${encodeURIComponent(q.trim())}&size=15`)
+      const brandQuery = brandId ? `&brand=${encodeURIComponent(brandId)}` : ''
+      const res = await fetch(`/api/cdek/cities?q=${encodeURIComponent(q.trim())}&size=15${brandQuery}`)
       const data = await res.json()
       setCitySuggestions(Array.isArray(data.cities) ? data.cities : [])
       setCitySuggestionsOpen(true)
@@ -142,7 +145,7 @@ export function DeliverySection({
     } finally {
       setCitySearchLoading(false)
     }
-  }, [])
+  }, [brandId])
 
   useEffect(() => {
     if (selectedCity) {

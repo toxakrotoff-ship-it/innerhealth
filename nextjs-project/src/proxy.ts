@@ -36,10 +36,10 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net", // Yandex Maps JS API (загрузка бандла с yastatic.net)
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
-    "font-src 'self' data:",
-    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru", // Yandex Maps API and tiles
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru", // Yandex Maps API and tiles
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

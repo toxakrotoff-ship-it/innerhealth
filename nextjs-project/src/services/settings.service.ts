@@ -14,6 +14,7 @@ import type { BrandId } from '@/lib/brand/brand'
 export const SETTING_KEYS = [
   'cdek_api_key',
   'cdek_client_secret',
+  'cdek_use_test',
   'cdek_sender_name',
   'cdek_sender_phone',
   'cdek_sender_address',
@@ -23,6 +24,8 @@ export const SETTING_KEYS = [
   'cdek_default_package_length_mm',
   'cdek_default_package_width_mm',
   'cdek_default_package_height_mm',
+  'cdek_preferred_tariff_code_pvz',
+  'cdek_preferred_tariff_code_address',
   'yookassa_shop_id',
   'yookassa_secret_key',
   'yookassa_term_id',
@@ -230,23 +233,30 @@ export async function getMaxBotSettings(options: SettingsScopeOptions = {}): Pro
 /** Ключи настроек СДЭК для OAuth (client_id + client_secret). */
 export const CDEK_CREDENTIAL_KEYS = ['cdek_api_key', 'cdek_client_secret'] as const;
 
+function parseBooleanSetting(value: string | undefined | null): boolean | null {
+  const v = (value ?? '').trim().toLowerCase()
+  if (v === '') return null
+  if (v === '0' || v === 'false' || v === 'no' || v === 'n' || v === 'off') return false
+  if (v === '1' || v === 'true' || v === 'yes' || v === 'y' || v === 'on') return true
+  return null
+}
+
 /**
- * Учётные данные СДЭК для OAuth: из настроек админки (если заданы оба поля) или из env.
+ * Учётные данные СДЭК для OAuth: только из настроек админки (SiteSetting).
+ * Важно: намеренно НЕ используем env fallback, чтобы не получить неожиданный контур/ключи.
  */
 export async function getCdekCredentials(options: SettingsScopeOptions = {}): Promise<{
   clientId: string;
   clientSecret: string;
+  useTest: boolean;
 } | null> {
-  const map = await getSettingsMap([...CDEK_CREDENTIAL_KEYS], options);
+  const map = await getSettingsMap([...CDEK_CREDENTIAL_KEYS, 'cdek_use_test'], options);
   const fromAdminId = map.cdek_api_key?.trim();
   const fromAdminSecret = map.cdek_client_secret?.trim();
+  const useTestFromAdmin = parseBooleanSetting(map.cdek_use_test);
+  const useTest = useTestFromAdmin ?? false;
   if (fromAdminId && fromAdminSecret) {
-    return { clientId: fromAdminId, clientSecret: fromAdminSecret };
-  }
-  const fromEnvId = process.env.CDEK_CLIENT_ID ?? process.env.CDEK_ACCOUNT;
-  const fromEnvSecret = process.env.CDEK_CLIENT_SECRET ?? process.env.CDEK_SECURE;
-  if (fromEnvId?.trim() && fromEnvSecret?.trim()) {
-    return { clientId: fromEnvId.trim(), clientSecret: fromEnvSecret.trim() };
+    return { clientId: fromAdminId, clientSecret: fromAdminSecret, useTest };
   }
   return null;
 }

@@ -12,6 +12,7 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
+import { CdekWidget } from '@/components/site/cdek-widget'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
 import { Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -259,7 +260,14 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
         fetch(`/api/cdek/calculator${brandQuery}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, deliveryKind: 'pvz' }),
+          body: JSON.stringify({
+            ...payload,
+            deliveryKind: 'pvz',
+            toLocation: {
+              ...payload.toLocation,
+              pvzCode: selectedPvz?.code ?? undefined,
+            },
+          }),
         }),
         fetch(`/api/cdek/calculator${brandQuery}`, {
           method: 'POST',
@@ -296,7 +304,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
     } finally {
       setCalculationLoading(false)
     }
-  }, [cityCode, items])
+  }, [cityCode, items, brandId, selectedPvz?.code])
 
   useEffect(() => {
     if (!usingSavedAddress || !selectedSavedAddressId) return
@@ -604,29 +612,48 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
             </p>
           </div>
         ) : (
-          <DeliverySection
-              selectedCity={selectedCity}
-              onCitySelect={setSelectedCity}
-              pvzTariff={pvzTariff}
-              doorTariff={doorTariff}
-              calculationLoading={calculationLoading}
-              onCalculate={handleCalculateDelivery}
-              deliveryMethod={deliveryMethod}
-              onDeliveryMethodChange={setDeliveryMethod}
-              deliveryPoints={deliveryPoints}
-              deliveryPointsLoading={deliveryPointsLoading}
-              deliveryPointsError={deliveryPointsError}
-              selectedPvz={selectedPvz}
-              onPvzSelect={setSelectedPvz}
-              recipientName={recipientName}
-              onRecipientNameChange={setRecipientName}
-              doorAddress={doorAddress}
-              onDoorAddressChange={(patch) => setDoorAddress((prev) => ({ ...prev, ...patch }))}
-              comment={comment}
-              onCommentChange={setComment}
-              error={deliveryError}
-              isSprintTheme={isSprintTheme}
-            />
+          <CdekWidget
+            brandId={brandId}
+            items={items}
+            onCalculate={({ office, door }) => {
+              const firstOffice = office[0]
+              const firstDoor = door[0]
+              setPvzTariff(firstOffice ?? null)
+              setDoorTariff(firstDoor ?? null)
+            }}
+            onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+              setDeliveryMethod(method)
+              if (cdekCityCode != null || cdekCity) {
+                setSelectedCity((prev) => ({
+                  code: cdekCityCode ?? prev?.code ?? 0,
+                  city: cdekCity ?? prev?.city,
+                  region: prev?.region,
+                  country: prev?.country,
+                }))
+              }
+              if (method === 'cdek_pvz') {
+                setPvzTariff(tariff)
+                setSelectedPvz(
+                  pvzCode
+                    ? {
+                        code: pvzCode,
+                        address: pvzAddress ?? undefined,
+                        full_address: pvzAddress ?? undefined,
+                      }
+                    : null
+                )
+              } else {
+                setDoorTariff(tariff)
+                if (doorAddr) {
+                  setDoorAddress((prev) => ({
+                    ...prev,
+                    street: doorAddr,
+                    house: prev.house,
+                  }))
+                }
+              }
+            }}
+          />
         )}
 
           <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>

@@ -14,22 +14,27 @@
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
 
-function getCdekApiBase(): string {
-  if (process.env.CDEK_API_BASE) return process.env.CDEK_API_BASE
-  if (process.env.CDEK_USE_TEST === 'true' || process.env.CDEK_USE_TEST === '1') {
-    return CDEK_API_TEST
-  }
+function getCdekApiBase(creds?: { useTest?: boolean } | null): string {
+  if (creds?.useTest === true) return CDEK_API_TEST
   return CDEK_API_PRODUCTION
+}
+
+function isCdekTestBase(base: string): boolean {
+  return base.includes('api.edu.cdek.ru')
 }
 
 /** Локация для расчёта: код города СДЭК или почтовый индекс */
 export interface CdekLocation {
   /** Код населённого пункта СДЭК (приоритет) */
   code?: number
+  /** Код населённого пункта СДЭК (альтернативное имя поля в некоторых endpoint'ах) */
+  city_code?: number
   /** Почтовый индекс (если нет code) */
   postal_code?: string
   /** Код страны ISO 3166-1 alpha-2 */
   country_code?: string
+  /** Код ПВЗ (если нужно считать от конкретного ПВЗ) */
+  delivery_point?: string
 }
 
 /** Пакет для калькулятора: вес в граммах, размеры в мм */
@@ -66,7 +71,15 @@ export interface CdekCalculatorTariffListRequest {
   type?: 1 | 2
   /** Валюта: 1 — RUB */
   currency?: number
-  date?: string
+  /** Ограничение списка тарифов (если endpoint ожидает явный набор). */
+  tariff_codes?: number[]
+  /** Дополнительные услуги (часто требуется как массив, даже если пустой). */
+  services?: Array<Record<string, unknown>>
+  /**
+   * Дата/время передачи заказа.
+   * В разных контурах CDEK ожидает либо строку, либо timestamp числом.
+   */
+  date?: string | number
   lang?: 'rus' | 'eng'
 }
 
@@ -90,9 +103,98 @@ export interface CdekTariffResult {
 export type CdekDeliveryKind = 'pvz' | 'address'
 
 /** Коды тарифов СДЭК: до ПВЗ (пункт выдачи) */
-const CDEK_TARIFF_CODES_PVZ = [136, 139, 368]
+export const CDEK_TARIFF_CODES_PVZ = [
+  // Посылка / экономичная / склад-постамат
+  136, // склад-склад (склад = пункт выдачи/склад получателя)
+  138, // дверь-склад
+  232, // экономичная дверь-склад
+  234, // экономичная склад-склад
+  366, // дверь-постамат
+  368, // склад-постамат
+  378, // экономичная склад-постамат
+
+  // Documents Express
+  2262, // дверь-склад
+  2264, // склад-склад
+  2266, // дверь-постамат
+  2267, // склад-постамат
+
+  // Экспресс
+  481, // дверь-склад
+  483, // склад-склад
+  485, // дверь-постамат
+  486, // склад-постамат
+
+  // Супер-экспресс (до N: дверь-склад / склад-склад)
+  777, // дверь-склад
+  786, // дверь-склад
+  679, // склад-склад
+  689,
+  699,
+  709,
+  719,
+  779,
+  788,
+  797,
+  806,
+
+  // Супер-экспресс (до N: дверь-склад)
+  677,
+  687,
+  697,
+  707,
+
+  // Магистральный
+  62, // склад-склад
+  123, // дверь-склад
+  63, // дверь-склад
+  126, // дверь-склад
+]
 /** Коды тарифов СДЭК: до адреса (курьером до двери) */
-const CDEK_TARIFF_CODES_ADDRESS = [234, 366]
+export const CDEK_TARIFF_CODES_ADDRESS = [
+  // Посылка / экономичная
+  137, // склад-дверь
+  139, // дверь-дверь
+  231, // экономичная дверь-дверь
+  233, // экономичная склад-дверь
+
+  // Documents Express
+  2261, // дверь-дверь
+  2263, // склад-дверь
+
+  // Экспресс
+  480, // дверь-дверь
+  482, // склад-дверь
+
+  // Супер-экспресс (до N: дверь-дверь)
+  57, 58, 59, 60, 61,
+  3,
+
+  // Супер-экспресс (до N: склад-дверь)
+  717,
+  678,
+  688,
+  698,
+  708,
+  718,
+  778,
+  787,
+  796,
+  805,
+
+  // Супер-экспресс (до N: дверь-дверь)
+  676,
+  686,
+  696,
+  706,
+  716,
+
+  // Магистральный
+  121, // дверь-дверь
+  122, // склад-дверь
+  124, // дверь-дверь (супер)
+  125, // склад-дверь (супер)
+]
 
 /**
  * Фильтрует тарифы по типу доставки (До ПВЗ / До адреса).
@@ -248,8 +350,19 @@ export interface CdekDeliveryPointsResponse {
   delivery_points?: CdekDeliveryPoint[]
 }
 
-const DEFAULT_PACKAGE_WEIGHT_G = 500
-const DEFAULT_PACKAGE_DIMENSION_MM = 200
+export interface CdekPackageDefaults {
+  weightG: number
+  lengthMm: number
+  widthMm: number
+  heightMm: number
+}
+
+const DEFAULT_PACKAGE_DEFAULTS: CdekPackageDefaults = {
+  weightG: 100,
+  lengthMm: 33,
+  widthMm: 25,
+  heightMm: 15,
+}
 
 /**
  * Минимальные габариты для одного пакета (если у товара не указаны).
@@ -257,10 +370,10 @@ const DEFAULT_PACKAGE_DIMENSION_MM = 200
  */
 export function getDefaultCdekPackage(): CdekPackage {
   return {
-    weight: DEFAULT_PACKAGE_WEIGHT_G,
-    length: DEFAULT_PACKAGE_DIMENSION_MM,
-    width: DEFAULT_PACKAGE_DIMENSION_MM,
-    height: DEFAULT_PACKAGE_DIMENSION_MM,
+    weight: DEFAULT_PACKAGE_DEFAULTS.weightG,
+    length: DEFAULT_PACKAGE_DEFAULTS.lengthMm,
+    width: DEFAULT_PACKAGE_DEFAULTS.widthMm,
+    height: DEFAULT_PACKAGE_DEFAULTS.heightMm,
   }
 }
 
@@ -273,12 +386,18 @@ export function productToCdekPackage(
   lengthMm: number | null | undefined,
   widthMm: number | null | undefined,
   heightMm: number | null | undefined,
-  quantity: number
+  quantity: number,
+  defaults: CdekPackageDefaults = DEFAULT_PACKAGE_DEFAULTS
 ): CdekPackage {
-  const w = (weightG ?? DEFAULT_PACKAGE_WEIGHT_G) * quantity
-  const l = lengthMm ?? DEFAULT_PACKAGE_DIMENSION_MM
-  const wd = widthMm ?? DEFAULT_PACKAGE_DIMENSION_MM
-  const h = heightMm ?? DEFAULT_PACKAGE_DIMENSION_MM
+  // CDEK ожидает положительные целые значения. Некоторые данные в админке
+  // могут приходить как `0` вместо `null` — тогда мы подставляем дефолты.
+  const safePositiveOrDefault = (value: number | null | undefined, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
+
+  const w = safePositiveOrDefault(weightG, defaults.weightG) * quantity
+  const l = safePositiveOrDefault(lengthMm, defaults.lengthMm)
+  const wd = safePositiveOrDefault(widthMm, defaults.widthMm)
+  const h = safePositiveOrDefault(heightMm, defaults.heightMm)
   return {
     weight: Math.max(1, Math.round(w)),
     length: Math.max(1, Math.round(l)),
@@ -317,6 +436,7 @@ let cachedToken: {
 export interface CdekCredentials {
   clientId: string
   clientSecret: string
+  useTest: boolean
 }
 
 /**
@@ -330,11 +450,12 @@ export async function getCdekToken(
   const creds = override ?? (await getCdekCredentials())
   if (!creds?.clientId || !creds.clientSecret) {
     throw new Error(
-      'CDEK: задайте учётные данные в настройках (API-ключ и секрет) или CDEK_CLIENT_ID и CDEK_CLIENT_SECRET в .env'
+      'CDEK: задайте учётные данные в настройках (API-ключ и секрет) в админке'
     )
   }
   const now = Date.now()
-  const cacheKey = creds.clientId
+  const base = getCdekApiBase(creds)
+  const cacheKey = `${base}|${creds.clientId}`
   if (
     cachedToken &&
     cachedToken.key === cacheKey &&
@@ -342,7 +463,6 @@ export async function getCdekToken(
   ) {
     return cachedToken.token
   }
-  const base = getCdekApiBase()
   const response = await fetch(`${base}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -371,6 +491,114 @@ export interface CdekConnectionCheck {
   error?: string
 }
 
+type CdekCalculatorTariffResponse = CdekTariffResult
+
+function isCdekInternalError(text: string): boolean {
+  return text.includes('"code":"v2_internal_error"') || text.includes('v2_internal_error')
+}
+
+async function getCdekTokenForBase(params: {
+  base: string
+  overrideCredentials?: CdekCredentials | null
+}): Promise<string> {
+  const { base, overrideCredentials } = params
+  const { getCdekCredentials } = await import('@/services/settings.service')
+  const creds = overrideCredentials ?? (await getCdekCredentials())
+  if (!creds?.clientId || !creds.clientSecret) {
+    throw new Error(
+      'CDEK: задайте учётные данные в настройках (API-ключ и секрет) в админке'
+    )
+  }
+  const now = Date.now()
+  const cacheKey = `${base}|${creds.clientId}`
+  if (cachedToken && cachedToken.key === cacheKey && cachedToken.expiresAt > now + 60_000) {
+    return cachedToken.token
+  }
+  const response = await fetch(`${base}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: creds.clientId,
+      client_secret: creds.clientSecret,
+    }),
+  })
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`CDEK auth failed: ${response.status} ${text}`)
+  }
+  const data = (await response.json()) as CdekAuthResponse
+  cachedToken = {
+    key: cacheKey,
+    token: data.access_token,
+    expiresAt: now + (data.expires_in - 60) * 1000,
+  }
+  return data.access_token
+}
+
+async function calculateCdekTariff(
+  request: CdekCalculatorTariffRequest,
+  overrideCredentials?: CdekCredentials | null
+): Promise<CdekCalculatorTariffResponse> {
+  const run = async (base: string): Promise<CdekCalculatorTariffResponse> => {
+    const token = await getCdekTokenForBase({ base, overrideCredentials })
+    const response = await fetch(`${base}/calculator/tariff`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...request,
+        type: request.type ?? 1,
+      }),
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(`CDEK calculator/tariff failed: ${response.status} ${text}`)
+    }
+    const data = (await response.json()) as unknown
+    if (
+      data &&
+      typeof data === 'object' &&
+      Array.isArray((data as { errors?: unknown }).errors) &&
+      (data as { errors: unknown[] }).errors.length > 0
+    ) {
+      const errors = (data as { errors: Array<{ code?: unknown; message?: unknown; additional_code?: unknown }> }).errors
+      const compact = errors
+        .slice(0, 5)
+        .map((e) => {
+          const code = typeof e.code === 'string' ? e.code : ''
+          const add = typeof e.additional_code === 'string' ? ` (${e.additional_code})` : ''
+          const msg = typeof e.message === 'string' ? e.message : ''
+          return [code ? `${code}${add}` : null, msg || null].filter(Boolean).join(': ')
+        })
+        .filter((s) => s.length > 0)
+        .join('; ')
+      throw new Error(`CDEK calculator tariff error: ${compact || 'unknown'}`)
+    }
+    return data as CdekCalculatorTariffResponse
+  }
+
+  const base = getCdekApiBase(overrideCredentials ?? null)
+  try {
+    return await run(base)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (isCdekTestBase(base) && isCdekInternalError(msg)) {
+      console.warn('[cdek/calc][tariff] retry against production due to test internal error')
+      try {
+        return await run(CDEK_API_PRODUCTION)
+      } catch (e2) {
+        const msg2 = e2 instanceof Error ? e2.message : String(e2)
+        console.warn('[cdek/calc][tariff] production retry failed; keep original error', msg2)
+        throw e
+      }
+    }
+    throw e
+  }
+}
+
 /**
  * Проверяет подключение к API СДЭК: получает OAuth-токен.
  * Учётные данные: из override, иначе из настроек админки или env (настройки перекрывают env).
@@ -392,30 +620,147 @@ export async function checkCdekConnection(
  * Использует endpoint /v2/calculator/tarifflist (список тарифов с ценами).
  */
 export async function calculateCdekTariffList(
-  request: CdekCalculatorTariffListRequest
+  request: CdekCalculatorTariffListRequest,
+  overrideCredentials?: CdekCredentials | null
 ): Promise<CdekTariffResult[]> {
-  const token = await getCdekToken()
-  const body = {
-    ...request,
-    type: request.type ?? 1,
-    currency: request.currency ?? 1,
-    lang: request.lang ?? 'rus',
+  const run = async (base: string): Promise<CdekTariffResult[]> => {
+    const token = await getCdekTokenForBase({ base, overrideCredentials })
+    const body = {
+      ...request,
+      type: request.type ?? 1,
+      currency: request.currency ?? 1,
+      lang: request.lang ?? 'rus',
+    }
+    // Debug: helps distinguish "request contract" issues from "test/prod instability".
+    // Do not log secrets (token), only request parameters.
+    console.warn('[cdek/calc][tarifflist] request', {
+      base,
+      from_location: body.from_location,
+      to_location: body.to_location,
+      type: body.type,
+      currency: body.currency,
+      lang: body.lang,
+      date: body.date,
+      servicesCount: body.services?.length ?? 0,
+      packagesCount: body.packages?.length ?? 0,
+      packages: body.packages,
+      tariff_codes: body.tariff_codes,
+    })
+    const response = await fetch(`${base}/calculator/tarifflist`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      // In practice (especially in edu contour) tarifflist can intermittently return v2_internal_error.
+      // Fallback: calculate each requested tariff via /calculator/tariff.
+      if (isCdekInternalError(text) && Array.isArray(request.tariff_codes) && request.tariff_codes.length > 0) {
+        const results: CdekTariffResult[] = []
+        for (const tariffCode of request.tariff_codes) {
+          try {
+            const one = await calculateCdekTariff(
+              {
+                tariff_code: tariffCode,
+                from_location: request.from_location ?? { country_code: 'RU' },
+                to_location: request.to_location,
+                packages: request.packages,
+                type: request.type,
+              },
+              overrideCredentials
+            )
+            results.push(one)
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            console.warn('[cdek/calc][tariff] fallback failed for tariff_code', tariffCode, msg)
+          }
+        }
+        if (results.length > 0) return results
+      }
+      throw new Error(`CDEK calculator failed: ${response.status} ${text}`)
+    }
+    const data = (await response.json()) as unknown
+    if (
+      data &&
+      typeof data === 'object' &&
+      Array.isArray((data as { errors?: unknown }).errors) &&
+      (data as { errors: unknown[] }).errors.length > 0
+    ) {
+      const errors = (data as { errors: Array<{ code?: unknown; message?: unknown; additional_code?: unknown }> }).errors
+      const compact = errors
+        .slice(0, 5)
+        .map((e) => {
+          const code = typeof e.code === 'string' ? e.code : ''
+          const add = typeof e.additional_code === 'string' ? ` (${e.additional_code})` : ''
+          const msg = typeof e.message === 'string' ? e.message : ''
+          return [code ? `${code}${add}` : null, msg || null].filter(Boolean).join(': ')
+        })
+        .filter((s) => s.length > 0)
+        .join('; ')
+      throw new Error(`CDEK calculator tarifflist error: ${compact || 'unknown'}`)
+    }
+    const parsed = data as Partial<CdekCalculatorTariffListResponse>
+    const tariffs = Array.isArray(parsed.tariffs) ? parsed.tariffs : []
+
+    // Some accounts / contours occasionally return 200 OK with empty `tariffs`.
+    // Fallback: calculate each requested tariff via /calculator/tariff.
+    if (tariffs.length === 0 && Array.isArray(request.tariff_codes) && request.tariff_codes.length > 0) {
+      console.warn('[cdek/calc][tarifflist] empty tariffs; fallback to /calculator/tariff', {
+        tariffCodesCount: request.tariff_codes.length,
+        firstTariffCodes: request.tariff_codes.slice(0, 5),
+      })
+      const results: CdekTariffResult[] = []
+      const errors: string[] = []
+      for (const tariffCode of request.tariff_codes) {
+        try {
+          const one = await calculateCdekTariff(
+            {
+              tariff_code: tariffCode,
+              from_location: request.from_location ?? { country_code: 'RU' },
+              to_location: request.to_location,
+              packages: request.packages,
+              type: request.type,
+            },
+            overrideCredentials
+          )
+          results.push(one)
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e)
+          errors.push(`${tariffCode}: ${msg}`)
+          console.warn('[cdek/calc][tariff] empty-tarifflist fallback failed for tariff_code', tariffCode, msg)
+        }
+      }
+      if (results.length > 0) return results
+      if (errors.length > 0) {
+        throw new Error(
+          `CDEK calculator returned empty tariffs; /calculator/tariff also failed: ${errors.slice(0, 3).join('; ')}`
+        )
+      }
+    }
+
+    return tariffs
   }
-  const base = getCdekApiBase()
-  const response = await fetch(`${base}/calculator/tarifflist`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(body),
-  })
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`CDEK calculator failed: ${response.status} ${text}`)
+
+  const base = getCdekApiBase(overrideCredentials ?? null)
+  try {
+    return await run(base)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (isCdekTestBase(base) && isCdekInternalError(msg)) {
+      console.warn('[cdek/calc][tarifflist] retry against production due to test internal error')
+      try {
+        return await run(CDEK_API_PRODUCTION)
+      } catch (e2) {
+        const msg2 = e2 instanceof Error ? e2.message : String(e2)
+        console.warn('[cdek/calc][tarifflist] production retry failed; keep original error', msg2)
+        throw e
+      }
+    }
+    throw e
   }
-  const data = (await response.json()) as CdekCalculatorTariffListResponse
-  return data.tariffs ?? []
 }
 
 // --- Location: список городов ---
@@ -424,8 +769,11 @@ export async function calculateCdekTariffList(
  * Список городов СДЭК (Location).
  * GET /v2/location/cities с query-параметрами (API СДЭК возвращает 405 на POST).
  */
-export async function getCdekCities(request: CdekCitiesRequest = {}): Promise<CdekCity[]> {
-  const token = await getCdekToken()
+export async function getCdekCities(
+  request: CdekCitiesRequest = {},
+  overrideCredentials?: CdekCredentials | null
+): Promise<CdekCity[]> {
+  const token = await getCdekToken(overrideCredentials)
   const params = new URLSearchParams()
   const countryCodes = request.country_codes ?? ['RU']
   countryCodes.forEach((c) => params.append('country_codes', c))
@@ -438,7 +786,7 @@ export async function getCdekCities(request: CdekCitiesRequest = {}): Promise<Cd
   params.set('page', String(request.page ?? 0))
   params.set('lang', request.lang ?? 'rus')
 
-  const base = getCdekApiBase()
+  const base = getCdekApiBase(overrideCredentials ?? null)
   const url = `${base}/location/cities?${params.toString()}`
   const response = await fetch(url, {
     method: 'GET',
@@ -497,17 +845,74 @@ function normalizeCdekDeliveryPoint(raw: Record<string, unknown>): CdekDeliveryP
     raw.lng ??
     raw.lon
   ) as number | undefined
+  const cityCodeRaw =
+    raw.city_code ??
+    loc?.city_code ??
+    raw.cityCode ??
+    loc?.cityCode ??
+    raw.city_id ??
+    loc?.city_id ??
+    raw.cityId ??
+    loc?.cityId
+  const normalizedCityCode =
+    cityCodeRaw != null && !Number.isNaN(Number(cityCodeRaw)) ? Number(cityCodeRaw) : undefined
+  const rawCode =
+    raw.code ??
+    raw.delivery_point ??
+    raw.deliveryPoint ??
+    raw.delivery_point_code ??
+    raw.deliveryPointCode ??
+    loc?.code ??
+    loc?.delivery_point ??
+    loc?.deliveryPoint
+  const normalizedCode = rawCode != null ? String(rawCode) : undefined
+
+  const rawPostalCode =
+    raw.postal_code ??
+    raw.postalCode ??
+    raw.zip_code ??
+    raw.zipCode ??
+    loc?.postal_code ??
+    loc?.postalCode ??
+    loc?.zip_code ??
+    loc?.zipCode
+  const normalizedPostalCode =
+    rawPostalCode != null && String(rawPostalCode).trim() !== ''
+      ? String(rawPostalCode).trim()
+      : undefined
+
+  const rawCityName =
+    raw.city ??
+    raw.city_name ??
+    raw.cityName ??
+    raw.locality ??
+    raw.locality_name ??
+    loc?.city ??
+    loc?.city_name ??
+    loc?.cityName ??
+    loc?.locality ??
+    loc?.locality_name
+  const normalizedCityName =
+    rawCityName != null && String(rawCityName).trim() !== '' ? String(rawCityName).trim() : undefined
+  const normalizedLocation: Record<string, unknown> = {
+    ...(loc ?? {}),
+  }
+  if (latitude != null) normalizedLocation.latitude = Number(latitude)
+  if (longitude != null) normalizedLocation.longitude = Number(longitude)
+  if (normalizedCityCode != null) normalizedLocation.city_code = normalizedCityCode
+  if (normalizedPostalCode) normalizedLocation.postal_code = normalizedPostalCode
   return {
     ...(raw as CdekDeliveryPoint),
+    ...(normalizedCode ? { code: normalizedCode } : {}),
+    ...(normalizedCityCode != null ? { city_code: normalizedCityCode } : {}),
+    ...(normalizedPostalCode ? { postal_code: normalizedPostalCode } : {}),
+    ...(normalizedCityName ? { city: normalizedCityName } : {}),
     full_address:
       (raw.full_address as string) ??
       (loc?.address_full as string) ??
       (loc?.address as string) ??
       (raw.address as string),
-    location:
-      latitude != null && longitude != null
-        ? { latitude: Number(latitude), longitude: Number(longitude) }
-        : (raw.location as CdekDeliveryPoint['location']),
+    location: normalizedLocation as CdekDeliveryPoint['location'],
   }
 }
 
@@ -517,29 +922,36 @@ function normalizeCdekDeliveryPoint(raw: Record<string, unknown>): CdekDeliveryP
  * При 405/415 делаем fallback на GET с query-параметрами.
  */
 export async function searchCdekDeliveryPoints(
-  request: CdekDeliveryPointsRequest = {}
+  request: CdekDeliveryPointsRequest = {},
+  overrideCredentials?: CdekCredentials | null
 ): Promise<CdekDeliveryPoint[]> {
-  const token = await getCdekToken()
+  const token = await getCdekToken(overrideCredentials)
   const filter = request.filter ?? {}
   const size = request.size ?? 20
   const page = request.page ?? 0
   const lang = request.lang ?? 'rus'
-  const base = getCdekApiBase()
+  const base = getCdekApiBase(overrideCredentials ?? null)
 
-  /** По документации СДЭК фильтр — плоский объект (city_code, type, size, page, lang и др.) */
-  const body: Record<string, unknown> = {
-    size,
-    page,
-    lang,
+  type CodeMode = 'code' | 'delivery_point'
+
+  /** По документации СДЭК фильтр — плоский объект (city_code, type, size, page, lang и др.). */
+  const buildPostBody = (mode: CodeMode): Record<string, unknown> => {
+    const next: Record<string, unknown> = {
+      size,
+      page,
+      lang,
+    }
+    if (filter.city_code != null) next.city_code = filter.city_code
+    if (filter.postal_code) next.postal_code = filter.postal_code
+    if (filter.type) next.type = filter.type
+    if (filter.country_code) next.country_code = filter.country_code
+    if (filter.region_code != null) next.region_code = filter.region_code
+    if (filter.code) next[mode === 'code' ? 'code' : 'delivery_point'] = filter.code
+    return next
   }
-  if (filter.city_code != null) body.city_code = filter.city_code
-  if (filter.postal_code) body.postal_code = filter.postal_code
-  if (filter.type) body.type = filter.type
-  if (filter.country_code) body.country_code = filter.country_code
-  if (filter.region_code != null) body.region_code = filter.region_code
-  if (filter.code) body.code = filter.code
 
-  const tryPost = async (): Promise<CdekDeliveryPoint[]> => {
+  const tryPost = async (mode: CodeMode): Promise<CdekDeliveryPoint[]> => {
+    const body = buildPostBody(mode)
     const response = await fetch(`${base}/deliverypoints`, {
       method: 'POST',
       headers: {
@@ -557,14 +969,14 @@ export async function searchCdekDeliveryPoints(
     return list.map((p) => normalizeCdekDeliveryPoint(p as Record<string, unknown>))
   }
 
-  const tryGet = async (): Promise<CdekDeliveryPoint[]> => {
+  const tryGet = async (mode: CodeMode): Promise<CdekDeliveryPoint[]> => {
     const params = new URLSearchParams()
     if (filter.city_code != null) params.set('city_code', String(filter.city_code))
     if (filter.postal_code) params.set('postal_code', filter.postal_code)
     if (filter.type) params.set('type', filter.type)
     if (filter.country_code) params.set('country_code', filter.country_code)
     if (filter.region_code != null) params.set('region_code', String(filter.region_code))
-    if (filter.code) params.set('code', filter.code)
+    if (filter.code) params.set(mode === 'code' ? 'code' : 'delivery_point', filter.code)
     params.set('size', String(size))
     params.set('page', String(page))
     params.set('lang', lang)
@@ -592,17 +1004,42 @@ export async function searchCdekDeliveryPoints(
 
   /** СДЭК может поддерживать только GET с query — пробуем GET первым, затем POST */
   try {
-    const list = await tryGet()
+    const list = await tryGet('code')
     if (list.length > 0) return list
   } catch {
     /* ignore, try POST */
   }
   try {
-    return await tryPost()
+    const list = await tryGet('delivery_point')
+    if (list.length > 0) return list
+  } catch {
+    /* ignore, try POST */
+  }
+
+  try {
+    const list = await tryPost('code')
+    if (list.length > 0) return list
+    return list
   } catch (postErr) {
     const msg = postErr instanceof Error ? postErr.message : String(postErr)
     if (msg.includes('405') || msg.includes('415') || msg.includes('Method Not Allowed')) {
-      return tryGet()
+      // Пытаемся GET с тем же режимом
+      const list = await tryGet('code')
+      if (list.length > 0) return list
+    }
+    // Если POST с `code` не сработал — пробуем альтернативный ключ
+  }
+
+  // Финальная попытка: POST/GET с `delivery_point`
+  try {
+    const list = await tryPost('delivery_point')
+    if (list.length > 0) return list
+    return list
+  } catch (postErr) {
+    const msg = postErr instanceof Error ? postErr.message : String(postErr)
+    if (msg.includes('405') || msg.includes('415') || msg.includes('Method Not Allowed')) {
+      const list = await tryGet('delivery_point')
+      return list
     }
     throw postErr
   }
@@ -614,7 +1051,12 @@ const CDEK_SENDER_KEYS = [
   'cdek_sender_name',
   'cdek_sender_phone',
   'cdek_sender_address',
+  'cdek_from_pvz_code',
   'cdek_from_city_code',
+  'cdek_default_package_weight_g',
+  'cdek_default_package_length_mm',
+  'cdek_default_package_width_mm',
+  'cdek_default_package_height_mm',
 ] as const
 
 /**
@@ -628,6 +1070,10 @@ export async function createCdekOrder(
   try {
     const orderService = await import('@/services/order.service')
     const settingsService = await import('@/services/settings.service')
+    const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
+    const scopedCredentials = await settingsService.getCdekCredentials({
+      brandId: orderBrandId,
+    })
     const order = await orderService.findOrderWithItemsAndShippingForCdek(orderId)
     if (!order || !order.shippingInfo) {
       return { error: 'Заказ или адрес доставки не найден' }
@@ -640,18 +1086,157 @@ export async function createCdekOrder(
       return { error: 'Не указаны код города или тариф СДЭК' }
     }
 
-    const settingsMap = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS])
-    const senderName =
+    const settingsMap = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {
+      brandId: orderBrandId,
+    })
+    let senderName =
       settingsMap.cdek_sender_name?.trim() || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
-    const senderPhone =
+    let senderPhone =
       settingsMap.cdek_sender_phone?.trim() || process.env.CDEK_SENDER_PHONE?.trim() || ''
-    const senderAddress =
+    let senderAddress =
       settingsMap.cdek_sender_address?.trim() || process.env.CDEK_SENDER_ADDRESS?.trim() || ''
-    const fromCityCode =
+    const fromPvzCode = settingsMap.cdek_from_pvz_code?.trim().toUpperCase() || ''
+    let fromCityCodeRaw =
       settingsMap.cdek_from_city_code?.trim() || process.env.CDEK_FROM_CITY_CODE?.trim() || ''
-    const fromCode = fromCityCode ? Number(fromCityCode) : undefined
+
+    // Global fallback (если в brand-scope пусто).
+    if (!settingsMap.cdek_from_city_code || !settingsMap.cdek_sender_address) {
+      const globalSettings = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {})
+      if (!senderAddress) senderAddress = globalSettings.cdek_sender_address?.trim() || senderAddress
+      if (!fromCityCodeRaw) {
+        fromCityCodeRaw =
+          globalSettings.cdek_from_city_code?.trim() || process.env.CDEK_FROM_CITY_CODE?.trim() || ''
+      }
+      if (!senderName) senderName = globalSettings.cdek_sender_name?.trim() || senderName
+      if (!senderPhone) senderPhone = globalSettings.cdek_sender_phone?.trim() || senderPhone
+    }
+
+    let fromCode: number | undefined
+    if (fromPvzCode) {
+      const points =
+        (await (async () => {
+          const first = await searchCdekDeliveryPoints(
+            { filter: { code: fromPvzCode }, size: 1 },
+            scopedCredentials
+          )
+          if (first.length > 0) return first
+          const second = await searchCdekDeliveryPoints(
+            { filter: { code: fromPvzCode, type: 'PVZ' }, size: 1 },
+            scopedCredentials
+          )
+          if (second.length > 0) return second
+          return searchCdekDeliveryPoints(
+            { filter: { code: fromPvzCode, type: 'ALL' }, size: 1 },
+            scopedCredentials
+          )
+        })())
+      const cityCodeFromPvz = points[0]?.city_code
+      if (cityCodeFromPvz != null && !Number.isNaN(cityCodeFromPvz) && cityCodeFromPvz > 0) {
+        fromCode = cityCodeFromPvz
+      } else if (fromCityCodeRaw) {
+        const fallbackFromCode = Number(fromCityCodeRaw)
+        if (!Number.isNaN(fallbackFromCode) && fallbackFromCode > 0) {
+          console.warn(
+            '[CDEK createOrder] from_pvz_code is set but city_code was not resolved, fallback to from_city_code:',
+            fromPvzCode,
+            fallbackFromCode
+          )
+          fromCode = fallbackFromCode
+        } else {
+          return { error: 'Не удалось определить город отправления по коду ПВЗ СДЭК' }
+        }
+      } else {
+        // Пытаемся резолвить город через /location/cities по city/postal_code из ПВЗ.
+        const point = points[0]
+        const cityName = point?.city?.trim()
+        if (cityName) {
+          const cities = await getCdekCities(
+            { country_codes: ['RU'], city: cityName, size: 1 },
+            scopedCredentials
+          )
+          const code = cities[0]?.code
+          if (typeof code === 'number' && code > 0) {
+            fromCode = code
+          }
+        }
+        if (fromCode == null) {
+          const postalCode = point?.postal_code?.trim()
+          if (postalCode) {
+            const cities = await getCdekCities(
+              { country_codes: ['RU'], postal_code: postalCode, size: 1 },
+              scopedCredentials
+            )
+            const code = cities[0]?.code
+            if (typeof code === 'number' && code > 0) fromCode = code
+          }
+        }
+        if (fromCode == null || Number.isNaN(fromCode)) {
+          return { error: 'Не удалось определить город отправления по коду ПВЗ СДЭК' }
+        }
+      }
+    } else if (fromCityCodeRaw) {
+      fromCode = Number(fromCityCodeRaw)
+    }
+
     if (fromCode == null || Number.isNaN(fromCode)) {
-      return { error: 'Не задан код города отправления СДЭК (настройки или CDEK_FROM_CITY_CODE)' }
+      return {
+        error:
+          'Не задан ПВЗ/код города отправления СДЭК (укажите cdek_from_pvz_code или cdek_from_city_code)',
+      }
+    }
+
+    const parsePositiveIntOrNull = (raw: string | undefined): number | null => {
+      const trimmed = raw?.trim()
+      if (!trimmed) return null
+      const parsed = Number.parseInt(trimmed, 10)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    }
+
+    const brandDefaults = {
+      weightG: parsePositiveIntOrNull(settingsMap.cdek_default_package_weight_g),
+      lengthMm: parsePositiveIntOrNull(settingsMap.cdek_default_package_length_mm),
+      widthMm: parsePositiveIntOrNull(settingsMap.cdek_default_package_width_mm),
+      heightMm: parsePositiveIntOrNull(settingsMap.cdek_default_package_height_mm),
+    }
+
+    const needsGlobalDefaults =
+      brandDefaults.weightG == null ||
+      brandDefaults.lengthMm == null ||
+      brandDefaults.widthMm == null ||
+      brandDefaults.heightMm == null
+
+    let packageDefaults: CdekPackageDefaults = {
+      weightG: brandDefaults.weightG ?? DEFAULT_PACKAGE_DEFAULTS.weightG,
+      lengthMm: brandDefaults.lengthMm ?? DEFAULT_PACKAGE_DEFAULTS.lengthMm,
+      widthMm: brandDefaults.widthMm ?? DEFAULT_PACKAGE_DEFAULTS.widthMm,
+      heightMm: brandDefaults.heightMm ?? DEFAULT_PACKAGE_DEFAULTS.heightMm,
+    }
+
+    if (needsGlobalDefaults) {
+      const globalSettings = await settingsService.getSettingsMap(
+        [
+          'cdek_default_package_weight_g',
+          'cdek_default_package_length_mm',
+          'cdek_default_package_width_mm',
+          'cdek_default_package_height_mm',
+        ],
+        {}
+      )
+      packageDefaults = {
+        weightG: brandDefaults.weightG ?? parsePositiveIntOrNull(globalSettings.cdek_default_package_weight_g) ?? DEFAULT_PACKAGE_DEFAULTS.weightG,
+        lengthMm:
+          brandDefaults.lengthMm ??
+          parsePositiveIntOrNull(globalSettings.cdek_default_package_length_mm) ??
+          DEFAULT_PACKAGE_DEFAULTS.lengthMm,
+        widthMm:
+          brandDefaults.widthMm ??
+          parsePositiveIntOrNull(globalSettings.cdek_default_package_width_mm) ??
+          DEFAULT_PACKAGE_DEFAULTS.widthMm,
+        heightMm:
+          brandDefaults.heightMm ??
+          parsePositiveIntOrNull(globalSettings.cdek_default_package_height_mm) ??
+          DEFAULT_PACKAGE_DEFAULTS.heightMm,
+      }
     }
 
     const packages = mergeCdekPackages(
@@ -661,7 +1246,8 @@ export async function createCdekOrder(
           item.product.length,
           item.product.width,
           item.product.height,
-          item.quantity
+          item.quantity,
+          packageDefaults
         )
       )
     )
@@ -671,11 +1257,22 @@ export async function createCdekOrder(
       ware_key: item.productId,
       cost: item.price,
       amount: item.quantity,
-      weight: Math.max(1, Math.round((item.product.weight ?? DEFAULT_PACKAGE_WEIGHT_G) * item.quantity)),
+      weight: Math.max(
+        1,
+        Math.round(
+          (typeof item.product.weight === 'number' && item.product.weight > 0
+            ? item.product.weight
+            : packageDefaults.weightG) * item.quantity
+        )
+      ),
       payment: { value: 0 },
     }))
 
-    const from_location = { code: fromCode, country_code: 'RU' as const }
+    const from_location = {
+      code: fromCode,
+      country_code: 'RU' as const,
+      ...(fromPvzCode ? { delivery_point: fromPvzCode } : {}),
+    }
     let to_location: Record<string, unknown>
     if (sh.deliveryMethod === 'cdek_pvz' && sh.cdekPvzCode) {
       to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, delivery_point: sh.cdekPvzCode }
@@ -714,8 +1311,8 @@ export async function createCdekOrder(
       })),
     }
 
-    const token = await getCdekToken()
-    const base = getCdekApiBase()
+    const token = await getCdekToken(scopedCredentials)
+    const base = getCdekApiBase(scopedCredentials)
     const response = await fetch(`${base}/orders`, {
       method: 'POST',
       headers: {

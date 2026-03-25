@@ -395,6 +395,11 @@ export interface NewOrderEmailPayload {
   promoCode?: string | null
 }
 
+export interface PaidOrderEmailPayload extends NewOrderEmailPayload {
+  /** Трек-номер СДЭК (если уже сформирован) */
+  cdekTrackNumber?: string | null
+}
+
 /**
  * Send new order notification from support@innerhealth.ru to admin mailbox(s).
  * No-op if SMTP is not configured or toEmails is empty.
@@ -597,6 +602,131 @@ export async function sendCustomerOrderConfirmation(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[email] Send customer order confirmation error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Send "order paid" email to the customer. Includes CDEK track number when available.
+ * No-op if SMTP is not configured.
+ */
+export async function sendCustomerOrderPaidEmail(
+  to: string,
+  username: string,
+  payload: PaidOrderEmailPayload
+): Promise<{ ok: boolean; error?: string }> {
+  const trimmedTo = to.trim().toLowerCase()
+  if (!trimmedTo) return { ok: true }
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; paid email not sent to', trimmedTo)
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+  const { orderId, total, items, cdekTrackNumber } = payload
+  const orderSummary = items
+    .map(
+      (i) =>
+        `${i.title} — ${i.quantity} × ${i.price.toFixed(2)} ₽ = ${(i.quantity * i.price).toFixed(2)} ₽`
+    )
+    .join('\n')
+  const trackLine = cdekTrackNumber?.trim()
+    ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
+    : ''
+  const text =
+    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${total.toFixed(2)} ₽${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+
+  const htmlItems = items
+    .map(
+      (i) =>
+        `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(i.title)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${i.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(i.quantity * i.price).toFixed(2)} ₽</td></tr>`
+    )
+    .join('')
+  const trackHtml = cdekTrackNumber?.trim()
+    ? `<p style="margin:12px 0 0;font-size:14px;color:#374151;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</span></p>`
+    : ''
+  const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Заказ оплачен</title>
+</head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);padding:28px 32px;text-align:center;">
+              <h1 style="margin:0;font-size:22px;font-weight:600;color:#ffffff;letter-spacing:-0.02em;">Inner Health</h1>
+              <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.9);">Заказ оплачен</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#374151;"><strong>${escapeHtml(username)}</strong>, ваш заказ оплачен.</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#4b5563;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#111827;">Состав заказа:</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:20px;font-size:14px;color:#4b5563;">
+                <thead>
+                  <tr style="background-color:#f9fafb;">
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Товар</th>
+                    <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;">Кол-во</th>
+                    <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${htmlItems}
+                </tbody>
+              </table>
+              <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${total.toFixed(2)} ₽</p>
+              ${trackHtml}
+              <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim()
+  try {
+    console.log('[email] Sending paid email to', trimmedTo)
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      replyTo: REPLY_TO,
+      to: trimmedTo,
+      subject: `Заказ ${orderId} оплачен — Inner Health`,
+      text,
+      html,
+    })
+    console.log('[email] Paid email sent to', trimmedTo)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send paid email error:', message)
     return { ok: false, error: message }
   }
 }
