@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import Input from '@/components/ui/input'
 import Button from '@/components/ui/button'
@@ -167,6 +167,8 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const reachedAddressLimit = useMemo(() => addresses.length >= 3, [addresses.length])
+  const createCityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editCityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function runCitySearch(
     lookup: CdekLookupUiState,
@@ -189,6 +191,32 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
       isPvzLoading: false,
       pvzError: points.length === 0 ? 'Пункты выдачи не найдены для выбранного города.' : null,
     }))
+  }
+
+  function applySelectedCity(params: {
+    city: CdekCityOption
+    setForm: Dispatch<SetStateAction<AddressFormState>>
+    setLookup: Dispatch<SetStateAction<CdekLookupUiState>>
+  }) {
+    const { city, setForm, setLookup } = params
+    setForm((prev) => ({
+      ...prev,
+      city: city.city ?? prev.city,
+      cdekCityCode: String(city.code),
+      cdekPvzCode: '',
+      addressLine: '',
+    }))
+    setLookup((prev) => ({
+      ...prev,
+      cityQuery: city.city ?? prev.cityQuery,
+      cityOptions: [],
+      pvzQuery: '',
+    }))
+    void loadPvzOptions(String(city.code), setLookup)
+  }
+
+  function renderComputedDoorAddressLine(form: AddressFormState): string {
+    return [form.street, form.house, form.apartment].map((x) => x.trim()).filter(Boolean).join(', ')
   }
 
   async function createAddress() {
@@ -309,58 +337,39 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
           placeholder="Название (Дом, Офис...)"
         />
         <div className="space-y-2">
-          <div className="flex gap-2">
+          <div className="relative">
             <Input
               value={lookup.cityQuery}
               onChange={(event) =>
                 setLookup((prev) => ({ ...prev, cityQuery: event.target.value, cityOptions: [] }))
               }
-              placeholder="Город (поиск через CDEK)"
+              placeholder="Город (начните вводить, подберём через CDEK)"
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => runCitySearch(lookup, setLookup)}
-              disabled={lookup.isCitiesLoading}
-            >
-              {lookup.isCitiesLoading ? '...' : 'Найти'}
-            </Button>
+            {lookup.isCitiesLoading ? (
+              <div className="mt-1 text-xs text-gray-500">Поиск городов…</div>
+            ) : null}
+            {lookup.cityOptions.length > 0 ? (
+              <div className="absolute z-10 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow">
+                {lookup.cityOptions.map((city) => (
+                  <button
+                    key={`${city.code}-${city.city ?? 'city'}`}
+                    type="button"
+                    onClick={() => applySelectedCity({ city, setForm, setLookup })}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
+                  >
+                    <span className="font-medium">{city.city ?? 'Без названия'}</span>
+                    <span className="ml-2 text-xs text-gray-500">({city.code})</span>
+                    {city.region ? <span className="ml-2 text-xs text-gray-500">{city.region}</span> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-          {lookup.cityOptions.length > 0 ? (
-            <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
-              {lookup.cityOptions.map((city) => (
-                <button
-                  key={`${city.code}-${city.city ?? 'city'}`}
-                  type="button"
-                  onClick={() => {
-                    setForm((prev) => ({
-                      ...prev,
-                      city: city.city ?? prev.city,
-                      cdekCityCode: String(city.code),
-                      cdekPvzCode: '',
-                      addressLine: '',
-                    }))
-                    setLookup((prev) => ({
-                      ...prev,
-                      cityQuery: city.city ?? prev.cityQuery,
-                      cityOptions: [],
-                      pvzQuery: '',
-                    }))
-                    void loadPvzOptions(String(city.code), setLookup)
-                  }}
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-white"
-                >
-                  <span className="font-medium">{city.city ?? 'Без названия'}</span>
-                  <span className="ml-2 text-xs text-gray-500">({city.code})</span>
-                  {city.region ? <span className="ml-2 text-xs text-gray-500">{city.region}</span> : null}
-                </button>
-              ))}
+          {form.cdekCityCode ? (
+            <div className="text-xs text-gray-600">
+              Выбран: <span className="font-medium">{form.city || lookup.cityQuery}</span> (код CDEK: {form.cdekCityCode})
             </div>
           ) : null}
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input value={form.city} readOnly placeholder="Выбранный город" />
-            <Input value={form.cdekCityCode} readOnly placeholder="Код города CDEK" />
-          </div>
         </div>
 
         <label className="flex flex-col gap-1 text-sm text-gray-600">
@@ -389,15 +398,8 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
                 onChange={(event) => setLookup((prev) => ({ ...prev, pvzQuery: event.target.value }))}
                 placeholder="Поиск ПВЗ (код/название/адрес)"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => loadPvzOptions(form.cdekCityCode, setLookup)}
-                disabled={!form.cdekCityCode || lookup.isPvzLoading}
-              >
-                {lookup.isPvzLoading ? '...' : 'Обновить'}
-              </Button>
             </div>
+            {lookup.isPvzLoading ? <p className="text-xs text-gray-500">Загружаем ПВЗ…</p> : null}
             {lookup.pvzError ? <p className="text-xs text-red-600">{lookup.pvzError}</p> : null}
             {filteredPvzOptions.length > 0 ? (
               <div className="max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
@@ -425,30 +427,72 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
                 })}
               </div>
             ) : null}
-            <Input value={form.cdekPvzCode} readOnly placeholder="Код ПВЗ" />
-            <Input value={form.addressLine} readOnly placeholder="Адрес ПВЗ" />
+            {form.cdekPvzCode ? (
+              <div className="text-xs text-gray-600">
+                Выбран ПВЗ: <span className="font-medium">{form.cdekPvzCode}</span>
+              </div>
+            ) : null}
+            <Input value={form.addressLine} readOnly placeholder="Адрес ПВЗ (заполнится после выбора)" />
           </div>
         ) : (
-          <Input
-            value={form.addressLine}
-            onChange={(event) => setForm((prev) => ({ ...prev, addressLine: event.target.value }))}
-            placeholder="Адрес строкой"
-          />
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                value={form.street}
+                onChange={(event) => setForm((prev) => ({ ...prev, street: event.target.value }))}
+                placeholder="Улица"
+              />
+              <Input
+                value={form.house}
+                onChange={(event) => setForm((prev) => ({ ...prev, house: event.target.value }))}
+                placeholder="Дом"
+              />
+            </div>
+            <Input
+              value={form.apartment}
+              onChange={(event) => setForm((prev) => ({ ...prev, apartment: event.target.value }))}
+              placeholder="Квартира / офис (необязательно)"
+            />
+            <Input
+              value={form.addressLine || renderComputedDoorAddressLine(form)}
+              readOnly
+              placeholder="Адрес (будет сохранён автоматически)"
+            />
+          </div>
         )}
-
-        <Input
-          value={form.street}
-          onChange={(event) => setForm((prev) => ({ ...prev, street: event.target.value }))}
-          placeholder="Улица (только для доставки до двери)"
-        />
-        <Input
-          value={form.house}
-          onChange={(event) => setForm((prev) => ({ ...prev, house: event.target.value }))}
-          placeholder="Дом (только для доставки до двери)"
-        />
       </div>
     )
   }
+
+  useEffect(() => {
+    if (createCityDebounceRef.current) clearTimeout(createCityDebounceRef.current)
+    const q = createLookup.cityQuery.trim()
+    if (q.length < 2) {
+      setCreateLookup((prev) => ({ ...prev, cityOptions: [], isCitiesLoading: false }))
+      return
+    }
+    createCityDebounceRef.current = setTimeout(() => {
+      void runCitySearch({ ...createLookup, cityQuery: q }, setCreateLookup)
+    }, 250)
+    return () => {
+      if (createCityDebounceRef.current) clearTimeout(createCityDebounceRef.current)
+    }
+  }, [createLookup.cityQuery])
+
+  useEffect(() => {
+    if (editCityDebounceRef.current) clearTimeout(editCityDebounceRef.current)
+    const q = editLookup.cityQuery.trim()
+    if (q.length < 2) {
+      setEditLookup((prev) => ({ ...prev, cityOptions: [], isCitiesLoading: false }))
+      return
+    }
+    editCityDebounceRef.current = setTimeout(() => {
+      void runCitySearch({ ...editLookup, cityQuery: q }, setEditLookup)
+    }, 250)
+    return () => {
+      if (editCityDebounceRef.current) clearTimeout(editCityDebounceRef.current)
+    }
+  }, [editLookup.cityQuery])
 
   return (
     <section className="space-y-6">

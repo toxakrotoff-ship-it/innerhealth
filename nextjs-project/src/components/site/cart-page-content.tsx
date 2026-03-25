@@ -128,10 +128,17 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
   const [usingSavedAddress, setUsingSavedAddress] = useState(false)
   const selectedSavedAddressIdRef = useRef<string | null>(null)
+  const savedAddressCalcAbortRef = useRef<AbortController | null>(null)
 
   const selectedSavedAddress = selectedSavedAddressId
     ? savedAddresses.find((address) => address.id === selectedSavedAddressId) ?? null
     : null
+
+  useEffect(() => {
+    if (usingSavedAddress) return
+    setPvzTariff(null)
+    setDoorTariff(null)
+  }, [selectedSavedAddressId, usingSavedAddress])
 
   useEffect(() => {
     selectedSavedAddressIdRef.current = selectedSavedAddressId
@@ -316,6 +323,88 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
     if (!usingSavedAddress || !selectedSavedAddressId) return
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
+
+  useEffect(() => {
+    if (!usingSavedAddress) return
+    if (!selectedSavedAddress) return
+    if (selectedSavedAddress.deliveryMethod !== 'cdek_door') return
+    if (!selectedSavedAddress.city || !selectedSavedAddress.addressLine) return
+
+    savedAddressCalcAbortRef.current?.abort()
+    const controller = new AbortController()
+    savedAddressCalcAbortRef.current = controller
+
+    async function run() {
+      setCalculationLoading(true)
+      setDeliveryError(null)
+      try {
+        const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
+        const configRes = await fetch(`/api/cdek-widget/config${brandQuery}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+          }),
+          signal: controller.signal,
+        })
+        const configJson = (await configRes.json()) as
+          | { from?: unknown; goods?: unknown; tariffs?: unknown; error?: string }
+          | null
+        if (!configRes.ok) throw new Error(configJson?.error ?? 'Не удалось загрузить конфиг виджета СДЭК')
+
+        const goods = Array.isArray(configJson?.goods) ? (configJson.goods as unknown[]) : []
+        if (goods.length === 0) throw new Error('Не удалось определить габариты посылки для расчёта СДЭК')
+
+        const serviceRes = await fetch(`/api/cdek-widget/service?action=calculate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'calculate',
+            from: configJson?.from ?? null,
+            to: {
+              code: selectedSavedAddress.cdekCityCode,
+              city: selectedSavedAddress.city,
+              postal_code: selectedSavedAddress.postalCode ?? undefined,
+              address: selectedSavedAddress.addressLine,
+              country_code: 'RU',
+            },
+            goods,
+          }),
+          signal: controller.signal,
+        })
+
+        const serviceJson = (await serviceRes.json().catch(() => null)) as
+          | { tariff_codes?: unknown[]; message?: string }
+          | null
+        if (!serviceRes.ok) throw new Error(serviceJson?.message ?? 'Ошибка расчёта СДЭК до двери')
+
+        const tariffCodes = Array.isArray(serviceJson?.tariff_codes) ? serviceJson?.tariff_codes : []
+        const mapped = tariffCodes
+          .map((t) => {
+            const x = t as Record<string, unknown>
+            const tariffCode = typeof x.tariff_code === 'number' ? x.tariff_code : Number.parseInt(String(x.tariff_code ?? ''), 10)
+            const deliverySum = typeof x.delivery_sum === 'number' ? x.delivery_sum : Number.parseInt(String(x.delivery_sum ?? ''), 10)
+            const periodMin = typeof x.period_min === 'number' ? x.period_min : Number.parseInt(String(x.period_min ?? ''), 10)
+            const periodMax = typeof x.period_max === 'number' ? x.period_max : Number.parseInt(String(x.period_max ?? ''), 10)
+            if (![tariffCode, deliverySum, periodMin, periodMax].every((n) => Number.isFinite(n) && n >= 0)) return null
+            return { tariffCode, deliverySum, periodMin, periodMax }
+          })
+          .filter((t): t is { tariffCode: number; deliverySum: number; periodMin: number; periodMax: number } => t !== null)
+
+        const door = mapped.find((t) => t.tariffCode === 137) ?? mapped[0] ?? null
+        setDoorTariff(door)
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта СДЭК до двери')
+        setDoorTariff(null)
+      } finally {
+        setCalculationLoading(false)
+      }
+    }
+
+    void run()
+    return () => controller.abort()
+  }, [usingSavedAddress, selectedSavedAddress, items, brandId])
 
   /** Расчёт СДЭК при выборе города и при изменении корзины (не только для сохранённого адреса). */
   useEffect(() => {
@@ -619,6 +708,15 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
           </div>
         ) : (
           <CdekWidget
+            key={[
+              'cdek-widget',
+              // When user changes the selected saved address, remount the widget to force recalculation.
+              selectedSavedAddressId ?? 'none',
+              selectedSavedAddress?.deliveryMethod ?? 'none',
+              selectedSavedAddress?.cdekCityCode ?? '0',
+              selectedSavedAddress?.cdekPvzCode ?? 'none',
+              selectedSavedAddress?.addressLine ?? 'none',
+            ].join(':')}
             brandId={brandId}
             items={items}
             defaultLocation={selectedSavedAddress?.city ?? undefined}
@@ -626,7 +724,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
               selectedSavedAddress
                 ? selectedSavedAddress.deliveryMethod === 'cdek_pvz'
                   ? { office: selectedSavedAddress.cdekPvzCode }
-                  : { door: selectedSavedAddress.addressLine }
+                  : undefined
                 : undefined
             }
             onCalculate={({ office, door }) => {
@@ -673,6 +771,152 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
             }}
           />
         )}
+
+        {!usingSavedAddress && deliveryMethod === 'cdek_door' ? (
+          <div
+            className={cn(
+              'rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24',
+              isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white'
+            )}
+          >
+            <Heading2
+              className={cn(
+                'mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20',
+                isSprintTheme && 'text-slate-100'
+              )}
+            >
+              Адрес доставки
+            </Heading2>
+            <p className={cn('mb-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+              Виджет выбирает улицу и дом. Пожалуйста, добавьте детали для курьера.
+            </p>
+
+            <div className="grid gap-3 xl:gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="cdek-door-street"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Улица
+                </label>
+                <input
+                  id="cdek-door-street"
+                  type="text"
+                  required
+                  value={doorAddress.street}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, street: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Улица"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="cdek-door-house"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Дом / корпус
+                </label>
+                <input
+                  id="cdek-door-house"
+                  type="text"
+                  required
+                  value={doorAddress.house}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, house: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Например: 10к2"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="cdek-door-apartment"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Квартира / офис
+                </label>
+                <input
+                  id="cdek-door-apartment"
+                  type="text"
+                  required
+                  value={doorAddress.apartment}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, apartment: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Например: 42"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="cdek-door-entrance"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Подъезд
+                </label>
+                <input
+                  id="cdek-door-entrance"
+                  type="text"
+                  value={doorAddress.entrance}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, entrance: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Необязательно"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="cdek-door-floor"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Этаж
+                </label>
+                <input
+                  id="cdek-door-floor"
+                  type="text"
+                  value={doorAddress.floor}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, floor: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Необязательно"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="cdek-door-intercom"
+                  className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}
+                >
+                  Домофон
+                </label>
+                <input
+                  id="cdek-door-intercom"
+                  type="text"
+                  value={doorAddress.intercom}
+                  onChange={(e) => setDoorAddress((prev) => ({ ...prev, intercom: e.target.value }))}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Необязательно"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
 
           <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
             <Heading2 className={cn('mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20', isSprintTheme && 'text-slate-100')}>

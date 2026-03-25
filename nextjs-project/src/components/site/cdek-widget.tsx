@@ -75,6 +75,10 @@ function loadScriptOnce(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
     if (existing) {
+      if (existing.dataset.loaded === 'true') {
+        resolve()
+        return
+      }
       existing.addEventListener('load', () => resolve(), { once: true })
       existing.addEventListener('error', () => reject(new Error('Failed to load script')), { once: true })
       // if already loaded:
@@ -84,7 +88,11 @@ function loadScriptOnce(src: string): Promise<void> {
     const s = document.createElement('script')
     s.src = src
     s.async = true
-    s.onload = () => resolve()
+    s.dataset.loaded = 'false'
+    s.onload = () => {
+      s.dataset.loaded = 'true'
+      resolve()
+    }
     s.onerror = () => reject(new Error(`Failed to load ${src}`))
     document.head.appendChild(s)
   })
@@ -98,10 +106,35 @@ export function CdekWidget({
   onChoose,
   onCalculate,
 }: CdekWidgetProps) {
-  const rootId = useMemo(() => `cdek-widget-${Math.random().toString(16).slice(2)}`, [])
+  const [instanceKey, setInstanceKey] = useState<string>(() => Math.random().toString(16).slice(2))
+  const rootId = useMemo(() => `cdek-widget-${instanceKey}`, [instanceKey])
   const widgetRef = useRef<unknown>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    function reinitWidget() {
+      setInstanceKey(Math.random().toString(16).slice(2))
+    }
+
+    function handlePageShow(event: PageTransitionEvent) {
+      // bfcache restore: scripts might be present, but widget internal state can be broken.
+      if (event.persisted) reinitWidget()
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState !== 'visible') return
+      // If the page becomes visible and the widget isn't ready, attempt re-init.
+      if (!isReady) reinitWidget()
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isReady])
 
   useEffect(() => {
     let cancelled = false
@@ -218,6 +251,8 @@ export function CdekWidget({
     return () => {
       cancelled = true
       widgetRef.current = null
+      const rootEl = document.getElementById(rootId)
+      if (rootEl) rootEl.innerHTML = ''
     }
   }, [brandId, items, defaultLocation, selected?.door, selected?.office, onCalculate, onChoose, rootId])
 
