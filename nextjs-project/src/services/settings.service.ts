@@ -4,6 +4,7 @@ import {
   decryptSettingValue,
   encryptSettingValue,
   isSensitiveSettingKey,
+  isSensitiveSettingStorageKey,
 } from '@/lib/settings-encryption'
 import {
   isBrandScopedSettingKey,
@@ -118,7 +119,7 @@ export async function getSettingsMap(
 
     const rowsByStorageKey = new Map<string, string>()
     for (const row of rows) {
-      const value = isSensitiveSettingKey(row.key)
+      const value = isSensitiveSettingStorageKey(row.key)
         ? decryptSettingValue(row.value)
         : row.value
       rowsByStorageKey.set(row.key, value)

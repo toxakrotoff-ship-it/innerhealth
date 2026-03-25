@@ -93,3 +93,14 @@ export function decryptSettingValue(value: string): string {
 export function isSensitiveSettingKey(key: string): key is SensitiveSettingKey {
   return (SENSITIVE_SETTING_KEYS as readonly string[]).includes(key)
 }
+
+/**
+ * Checks whether a storage key is sensitive.
+ * Supports brand-scoped keys like `inner:cdek_api_key`.
+ */
+export function isSensitiveSettingStorageKey(storageKey: string): boolean {
+  const logicalKey = storageKey.includes(':')
+    ? storageKey.slice(storageKey.indexOf(':') + 1)
+    : storageKey
+  return isSensitiveSettingKey(logicalKey)
+}
