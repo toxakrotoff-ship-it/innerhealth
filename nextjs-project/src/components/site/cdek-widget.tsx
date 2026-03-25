@@ -50,6 +50,24 @@ type WidgetConfigResponse = {
   tariffs: { office: number[]; door: number[] }
 }
 
+function parseWidgetNumber(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    // Handles "285", "285.5", and "285 RUB"
+    const normalized = value.replace(',', '.')
+    const match = normalized.match(/-?\d+(\.\d+)?/)
+    if (!match) return 0
+    const n = Number.parseFloat(match[0])
+    return Number.isFinite(n) ? n : 0
+  }
+  return 0
+}
+
+function parseWidgetInt(value: unknown): number {
+  const n = parseWidgetNumber(value)
+  return Number.isFinite(n) ? Math.trunc(n) : 0
+}
+
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
 
@@ -165,7 +183,7 @@ export function CdekWidget({
         },
         onChoose(mode: unknown, tariff: unknown, address: unknown) {
           const m = mode === 'office' ? 'cdek_pvz' : 'cdek_door'
-          const t = tariff as { tariff_code: number; delivery_sum: number; period_min: number; period_max: number }
+          const t = tariff as Record<string, unknown>
           const a = address as Record<string, unknown>
           const cityCodeRaw = a.city_code ?? a.code
           const cityCode =
@@ -177,10 +195,10 @@ export function CdekWidget({
           onChoose({
             deliveryMethod: m,
             tariff: {
-              tariffCode: t.tariff_code,
-              deliverySum: t.delivery_sum,
-              periodMin: t.period_min,
-              periodMax: t.period_max,
+              tariffCode: parseWidgetInt(t.tariff_code ?? t.tariffCode ?? t.code),
+              deliverySum: parseWidgetNumber(t.delivery_sum ?? t.deliverySum ?? t.price ?? t.cost),
+              periodMin: parseWidgetInt(t.period_min ?? t.periodMin ?? t.min),
+              periodMax: parseWidgetInt(t.period_max ?? t.periodMax ?? t.max),
             },
             cityCode: Number.isFinite(cityCode) && (cityCode as number) > 0 ? (cityCode as number) : undefined,
             city: typeof a.city === 'string' ? a.city : undefined,
