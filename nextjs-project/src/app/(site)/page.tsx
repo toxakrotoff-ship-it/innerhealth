@@ -119,6 +119,44 @@ function getBlockText(blocks: ContentBlockResolved[], key: string, fallback: str
   return text && text.length > 0 ? text : fallback
 }
 
+function getHowToOrderContent(blocks: ContentBlockResolved[]) {
+  const title = getBlockText(blocks, 'howToOrder.title', 'Как заказать')
+  const steps = [
+    {
+      title: getBlockText(blocks, 'howToOrder.step1.title', 'Выберите товары'),
+      text: getBlockText(
+        blocks,
+        'howToOrder.step1.text',
+        'Добавьте позиции в корзину из каталога или оформите «в 1 клик» на карточке товара.'
+      ),
+      href: getBlockText(blocks, 'howToOrder.step1.href', '/catalog'),
+      linkLabel: getBlockText(blocks, 'howToOrder.step1.linkLabel', 'В каталог'),
+    },
+    {
+      title: getBlockText(blocks, 'howToOrder.step2.title', 'Оформите заказ'),
+      text: getBlockText(
+        blocks,
+        'howToOrder.step2.text',
+        'Укажите контакты, способ доставки СДЭК (ПВЗ или курьер) и оплату через ЮKassa.'
+      ),
+      href: getBlockText(blocks, 'howToOrder.step2.href', '/faq'),
+      linkLabel: getBlockText(blocks, 'howToOrder.step2.linkLabel', 'Вопросы о доставке'),
+    },
+    {
+      title: getBlockText(blocks, 'howToOrder.step3.title', 'Получите и пользуйтесь'),
+      text: getBlockText(
+        blocks,
+        'howToOrder.step3.text',
+        'Отслеживайте отправление, при необходимости свяжитесь с нами через раздел контактов.'
+      ),
+      href: getBlockText(blocks, 'howToOrder.step3.href', '/contacts'),
+      linkLabel: getBlockText(blocks, 'howToOrder.step3.linkLabel', 'Контакты'),
+    },
+  ]
+
+  return { title, steps }
+}
+
 async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
   const categoryScopeWhere =
     activeBrand === 'sprint-power'
@@ -288,14 +326,14 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
   const heroImage = data.products[0]?.photo ?? null
   const innerSiteUrl = getBrandSiteUrl('inner')
   const markers = [
-    getBlockText(blocks, 'sprint.markers.item1', 'GMP и HACCP стандарты'),
-    getBlockText(blocks, 'sprint.markers.item2', 'Прозрачный состав'),
-    getBlockText(blocks, 'sprint.markers.item3', 'Регулярные обзоры'),
+    getBlockText(blocks, 'markers.item1', 'GMP и HACCP стандарты'),
+    getBlockText(blocks, 'markers.item2', 'Прозрачный состав'),
+    getBlockText(blocks, 'markers.item3', 'Регулярные обзоры'),
   ]
   const faqItems = [
-    getBlockText(blocks, 'sprint.faq.item1', 'Как выбрать продукт под цель?'),
-    getBlockText(blocks, 'sprint.faq.item2', 'Можно ли сочетать протеин и коллаген?'),
-    getBlockText(blocks, 'sprint.faq.item3', 'Сколько протеина нужно в день?'),
+    getBlockText(blocks, 'faq.item1', 'Как выбрать продукт под цель?'),
+    getBlockText(blocks, 'faq.item2', 'Можно ли сочетать протеин и коллаген?'),
+    getBlockText(blocks, 'faq.item3', 'Сколько протеина нужно в день?'),
   ]
 
   return (
@@ -305,15 +343,15 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
               <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">
-                {getBlockText(blocks, 'sprint.hero.badge', 'SPRINT POWER')}
+                {getBlockText(blocks, 'hero.badge', 'SPRINT POWER')}
               </p>
               <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
-                {getBlockText(blocks, 'sprint.hero.title', 'Почувствуй разницу с первой тренировки')}
+                {getBlockText(blocks, 'hero.title', 'Почувствуй разницу с первой тренировки')}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
                 {getBlockText(
                   blocks,
-                  'sprint.hero.subtitle',
+                  'hero.subtitle',
                   'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
                 )}
               </p>
@@ -322,13 +360,13 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
                   href="/catalog"
                   className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
                 >
-                  {getBlockText(blocks, 'sprint.hero.cta.primary', 'Выбрать продукт')}
+                  {getBlockText(blocks, 'hero.cta.primary', 'Выбрать продукт')}
                 </Link>
                 <Link
                   href="/otzyvy"
                   className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100"
                 >
-                  {getBlockText(blocks, 'sprint.hero.cta.secondary', 'Читать отзывы')}
+                  {getBlockText(blocks, 'hero.cta.secondary', 'Читать отзывы')}
                 </Link>
               </div>
             </div>
@@ -341,7 +379,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
               }
             >
               <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100">
-                {getBlockText(blocks, 'sprint.hero.featured', 'Hydro Protein - флагман линейки')}
+                {getBlockText(blocks, 'hero.featured', 'Hydro Protein - флагман линейки')}
               </div>
             </div>
           </div>
@@ -349,7 +387,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
           {data.products.length > 0 && (
             <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
               <h2 className="mb-4 text-2xl font-bold text-slate-100">
-                {getBlockText(blocks, 'sprint.hits.title', 'Хиты продаж')}
+                {getBlockText(blocks, 'hits.title', 'Хиты продаж')}
               </h2>
               <div className="grid gap-3 md:grid-cols-2">
                 {data.products.map((product) => (
@@ -380,7 +418,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
           <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
-                {getBlockText(blocks, 'sprint.reviews.title', 'Отзывы спортсменов')}
+                {getBlockText(blocks, 'reviews.title', 'Отзывы спортсменов')}
               </h3>
               {data.reviews.map((review) => (
                 <div key={review.id} className="rounded-xl bg-slate-50 p-4">
@@ -391,7 +429,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
             </div>
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
-                {getBlockText(blocks, 'sprint.markers.title', 'Доверительные маркеры')}
+                {getBlockText(blocks, 'markers.title', 'Доверительные маркеры')}
               </h3>
               {markers.map((item) => (
                 <div key={item} className="rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700">
@@ -403,7 +441,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
 
           <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-100">
-              {getBlockText(blocks, 'sprint.lineup.title', 'Вся линейка')}
+              {getBlockText(blocks, 'lineup.title', 'Вся линейка')}
             </h3>
             <div className="grid gap-3 md:grid-cols-3">
               {data.categories.map((category) => (
@@ -421,12 +459,12 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
 
           <div className="rounded-3xl bg-[#111D3A] p-6 md:p-8">
             <p className="text-2xl font-bold text-white">
-              {getBlockText(blocks, 'sprint.inner.title', 'Inner Health')}
+              {getBlockText(blocks, 'crossBrand.title', 'Inner Health')}
             </p>
             <p className="mt-2 text-sm text-slate-300">
               {getBlockText(
                 blocks,
-                'sprint.inner.text',
+                'crossBrand.text',
                 'Активное долголетие, превентивная медицина, нутрицевтика.'
               )}
             </p>
@@ -434,13 +472,13 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
               href={innerSiteUrl}
               className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
             >
-              {getBlockText(blocks, 'sprint.inner.cta', 'На Inner Health')}
+              {getBlockText(blocks, 'crossBrand.cta', 'На Inner Health')}
             </a>
           </div>
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-900">
-              {getBlockText(blocks, 'sprint.faq.title', 'Частые вопросы')}
+              {getBlockText(blocks, 'faq.title', 'Частые вопросы')}
             </h3>
             {faqItems.map((item) => (
               <div
@@ -455,7 +493,7 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
               href="/catalog"
               className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white"
             >
-              {getBlockText(blocks, 'sprint.faq.cta', 'Выбрать продукт сейчас')}
+              {getBlockText(blocks, 'faq.cta', 'Выбрать продукт сейчас')}
             </Link>
           </div>
         </div>
@@ -506,6 +544,8 @@ export default async function HomePage() {
         ? 'font-script'
         : 'font-display'
 
+  const howToOrder = getHowToOrderContent(homeBlocks)
+
   return (
     <div>
       <HomePopupClient
@@ -535,7 +575,11 @@ export default async function HomePage() {
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
-      <HowToOrderSteps showBorders={newProducts.length > 0} />
+      <HowToOrderSteps
+        showBorders={newProducts.length > 0}
+        title={howToOrder.title}
+        steps={howToOrder.steps}
+      />
       {newProducts.length > 0 && <SpacingVertical size="lg" />}
 
       {newProducts.length > 0 && (
