@@ -97,7 +97,10 @@ export function CdekWidget({ brandId, items, onChoose, onCalculate }: CdekWidget
       widgetRef.current = new window.CDEKWidget({
         root: rootId,
         apiKey,
-        servicePath: `/api/cdek-widget/service${brandQuery}`,
+        // Widget internally appends its own query params (?action=offices/calculate...).
+        // If we include our own query (?brand=...), it can break the final URL (double '?')
+        // and the backend will not receive `action`.
+        servicePath: '/api/cdek-widget/service',
         canChoose: true,
         debug: false,
         from: configJson.from,
