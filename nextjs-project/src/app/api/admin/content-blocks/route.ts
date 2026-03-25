@@ -9,6 +9,23 @@ import {
   getResolvedBlocksForPage,
 } from '@/services/content-block.service'
 
+function validateInternalHref(value: string): boolean {
+  if (value.trim() !== value) return false
+  if (!value.startsWith('/')) return false
+  if (value.startsWith('//')) return false
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i)
+    if (code <= 0x20 || code === 0x7f) return false
+  }
+
+  try {
+    const url = new URL(value, 'https://example.invalid')
+    return url.origin === 'https://example.invalid'
+  } catch {
+    return false
+  }
+}
+
 const pageQuerySchema = z.object({
   page: z.string().min(1).transform((s) => s.trim()),
 })
@@ -68,6 +85,18 @@ export async function PUT(request: Request) {
         ? err.issues.map((e) => e.message).join('; ')
         : 'Invalid payload'
     return NextResponse.json({ error: msg }, { status: 400 })
+  }
+
+  for (const block of body.blocks) {
+    if (!block.key.endsWith('.href')) continue
+    const hrefValue = block.text ?? ''
+    if (hrefValue === '') continue
+    if (!validateInternalHref(hrefValue)) {
+      return NextResponse.json(
+        { error: `Invalid href for key "${block.key}"` },
+        { status: 400 }
+      )
+    }
   }
 
   try {

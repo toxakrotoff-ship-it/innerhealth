@@ -5,6 +5,7 @@ import type { BrandId } from '@/lib/brand/brand'
 
 export interface ContentBlockDto {
   id: string
+  brand: string
   page: string
   key: string
   label: string
@@ -16,24 +17,9 @@ export interface ContentBlockDto {
   fontWeight: string | null
 }
 
-function getScopedPage(page: string, brandId: BrandId): string {
-  return brandId === 'sprint-power' ? `sprint-power::${page}` : page
-}
-
-function shouldIncludeDefaultForBrand(def: ContentBlockDefault, brandId: BrandId): boolean {
-  const isSprintOnly = def.key.startsWith('sprint.') || def.key.startsWith('faq.sprint.')
-  if (brandId === 'sprint-power') {
-    if (def.page === 'home') return def.key.startsWith('sprint.')
-    if (def.page === 'faq') return def.key.startsWith('faq.sprint.')
-    return !def.key.startsWith('home.') && !def.key.startsWith('hero.')
-  }
-  return !isSprintOnly
-}
-
 export async function getBlocksForPage(page: string, brandId: BrandId = 'inner'): Promise<ContentBlockDto[]> {
-  const scopedPage = getScopedPage(page, brandId)
   const blocks = await prisma.contentBlock.findMany({
-    where: { page: scopedPage },
+    where: { brand: brandId, page },
     orderBy: { createdAt: 'asc' },
   })
 
@@ -63,9 +49,9 @@ export async function upsertBlocks(
   const result: ContentBlockDto[] = []
 
   for (const input of inputs) {
-    const scopedPage = getScopedPage(input.page, brandId)
     const data: Prisma.ContentBlockUncheckedCreateInput = {
-      page: scopedPage,
+      brand: brandId,
+      page: input.page,
       key: input.key,
       label: input.label,
       type: input.type,
@@ -84,8 +70,9 @@ export async function upsertBlocks(
           })
         : await prisma.contentBlock.upsert({
             where: {
-              page_key: {
-                page: scopedPage,
+              brand_page_key: {
+                brand: brandId,
+                page: input.page,
                 key: input.key,
               },
             },
@@ -114,11 +101,8 @@ export async function getResolvedBlocksForPage(
   page: string,
   brandId: BrandId = 'inner'
 ): Promise<ContentBlockResolved[]> {
-  const scopedPage = getScopedPage(page, brandId)
-  const defaults = CONTENT_BLOCK_DEFAULTS.filter(
-    (d) => d.page === page && shouldIncludeDefaultForBrand(d, brandId)
-  )
-  const existing = await prisma.contentBlock.findMany({ where: { page: scopedPage } })
+  const defaults = CONTENT_BLOCK_DEFAULTS.filter((d) => d.page === page)
+  const existing = await prisma.contentBlock.findMany({ where: { brand: brandId, page } })
 
   return defaults.map((def): ContentBlockResolved => {
     const found = existing.find((b) => b.key === def.key)

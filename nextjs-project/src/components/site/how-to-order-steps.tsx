@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading2 } from '@/components/ui/responsive-text'
 
-const steps = [
+const DEFAULT_STEPS = [
   {
     title: 'Выберите товары',
     text: 'Добавьте позиции в корзину из каталога или оформите «в 1 клик» на карточке товара.',
@@ -23,35 +23,49 @@ const steps = [
   },
 ] as const
 
+interface HowToOrderStep {
+  title: string
+  text: string
+  href: string
+  linkLabel: string
+}
+
 interface HowToOrderStepsProps {
   /** When embedded inside another container (e.g. FAQ), skip outer AdaptiveContainer + title. */
   embedded?: boolean
   /** When false, hide outer section borders (useful when adjacent sections have mismatched spacing). */
   showBorders?: boolean
   isSprintTheme?: boolean
+  title?: string
+  steps?: HowToOrderStep[]
 }
 
 export function HowToOrderSteps({
   embedded = false,
   showBorders = true,
   isSprintTheme = false,
+  title,
+  steps,
 }: HowToOrderStepsProps) {
+  const resolvedTitle = title ?? 'Как заказать'
+  const resolvedSteps = steps ?? [...DEFAULT_STEPS]
+
   const inner = (
     <>
       {!embedded && (
         <Heading2 className={`mb-6 text-center sm:text-left ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-          Как заказать
+          {resolvedTitle}
         </Heading2>
       )}
       {embedded && (
         <p className={`font-semibold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-          Как заказать — три шага
+          {resolvedTitle} — три шага
         </p>
       )}
       <ol className="grid gap-6 sm:grid-cols-3">
-        {steps.map((step, i) => (
+        {resolvedSteps.map((step, i) => (
           <li
-            key={step.title}
+            key={`${i}-${step.title}`}
             className={`rounded-2xl border p-5 shadow-sm flex flex-col ${
               isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-white'
             }`}
