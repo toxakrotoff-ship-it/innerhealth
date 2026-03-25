@@ -39,7 +39,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru", // Yandex Maps API and tiles
+    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru", // Yandex Maps API and tiles
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
