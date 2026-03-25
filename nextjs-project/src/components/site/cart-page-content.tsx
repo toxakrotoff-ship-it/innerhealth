@@ -105,6 +105,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
   const [calculationLoading, setCalculationLoading] = useState(false)
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('cdek_pvz')
+  const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
   const [deliveryPoints, setDeliveryPoints] = useState<CdekPvzOption[]>([])
   const [deliveryPointsLoading, setDeliveryPointsLoading] = useState(false)
   const [deliveryPointsError, setDeliveryPointsError] = useState<string | null>(null)
@@ -629,13 +630,16 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
                 : undefined
             }
             onCalculate={({ office, door }) => {
-              // Prefer explicit tariffs we actually use (136/137), fallback to first available.
+              // До выбора пользователем — можно подставить дефолт для отображения.
+              // После `onChoose` выбранный тариф является источником истины и не должен затираться.
+              if (hasWidgetTariffSelection) return
               const officeTariff = office.find((t) => t.tariffCode === 136) ?? office[0]
               const doorTariff = door.find((t) => t.tariffCode === 137) ?? door[0]
               setPvzTariff(officeTariff ?? null)
               setDoorTariff(doorTariff ?? null)
             }}
             onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+              setHasWidgetTariffSelection(true)
               setDeliveryMethod(method)
               if (cdekCityCode != null || cdekCity) {
                 setSelectedCity((prev) => ({
