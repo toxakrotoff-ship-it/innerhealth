@@ -25,14 +25,21 @@ export type CartLineDetails = Pick<
 interface CartState {
   items: CartLine[]
   isDrawerOpen: boolean
+  ownerKey: string | null
   addItem: (line: CartLine) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   mergeItemDetails: (productId: string, details: CartLineDetails) => void
+  syncOwner: (ownerId: string | null) => void
   openDrawer: () => void
   closeDrawer: () => void
   toggleDrawer: () => void
   clearCart: () => void
+}
+
+function toOwnerKey(ownerId: string | null): string {
+  if (ownerId != null && ownerId.trim().length > 0) return `user:${ownerId.trim()}`
+  return 'guest'
 }
 
 export const useCartStore = create<CartState>()(
@@ -40,6 +47,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isDrawerOpen: false,
+      ownerKey: null,
 
       addItem(line) {
         set((state) => {
@@ -87,6 +95,19 @@ export const useCartStore = create<CartState>()(
         }))
       },
 
+      syncOwner(ownerId) {
+        const nextOwnerKey = toOwnerKey(ownerId)
+        set((state) => {
+          // Legacy persisted carts (without ownerKey) are ambiguous: reset once.
+          if (state.ownerKey == null) {
+            if (state.items.length === 0) return { ownerKey: nextOwnerKey }
+            return { ownerKey: nextOwnerKey, items: [] }
+          }
+          if (state.ownerKey === nextOwnerKey) return state
+          return { ownerKey: nextOwnerKey, items: [] }
+        })
+      },
+
       openDrawer: () => set({ isDrawerOpen: true }),
       closeDrawer: () => set({ isDrawerOpen: false }),
       toggleDrawer: () => set((s) => ({ isDrawerOpen: !s.isDrawerOpen })),
@@ -96,6 +117,7 @@ export const useCartStore = create<CartState>()(
       name: 'innerhealth-cart',
       /** Persist only productId and quantity to reduce localStorage size. */
       partialize: (state) => ({
+        ownerKey: state.ownerKey,
         items: state.items.map(({ productId, quantity }) => ({ productId, quantity })),
       }),
     }
