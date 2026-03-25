@@ -5,7 +5,7 @@ interface FaqItem {
 }
 
 interface FaqAccordionProps {
-  items: FaqItem[]
+  items: ReadonlyArray<FaqItem>
   isSprintTheme?: boolean
 }
 
