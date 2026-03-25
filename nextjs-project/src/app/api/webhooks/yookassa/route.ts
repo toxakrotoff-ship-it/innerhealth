@@ -79,10 +79,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
+
   if (body.event === 'payment.succeeded' && order.status !== 'paid') {
     let payment: { status: string } | null = null
     try {
-      const yookassaSettings = await settingsService.getYookassaSettingsMap()
+      const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: orderBrandId })
       const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
       const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
       const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
@@ -97,11 +99,13 @@ export async function POST(request: Request) {
         orderId,
         errorMessage,
         context: 'webhook',
+        brandId: orderBrandId,
       })
       void notifyMaxPaymentError({
         orderId,
         errorMessage,
         context: 'webhook',
+        brandId: orderBrandId,
       })
       return NextResponse.json({ ok: true })
     }

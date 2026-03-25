@@ -75,9 +75,19 @@ function looksLikeHtmlMarkup(text: string): boolean {
   return /<[a-z][\s\S]*>/i.test(text.trim())
 }
 
-function ProductDescriptionBlock({ description }: { description: string }) {
-  const className =
-    'mt-6 text-gray-600 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal'
+function ProductDescriptionBlock({
+  description,
+  isSprintTheme,
+}: {
+  description: string
+  isSprintTheme: boolean
+}) {
+  const className = cn(
+    'mt-6 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
+    isSprintTheme
+      ? 'text-slate-300 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
+      : 'text-text [&_p]:text-text [&_li]:text-text [&_strong]:text-gray-900'
+  )
   if (looksLikeHtmlMarkup(description)) {
     return <div className={className} dangerouslySetInnerHTML={{ __html: description }} />
   }
@@ -88,9 +98,13 @@ function ProductDescriptionBlock({ description }: { description: string }) {
   )
 }
 
-function ProductLongTextBlock({ text }: { text: string }) {
-  const className =
-    'prose prose-sm max-w-none text-gray-600 dark:text-gray-300 [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal'
+function ProductLongTextBlock({ text, isSprintTheme }: { text: string; isSprintTheme: boolean }) {
+  const className = cn(
+    'prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
+    isSprintTheme
+      ? 'text-slate-300 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
+      : 'text-text [&_p]:text-text [&_li]:text-text [&_strong]:text-gray-900'
+  )
   if (looksLikeHtmlMarkup(text)) {
     return <div className={className} dangerouslySetInnerHTML={{ __html: text }} />
   }
@@ -199,7 +213,9 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
           <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
-          {product.description && <ProductDescriptionBlock description={product.description} />}
+          {product.description && (
+            <ProductDescriptionBlock description={product.description} isSprintTheme={isSprintTheme} />
+          )}
         </div>
       </FluidGrid>
 
@@ -208,21 +224,29 @@ export function ProductPageContent({
           <section
             className={`pt-8 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200 dark:border-gray-700'}`}
           >
-            <ProductLongTextBlock text={product.text} />
+            <ProductLongTextBlock text={product.text} isSprintTheme={isSprintTheme} />
           </section>
         </ScalableSpacing>
       )}
 
       {tabs.length > 0 && (
         <ScalableSpacing size="lg">
-          <ProductTabs tabs={tabs} />
+          <ProductTabs tabs={tabs} isSprintTheme={isSprintTheme} />
         </ScalableSpacing>
       )}
 
       {relatedProducts.length > 0 && (
         <ScalableSpacing size="lg">
-          <section className={tabs.length > 0 ? 'pt-6 sm:pt-8' : 'border-t border-gray-200 pt-6 sm:pt-8'}>
-            <Heading2 className="mb-1">Из той же категории</Heading2>
+          <section
+            className={
+              tabs.length > 0
+                ? 'pt-6 sm:pt-8'
+                : isSprintTheme
+                  ? 'border-t border-slate-700 pt-6 sm:pt-8'
+                  : 'border-t border-gray-200 pt-6 sm:pt-8'
+            }
+          >
+            <Heading2 className={cn('mb-1', isSprintTheme && 'text-slate-100')}>Из той же категории</Heading2>
             <p className={`mb-4 max-w-2xl text-sm ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>
               Подборка похожих позиций из каталога — удобно сравнить состав и цену.
             </p>
@@ -230,6 +254,7 @@ export function ProductPageContent({
               <ProductRelatedCategoryLinks
                 categoryTitle={relatedProductsCategoryTitle}
                 items={relatedProducts}
+                isSprintTheme={isSprintTheme}
               />
             ) : null}
             <FluidGrid

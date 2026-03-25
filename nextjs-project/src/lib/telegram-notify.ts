@@ -1,6 +1,7 @@
 import * as telegramService from '@/services/telegram.service';
 import * as userService from '@/services/user.service';
 import * as settingsService from '@/services/settings.service';
+import type { BrandId } from '@/lib/brand/brand';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -65,10 +66,13 @@ export interface OrderNotifyPayload {
   promoCode?: string | null;
   /** If set, partner linked to this promo will receive a separate short notification. */
   promoCodeId?: string | null;
+  /** Соответствует scope настроек в админке (telegram_bot_token и т.д.). */
+  brandId?: BrandId;
 }
 
 export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
-  settingsService.getTelegramBotToken().then((token) => {
+  const settingsScope = payload.brandId ? { brandId: payload.brandId } : {};
+  settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return null;
     return getWhitelistChatIds(token).then((chatIds) => ({ token, chatIds }));
   }).then(async (result) => {
@@ -205,12 +209,14 @@ export interface PaymentErrorNotifyPayload {
   errorMessage: string;
   /** Контекст: создание платежа при оформлении заказа или верификация в webhook. */
   context: 'create' | 'webhook';
+  brandId?: BrandId;
 }
 
 /** Алерт в Telegram при ошибке ЮKassa (нет связи с платёжной системой, ошибка API и т.д.). */
 export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): void {
-  const { orderId, total, errorMessage, context } = payload;
-  settingsService.getTelegramBotToken().then((token) => {
+  const { orderId, total, errorMessage, context, brandId } = payload;
+  const settingsScope = brandId ? { brandId } : {};
+  settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
     return getWhitelistChatIds(token);
   }).then(async (chatIds) => {
@@ -227,7 +233,7 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
       `Заказ: ${escapeHtml(orderId)}. ${totalStr}Ошибка: ${escapeHtml(errorMessage.slice(0, 300))}`,
     ];
     const text = lines.join('\n');
-    return settingsService.getTelegramBotToken().then((token) => {
+    return settingsService.getTelegramBotToken(settingsScope).then((token) => {
       if (!token) return;
       for (const chatId of chatIds) {
         sendMessage(token, chatId, text).catch((e) =>

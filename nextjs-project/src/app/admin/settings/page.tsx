@@ -76,7 +76,12 @@ const FIELDS: Array<{
   { key: 'cdek_sender_name', label: 'Имя отправителя (СДЭК)', type: 'text', placeholder: 'Название компании или ФИО', group: 'cdek' },
   { key: 'cdek_sender_phone', label: 'Телефон отправителя (СДЭК)', type: 'text', placeholder: '+7 (999) 123-45-67', group: 'cdek' },
   { key: 'cdek_sender_address', label: 'Адрес отправителя (СДЭК)', type: 'text', placeholder: 'Город, улица, дом', group: 'cdek' },
+  { key: 'cdek_from_pvz_code', label: 'Код ПВЗ отправки СДЭК', type: 'text', placeholder: 'MSK123', group: 'cdek' },
   { key: 'cdek_from_city_code', label: 'Код города отправления СДЭК', type: 'text', placeholder: '44', group: 'cdek' },
+  { key: 'cdek_default_package_weight_g', label: 'Дефолтный вес посылки (СДЭК), г', type: 'text', placeholder: '100', group: 'cdek' },
+  { key: 'cdek_default_package_length_mm', label: 'Дефолтная длина посылки (СДЭК), мм', type: 'text', placeholder: '33', group: 'cdek' },
+  { key: 'cdek_default_package_width_mm', label: 'Дефолтная ширина посылки (СДЭК), мм', type: 'text', placeholder: '25', group: 'cdek' },
+  { key: 'cdek_default_package_height_mm', label: 'Дефолтная высота посылки (СДЭК), мм', type: 'text', placeholder: '15', group: 'cdek' },
   { key: 'yookassa_shop_id', label: 'Shop ID ЮKassa', type: 'text', placeholder: 'Идентификатор магазина', group: 'yookassa' },
   { key: 'yookassa_secret_key', label: 'Секретный ключ ЮKassa', type: 'password', placeholder: '••••••••', group: 'yookassa' },
   { key: 'yookassa_term_id', label: 'Term ID ЮKassa (терминал)', type: 'text', placeholder: 'ID терминала при необходимости', group: 'yookassa' },
@@ -182,6 +187,11 @@ export default function AdminSettingsPage() {
   function buildSettingsEndpoint(): string {
     if (settingsScope === 'global') return '/api/admin/settings';
     return `/api/admin/settings?brand=${encodeURIComponent(settingsScope)}`;
+  }
+
+  function buildScopedCheckEndpoint(basePath: '/api/admin/check-cdek' | '/api/admin/check-yookassa'): string {
+    if (settingsScope === 'global') return basePath;
+    return `${basePath}?brand=${encodeURIComponent(settingsScope)}`;
   }
 
   useEffect(() => {
@@ -571,7 +581,7 @@ export default function AdminSettingsPage() {
                       setYookassaCheckResult(null);
                       setYookassaCheckLoading(true);
                       try {
-                        const res = await fetch('/api/admin/check-yookassa');
+                        const res = await fetch(buildScopedCheckEndpoint('/api/admin/check-yookassa'));
                         const data = await res.json();
                         setYookassaCheckResult({ ok: data.ok, error: data.error });
                       } catch {
@@ -601,7 +611,7 @@ export default function AdminSettingsPage() {
                       setCdekCheckResult(null);
                       setCdekCheckLoading(true);
                       try {
-                        const res = await fetch('/api/admin/check-cdek');
+                        const res = await fetch(buildScopedCheckEndpoint('/api/admin/check-cdek'));
                         const data = await res.json();
                         setCdekCheckResult({ ok: data.ok, error: data.error });
                       } catch {

@@ -22,7 +22,13 @@ export async function getCategoriesWithProductCount() {
       sortOrder: true,
       createdAt: true,
       updatedAt: true,
-      _count: { select: { products: true } },
+      _count: {
+        select: {
+          products: {
+            where: { product: { isDraft: false } },
+          },
+        },
+      },
     },
     orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
   });

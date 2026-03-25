@@ -2,10 +2,12 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
 import { cookies, headers } from 'next/headers';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { resolveBrand, type BrandId } from '@/lib/brand/brand';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
 import {
   productBelongsToBrandScope,
@@ -40,9 +42,10 @@ async function resolveEffectiveBrandId(brandId?: BrandId | null): Promise<BrandI
   if (brandId) return brandId;
   const headerStore = await headers();
   const cookieStore = await cookies();
-  return resolveBrand({
+  return resolveAdminBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    adminBrandCookie: cookieStore.get(ADMIN_BRAND_COOKIE_NAME)?.value ?? null,
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   });
 }
@@ -203,7 +206,14 @@ export async function setProductCategories(productId: string, categoryIds: strin
     if (!prisma) {
       throw new Error('Database connection is not initialized');
     }
-    
+
+    const previousCategoryIds = (
+      await prisma.productCategory.findMany({
+        where: { productId },
+        select: { categoryId: true },
+      })
+    ).map((row) => row.categoryId);
+
     // Удаляем все существующие связи
     await prisma.productCategory.deleteMany({
       where: { productId }
@@ -220,6 +230,11 @@ export async function setProductCategories(productId: string, categoryIds: strin
         data: links
       });
     }
+
+    await revalidateCatalogForProduct({
+      productId,
+      extraCategoryIds: [...previousCategoryIds, ...categoryIds],
+    });
     
     revalidatePath('/admin/catalog');
     revalidatePath(`/admin/products/${productId}`);

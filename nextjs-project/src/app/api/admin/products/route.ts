@@ -1,47 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import { prisma } from '@/lib/prisma';
-import { buildCatalogRevalidationPaths } from '@/lib/catalog-revalidation';
+import { revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 import * as productService from '@/services/product.service';
 import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
-
-async function revalidateCatalogForProduct(options: {
-  productId: string;
-  extraCategoryIds?: readonly string[];
-}): Promise<void> {
-  const linkedCategories = await prisma.productCategory.findMany({
-    where: { productId: options.productId },
-    select: { categoryId: true },
-  });
-
-  const categoryIds = Array.from(
-    new Set([
-      ...linkedCategories.map((item) => item.categoryId),
-      ...(options.extraCategoryIds ?? []),
-    ])
-  );
-
-  if (categoryIds.length === 0) {
-    for (const path of buildCatalogRevalidationPaths([])) {
-      revalidatePath(path);
-    }
-    return;
-  }
-
-  const categories = await prisma.category.findMany({
-    where: { id: { in: categoryIds } },
-    select: { slug: true },
-  });
-
-  for (const path of buildCatalogRevalidationPaths(categories.map((category) => category.slug))) {
-    revalidatePath(path);
-  }
-}
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -120,6 +86,16 @@ export async function PUT(request: Request) {
       );
     }
 
+    const previousCategoryIds =
+      categoryIds !== undefined
+        ? (
+            await prisma.productCategory.findMany({
+              where: { productId: id },
+              select: { categoryId: true },
+            })
+          ).map((row) => row.categoryId)
+        : [];
+
     const productFields = ['tildaUid', 'slug', 'brand', 'sku', 'mark', 'category', 'title', 'description', 'text', 'photo', 'photos', 'price', 'quantity', 'priceOld', 'discountPrice', 'isPromoEligible', 'isPreorderEnabled', 'isFeaturedInNewArrivals', 'isDraft', 'editions', 'modifications', 'externalId', 'parentUid', 'weight', 'length', 'width', 'height', 'seoTitle', 'seoDescr', 'seoKeywords', 'fbTitle', 'fbDescr', 'tab1', 'tab2', 'tab3', 'tab4', 'tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'] as const;
     const characteristics = ['characteristicsNutrition100g', 'characteristicsKkal', 'characteristicsContraindications', 'characteristicsShelfLife', 'characteristicsShelfLife2', 'characteristicsNutrition100gProduct', 'characteristicsEnergyValue100g', 'characteristicsNutrition100g2', 'characteristicsNutritionPerPortion5g', 'characteristicsComposition', 'characteristicsKkal100gDailyDose', 'characteristicsFormulation', 'characteristicsCalorie', 'characteristicsFlacon200ml', 'characteristicsStorage'];
     const allFields = [...productFields, ...characteristics];
@@ -148,7 +124,10 @@ export async function PUT(request: Request) {
     );
     await revalidateCatalogForProduct({
       productId: id,
-      extraCategoryIds: categoryIds,
+      extraCategoryIds:
+        categoryIds !== undefined
+          ? [...previousCategoryIds, ...categoryIds]
+          : undefined,
     });
     return NextResponse.json(updatedProduct);
   } catch (error) {

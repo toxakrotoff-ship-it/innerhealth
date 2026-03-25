@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import { Unbounded } from 'next/font/google'
 import { Preloader } from '@/components/site/preloader'
-import { getSiteBaseUrl } from '@/lib/site-url'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -36,61 +36,80 @@ const unbounded = Unbounded({
   display: 'swap',
 })
 
-const siteBaseUrl = getSiteBaseUrl()
 const yandexVerification = process.env.NEXT_PUBLIC_YANDEX_VERIFICATION?.trim()
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteBaseUrl),
-  title: {
-    default: 'Inner Health — нутриенты и здоровое питание',
-    template: '%s | Inner Health',
-  },
-  description:
-    'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
-  applicationName: 'Inner Health',
-  referrer: 'origin-when-cross-origin',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'ru_RU',
-    url: siteBaseUrl,
-    siteName: 'Inner Health',
-    title: 'Inner Health — нутриенты и здоровое питание',
+function getBrandMetaCopy(brandId: 'inner' | 'sprint-power'): {
+  defaultTitle: string
+  description: string
+} {
+  if (brandId === 'sprint-power') {
+    return {
+      defaultTitle: 'Sprint Power — спортивное питание и нутриенты',
+      description:
+        'Интернет-магазин Sprint Power: спортивное питание, протеин, формулы для восстановления и активной формы. Доставка по России.',
+    }
+  }
+  return {
+    defaultTitle: 'Inner Health — нутриенты и здоровое питание',
     description:
       'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
-    images: [
-      {
-        url: '/hero-portrait.png',
-        alt: 'Inner Health',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Inner Health — нутриенты и здоровое питание',
-    description:
-      'Интернет-магазин Inner Health: нутриенты, коллаген, БАДы и продукты для здоровья. Доставка по России.',
-    images: ['/hero-portrait.png'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { brandId, siteTitle, siteUrl } = await getServerBrandContext()
+  const metaCopy = getBrandMetaCopy(brandId)
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: metaCopy.defaultTitle,
+      template: `%s | ${siteTitle}`,
+    },
+    description: metaCopy.description,
+    applicationName: siteTitle,
+    referrer: 'origin-when-cross-origin',
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
+    openGraph: {
+      type: 'website',
+      locale: 'ru_RU',
+      url: siteUrl,
+      siteName: siteTitle,
+      title: metaCopy.defaultTitle,
+      description: metaCopy.description,
+      images: [
+        {
+          url: '/hero-portrait.png',
+          alt: siteTitle,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: metaCopy.defaultTitle,
+      description: metaCopy.description,
+      images: ['/hero-portrait.png'],
+    },
+    robots: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+      },
     },
-  },
-  category: 'health',
-  ...(yandexVerification
-    ? { verification: { yandex: yandexVerification } }
-    : {}),
+    category: 'health',
+    ...(yandexVerification
+      ? { verification: { yandex: yandexVerification } }
+      : {}),
+  }
 }
 
 export default function RootLayout({

@@ -2,17 +2,19 @@ import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import { checkYookassaConnection } from '@/lib/yookassa'
 import * as settingsService from '@/services/settings.service'
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
 
 /**
  * GET /api/admin/check-yookassa
  * Проверяет подключение к API ЮKassa (учётные данные из настроек админки или env).
  * Только для администраторов.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
-  const yookassaSettings = await settingsService.getYookassaSettingsMap()
+  const brandId = resolveBrandFromRequest(request)
+  const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
   const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
   const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
   const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0

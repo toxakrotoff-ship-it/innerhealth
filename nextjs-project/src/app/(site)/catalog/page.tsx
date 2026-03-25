@@ -117,7 +117,15 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     prisma.category.findMany({
       where: { showInCategoriesBlock: true, brand: dbBrand },
       orderBy: { sortOrder: 'asc' },
-      include: { _count: { select: { products: true } } },
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: { product: { isDraft: false } },
+            },
+          },
+        },
+      },
     }),
     productService.getCatalogBrandOptions().then((options) =>
       isSprintPowerBrand(brandId)

@@ -23,6 +23,7 @@ import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { cn } from '@/lib/utils'
+import type { BrandId } from '@/lib/brand/brand'
 
 interface PromoResult {
   valid: boolean
@@ -48,9 +49,10 @@ function applyPromoToSubtotal(subtotal: number, promo: PromoResult | null): numb
 
 interface CartPageContentProps {
   isSprintTheme?: boolean
+  brandId?: BrandId
 }
 
-export function CartPageContent({ isSprintTheme = false }: CartPageContentProps) {
+export function CartPageContent({ isSprintTheme = false, brandId }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -252,13 +254,14 @@ export function CartPageContent({ isSprintTheme = false }: CartPageContentProps)
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         toLocation: { cityCode },
       }
+      const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
       const [resPvz, resDoor] = await Promise.all([
-        fetch('/api/cdek/calculator', {
+        fetch(`/api/cdek/calculator${brandQuery}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, deliveryKind: 'pvz' }),
         }),
-        fetch('/api/cdek/calculator', {
+        fetch(`/api/cdek/calculator${brandQuery}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, deliveryKind: 'address' }),
@@ -300,10 +303,12 @@ export function CartPageContent({ isSprintTheme = false }: CartPageContentProps)
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
 
+  /** Расчёт СДЭК при выборе города и при изменении корзины (не только для сохранённого адреса). */
   useEffect(() => {
-    if (!usingSavedAddress || cityCode == null) return
+    if (cityCode == null) return
+    if (deliveryMethod === 'pickup') return
     void handleCalculateDelivery()
-  }, [usingSavedAddress, cityCode, handleCalculateDelivery])
+  }, [cityCode, items, deliveryMethod, handleCalculateDelivery])
 
   useEffect(() => {
     if (cityCode != null && deliveryMethod === 'cdek_pvz') {
@@ -378,7 +383,10 @@ export function CartPageContent({ isSprintTheme = false }: CartPageContentProps)
     if (comment.trim()) address = `${address}\nКомментарий: ${comment.trim()}`
     setSubmitting(true)
     try {
-      const res = await fetch('/api/orders', {
+      const orderEndpoint = brandId
+        ? `/api/orders?brand=${encodeURIComponent(brandId)}`
+        : '/api/orders'
+      const res = await fetch(orderEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -718,17 +726,32 @@ export function CartPageContent({ isSprintTheme = false }: CartPageContentProps)
                   </div>
                 </>
               )}
-              {(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && deliverySum > 0 && (
+              {(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && (
                 <>
                   <div className={cn('flex justify-between', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                     <span>
                       Доставка СДЭК ({deliveryMethod === 'cdek_pvz' ? 'до ПВЗ' : 'до двери'})
                     </span>
-                    <span>{deliverySum.toLocaleString('ru-RU')} ₽</span>
+                    <span>
+                      {cityCode == null
+                        ? '—'
+                        : calculationLoading
+                          ? '…'
+                          : deliveryError
+                            ? '—'
+                            : `${deliverySum.toLocaleString('ru-RU')} ₽`}
+                    </span>
                   </div>
-                  <p className={cn('mt-0.5 text-xs xl:mt-1 2xl:mt-1.5 3xl:mt-2 4xl:mt-2.5 5xl:mt-3 6xl:mt-4', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
-                    Стоимость доставки не зависит от скидки по промокоду.
-                  </p>
+                  {cityCode != null && !calculationLoading && !deliveryError && (
+                    <p
+                      className={cn(
+                        'mt-0.5 text-xs xl:mt-1 2xl:mt-1.5 3xl:mt-2 4xl:mt-2.5 5xl:mt-3 6xl:mt-4',
+                        isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                      )}
+                    >
+                      Стоимость доставки не зависит от скидки по промокоду.
+                    </p>
+                  )}
                 </>
               )}
               <div className={cn('flex justify-between border-t pt-2 text-lg font-semibold', isSprintTheme ? 'border-slate-700' : 'border-gray-200')}>

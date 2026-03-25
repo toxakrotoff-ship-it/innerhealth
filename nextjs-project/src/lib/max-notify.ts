@@ -2,19 +2,24 @@ import { Bot } from '@maxhub/max-bot-api';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
+import type { BrandId } from '@/lib/brand/brand';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-async function getMaxBot(): Promise<Bot | null> {
-  const settings = await settingsService.getMaxBotSettings();
+async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | null> {
+  const settings = await settingsService.getMaxBotSettings(options);
   if (!settings.token) return null;
   return new Bot(settings.token);
 }
 
-async function sendToUsers(userIds: string[], text: string): Promise<void> {
-  const bot = await getMaxBot();
+async function sendToUsers(
+  userIds: string[],
+  text: string,
+  options?: { brandId?: BrandId | null }
+): Promise<void> {
+  const bot = await getMaxBot(options);
   if (!bot || userIds.length === 0) return;
   for (const userId of userIds) {
     const id = Number.parseInt(userId, 10);
@@ -41,9 +46,11 @@ export interface MaxOrderNotifyPayload {
   promoCode?: string | null;
   promoCodeId?: string | null;
   customerUserId?: string | null;
+  brandId?: BrandId;
 }
 
 export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const whitelist = await maxService.getMaxWhitelist();
   const adminUserIds = whitelist.map((row) => row.maxUserId);
   const lines: string[] = [
@@ -66,7 +73,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     `Адрес: ${escapeHtml(payload.shipping.address)}`,
     `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
   ];
-  await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'));
+  await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'), scope);
 
   if (payload.promoCodeId) {
     const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId);
@@ -77,7 +84,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
         `Промокод: ${promoLabel}\n` +
         `Заказ ID: ${escapeHtml(payload.orderId)}\n` +
         `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
-      await sendToUsers([partnerMaxUserId], partnerText);
+      await sendToUsers([partnerMaxUserId], partnerText, scope);
     }
   }
 
@@ -88,7 +95,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
         `✅ <b>Ваш заказ принят</b>\n\n` +
         `Номер: ${escapeHtml(payload.orderId)}\n` +
         `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
-      await sendToUsers([customerLink.maxUserId], customerText);
+      await sendToUsers([customerLink.maxUserId], customerText, scope);
     }
   }
 }
@@ -147,7 +154,9 @@ export async function notifyMaxPaymentError(payload: {
   total?: number;
   errorMessage: string;
   context: 'create' | 'webhook';
+  brandId?: BrandId;
 }): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const contextLabel = payload.context === 'create' ? 'создание платежа' : 'верификация в webhook';
   const totalLine =
     payload.total !== undefined ? `Сумма: ${payload.total.toFixed(0)} ₽. ` : '';
@@ -158,7 +167,7 @@ export async function notifyMaxPaymentError(payload: {
     `Заказ: ${escapeHtml(payload.orderId)}. ${totalLine}Ошибка: ${escapeHtml(payload.errorMessage.slice(0, 300))}`,
   ].join('\n');
   const whitelist = await maxService.getMaxWhitelist();
-  await sendToUsers(whitelist.map((row) => row.maxUserId), text);
+  await sendToUsers(whitelist.map((row) => row.maxUserId), text, scope);
 }
 
 export async function notifyMaxNewReview(payload: {

@@ -1,9 +1,9 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
+import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
-const BRAND_COOKIE_NAME = 'ih_active_brand'
 const BRAND_IDS = new Set(['inner', 'sprint-power'])
 
 function getAdminSecretPath(): string {
@@ -93,7 +93,7 @@ async function proxyHandler(request: Request) {
       url.pathname = canonicalAdminPath
 
       const res = NextResponse.rewrite(url)
-      res.cookies.set(BRAND_COOKIE_NAME, brandSegment, {
+      res.cookies.set(ADMIN_BRAND_COOKIE_NAME, brandSegment, {
         path: '/',
         sameSite: 'lax',
         httpOnly: false,

@@ -7,7 +7,7 @@ import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { getRedirectMap } from '@/services/redirect.service'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveSiteBrand, ACTIVE_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -61,9 +61,9 @@ export default async function SiteLayout({
 }) {
   const headerStore = await headers()
   const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'])

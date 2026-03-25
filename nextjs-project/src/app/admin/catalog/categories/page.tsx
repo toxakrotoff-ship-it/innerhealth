@@ -28,6 +28,7 @@ import {
 } from '@/lib/category-tree';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
+import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
 
 interface CategoryFormState {
   title: string;
@@ -148,7 +149,7 @@ export default function AdminCategoriesPage() {
     const fromCookie = document.cookie
       .split(';')
       .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith('ih_active_brand='))
+      .find((entry) => entry.startsWith(`${ADMIN_BRAND_COOKIE_NAME}=`))
       ?.split('=')[1];
     if (fromCookie === 'sprint-power') {
       setActiveBrand('sprint-power');

@@ -133,7 +133,15 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
       const categoriesForBlock = await prisma.category.findMany({
         where: { showInCategoriesBlock: true, ...categoryScopeWhere },
         orderBy: { sortOrder: 'asc' },
-        include: { _count: { select: { products: true } } },
+        include: {
+          _count: {
+            select: {
+              products: {
+                where: { product: { isDraft: false } },
+              },
+            },
+          },
+        },
       })
 
       if (categoriesForBlock.length > 0) return categoriesForBlock
@@ -142,7 +150,15 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
       return prisma.category.findMany({
         where: categoryScopeWhere,
         orderBy: { sortOrder: 'asc' },
-        include: { _count: { select: { products: true } } },
+        include: {
+          _count: {
+            select: {
+              products: {
+                where: { product: { isDraft: false } },
+              },
+            },
+          },
+        },
       })
     } catch {
       return []
@@ -219,9 +235,10 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         c.id,
         c.title,
         c.slug,
-        COUNT(pc."productId")::int AS "productsCount"
+        COUNT(pc."productId") FILTER (WHERE p."isDraft" = false)::int AS "productsCount"
       FROM "Category" c
       LEFT JOIN "ProductCategory" pc ON pc."categoryId" = c.id
+      LEFT JOIN "Product" p ON p.id = pc."productId"
       WHERE c.brand = 'sprint-power'
       GROUP BY c.id, c.title, c.slug, c."sortOrder"
       ORDER BY c."sortOrder" ASC NULLS LAST, c.title ASC

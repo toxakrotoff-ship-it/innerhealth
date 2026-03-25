@@ -1,12 +1,16 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { GalleryBlock } from '@/components/site/gallery-block'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
 
-export const metadata = {
-  title: 'Сертификаты соответствия | Inner Health',
-  description:
-    'Сертификаты соответствия и документы, подтверждающие качество и безопасность продукции Inner Health. Декларации, сертификаты органической продукции.',
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteTitle } = await getServerBrandContext()
+  return {
+    title: `Сертификаты соответствия | ${siteTitle}`,
+    description: `Сертификаты соответствия и документы, подтверждающие качество и безопасность продукции ${siteTitle}. Декларации и сертификаты качества.`,
+  }
 }
 
 const breadcrumbItems = [

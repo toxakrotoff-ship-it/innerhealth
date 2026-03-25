@@ -20,6 +20,21 @@ export async function findOrderForWebhook(orderId: string) {
   });
 }
 
+/**
+ * Бренд для настроек уведомлений / ЮKassa: по строкам заказа (товарный brand).
+ * Заказы смешанного состава в API не допускаются; при отсутствии позиций — inner.
+ */
+export async function findOrderBrandIdForNotify(orderId: string): Promise<BrandId> {
+  const rows = await prisma.orderItem.findMany({
+    where: { orderId },
+    select: { product: { select: { brand: true } } },
+  });
+  const hasSprintPower = rows.some(
+    (row) => (row.product.brand ?? '').trim() === SPRINT_POWER_PRODUCT_BRAND
+  );
+  return hasSprintPower ? 'sprint-power' : 'inner';
+}
+
 /** Get order with shipping for CDEK flow. */
 export async function findOrderWithShipping(orderId: string) {
   return prisma.order.findUnique({

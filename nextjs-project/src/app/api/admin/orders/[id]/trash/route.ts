@@ -11,13 +11,13 @@ const paramsSchema = z.object({
 
 export async function POST(
   request: Request,
-  context: { params: unknown }
+  context: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
   const brandId = resolveBrandOrDefaultFromRequest(request);
 
-  const parsedParams = paramsSchema.safeParse(context.params);
+  const parsedParams = paramsSchema.safeParse(await context.params);
   if (!parsedParams.success) {
     return NextResponse.json(
       { error: 'Некорректный ID заказа' },

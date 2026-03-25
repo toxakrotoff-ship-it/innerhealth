@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Category, getCategoriesWithCounts } from '../actions'
 import { NO_CATEGORY_ID } from '../constants'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
+import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 
 type ProductWithCategories = {
   id: string
@@ -54,7 +55,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
     const fromCookie = document.cookie
       .split(';')
       .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith('ih_active_brand='))
+      .find((entry) => entry.startsWith(`${ADMIN_BRAND_COOKIE_NAME}=`))
       ?.split('=')[1]
     if (fromCookie === 'sprint-power') {
       setActiveBrand('sprint-power')

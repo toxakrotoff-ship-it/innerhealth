@@ -190,6 +190,7 @@ export async function POST(request: Request) {
       },
       promoCode: promoCodeStr,
       promoCodeId: order.promoCodeId ?? undefined,
+      brandId,
     })
     void notifyMaxOrder({
       orderId: order.id,
@@ -211,6 +212,7 @@ export async function POST(request: Request) {
       promoCode: promoCodeStr,
       promoCodeId: order.promoCodeId ?? undefined,
       customerUserId: userId,
+      brandId,
     })
 
     const orderNotificationPayload = {
@@ -309,12 +311,14 @@ export async function POST(request: Request) {
           total,
           errorMessage,
           context: 'create',
+          brandId,
         })
         void notifyMaxPaymentError({
           orderId: order.id,
           total,
           errorMessage,
           context: 'create',
+          brandId,
         })
         return NextResponse.json(
           { error: 'Заказ создан, но не удалось создать платёж. Мы свяжемся с вами.' },

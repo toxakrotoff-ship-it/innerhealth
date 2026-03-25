@@ -21,6 +21,14 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const ogrnip = blocks.find((b) => b.key === 'footer.bank.ogrnip')
   const inn = blocks.find((b) => b.key === 'footer.bank.inn')
 
+  const footerLinkSectionClass = isSprintTheme
+    ? 'max-md:border-t max-md:border-slate-700 max-md:pt-9 md:border-0 md:pt-0'
+    : 'max-md:border-t max-md:border-slate-200 max-md:pt-9 md:border-0 md:pt-0'
+
+  const footerColumnHeadingClass = isSprintTheme
+    ? 'mb-3 text-slate-100 md:mb-6 2xl:mb-7'
+    : 'mb-3 md:mb-6 2xl:mb-7'
+
   return (
     <footer
       className={`mt-auto ${
@@ -76,7 +84,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
             </div>
 
             {/* Колонка 2: Информация */}
-            <div>
+            <div className={footerLinkSectionClass}>
               <ResponsiveText
                 as="h3"
                 variant="xs"
@@ -84,7 +92,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
+                className={footerColumnHeadingClass}
                 adaptive
               >
                 Информация
@@ -114,7 +122,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
             </div>
 
             {/* Колонка 3: Покупателям */}
-            <div>
+            <div className={footerLinkSectionClass}>
               <ResponsiveText
                 as="h3"
                 variant="xs"
@@ -122,7 +130,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
+                className={footerColumnHeadingClass}
                 adaptive
               >
                 Покупателям
@@ -152,7 +160,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
             </div>
 
             {/* Колонка 4: Юридическое */}
-            <div>
+            <div className={footerLinkSectionClass}>
               <ResponsiveText
                 as="h3"
                 variant="xs"
@@ -160,7 +168,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 uppercase
                 tracking="widest"
                 color="primary"
-                className={isSprintTheme ? 'mb-6 text-slate-100 2xl:mb-7' : 'mb-6 2xl:mb-7'}
+                className={footerColumnHeadingClass}
                 adaptive
               >
                 Юридическое

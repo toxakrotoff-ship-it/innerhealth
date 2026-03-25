@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { ReactNode } from 'react'
 import AdminLayoutClient from './components/AdminLayoutClient'
 import { cookies, headers } from 'next/headers'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -34,9 +34,10 @@ export default async function AdminLayout({
   const adminBasePath = process.env.ADMIN_SECRET_PATH || 'admin'
   const headersStore = await headers()
   const cookiesStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveAdminBrand({
     forwardedBrand: headersStore.get('x-brand'),
-    cookieBrand: cookiesStore.get('ih_active_brand')?.value,
+    adminBrandCookie: cookiesStore.get(ADMIN_BRAND_COOKIE_NAME)?.value ?? null,
+    activeBrandCookie: cookiesStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headersStore.get('x-forwarded-host') || headersStore.get('host'),
   })
 

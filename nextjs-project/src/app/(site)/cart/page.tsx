@@ -30,7 +30,7 @@ export default async function CartPage({ searchParams }: CartPageProps) {
       <CheckoutTrustStrip isSprintTheme={isSprintTheme} />
       <CartReturnMessage payment={payment} />
       <ScalableSpacing size="lg" />
-      <CartPageContent isSprintTheme={isSprintTheme} />
+      <CartPageContent isSprintTheme={isSprintTheme} brandId={brandId} />
       <ScalableSpacing size="lg" />
       <RecentlyViewedProducts title="Вы недавно смотрели" />
     </AdaptiveContainer>

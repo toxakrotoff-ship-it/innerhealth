@@ -5,7 +5,7 @@ import { AdminDatePicker } from './components/AdminDatePicker'
 import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
 import { AdminStatsRefreshButton } from './components/AdminStatsRefreshButton'
 import type { BrandId } from '@/lib/brand/brand'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 
 export const dynamic = 'force-dynamic'
@@ -400,9 +400,10 @@ export default async function AdminPage({
 
   const headerStore = await headers()
   const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveAdminBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
+    adminBrandCookie: cookieStore.get(ADMIN_BRAND_COOKIE_NAME)?.value ?? null,
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
 
