@@ -128,6 +128,10 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
   const [usingSavedAddress, setUsingSavedAddress] = useState(false)
   const selectedSavedAddressIdRef = useRef<string | null>(null)
 
+  const selectedSavedAddress = selectedSavedAddressId
+    ? savedAddresses.find((address) => address.id === selectedSavedAddressId) ?? null
+    : null
+
   useEffect(() => {
     selectedSavedAddressIdRef.current = selectedSavedAddressId
   }, [selectedSavedAddressId])
@@ -616,11 +620,20 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
           <CdekWidget
             brandId={brandId}
             items={items}
+            defaultLocation={selectedSavedAddress?.city ?? undefined}
+            selected={
+              selectedSavedAddress
+                ? selectedSavedAddress.deliveryMethod === 'cdek_pvz'
+                  ? { office: selectedSavedAddress.cdekPvzCode }
+                  : { door: selectedSavedAddress.addressLine }
+                : undefined
+            }
             onCalculate={({ office, door }) => {
-              const firstOffice = office[0]
-              const firstDoor = door[0]
-              setPvzTariff(firstOffice ?? null)
-              setDoorTariff(firstDoor ?? null)
+              // Prefer explicit tariffs we actually use (136/137), fallback to first available.
+              const officeTariff = office.find((t) => t.tariffCode === 136) ?? office[0]
+              const doorTariff = door.find((t) => t.tariffCode === 137) ?? door[0]
+              setPvzTariff(officeTariff ?? null)
+              setDoorTariff(doorTariff ?? null)
             }}
             onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
               setDeliveryMethod(method)
