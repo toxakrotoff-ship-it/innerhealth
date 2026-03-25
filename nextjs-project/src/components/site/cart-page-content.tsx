@@ -64,7 +64,8 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
     const slimIds = items.filter((i) => i.title == null).map((i) => i.productId)
     if (slimIds.length === 0) return
     const controller = new AbortController()
-    fetch(`/api/products/cart-items?ids=${slimIds.join(',')}`, { signal: controller.signal })
+    const brandQuery = brandId ? `&brand=${encodeURIComponent(brandId)}` : ''
+    fetch(`/api/products/cart-items?ids=${slimIds.join(',')}${brandQuery}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((products: Array<{ id: string; title: string; price: number; priceOld: number | null; photo: string | null; slug: string | null; isPromoEligible: boolean | null; discountPrice: number | null }>) => {
         products.forEach((p) => {
@@ -82,7 +83,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
       })
       .catch(() => {})
     return () => controller.abort()
-  }, [items, mergeItemDetails])
+  }, [items, mergeItemDetails, brandId])
 
   const [promoCode, setPromoCode] = useState('')
   const [promoResult, setPromoResult] = useState<PromoResult | null>(null)
