@@ -12,6 +12,7 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
+import { CdekWidget } from '@/components/site/cdek-widget'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
 import { Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -612,29 +613,47 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
             </p>
           </div>
         ) : (
-          <DeliverySection
+          <CdekWidget
             brandId={brandId}
-            selectedCity={selectedCity}
-            onCitySelect={setSelectedCity}
-            pvzTariff={pvzTariff}
-            doorTariff={doorTariff}
-            calculationLoading={calculationLoading}
-            onCalculate={handleCalculateDelivery}
-            deliveryMethod={deliveryMethod}
-            onDeliveryMethodChange={setDeliveryMethod}
-            deliveryPoints={deliveryPoints}
-            deliveryPointsLoading={deliveryPointsLoading}
-            deliveryPointsError={deliveryPointsError}
-            selectedPvz={selectedPvz}
-            onPvzSelect={setSelectedPvz}
-            recipientName={recipientName}
-            onRecipientNameChange={setRecipientName}
-            doorAddress={doorAddress}
-            onDoorAddressChange={(patch) => setDoorAddress((prev) => ({ ...prev, ...patch }))}
-            comment={comment}
-            onCommentChange={setComment}
-            error={deliveryError}
-            isSprintTheme={isSprintTheme}
+            items={items}
+            onCalculate={({ office, door }) => {
+              const firstOffice = office[0]
+              const firstDoor = door[0]
+              setPvzTariff(firstOffice ?? null)
+              setDoorTariff(firstDoor ?? null)
+            }}
+            onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+              setDeliveryMethod(method)
+              if (cdekCityCode != null || cdekCity) {
+                setSelectedCity((prev) => ({
+                  code: cdekCityCode ?? prev?.code ?? 0,
+                  city: cdekCity ?? prev?.city,
+                  region: prev?.region,
+                  country: prev?.country,
+                }))
+              }
+              if (method === 'cdek_pvz') {
+                setPvzTariff(tariff)
+                setSelectedPvz(
+                  pvzCode
+                    ? {
+                        code: pvzCode,
+                        address: pvzAddress ?? undefined,
+                        full_address: pvzAddress ?? undefined,
+                      }
+                    : null
+                )
+              } else {
+                setDoorTariff(tariff)
+                if (doorAddr) {
+                  setDoorAddress((prev) => ({
+                    ...prev,
+                    street: doorAddr,
+                    house: prev.house,
+                  }))
+                }
+              }
+            }}
           />
         )}
 
