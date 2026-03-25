@@ -109,8 +109,15 @@ export function CdekWidget({
   const [instanceKey, setInstanceKey] = useState<string>(() => Math.random().toString(16).slice(2))
   const rootId = useMemo(() => `cdek-widget-${instanceKey}`, [instanceKey])
   const widgetRef = useRef<unknown>(null)
+  const onChooseRef = useRef<CdekWidgetProps['onChoose']>(onChoose)
+  const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    onChooseRef.current = onChoose
+    onCalculateRef.current = onCalculate
+  }, [onChoose, onCalculate])
 
   useEffect(() => {
     function reinitWidget() {
@@ -199,7 +206,7 @@ export function CdekWidget({
             office?: Array<{ tariff_code: number; delivery_sum: number; period_min: number; period_max: number }>
             door?: Array<{ tariff_code: number; delivery_sum: number; period_min: number; period_max: number }>
           }
-          onCalculate({
+          onCalculateRef.current({
             office: (t.office ?? []).map((x) => ({
               tariffCode: x.tariff_code,
               deliverySum: x.delivery_sum,
@@ -225,7 +232,7 @@ export function CdekWidget({
               : typeof cityCodeRaw === 'string'
                 ? Number.parseInt(cityCodeRaw, 10)
                 : undefined
-          onChoose({
+          onChooseRef.current({
             deliveryMethod: m,
             tariff: {
               tariffCode: parseWidgetInt(t.tariff_code ?? t.tariffCode ?? t.code),
@@ -254,7 +261,7 @@ export function CdekWidget({
       const rootEl = document.getElementById(rootId)
       if (rootEl) rootEl.innerHTML = ''
     }
-  }, [brandId, items, defaultLocation, selected?.door, selected?.office, onCalculate, onChoose, rootId])
+  }, [brandId, items, defaultLocation, selected?.door, selected?.office, rootId])
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-3">
