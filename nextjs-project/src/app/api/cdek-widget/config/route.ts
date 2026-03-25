@@ -91,8 +91,10 @@ export async function POST(request: Request) {
         from,
         goods,
         tariffs: {
-          office: [234, 136, 138],
-          door: [233, 137, 139],
+          // Ограничиваем тарифы только теми, которые вы реально используете.
+          // office = "до ПВЗ" (склад-склад), door = "до двери" (склад-дверь)
+          office: [136],
+          door: [137],
         },
       },
       { headers: { 'Cache-Control': 'no-store' } }

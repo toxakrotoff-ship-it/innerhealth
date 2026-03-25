@@ -36,6 +36,8 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net", // Yandex Maps JS API (загрузка бандла с yastatic.net)
+    // Yandex Maps v3 uses WebWorkers from blob:/data: (e.g. content_provider.worker.js).
+    "worker-src 'self' blob: data: https://yastatic.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
