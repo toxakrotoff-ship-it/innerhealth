@@ -4,7 +4,7 @@ import globals from "globals";
 import react from "eslint-plugin-react";
 
 export default [
-  { ignores: [".next/**", "node_modules/**", "**/*.config.js", "**/*.config.mjs", "**/*.config.ts", "src/generated/**"] },
+  { ignores: [".next/**", "node_modules/**", "public/vendor/**", "**/*.config.js", "**/*.config.mjs", "**/*.config.ts", "src/generated/**"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

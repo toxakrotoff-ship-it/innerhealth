@@ -96,11 +96,20 @@ function mapAddressToForm(address: AccountAddress): AddressFormState {
 }
 
 function mapFormToPayload(form: AddressFormState) {
+  const composedDoorAddressLine =
+    form.deliveryMethod === 'cdek_door'
+      ? [form.street, form.house, form.apartment].map((x) => x.trim()).filter(Boolean).join(', ')
+      : ''
+  const addressLine =
+    form.deliveryMethod === 'cdek_door'
+      ? (form.addressLine.trim() || composedDoorAddressLine)
+      : form.addressLine.trim()
+
   return {
     label: form.label.trim(),
     city: form.city.trim(),
     postalCode: form.postalCode.trim() || undefined,
-    addressLine: form.addressLine.trim(),
+    addressLine,
     deliveryMethod: form.deliveryMethod,
     cdekCityCode: Number(form.cdekCityCode),
     cdekPvzCode: form.cdekPvzCode.trim() || undefined,

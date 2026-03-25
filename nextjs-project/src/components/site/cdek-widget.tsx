@@ -18,6 +18,17 @@ declare global {
 interface CdekWidgetProps {
   brandId?: BrandId
   items: CartLine[]
+  /**
+   * Optional override for widget `defaultLocation`.
+   * Useful for auto-filling city when user has saved addresses.
+   */
+  defaultLocation?: string
+  /**
+   * Optional preselection for widget internal `selected` state.
+   * - office: PVZ code
+   * - door: formatted address string
+   */
+  selected?: { office?: string | null; door?: string | null }
   onChoose: (payload: {
     deliveryMethod: 'cdek_pvz' | 'cdek_door'
     tariff: { tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }
@@ -61,7 +72,14 @@ function loadScriptOnce(src: string): Promise<void> {
   })
 }
 
-export function CdekWidget({ brandId, items, onChoose, onCalculate }: CdekWidgetProps) {
+export function CdekWidget({
+  brandId,
+  items,
+  defaultLocation,
+  selected,
+  onChoose,
+  onCalculate,
+}: CdekWidgetProps) {
   const rootId = useMemo(() => `cdek-widget-${Math.random().toString(16).slice(2)}`, [])
   const widgetRef = useRef<unknown>(null)
   const [error, setError] = useState<string | null>(null)
@@ -104,11 +122,22 @@ export function CdekWidget({ brandId, items, onChoose, onCalculate }: CdekWidget
         canChoose: true,
         debug: false,
         from: configJson.from,
-        defaultLocation: typeof (configJson.from as { city?: unknown } | null)?.city === 'string'
-          ? ((configJson.from as { city?: string }).city as string)
-          : typeof (configJson.from as { address?: unknown } | null)?.address === 'string'
-            ? ((configJson.from as { address?: string }).address as string)
-            : 'Москва',
+        defaultLocation:
+          defaultLocation?.trim().length
+            ? defaultLocation.trim()
+            : typeof (configJson.from as { city?: unknown } | null)?.city === 'string'
+              ? ((configJson.from as { city?: string }).city as string)
+              : typeof (configJson.from as { address?: unknown } | null)?.address === 'string'
+                ? ((configJson.from as { address?: string }).address as string)
+                : 'Москва',
+        ...(selected?.office || selected?.door
+          ? {
+              selected: {
+                office: selected.office ?? null,
+                door: selected.door ?? null,
+              },
+            }
+          : {}),
         goods: configJson.goods ?? [],
         tariffs: configJson.tariffs ?? { office: [234, 136, 138], door: [233, 137, 139] },
         onReady() {
@@ -172,7 +201,7 @@ export function CdekWidget({ brandId, items, onChoose, onCalculate }: CdekWidget
       cancelled = true
       widgetRef.current = null
     }
-  }, [brandId, items, onCalculate, onChoose, rootId])
+  }, [brandId, items, defaultLocation, selected?.door, selected?.office, onCalculate, onChoose, rootId])
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-3">
