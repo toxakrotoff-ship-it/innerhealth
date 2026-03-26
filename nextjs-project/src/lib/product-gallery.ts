@@ -1,6 +1,10 @@
+import type { ProductPhotoTransform } from '@/lib/product-photo-transform'
+import { normalizePhotoTransform } from '@/lib/product-photo-transform'
+
 export interface ProductGalleryPhoto {
   url: string
   blurDataURL?: string
+  transform?: ProductPhotoTransform
 }
 
 function normalizePhotoUrl(raw: string): string {
@@ -20,7 +24,8 @@ export function parseProductGalleryPhotos(photos: unknown, fallbackPhoto: string
         const url = typeof record.url === 'string' ? record.url.trim() : ''
         if (!url) continue
         const blurDataURL = typeof record.blurDataURL === 'string' ? record.blurDataURL : undefined
-        normalized.push({ url: normalizePhotoUrl(url), blurDataURL })
+        const transform = record.transform ? normalizePhotoTransform(record.transform) : undefined
+        normalized.push({ url: normalizePhotoUrl(url), blurDataURL, transform })
       }
     }
   }

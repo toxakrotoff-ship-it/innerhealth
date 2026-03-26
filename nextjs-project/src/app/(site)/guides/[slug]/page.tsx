@@ -126,6 +126,7 @@ export default async function SeoHubPage({ params }: PageProps) {
                     price={p.price}
                     priceOld={p.priceOld}
                     photo={p.photo}
+                    photos={p.photos}
                     slug={p.slug}
                     isPromoEligible={p.isPromoEligible}
                     discountPrice={p.discountPrice}

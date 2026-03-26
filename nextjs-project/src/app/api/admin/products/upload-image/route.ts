@@ -8,7 +8,16 @@ import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-type PhotoEntry = { url: string; blurDataURL?: string };
+type PhotoEntry = {
+  url: string
+  blurDataURL?: string
+  transform?: {
+    fitMode: 'contain' | 'cover'
+    x: number
+    y: number
+    zoom: number
+  }
+};
 
 function parsePhotosJson(photos: unknown): PhotoEntry[] {
   if (!Array.isArray(photos)) return [];
@@ -16,7 +25,7 @@ function parsePhotosJson(photos: unknown): PhotoEntry[] {
   for (const p of photos) {
     if (typeof p === 'string') result.push({ url: p });
     else if (p && typeof p === 'object' && 'url' in p && typeof (p as PhotoEntry).url === 'string') {
-      result.push({ url: (p as PhotoEntry).url, blurDataURL: (p as PhotoEntry).blurDataURL });
+      result.push({ url: (p as PhotoEntry).url, blurDataURL: (p as PhotoEntry).blurDataURL, transform: (p as PhotoEntry).transform });
     }
   }
   return result;
@@ -66,9 +75,11 @@ export async function POST(request: Request) {
         const existingPhotos = parsePhotosJson(existingProduct.photos);
         const newEntry: PhotoEntry = { url: photoUrl, blurDataURL: blurDataURLValue };
         const updatedPhotos: PhotoEntry[] = [newEntry, ...existingPhotos];
-        const photosJson = updatedPhotos.map((p) =>
-          p.blurDataURL ? { url: p.url, blurDataURL: p.blurDataURL } : { url: p.url }
-        );
+        const photosJson = updatedPhotos.map((p) => ({
+          url: p.url,
+          ...(p.blurDataURL ? { blurDataURL: p.blurDataURL } : {}),
+          ...(p.transform ? { transform: p.transform } : {}),
+        }));
         await productService.updateProduct(productId, {
           photo: photoUrl,
           photos: photosJson as unknown as object,

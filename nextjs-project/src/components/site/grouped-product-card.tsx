@@ -4,10 +4,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
+import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ProductQuickView } from '@/components/site/product-quick-view'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { cn } from '@/lib/utils'
+import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
 import type { ProductListingGroup } from '@/lib/product-grouping'
 
 interface GroupedProductCardProps {
@@ -26,6 +28,19 @@ export function GroupedProductCard({ group, priority = false }: GroupedProductCa
     activeVariant.quantity != null && activeVariant.quantity <= 0 && !activeVariant.isPreorderEnabled
   const detailHref = activeVariant.slug ? `/product/${activeVariant.slug}` : `/product/id/${activeVariant.id}`
   const isSprintTheme = activeVariant.brand === 'sprint-power'
+  const activePhotoSrc = activeVariant.photo
+    ? activeVariant.photo.startsWith('http://') || activeVariant.photo.startsWith('https://')
+      ? activeVariant.photo
+      : activeVariant.photo.startsWith('/')
+        ? activeVariant.photo
+        : `/${activeVariant.photo.replace(/^\//, '')}`
+    : null
+  const activePhotoTransform = getPhotoTransformByUrl(activeVariant.photos, activePhotoSrc)
+  const activePhotoFitClass = activePhotoTransform
+    ? activePhotoTransform.fitMode === 'cover'
+      ? 'object-cover'
+      : 'object-contain object-center'
+    : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
   return (
     <ScrollReveal as="div" variant="fade-up">
@@ -52,24 +67,26 @@ export function GroupedProductCard({ group, priority = false }: GroupedProductCa
             />
             <WishlistToggleButton productId={activeVariant.id} iconOnly />
           </div>
-          {activeVariant.photo ? (
+          {activePhotoSrc ? (
             <Image
-              src={
-                activeVariant.photo.startsWith('http://') || activeVariant.photo.startsWith('https://')
-                  ? activeVariant.photo
-                  : activeVariant.photo.startsWith('/')
-                    ? activeVariant.photo
-                    : `/${activeVariant.photo.replace(/^\//, '')}`
-              }
+              src={activePhotoSrc}
               alt={group.baseTitle}
               fill
-              className="object-cover object-top"
+              className={cn('z-10', activePhotoFitClass)}
+              style={
+                activePhotoTransform
+                  ? {
+                      objectPosition: '50% 50%',
+                      transform: `translate(${activePhotoTransform.x}%, ${activePhotoTransform.y}%) scale(${activePhotoTransform.zoom})`,
+                    }
+                  : undefined
+              }
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={priority}
               unoptimized={activeVariant.photo.startsWith('http://') || activeVariant.photo.startsWith('https://')}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="relative z-10 flex h-full w-full items-center justify-center">
               <span className="text-action-blue/40 text-4xl font-light">?</span>
             </div>
           )}

@@ -615,6 +615,7 @@ export default async function HomePage() {
                         price={newProducts[0].price}
                         priceOld={newProducts[0].priceOld}
                         photo={newProducts[0].photo}
+                        photos={'photos' in newProducts[0] ? newProducts[0].photos : undefined}
                         slug={newProducts[0].slug}
                         quantity={newProducts[0].quantity}
                         isPreorderEnabled={newProducts[0].isPreorderEnabled}
@@ -650,6 +651,7 @@ export default async function HomePage() {
                       price={p.price}
                       priceOld={p.priceOld}
                       photo={p.photo}
+                      photos={'photos' in p ? p.photos : undefined}
                       slug={p.slug}
                       quantity={p.quantity}
                       isPreorderEnabled={p.isPreorderEnabled}

@@ -130,7 +130,7 @@ export function CartDrawer() {
                         src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
                         alt={line.title ?? ''}
                         fill
-                        className="object-contain p-1"
+                        className="object-contain object-center"
                       />
                     ) : (
                       <span className="text-action-blue/40 text-2xl m-auto">?</span>

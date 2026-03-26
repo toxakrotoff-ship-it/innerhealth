@@ -304,6 +304,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       price={item.product.price}
                       priceOld={item.product.priceOld}
                       photo={item.product.photo}
+                      photos={'photos' in item.product ? item.product.photos : undefined}
                       slug={item.product.slug}
                       isPromoEligible={item.product.isPromoEligible}
                       discountPrice={item.product.discountPrice}

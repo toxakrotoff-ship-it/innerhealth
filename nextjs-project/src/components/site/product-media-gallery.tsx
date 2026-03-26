@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { useModalPresence } from '@/components/ui/modal-layer'
+import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 
 interface ProductMediaGalleryProps {
@@ -35,10 +36,15 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
   }, [lightboxMounted])
 
   const active = photos[activeIndex]
+  const activePhotoFitClass = active?.transform
+    ? active.transform.fitMode === 'cover'
+      ? 'object-cover'
+      : 'object-contain object-center'
+    : getProductImagePostprocessClasses({ surface: 'gallery-main' })
 
   if (!active) {
     return (
-      <div className="relative aspect-square max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue flex items-center justify-center overflow-hidden">
+      <div className="relative aspect-3/4 max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue flex items-center justify-center overflow-hidden">
         <span className="text-action-blue/40 text-6xl">?</span>
       </div>
     )
@@ -49,7 +55,7 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
       <div className="space-y-3">
         <button
           type="button"
-          className="relative block aspect-square w-full max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue overflow-hidden"
+          className="relative block aspect-3/4 w-full max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue overflow-hidden"
           onClick={() => setIsLightboxOpen(true)}
           aria-label="Открыть изображение крупнее"
         >
@@ -57,7 +63,15 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
             src={active.url}
             alt={title}
             fill
-            className="object-contain p-6 transition-transform duration-200 hover:scale-105"
+            className={cn('z-10 transition-transform duration-200 hover:scale-105', activePhotoFitClass)}
+            style={
+              active.transform
+                ? {
+                    objectPosition: '50% 50%',
+                    transform: `translate(${active.transform.x}%, ${active.transform.y}%) scale(${active.transform.zoom})`,
+                  }
+                : undefined
+            }
             sizes="(max-width: 1024px) 92vw, 44vw"
             priority
             placeholder={active.blurDataURL ? 'blur' : undefined}
@@ -82,7 +96,7 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
                   src={photo.url}
                   alt={`${title} — фото ${index + 1}`}
                   fill
-                  className="object-contain p-1"
+                  className="object-contain object-center"
                   sizes="64px"
                   unoptimized={photo.url.startsWith('http://') || photo.url.startsWith('https://')}
                 />
@@ -95,7 +109,7 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
       {lightboxMounted && (
         <div
           className={cn(
-            'fixed inset-0 z-[120] flex items-center justify-center bg-black/85 px-4 transition-opacity duration-[220ms] ease-out motion-reduce:transition-none',
+            'fixed inset-0 z-120 flex items-center justify-center bg-black/85 px-4 transition-opacity duration-220 ease-out motion-reduce:transition-none',
             lightboxVisible ? 'opacity-100' : 'opacity-0'
           )}
           role="dialog"
@@ -118,7 +132,7 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
-          <div className="relative z-10 aspect-[4/3] w-full max-w-5xl">
+          <div className="relative z-10 aspect-4/3 w-full max-w-5xl">
             <Image
               src={active.url}
               alt={title}

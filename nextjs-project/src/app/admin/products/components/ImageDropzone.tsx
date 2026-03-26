@@ -11,6 +11,7 @@ interface ImageDropzoneProps {
   className?: string;
   chooseButtonText?: string;
   showHelperText?: boolean;
+  helperText?: string;
 }
 
 interface ImageInfo {
@@ -51,6 +52,7 @@ export function ImageDropzone({
   className = '',
   chooseButtonText = 'Выбрать файл',
   showHelperText = true,
+  helperText = 'Рекомендуем 3:4 — минимум 900×1200, оптимально 1200×1600 или 1440×1920',
 }: ImageDropzoneProps) {
   const inputId = useId()
   const [dragActive, setDragActive] = useState(false);
@@ -150,7 +152,7 @@ export function ImageDropzone({
 
         {showHelperText && (
           <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] text-gray-700 shadow-sm">
-            Рекомендуем: 1200×1200, товар ближе к верху, снизу оставьте ~15–20% воздуха
+            {helperText}
           </div>
         )}
 
@@ -215,7 +217,7 @@ export function ImageDropzone({
           Размер: <span className="font-medium">{imageInfo.width}×{imageInfo.height}</span>
           {isNearSquare === false && (
             <span className="ml-2 text-amber-700">
-              Лучше квадрат (1:1) — иначе в каталоге будет разный кроп/поля
+              Лучше 3:4 — так фото без потерь подходит и для каталога, и для карточки товара
             </span>
           )}
         </div>

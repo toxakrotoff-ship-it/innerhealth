@@ -8,6 +8,7 @@ import { Category, getCategories } from '@/app/admin/catalog/actions';
 import { sanitizeProductText } from '@/lib/sanitize-text';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { ProductGalleryEditor } from '../../components/ProductGalleryEditor';
+import type { ProductGalleryEditorPhoto } from '../../components/ProductGalleryEditor';
 import { ProductCharacteristicsEditor } from '../../components/ProductCharacteristicsEditor';
 import { ProductRichTextEditor } from '../../components/ProductRichTextEditor';
 
@@ -129,7 +130,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     seoTitle: '',
     seoDescr: '',
     seoKeywords: '',
-    photos: [] as string[],
+    photos: [] as ProductGalleryEditorPhoto[],
   });
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
 
@@ -203,10 +204,23 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         seoDescr: data.seoDescr ?? '',
         seoKeywords: data.seoKeywords ?? '',
         photos: (() => {
-          if (!Array.isArray(data.photos)) return data.photo ? [data.photo] : [];
-          return data.photos.map((p: unknown) =>
-            typeof p === 'string' ? p : (p && typeof p === 'object' && 'url' in p && typeof (p as { url: string }).url === 'string' ? (p as { url: string }).url : '')
-          ).filter(Boolean) as string[];
+          if (!Array.isArray(data.photos)) return data.photo ? [{ url: data.photo }] : [];
+          return data.photos
+            .map((p: unknown) => {
+              if (typeof p === 'string') return { url: p } as ProductGalleryEditorPhoto;
+              if (!p || typeof p !== 'object') return null;
+              const record = p as Record<string, unknown>;
+              if (typeof record.url !== 'string') return null;
+              return {
+                url: record.url,
+                blurDataURL: typeof record.blurDataURL === 'string' ? record.blurDataURL : undefined,
+                transform:
+                  record.transform && typeof record.transform === 'object'
+                    ? (record.transform as ProductGalleryEditorPhoto['transform'])
+                    : undefined,
+              } as ProductGalleryEditorPhoto;
+            })
+            .filter(Boolean) as ProductGalleryEditorPhoto[];
         })(),
       });
     } catch (err) {
@@ -286,8 +300,23 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           seoTitle: formData.seoTitle || null,
           seoDescr: formData.seoDescr || null,
           seoKeywords: formData.seoKeywords || null,
-          photo: formData.photos.filter(Boolean).length > 0 ? formData.photos[0] : null,
-          photos: formData.photos.filter(Boolean).length > 0 ? formData.photos.filter(Boolean) : null,
+          photo: formData.photos.map((entry) => entry.url.trim()).filter(Boolean).at(0) ?? null,
+          photos:
+            formData.photos
+              .map((entry) => ({
+                url: entry.url.trim(),
+                blurDataURL: entry.blurDataURL,
+                transform: entry.transform,
+              }))
+              .filter((entry) => Boolean(entry.url)).length > 0
+              ? formData.photos
+                  .map((entry) => ({
+                    url: entry.url.trim(),
+                    blurDataURL: entry.blurDataURL,
+                    transform: entry.transform,
+                  }))
+                  .filter((entry) => Boolean(entry.url))
+              : null,
           id,
           categoryIds: formData.categories,
         }),

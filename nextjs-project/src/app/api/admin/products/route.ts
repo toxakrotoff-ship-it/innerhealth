@@ -57,6 +57,64 @@ export async function GET(request: Request) {
 
 const allowedBrandSchema = z.enum(['inner', 'sprint-power']);
 
+interface PhotoTransform {
+  fitMode: 'contain' | 'cover'
+  x: number
+  y: number
+  zoom: number
+}
+
+interface PhotoEntry {
+  url: string
+  blurDataURL?: string
+  transform?: PhotoTransform
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function normalizePhotoTransform(input: unknown): PhotoTransform | undefined {
+  if (!input || typeof input !== 'object') return undefined
+  const raw = input as Record<string, unknown>
+  const fitMode = raw.fitMode === 'cover' ? 'cover' : raw.fitMode === 'contain' ? 'contain' : null
+  if (!fitMode) return undefined
+  const x = typeof raw.x === 'number' ? clamp(raw.x, -50, 50) : 0
+  const y = typeof raw.y === 'number' ? clamp(raw.y, -50, 50) : 0
+  const zoom = typeof raw.zoom === 'number' ? clamp(raw.zoom, 1, 2) : 1
+  return { fitMode, x, y, zoom }
+}
+
+function parsePhotoEntries(input: unknown): PhotoEntry[] {
+  if (!Array.isArray(input)) return []
+  const result: PhotoEntry[] = []
+  for (const item of input) {
+    if (typeof item === 'string') {
+      const url = item.trim()
+      if (url) result.push({ url })
+      continue
+    }
+    if (!item || typeof item !== 'object') continue
+    const raw = item as Record<string, unknown>
+    const url = typeof raw.url === 'string' ? raw.url.trim() : ''
+    if (!url) continue
+    result.push({
+      url,
+      blurDataURL: typeof raw.blurDataURL === 'string' ? raw.blurDataURL : undefined,
+      transform: normalizePhotoTransform(raw.transform),
+    })
+  }
+  return result
+}
+
+function toPhotosJson(entries: PhotoEntry[]): Array<Record<string, unknown>> {
+  return entries.map((entry) => ({
+    url: entry.url,
+    ...(entry.blurDataURL ? { blurDataURL: entry.blurDataURL } : {}),
+    ...(entry.transform ? { transform: entry.transform } : {}),
+  }))
+}
+
 const putProductSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
   categoryIds: z.array(z.string()).optional(),
@@ -108,16 +166,19 @@ export async function PUT(request: Request) {
       if (key in data && data[key] !== undefined) sanitizedData[key] = data[key];
     }
     if (Array.isArray(sanitizedData.photos) && sanitizedData.photos.length > 0) {
-      const urls = sanitizedData.photos.filter((u: unknown) => typeof u === 'string') as string[];
-      sanitizedData.photo = urls[0] ?? null;
-      const existingPhotos = Array.isArray(existingProduct.photos) ? existingProduct.photos as Array<{ url?: string; blurDataURL?: string } | string> : [];
-      const blurByUrl: Record<string, string> = {};
-      for (const p of existingPhotos) {
-        const url = typeof p === 'string' ? p : p?.url;
-        const blur = typeof p === 'object' && p && 'blurDataURL' in p && typeof (p as { blurDataURL?: string }).blurDataURL === 'string' ? (p as { blurDataURL: string }).blurDataURL : undefined;
-        if (url && blur) blurByUrl[url] = blur;
-      }
-      sanitizedData.photos = urls.map((url) => (blurByUrl[url] ? { url, blurDataURL: blurByUrl[url] } : { url })) as unknown;
+      const requestedEntries = parsePhotoEntries(sanitizedData.photos)
+      sanitizedData.photo = requestedEntries[0]?.url ?? null
+      const existingEntries = parsePhotoEntries(existingProduct.photos)
+      const existingByUrl = new Map<string, PhotoEntry>(existingEntries.map((entry) => [entry.url, entry]))
+      const mergedEntries = requestedEntries.map((entry) => {
+        const existing = existingByUrl.get(entry.url)
+        return {
+          ...entry,
+          blurDataURL: entry.blurDataURL ?? existing?.blurDataURL,
+          transform: entry.transform ?? existing?.transform,
+        } satisfies PhotoEntry
+      })
+      sanitizedData.photos = toPhotosJson(mergedEntries) as unknown
     }
     Object.assign(sanitizedData, sanitizeProductTextFields(sanitizedData));
 
@@ -237,7 +298,9 @@ export async function POST(request: Request) {
       if (key in data && data[key] !== undefined) sanitizedCreate[key] = data[key];
     }
     if (Array.isArray(sanitizedCreate.photos) && sanitizedCreate.photos.length > 0) {
-      sanitizedCreate.photo = typeof sanitizedCreate.photos[0] === 'string' ? sanitizedCreate.photos[0] : null;
+      const entries = parsePhotoEntries(sanitizedCreate.photos)
+      sanitizedCreate.photo = entries[0]?.url ?? null
+      sanitizedCreate.photos = toPhotosJson(entries) as unknown
     }
     Object.assign(sanitizedCreate, sanitizeProductTextFields(sanitizedCreate));
     if (!sanitizedCreate.tildaUid && titleStr) {

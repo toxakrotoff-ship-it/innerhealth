@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CategoryMultiSelect } from '../components/CategoryMultiSelect';
 import { ImageDropzone } from '../components/ImageDropzone';
 import { ProductGalleryEditor } from '../components/ProductGalleryEditor';
+import type { ProductGalleryEditorPhoto } from '../components/ProductGalleryEditor';
 import { getCategoriesWithCounts } from '@/app/admin/catalog/actions';
 import { slugify } from '@/lib/slugify';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
@@ -72,7 +73,7 @@ interface Product {
   createdAt: string;
   updatedAt: string;
   categoryIds?: string[];
-  photos?: string[] | null;
+  photos?: ProductGalleryEditorPhoto[] | null;
 }
 
 export default function NewProductPage() {

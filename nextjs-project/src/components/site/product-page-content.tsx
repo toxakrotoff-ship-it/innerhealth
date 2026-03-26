@@ -315,6 +315,7 @@ export function ProductPageContent({
                     price={item.product.price}
                     priceOld={item.product.priceOld}
                     photo={item.product.photo}
+                    photos={item.product.photos}
                     slug={item.product.slug}
                     isPromoEligible={item.product.isPromoEligible}
                     discountPrice={item.product.discountPrice}

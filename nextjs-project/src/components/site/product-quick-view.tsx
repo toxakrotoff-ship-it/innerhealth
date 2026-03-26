@@ -116,7 +116,7 @@ export function ProductQuickView({
                       }
                       alt={title}
                       fill
-                      className="object-contain p-3"
+                      className="object-contain object-center"
                       unoptimized={photo.startsWith('http://') || photo.startsWith('https://')}
                     />
                   ) : (

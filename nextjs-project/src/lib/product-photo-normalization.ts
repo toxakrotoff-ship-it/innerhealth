@@ -1,7 +1,6 @@
 import sharp from 'sharp'
 
 const MAX_INPUT_WIDTH = 1920
-const OUTPUT_SIZE = 1200
 const BLUR_PLACEHOLDER_SIZE = 10
 
 interface NormalizeProductPhotoResult {
@@ -20,10 +19,7 @@ export async function normalizeProductPhoto(inputBuffer: Buffer): Promise<Normal
       ? base.resize(MAX_INPUT_WIDTH, null, { withoutEnlargement: true })
       : base
 
-  const webpBuffer = await resizedForSafety
-    .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit: 'cover', position: 'top' })
-    .webp({ quality: 85 })
-    .toBuffer()
+  const webpBuffer = await resizedForSafety.webp({ quality: 85 }).toBuffer()
 
   try {
     const blurBuffer = await sharp(webpBuffer)

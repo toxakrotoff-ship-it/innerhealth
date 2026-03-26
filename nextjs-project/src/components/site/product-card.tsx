@@ -7,7 +7,9 @@ import { cn } from '@/lib/utils'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ProductQuickView } from '@/components/site/product-quick-view'
+import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
 
 interface ProductCardProps {
   id: string
@@ -17,6 +19,7 @@ interface ProductCardProps {
   price: number
   priceOld?: number | null
   photo?: string | null
+  photos?: unknown
   slug?: string | null
   isPromoEligible?: boolean
   discountPrice?: number | null
@@ -37,6 +40,7 @@ export function ProductCard({
   price,
   priceOld,
   photo,
+  photos,
   slug,
   isPromoEligible = true,
   discountPrice = null,
@@ -51,6 +55,19 @@ export function ProductCard({
   const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled
   const normalizedBrand = (brand ?? '').trim().toLowerCase()
   const isSprintTheme = normalizedBrand === 'sprint-power' || normalizedBrand.includes('sprint')
+  const photoSrc = photo
+    ? photo.startsWith('http://') || photo.startsWith('https://')
+      ? photo
+      : photo.startsWith('/')
+        ? photo
+        : `/${photo.replace(/^\//, '')}`
+    : null
+  const photoTransform = getPhotoTransformByUrl(photos, photoSrc)
+  const photoFitClass = photoTransform
+    ? photoTransform.fitMode === 'cover'
+      ? 'object-cover'
+      : 'object-contain object-center'
+    : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
   const updateStyles = () => {
     if (ref.current) {
@@ -117,16 +134,18 @@ export function ProductCard({
           </div>
           {photo ? (
             <Image
-              src={
-                photo.startsWith('http://') || photo.startsWith('https://')
-                  ? photo
-                  : photo.startsWith('/')
-                    ? photo
-                    : `/${photo.replace(/^\//, '')}`
-              }
+              src={photoSrc!}
               alt={title}
               fill
-              className="object-cover object-top"
+              className={cn('z-10', photoFitClass)}
+              style={
+                photoTransform
+                  ? {
+                      objectPosition: '50% 50%',
+                      transform: `translate(${photoTransform.x}%, ${photoTransform.y}%) scale(${photoTransform.zoom})`,
+                    }
+                  : undefined
+              }
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={priority}
               placeholder={blurDataURL ? 'blur' : undefined}
@@ -134,7 +153,7 @@ export function ProductCard({
               unoptimized={photo.startsWith('http://') || photo.startsWith('https://')}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="relative z-10 flex h-full w-full items-center justify-center">
               <span className="text-action-blue/40 text-4xl font-light">?</span>
             </div>
           )}
