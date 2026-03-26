@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { isSensitiveSettingStorageKey } from '@/lib/settings-encryption'
+import {
+  isEncryptedSettingValue,
+  isSensitiveSettingStorageKey,
+} from '@/lib/settings-encryption'
 
 describe('isSensitiveSettingStorageKey', () => {
   it('returns true for plain sensitive keys', () => {
@@ -16,5 +19,14 @@ describe('isSensitiveSettingStorageKey', () => {
   it('returns false for non-sensitive keys', () => {
     expect(isSensitiveSettingStorageKey('site_name')).toBe(false)
     expect(isSensitiveSettingStorageKey('inner:site_name')).toBe(false)
+  })
+})
+
+describe('isEncryptedSettingValue', () => {
+  it('returns true only for encrypted payload prefix', () => {
+    expect(isEncryptedSettingValue('__enc:v1:abc')).toBe(true)
+    expect(isEncryptedSettingValue('__enc:v2:abc')).toBe(false)
+    expect(isEncryptedSettingValue('plain-value')).toBe(false)
+    expect(isEncryptedSettingValue('')).toBe(false)
   })
 })

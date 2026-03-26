@@ -25,6 +25,17 @@ export async function GET(request: Request) {
     process.env.YOOKASSA_SECRET_KEY.length > 0
 
   if (!hasFromAdmin && !hasFromEnv) {
+    const credentialsStatus = await settingsService.getYookassaCredentialsStatus({ brandId })
+    if (credentialsStatus.status === 'unreadable_encrypted') {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Ключ ЮKassa сохранён, но не читается (проверьте SETTINGS_ENCRYPTION_KEY в runtime/.env и перезапустите сервис). После исправления пересохраните ключ в админке.',
+        },
+        { status: 500 }
+      )
+    }
     return NextResponse.json(
       { ok: false, error: 'Учётные данные ЮKassa не заданы (настройки или YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)' },
       { status: 400 }

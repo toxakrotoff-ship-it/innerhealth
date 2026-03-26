@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import {
   decryptSettingValue,
   encryptSettingValue,
+  isEncryptedSettingValue,
   isSensitiveSettingKey,
   isSensitiveSettingStorageKey,
 } from '@/lib/settings-encryption'
@@ -119,9 +120,15 @@ export async function getSettingsMap(
 
     const rowsByStorageKey = new Map<string, string>()
     for (const row of rows) {
-      const value = isSensitiveSettingStorageKey(row.key)
-        ? decryptSettingValue(row.value)
-        : row.value
+      const isSensitive = isSensitiveSettingStorageKey(row.key)
+      const decryptedValue = isSensitive ? decryptSettingValue(row.value) : row.value
+      const value =
+        isSensitive && isEncryptedSettingValue(decryptedValue) ? '' : decryptedValue
+      if (isSensitive && value === '' && row.value !== '') {
+        console.error(
+          `[settings] sensitive key "${row.key}" could not be decrypted. Check SETTINGS_ENCRYPTION_KEY.`
+        )
+      }
       rowsByStorageKey.set(row.key, value)
       settingsCacheByKey.set(row.key, {
         value,
@@ -234,6 +241,10 @@ export async function getMaxBotSettings(options: SettingsScopeOptions = {}): Pro
 /** Ключи настроек СДЭК для OAuth (client_id + client_secret). */
 export const CDEK_CREDENTIAL_KEYS = ['cdek_api_key', 'cdek_client_secret'] as const;
 
+export interface CdekCredentialsStatus {
+  status: 'ok' | 'missing' | 'unreadable_encrypted'
+}
+
 function parseBooleanSetting(value: string | undefined | null): boolean | null {
   const v = (value ?? '').trim().toLowerCase()
   if (v === '') return null
@@ -260,4 +271,81 @@ export async function getCdekCredentials(options: SettingsScopeOptions = {}): Pr
     return { clientId: fromAdminId, clientSecret: fromAdminSecret, useTest };
   }
   return null;
+}
+
+function resolveStorageCandidatesForCredentialKey(
+  key: string,
+  options: SettingsScopeOptions
+): string[] {
+  const scopedBrandId = options.brandId ?? null
+  if (scopedBrandId && isBrandScopedSettingKey(key)) {
+    return [makeScopedSettingKey(scopedBrandId, key), key]
+  }
+  return [key]
+}
+
+/**
+ * Detects if CDEK credentials are missing or stored encrypted but currently unreadable
+ * (usually due to invalid/missing SETTINGS_ENCRYPTION_KEY on runtime).
+ */
+export async function getCdekCredentialsStatus(
+  options: SettingsScopeOptions = {}
+): Promise<CdekCredentialsStatus> {
+  const map = await getSettingsMap([...CDEK_CREDENTIAL_KEYS], options)
+  const hasId = map.cdek_api_key.trim().length > 0
+  const hasSecret = map.cdek_client_secret.trim().length > 0
+  if (hasId && hasSecret) return { status: 'ok' }
+
+  const candidateKeys = CDEK_CREDENTIAL_KEYS.flatMap((key) =>
+    resolveStorageCandidatesForCredentialKey(key, options)
+  )
+  const rows = await prisma.siteSetting.findMany({
+    where: { key: { in: candidateKeys } },
+    select: { key: true, value: true },
+  })
+  const rowsByKey = new Map(rows.map((row) => [row.key, row.value]))
+
+  const hasUnreadableEncryptedValue = CDEK_CREDENTIAL_KEYS.some((key) => {
+    const candidates = resolveStorageCandidatesForCredentialKey(key, options)
+    const storedValue = candidates
+      .map((candidateKey) => rowsByKey.get(candidateKey))
+      .find((value) => value !== undefined)
+    if (!storedValue) return false
+    if (!isEncryptedSettingValue(storedValue)) return false
+    return isEncryptedSettingValue(decryptSettingValue(storedValue))
+  })
+
+  if (hasUnreadableEncryptedValue) return { status: 'unreadable_encrypted' }
+  return { status: 'missing' }
+}
+
+/**
+ * Detects if YooKassa credentials are missing or stored encrypted but unreadable.
+ */
+export async function getYookassaCredentialsStatus(
+  options: SettingsScopeOptions = {}
+): Promise<CdekCredentialsStatus> {
+  const map = await getYookassaSettingsMap(options)
+  const hasShopId = (map.yookassa_shop_id ?? '').trim().length > 0
+  const hasSecret = (map.yookassa_secret_key ?? '').trim().length > 0
+  if (hasShopId && hasSecret) return { status: 'ok' }
+
+  const candidates = resolveStorageCandidatesForCredentialKey('yookassa_secret_key', options)
+  const rows = await prisma.siteSetting.findMany({
+    where: { key: { in: candidates } },
+    select: { key: true, value: true },
+  })
+  const encryptedRow = candidates
+    .map((candidateKey) => rows.find((row) => row.key === candidateKey))
+    .find((row) => row !== undefined)
+  const storedValue = encryptedRow?.value ?? ''
+  if (
+    storedValue &&
+    isEncryptedSettingValue(storedValue) &&
+    isEncryptedSettingValue(decryptSettingValue(storedValue))
+  ) {
+    return { status: 'unreadable_encrypted' }
+  }
+
+  return { status: 'missing' }
 }

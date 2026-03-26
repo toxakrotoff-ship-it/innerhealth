@@ -16,11 +16,22 @@ export async function GET(request: Request) {
   const brandId = resolveBrandFromRequest(request)
   const creds = await settingsService.getCdekCredentials({ brandId })
   if (!creds) {
+    const credentialsStatus = await settingsService.getCdekCredentialsStatus({ brandId })
+    if (credentialsStatus.status === 'unreadable_encrypted') {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Ключи СДЭК сохранены, но не читаются (проверьте SETTINGS_ENCRYPTION_KEY в runtime/.env и перезапустите сервис). После исправления пересохраните ключи в админке.',
+        },
+        { status: 500 }
+      )
+    }
     return NextResponse.json(
       {
         ok: false,
         error:
-          'Учётные данные СДЭК не заданы. Укажите API-ключ и секрет в настройках или CDEK_CLIENT_ID и CDEK_CLIENT_SECRET в .env',
+          'Учётные данные СДЭК не заданы. Укажите API-ключ и секрет в настройках.',
       },
       { status: 400 }
     )

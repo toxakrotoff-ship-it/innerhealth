@@ -90,6 +90,14 @@ export function decryptSettingValue(value: string): string {
   }
 }
 
+/**
+ * Detects encrypted payload marker in storage values.
+ * Used to avoid treating undecrypted ciphertext as a real credential.
+ */
+export function isEncryptedSettingValue(value: string): boolean {
+  return value.startsWith(ENCRYPTION_PREFIX)
+}
+
 export function isSensitiveSettingKey(key: string): key is SensitiveSettingKey {
   return (SENSITIVE_SETTING_KEYS as readonly string[]).includes(key)
 }
