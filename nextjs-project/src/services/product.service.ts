@@ -415,6 +415,28 @@ export async function getRelatedProductsByCategory(
   })
 }
 
+export async function getProductFlavorVariantsByParentUid(
+  parentUid: string,
+  brandId?: BrandId | null
+) {
+  const normalized = parentUid.trim()
+  if (!normalized) return []
+
+  const brandWhere: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] }
+
+  return prisma.product.findMany({
+    where: {
+      isDraft: false,
+      parentUid: normalized,
+      ...brandWhere,
+    },
+    orderBy: [{ createdAt: 'desc' }],
+    select: productCardSelect,
+  })
+}
+
 /** Get all product ids and quantities (for stock endpoint). */
 export async function getStockMap() {
   const rows = await prisma.product.findMany({

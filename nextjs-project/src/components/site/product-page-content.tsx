@@ -10,6 +10,7 @@ import { QuickOrderDialog } from '@/components/site/quick-order-dialog'
 import { PurchaseTrustStrip } from '@/components/site/purchase-trust-strip'
 import { ProductRelatedCategoryLinks } from '@/components/site/product-related-category-links'
 import { ProductMediaGallery } from '@/components/site/product-media-gallery'
+import { ProductFlavorSelector } from '@/components/site/product-flavor-selector'
 import { Breadcrumbs, type BreadcrumbItemType } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
@@ -37,6 +38,21 @@ interface ProductPageContentProps {
     isPromoEligible?: boolean
     discountPrice?: number | null
   }
+  flavorVariants?: Array<{
+    id: string
+    parentUid: string | null
+    title: string
+    brand: string | null
+    sku: string | null
+    price: number
+    priceOld: number | null
+    quantity?: number | null
+    photo: string | null
+    slug: string | null
+    isPromoEligible: boolean
+    discountPrice: number | null
+    isPreorderEnabled?: boolean
+  }>
   tabs: { title: string; content: string }[]
   photos: ProductGalleryPhoto[]
   /** When omitted, uses Главная → Каталог → title */
@@ -123,6 +139,7 @@ export function ProductPageContent({
   product,
   tabs,
   photos,
+  flavorVariants = [],
   relatedProducts,
   breadcrumbItems,
   relatedProductsCategoryTitle,
@@ -185,6 +202,11 @@ export function ProductPageContent({
               </span>
             )}
           </div>
+          <ProductFlavorSelector
+            activeProductId={product.id}
+            variants={flavorVariants}
+            isSprintTheme={isSprintTheme}
+          />
           <div className="mt-6 flex flex-wrap gap-3">
             <AddToCartButton
               productId={product.id}

@@ -41,6 +41,16 @@ function isVariantAvailable(variant: ProductVariantForListing): boolean {
   return variant.quantity == null || variant.quantity > 0 || variant.isPreorderEnabled
 }
 
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+}
+
 function normalizeParentUid(parentUid: string | null): string | null {
   if (!parentUid) return null
   const trimmed = parentUid.trim()
@@ -48,7 +58,7 @@ function normalizeParentUid(parentUid: string | null): string | null {
 }
 
 export function getBaseTitleAndFlavorLabel(title: string): { baseTitle: string; flavorLabel: string | null } {
-  const normalized = title.trim()
+  const normalized = decodeHtmlEntities(title).trim()
   if (!normalized) return { baseTitle: title, flavorLabel: null }
 
   const dashSeparatorMatch = normalized.match(/^(.+?)\s(?:—|-)\s(.+)$/)

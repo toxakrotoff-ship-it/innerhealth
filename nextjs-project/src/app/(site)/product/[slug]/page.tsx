@@ -100,6 +100,10 @@ export default async function ProductPage({ params }: PageProps) {
   if (!product) notFound()
   if (!productBelongsToBrandScope(product.brand, brandId)) notFound()
 
+  const flavorVariants = product.parentUid
+    ? await productService.getProductFlavorVariantsByParentUid(product.parentUid, brandId)
+    : []
+
   const sortedCategoryLinks = [...product.categories].sort((a, b) => {
     const ao = a.category.sortOrder ?? 0
     const bo = b.category.sortOrder ?? 0
@@ -147,6 +151,7 @@ export default async function ProductPage({ params }: PageProps) {
         product={product}
         tabs={buildTabs(product)}
         photos={photos}
+        flavorVariants={flavorVariants}
         relatedProducts={relatedProducts}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
         breadcrumbItems={breadcrumbItems}
