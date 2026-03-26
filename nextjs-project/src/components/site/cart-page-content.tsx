@@ -52,9 +52,10 @@ function applyPromoToSubtotal(subtotal: number, promo: PromoResult | null): numb
 interface CartPageContentProps {
   isSprintTheme?: boolean
   brandId?: BrandId
+  pickupAddress?: string
 }
 
-export function CartPageContent({ isSprintTheme = false, brandId }: CartPageContentProps) {
+export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -105,7 +106,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
   const [pvzTariff, setPvzTariff] = useState<CdekTariffSummary | null>(null)
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
   const [calculationLoading, setCalculationLoading] = useState(false)
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('cdek_pvz')
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
   const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
   const [deliveryPoints, setDeliveryPoints] = useState<CdekPvzOption[]>([])
   const [deliveryPointsLoading, setDeliveryPointsLoading] = useState(false)
@@ -134,6 +135,7 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
   const selectedSavedAddress = selectedSavedAddressId
     ? savedAddresses.find((address) => address.id === selectedSavedAddressId) ?? null
     : null
+  const isCdekDeliverySelected = deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
 
   useEffect(() => {
     if (usingSavedAddress) return
@@ -264,6 +266,15 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
     },
     [savedAddresses]
   )
+
+  function handlePickupModeSelect() {
+    setDeliveryMethod('pickup')
+    setHasWidgetTariffSelection(false)
+  }
+
+  function handleCdekModeSelect() {
+    setDeliveryMethod((prev) => (prev === 'pickup' ? 'cdek_pvz' : prev))
+  }
 
   const handleCalculateDelivery = useCallback(async () => {
     if (cityCode == null) return
@@ -719,77 +730,122 @@ export function CartPageContent({ isSprintTheme = false, brandId }: CartPageCont
               {' '}«Использовать другой адрес».
             </p>
           </div>
-        ) : (
-          <CdekWidget
-            key={[
-              'cdek-widget',
-              // When user changes the selected saved address, remount the widget to force recalculation.
-              selectedSavedAddressId ?? 'none',
-              selectedSavedAddress?.deliveryMethod ?? 'none',
-              selectedSavedAddress?.cdekCityCode ?? '0',
-              selectedSavedAddress?.cdekPvzCode ?? 'none',
-              selectedSavedAddress?.addressLine ?? 'none',
-            ].join(':')}
-            brandId={brandId}
-            items={items}
-            defaultLocation={selectedSavedAddress?.city ?? undefined}
-            selected={
-              selectedSavedAddress
-                ? selectedSavedAddress.deliveryMethod === 'cdek_pvz'
-                  ? { office: selectedSavedAddress.cdekPvzCode }
+        ) : null}
+
+        {!usingSavedAddress ? (
+          <div className={cn('rounded-2xl border p-6 xl:p-8 2xl:p-10 3xl:p-12 4xl:p-16 5xl:p-20 6xl:p-24', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
+            <Heading2 className={cn('mb-4 xl:mb-6 2xl:mb-8 3xl:mb-10 4xl:mb-12 5xl:mb-16 6xl:mb-20', isSprintTheme && 'text-slate-100')}>
+              Способ получения
+            </Heading2>
+            <div className="space-y-3">
+              <label className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3', isSprintTheme ? 'border-slate-600 hover:bg-slate-800/60' : 'border-gray-200 hover:bg-gray-50')}>
+                <input
+                  type="radio"
+                  name="checkout-delivery-kind"
+                  checked={deliveryMethod === 'pickup'}
+                  onChange={handlePickupModeSelect}
+                  className="h-4 w-4"
+                />
+                <span className="min-w-0">
+                  <span className={cn('block text-sm font-medium', isSprintTheme ? 'text-slate-100' : 'text-gray-900')}>
+                    Самовывоз
+                  </span>
+                  {pickupAddress?.trim() ? (
+                    <span className={cn('mt-1 block text-xs', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+                      {pickupAddress.trim()}
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+              <label className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3', isSprintTheme ? 'border-slate-600 hover:bg-slate-800/60' : 'border-gray-200 hover:bg-gray-50')}>
+                <input
+                  type="radio"
+                  name="checkout-delivery-kind"
+                  checked={isCdekDeliverySelected}
+                  onChange={handleCdekModeSelect}
+                  className="h-4 w-4"
+                />
+                <span className={cn('text-sm font-medium', isSprintTheme ? 'text-slate-100' : 'text-gray-900')}>
+                  Доставка (СДЭК)
+                </span>
+              </label>
+            </div>
+          </div>
+        ) : null}
+
+        {!usingSavedAddress ? (
+          <div hidden={!isCdekDeliverySelected} aria-hidden={!isCdekDeliverySelected}>
+            <CdekWidget
+              key={[
+                'cdek-widget',
+                // When user changes the selected saved address, remount the widget to force recalculation.
+                selectedSavedAddressId ?? 'none',
+                selectedSavedAddress?.deliveryMethod ?? 'none',
+                selectedSavedAddress?.cdekCityCode ?? '0',
+                selectedSavedAddress?.cdekPvzCode ?? 'none',
+                selectedSavedAddress?.addressLine ?? 'none',
+              ].join(':')}
+              brandId={brandId}
+              items={items}
+              defaultLocation={selectedSavedAddress?.city ?? undefined}
+              selected={
+                selectedSavedAddress
+                  ? selectedSavedAddress.deliveryMethod === 'cdek_pvz'
+                    ? { office: selectedSavedAddress.cdekPvzCode }
+                    : undefined
                   : undefined
-                : undefined
-            }
-            onCalculate={({ office, door }) => {
-              // До выбора пользователем — можно подставить дефолт для отображения.
-              // После `onChoose` выбранный тариф является источником истины и не должен затираться.
-              if (hasWidgetTariffSelection) return
-              const officeTariff = office.find((t) => t.tariffCode === 136) ?? office[0]
-              const doorTariff = door.find((t) => t.tariffCode === 137) ?? door[0]
-              setPvzTariff(officeTariff ?? null)
-              setDoorTariff(doorTariff ?? null)
-            }}
-            onModeChange={(method) => {
-              setDeliveryMethod(method)
-            }}
-            onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
-              setHasWidgetTariffSelection(true)
-              setDeliveryMethod(method)
-              if (
-                (typeof cdekCityCode === 'number' && Number.isFinite(cdekCityCode) && cdekCityCode > 0) ||
-                cdekCity
-              ) {
-                setSelectedCity((prev) => ({
-                  code: cdekCityCode ?? prev?.code ?? Number.NaN,
-                  city: cdekCity ?? prev?.city,
-                  region: prev?.region,
-                  country: prev?.country,
-                }))
               }
-              if (method === 'cdek_pvz') {
-                setPvzTariff(tariff)
-                setSelectedPvz(
-                  pvzCode
-                    ? {
-                        code: pvzCode,
-                        address: pvzAddress ?? undefined,
-                        full_address: pvzAddress ?? undefined,
-                      }
-                    : null
-                )
-              } else {
-                setDoorTariff(tariff)
-                if (doorAddr) {
-                  setDoorAddress((prev) => ({
-                    ...prev,
-                    street: doorAddr,
-                    house: prev.house,
+              onCalculate={({ office, door }) => {
+                // До выбора пользователем — можно подставить дефолт для отображения.
+                // После `onChoose` выбранный тариф является источником истины и не должен затираться.
+                if (hasWidgetTariffSelection) return
+                const officeTariff = office.find((t) => t.tariffCode === 136) ?? office[0]
+                const doorTariff = door.find((t) => t.tariffCode === 137) ?? door[0]
+                setPvzTariff(officeTariff ?? null)
+                setDoorTariff(doorTariff ?? null)
+              }}
+              onModeChange={(method) => {
+                setDeliveryMethod(method)
+              }}
+              onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+                setHasWidgetTariffSelection(true)
+                setDeliveryMethod(method)
+                if (
+                  (typeof cdekCityCode === 'number' && Number.isFinite(cdekCityCode) && cdekCityCode > 0) ||
+                  cdekCity
+                ) {
+                  setSelectedCity((prev) => ({
+                    code: cdekCityCode ?? prev?.code ?? Number.NaN,
+                    city: cdekCity ?? prev?.city,
+                    region: prev?.region,
+                    country: prev?.country,
                   }))
                 }
-              }
-            }}
-          />
-        )}
+                if (method === 'cdek_pvz') {
+                  setPvzTariff(tariff)
+                  setSelectedPvz(
+                    pvzCode
+                      ? {
+                          code: pvzCode,
+                          address: pvzAddress ?? undefined,
+                          full_address: pvzAddress ?? undefined,
+                        }
+                      : null
+                  )
+                } else {
+                  setDoorTariff(tariff)
+                  if (doorAddr) {
+                    setDoorAddress((prev) => ({
+                      ...prev,
+                      street: doorAddr,
+                      house: prev.house,
+                    }))
+                  }
+                }
+              }}
+            />
+          </div>
+        ) : null}
 
         {!usingSavedAddress && deliveryMethod === 'cdek_door' ? (
           <div

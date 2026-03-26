@@ -55,9 +55,13 @@ export async function GET(request: Request) {
   }
 }
 
+const allowedBrandSchema = z.enum(['inner', 'sprint-power']);
+
 const putProductSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
   categoryIds: z.array(z.string()).optional(),
+  brand: allowedBrandSchema.optional(),
+  parentUid: z.string().trim().min(1).nullable().optional(),
 }).passthrough();
 
 export async function PUT(request: Request) {
@@ -197,6 +201,8 @@ export async function PATCH(request: Request) {
 
 const postProductSchema = z.object({
   categoryIds: z.array(z.string()).optional(),
+  brand: allowedBrandSchema.optional(),
+  parentUid: z.string().trim().min(1).nullable().optional(),
 }).passthrough();
 
 export async function POST(request: Request) {

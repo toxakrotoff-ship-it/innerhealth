@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
+import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { ProductListRow } from '@/components/site/product-list-row'
 import { CatalogControls } from '@/components/site/catalog-controls'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
@@ -27,6 +28,7 @@ import {
   parseCatalogSearchParams,
 } from '@/lib/catalog-list-path'
 import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
+import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
@@ -148,6 +150,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const catalogBlockCategories = filterCatalogBlockCategories(categories)
   const hasNextPage = catalogResult.hasNextPage
   const products = catalogResult.items
+  const listingItems = groupProductsForListing(products)
 
   const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant', brandId)
   const categoryTitleFont =
@@ -290,25 +293,29 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 adaptiveGap={false}
                 className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
               >
-                {products.map((p, index) => (
-                  <ProductCard
-                    key={p.id}
-                    id={p.id}
-                    title={p.title}
-                    brand={p.brand}
-                    sku={p.sku}
-                    price={p.price}
-                    priceOld={p.priceOld}
-                    photo={p.photo}
-                    slug={p.slug}
-                    isPromoEligible={p.isPromoEligible}
-                    discountPrice={p.discountPrice}
-                    quantity={p.quantity}
-                    isPreorderEnabled={p.isPreorderEnabled}
-                    priority={index < 2}
-                    blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                  />
-                ))}
+                {listingItems.map((item, index) =>
+                  item.kind === 'single' ? (
+                    <ProductCard
+                      key={item.product.id}
+                      id={item.product.id}
+                      title={item.product.title}
+                      brand={item.product.brand}
+                      sku={item.product.sku}
+                      price={item.product.price}
+                      priceOld={item.product.priceOld}
+                      photo={item.product.photo}
+                      slug={item.product.slug}
+                      isPromoEligible={item.product.isPromoEligible}
+                      discountPrice={item.product.discountPrice}
+                      quantity={item.product.quantity}
+                      isPreorderEnabled={item.product.isPreorderEnabled}
+                      priority={index < 2}
+                      blurDataURL={'photos' in item.product ? getFirstPhotoBlurDataURL(item.product.photos) : undefined}
+                    />
+                  ) : (
+                    <GroupedProductCard key={item.parentUid} group={item} priority={index < 2} />
+                  )
+                )}
               </FluidGrid>
             ) : (
               <div className={`space-y-3 ${isSprintTheme ? '**:border-slate-700' : ''}`}>

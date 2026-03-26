@@ -59,6 +59,7 @@ export async function getProductsWithCategories(brandId?: BrandId | null) {
 /** Fields for catalog/home product cards — no photos JSON to reduce payload (use `photo` for image). */
 export const productCardSelect = {
   id: true,
+  parentUid: true,
   title: true,
   brand: true,
   sku: true,

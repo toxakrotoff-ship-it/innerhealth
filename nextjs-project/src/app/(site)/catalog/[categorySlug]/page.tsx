@@ -5,6 +5,7 @@ import { cookies, headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
+import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getCategoryPageContent } from '@/content/category-descriptions'
@@ -21,6 +22,7 @@ import { resolveBrand } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { groupProductsForListing } from '@/lib/product-grouping'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -119,7 +121,10 @@ export default async function CategoryPage({ params }: PageProps) {
           product: {
             select: {
               id: true,
+              parentUid: true,
               title: true,
+              brand: true,
+              sku: true,
               price: true,
               priceOld: true,
               photo: true,
@@ -163,6 +168,7 @@ export default async function CategoryPage({ params }: PageProps) {
   ]
 
   const products = filterVisibleProducts(category.products.map((pc) => pc.product))
+  const listingItems = groupProductsForListing(products)
   const content = getCategoryPageContent(categorySlug)
   const hasHero = Boolean(content?.heroImage)
   const hasDescription =
@@ -353,23 +359,29 @@ export default async function CategoryPage({ params }: PageProps) {
               adaptiveGap={false}
               className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
             >
-              {products.map((p, index) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  price={p.price}
-                  priceOld={p.priceOld}
-                  photo={p.photo}
-                  slug={p.slug}
-                  isPromoEligible={p.isPromoEligible}
-                  discountPrice={p.discountPrice}
-                  quantity={p.quantity}
-                  isPreorderEnabled={p.isPreorderEnabled}
-                  priority={index < 2}
-                  blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                />
-              ))}
+              {listingItems.map((item, index) =>
+                item.kind === 'single' ? (
+                  <ProductCard
+                    key={item.product.id}
+                    id={item.product.id}
+                    title={item.product.title}
+                    brand={item.product.brand}
+                    sku={item.product.sku}
+                    price={item.product.price}
+                    priceOld={item.product.priceOld}
+                    photo={item.product.photo}
+                    slug={item.product.slug}
+                    isPromoEligible={item.product.isPromoEligible}
+                    discountPrice={item.product.discountPrice}
+                    quantity={item.product.quantity}
+                    isPreorderEnabled={item.product.isPreorderEnabled}
+                    priority={index < 2}
+                    blurDataURL={'photos' in item.product ? getFirstPhotoBlurDataURL(item.product.photos) : undefined}
+                  />
+                ) : (
+                  <GroupedProductCard key={item.parentUid} group={item} priority={index < 2} />
+                )
+              )}
             </FluidGrid>
           )}
 

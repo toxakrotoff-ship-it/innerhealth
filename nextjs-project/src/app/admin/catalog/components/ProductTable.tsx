@@ -39,7 +39,7 @@ interface ProductTableProps {
 
 interface EditingState {
   productId: string
-  field: 'price' | 'quantity' | 'sku'
+  field: 'price' | 'quantity' | 'sku' | 'brand'
   value: string
 }
 
@@ -67,9 +67,11 @@ interface ProductRowProps {
   onStartEditPrice: () => void
   onStartEditQuantity: () => void
   onStartEditSku: () => void
+  onStartEditBrand: () => void
   onDelete: (product: Product) => void
   saveInline: (productId: string, field: 'price' | 'quantity', value: string) => Promise<void>
   saveInlineSku: (productId: string, nextSku: string | null) => Promise<void>
+  saveInlineBrand: (productId: string, nextBrand: 'inner' | 'sprint-power') => Promise<void>
   onToggleDraft: (productId: string, nextIsDraft: boolean) => void
 }
 
@@ -153,9 +155,11 @@ function ProductCardRow({
   onStartEditPrice,
   onStartEditQuantity,
   onStartEditSku,
+  onStartEditBrand,
   onDelete,
   saveInline,
   saveInlineSku,
+  saveInlineBrand,
   onToggleDraft,
 }: ProductRowProps) {
   const router = useRouter()
@@ -391,8 +395,50 @@ function ProductCardRow({
           )}
         </div>
 
-        <div className="min-w-0 w-full truncate text-sm text-gray-600 dark:text-gray-300" title={product.brand ?? ''}>
-          {product.brand || '—'}
+        <div className="min-w-0 w-full">
+          {editing?.productId === product.id && editing?.field === 'brand' ? (
+            <select
+              data-prevent-row-nav
+              value={editing.value === 'sprint-power' ? 'sprint-power' : 'inner'}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                const nextBrand = e.target.value === 'sprint-power' ? 'sprint-power' : 'inner'
+                void (async () => {
+                  try {
+                    await saveInlineBrand(product.id, nextBrand)
+                  } finally {
+                    setEditing(null)
+                  }
+                })()
+              }}
+              onBlur={() => setEditing(null)}
+              className="form-input box-border w-full py-1.5 text-sm text-gray-900 dark:text-gray-100"
+              autoFocus
+            >
+              <option value="inner">Inner Health</option>
+              <option value="sprint-power">Sprint Power</option>
+            </select>
+          ) : (
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="w-full rounded px-1 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={(e) => {
+                e.stopPropagation()
+                onStartEditBrand()
+              }}
+              aria-label="Редактировать бренд"
+              title={product.brand ?? ''}
+            >
+              {isSaving ? (
+                <span className="text-gray-400">…</span>
+              ) : (
+                <span className="truncate text-sm text-gray-600 dark:text-gray-300">
+                  {product.brand === 'sprint-power' ? 'Sprint Power' : 'Inner Health'}
+                </span>
+              )}
+            </button>
+          )}
         </div>
 
         <div className="flex min-w-0 w-full items-center justify-center">
@@ -692,6 +738,26 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     }
   }
 
+  const saveInlineBrand = async (productId: string, nextBrand: 'inner' | 'sprint-power') => {
+    setEditing(null)
+    setSavingId(productId)
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id: productId, brand: nextBrand }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      onRefresh()
+    } catch (e) {
+      console.error(e)
+      alert('Не удалось сохранить бренд')
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   const toggleDraft = async (productId: string, nextIsDraft: boolean) => {
     setTogglingDraftId(productId)
     try {
@@ -945,9 +1011,17 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
                         value: product.sku ?? '',
                       })
                     }
+                    onStartEditBrand={() =>
+                      setEditing({
+                        productId: product.id,
+                        field: 'brand',
+                        value: product.brand === 'sprint-power' ? 'sprint-power' : 'inner',
+                      })
+                    }
                     onDelete={handleDelete}
                     saveInline={saveInline}
                     saveInlineSku={saveInlineSku}
+                    saveInlineBrand={saveInlineBrand}
                     onToggleDraft={toggleDraft}
                   />
                 ))

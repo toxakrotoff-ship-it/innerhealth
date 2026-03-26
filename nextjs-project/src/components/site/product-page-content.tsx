@@ -4,6 +4,7 @@ import { CompareToggleButton } from '@/components/site/compare-toggle-button'
 import { RecentlyViewedTracker } from '@/components/site/recently-viewed-tracker'
 import { RecentlyViewedProducts } from '@/components/site/recently-viewed-products'
 import { ProductCard } from '@/components/site/product-card'
+import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { QuickOrderDialog } from '@/components/site/quick-order-dialog'
 import { PurchaseTrustStrip } from '@/components/site/purchase-trust-strip'
@@ -17,6 +18,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
+import { groupProductsForListing } from '@/lib/product-grouping'
 
 interface ProductPageContentProps {
   product: {
@@ -43,8 +45,10 @@ interface ProductPageContentProps {
   relatedProductsCategoryTitle?: string | null
   relatedProducts: Array<{
     id: string
+    parentUid: string | null
     title: string
     brand: string | null
+    sku: string | null
     price: number
     priceOld: number | null
     photo: string | null
@@ -137,6 +141,7 @@ export function ProductPageContent({
       { label: 'Каталог', href: '/catalog' },
       { label: product.title },
     ]
+  const relatedListingItems = groupProductsForListing(relatedProducts)
 
   return (
     <AdaptiveContainer
@@ -271,22 +276,28 @@ export function ProductPageContent({
               gap={4}
               adaptiveGap
             >
-              {relatedProducts.map((item) => (
-                <ProductCard
-                  key={item.id}
-                  id={item.id}
-                  title={item.title}
-                  price={item.price}
-                  priceOld={item.priceOld}
-                  photo={item.photo}
-                  slug={item.slug}
-                  isPromoEligible={item.isPromoEligible}
-                  discountPrice={item.discountPrice}
-                  quantity={item.quantity}
-                  isPreorderEnabled={item.isPreorderEnabled}
-                  blurDataURL={getFirstPhotoBlurDataURL(item.photos)}
-                />
-              ))}
+              {relatedListingItems.map((item) =>
+                item.kind === 'single' ? (
+                  <ProductCard
+                    key={item.product.id}
+                    id={item.product.id}
+                    title={item.product.title}
+                    brand={item.product.brand}
+                    sku={item.product.sku}
+                    price={item.product.price}
+                    priceOld={item.product.priceOld}
+                    photo={item.product.photo}
+                    slug={item.product.slug}
+                    isPromoEligible={item.product.isPromoEligible}
+                    discountPrice={item.product.discountPrice}
+                    quantity={item.product.quantity}
+                    isPreorderEnabled={item.product.isPreorderEnabled}
+                    blurDataURL={getFirstPhotoBlurDataURL(item.product.photos)}
+                  />
+                ) : (
+                  <GroupedProductCard key={item.parentUid} group={item} />
+                )
+              )}
             </FluidGrid>
           </section>
         </ScalableSpacing>

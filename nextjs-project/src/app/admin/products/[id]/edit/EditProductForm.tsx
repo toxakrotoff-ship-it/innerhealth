@@ -97,6 +97,8 @@ export function EditProductForm({ productId }: EditProductFormProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    brand: 'inner' as 'inner' | 'sprint-power',
+    parentUid: '',
     title: '',
     slug: '',
     sku: '',
@@ -168,6 +170,8 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       }
       setProduct(data);
       setFormData({
+        brand: data.brand === 'sprint-power' ? 'sprint-power' : 'inner',
+        parentUid: typeof data.parentUid === 'string' ? data.parentUid : '',
         title: data.title,
         slug: data.slug || '',
         sku: data.sku || '',
@@ -252,6 +256,8 @@ export function EditProductForm({ productId }: EditProductFormProps) {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          brand: formData.brand,
+          parentUid: formData.parentUid.trim() ? formData.parentUid.trim() : null,
           title: formData.title,
           slug: formData.slug || null,
           sku: formData.sku || null,
@@ -334,6 +340,36 @@ export function EditProductForm({ productId }: EditProductFormProps) {
 
         {product && (
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Бренд</label>
+                <select
+                  name="brand"
+                  value={formData.brand}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      brand: e.target.value === 'sprint-power' ? 'sprint-power' : 'inner',
+                    }))
+                  }
+                  className="form-input w-full"
+                >
+                  <option value="inner">Inner Health</option>
+                  <option value="sprint-power">Sprint Power</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Группа вкусов (parentUid)</label>
+                <input
+                  type="text"
+                  name="parentUid"
+                  value={formData.parentUid}
+                  onChange={handleChange}
+                  className="form-input w-full"
+                  placeholder="Одинаковый parentUid = одна карточка в каталоге"
+                />
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Название</label>
               <input
