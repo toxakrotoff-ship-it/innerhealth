@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { NavArrowDown } from 'iconoir-react'
 import Button from '@/components/ui/button'
 import { ProductTable } from './components/ProductTable'
 import { Product } from '@prisma/client'
@@ -145,7 +145,7 @@ export default function AdminCatalogPage() {
             aria-controls="admin-catalog-categories-panel"
           >
             <span>Категории</span>
-            <ChevronDown
+            <NavArrowDown
               className={`h-4 w-4 shrink-0 transition-transform ${categoriesPanelOpen ? 'rotate-180' : ''}`}
               aria-hidden
             />

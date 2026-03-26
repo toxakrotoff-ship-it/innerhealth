@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { Drag } from 'iconoir-react';
 import Button from '@/components/ui/button';
 import {
   getCategories,
@@ -76,7 +76,7 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
             {...attributes}
             aria-label="Перетащить для изменения порядка"
           >
-            <GripVertical className="w-5 h-5" />
+            <Drag className="w-5 h-5" />
           </button>
           <div>
             <div

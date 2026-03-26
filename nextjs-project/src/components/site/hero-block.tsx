@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import type { ContentBlockResolved } from '@/services/content-block.service'

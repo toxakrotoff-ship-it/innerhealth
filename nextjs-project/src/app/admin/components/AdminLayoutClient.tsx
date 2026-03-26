@@ -95,6 +95,18 @@ export default function AdminLayoutClient({
         aria-label="Закрыть меню"
       />
 
+      <button
+        type="button"
+        className="admin-fab-menu"
+        aria-label="Открыть меню"
+        aria-expanded={isSidebarOpen}
+        onClick={() => setIsSidebarOpen(true)}
+      >
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
       <div className="admin-main">
         <header className="admin-header">
           <div className="admin-header-inner">

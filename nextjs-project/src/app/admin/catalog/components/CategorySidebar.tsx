@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronDown } from 'lucide-react'
+import { NavArrowDown } from 'iconoir-react'
 import { AdminCollapsible } from '@/app/admin/components/admin-collapsible'
 import { cn } from '@/lib/utils'
 import { Category, getCategoriesWithCounts } from '../actions'
@@ -140,7 +140,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
               onClick={() => toggleExpanded(NO_CATEGORY_ID)}
               className="ml-3 mt-0.5 flex w-[calc(100%-0.75rem)] items-center gap-1.5 text-left text-xs text-gray-500 hover:text-gray-700"
             >
-              <ChevronDown
+              <NavArrowDown
                 className={cn(
                   'h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none',
                   expandedIds.has(NO_CATEGORY_ID) && 'rotate-180'
@@ -200,7 +200,7 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
                     }}
                     className="ml-3 mt-0.5 flex w-[calc(100%-0.75rem)] items-center gap-1.5 text-left text-xs text-gray-500 hover:text-gray-700"
                   >
-                    <ChevronDown
+                    <NavArrowDown
                       className={cn(
                         'h-3.5 w-3.5 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none',
                         expandedIds.has(cat.id) && 'rotate-180'

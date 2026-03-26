@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Star } from 'lucide-react'
+import { Star } from 'iconoir-react'
 
 const BANNER_URL = 'https://sprintpower.ru'
 

@@ -19,7 +19,7 @@ import {
   getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { ChevronRight } from 'lucide-react'
+import { NavArrowRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import {
   getResolvedBlocksForPage,
@@ -601,7 +601,7 @@ export default async function HomePage() {
                   href="/catalog"
                   className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm"
                 >
-                  СМОТРЕТЬ ВСЁ <ChevronRight className="w-4 h-4" aria-hidden />
+                  СМОТРЕТЬ ВСЁ <NavArrowRight className="w-4 h-4" aria-hidden />
                 </Link>
               </div>
               {newProducts.length <= 1 ? (
@@ -679,7 +679,7 @@ export default async function HomePage() {
             </div>
             <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
               ВСЕ НОВОСТИ
-              <ChevronRight className="w-4 h-4" aria-hidden />
+              <NavArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {newsPosts.length > 0 ? (
@@ -822,7 +822,7 @@ export default async function HomePage() {
               href="/catalog"
               className="desktop-button-scale inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue 2xl:text-base 3xl:px-10 3xl:py-5"
             >
-              СМОТРЕТЬ ВЕСЬ КАТАЛОГ <ChevronRight className="w-4 h-4" aria-hidden />
+              СМОТРЕТЬ ВЕСЬ КАТАЛОГ <NavArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
         </AdaptiveContainer>
@@ -841,7 +841,7 @@ export default async function HomePage() {
             </div>
             <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
               ВСЕ СТАТЬИ
-              <ChevronRight className="w-4 h-4" aria-hidden />
+              <NavArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {articlePosts.length > 0 ? (
@@ -912,7 +912,7 @@ export default async function HomePage() {
               </p>
             </div>
             <Link href="/otzyvy" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ ОТЗЫВЫ <ChevronRight className="w-4 h-4" aria-hidden />
+              ВСЕ ОТЗЫВЫ <NavArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
           {reviews.length > 0 ? (

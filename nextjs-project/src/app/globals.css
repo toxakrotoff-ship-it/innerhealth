@@ -1216,7 +1216,15 @@ html.preloader-skip .preloader-overlay {
     color: #94a3b8;
     font-size: 0.9375rem;
     font-weight: 500;
+    line-height: 1.25;
     transition: color 0.15s, background 0.15s;
+  }
+
+  .admin-nav-item > span {
+    min-width: 0;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
   }
 
   .admin-nav-item:hover {
@@ -1240,6 +1248,29 @@ html.preloader-skip .preloader-overlay {
     align-items: center;
     gap: 0;
     padding: 0;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    color: #94a3b8;
+    transition: color 0.15s;
+  }
+
+  .admin-nav-group-trigger::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: transparent;
+    transition: background 0.15s, box-shadow 0.15s;
+    z-index: 0;
+  }
+
+  .admin-nav-group-trigger:hover {
+    color: #f1f5f9;
+  }
+
+  .admin-nav-group-trigger:hover::before {
+    background: rgba(255,255,255,0.06);
   }
 
   .admin-nav-group-link {
@@ -1254,11 +1285,21 @@ html.preloader-skip .preloader-overlay {
     font-weight: inherit;
     flex: 1;
     min-width: 0;
+    line-height: 1.25;
+    position: relative;
+    z-index: 1;
+  }
+
+  .admin-nav-group-link > span {
+    min-width: 0;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
   }
 
   .admin-nav-group-link:hover {
-    color: #f1f5f9;
-    background: rgba(255,255,255,0.06);
+    color: inherit;
+    background: transparent;
   }
 
   .admin-nav-group-chevron {
@@ -1272,6 +1313,9 @@ html.preloader-skip .preloader-overlay {
     color: inherit;
     cursor: pointer;
     border-radius: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
   }
 
   .admin-nav-group-chevron svg {
@@ -1279,7 +1323,22 @@ html.preloader-skip .preloader-overlay {
   }
 
   .admin-nav-group-chevron:hover {
-    background: rgba(255,255,255,0.06);
+    background: transparent;
+  }
+
+  .admin-nav-group-trigger.admin-nav-item-active .admin-nav-group-link,
+  .admin-nav-group-trigger.admin-nav-item-active .admin-nav-group-chevron {
+    background: transparent;
+  }
+
+  .admin-nav-group-trigger.admin-nav-item-active {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .admin-nav-group-trigger.admin-nav-item-active::before {
+    background: rgba(59, 102, 245, 0.2);
+    box-shadow: 0 0 0 1px rgba(59, 102, 245, 0.3);
   }
 
   .admin-nav-group-expandable .admin-nav-group-chevron {
@@ -1313,6 +1372,8 @@ html.preloader-skip .preloader-overlay {
   /* Сайдбар как бургер-меню при ширине < 700px */
   @media (max-width: 699px) {
     .admin-sidebar {
+      width: min-content;
+      max-width: calc(100vw - 1rem);
       transform: translateX(-100%);
     }
 
@@ -1341,6 +1402,52 @@ html.preloader-skip .preloader-overlay {
     .admin-sidebar-profile {
       display: block;
     }
+
+    .admin-nav-item,
+    .admin-nav-group-link {
+      padding-top: 0.6875rem;
+      padding-bottom: 0.6875rem;
+    }
+
+    .admin-nav-group-chevron {
+      padding: 0.6875rem 0.4375rem;
+      margin-right: 0.125rem;
+    }
+
+    .admin-nav-sublist {
+      padding-left: 1.125rem;
+    }
+
+    .admin-header-mobile-menu {
+      display: none;
+    }
+
+    .admin-fab-menu {
+      position: fixed;
+      top: 0.5rem;
+      left: 0.5rem;
+      z-index: 45;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 0.75rem;
+      background: #fff;
+      color: var(--color-gray-700);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+    }
+
+    .admin-layout.admin-sidebar-open .admin-fab-menu {
+      display: none;
+    }
+  }
+
+  @media (max-width: 390px) {
+    .admin-sidebar {
+      max-width: calc(100vw - 0.75rem);
+    }
   }
 
   @media (min-width: 700px) {
@@ -1353,6 +1460,10 @@ html.preloader-skip .preloader-overlay {
     }
 
     .admin-sidebar-profile {
+      display: none !important;
+    }
+
+    .admin-fab-menu {
       display: none !important;
     }
   }

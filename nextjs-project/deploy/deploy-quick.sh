@@ -2,7 +2,7 @@
 # Быстрое обновление приложения и бота без полной пересборки DB (nginx пересоздаём для актуального host-конфига).
 # Использование: из каталога nextjs-project: ./deploy/deploy-quick.sh
 
-set -e
+set -euo pipefail
 # Каталог с docker-compose (nextjs-project) — сюда вернёмся для сборки
 DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DEPLOY_DIR"
@@ -11,8 +11,17 @@ GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 cd "$GIT_ROOT"
 
 echo "==> Pulling latest from repo (code + prisma/migrations)..."
-git fetch origin
-git reset --hard "origin/$(git branch --show-current)"
+git fetch --prune origin
+CURRENT_BRANCH="$(git branch --show-current)"
+if [ -z "${CURRENT_BRANCH}" ]; then
+  echo "ERROR: Unable to detect current git branch."
+  exit 1
+fi
+if ! git merge-base --is-ancestor "HEAD" "origin/${CURRENT_BRANCH}"; then
+  echo "ERROR: Local branch has commits not in origin/${CURRENT_BRANCH}. Resolve manually before deploy."
+  exit 1
+fi
+git pull --ff-only origin "${CURRENT_BRANCH}"
 
 cd "$DEPLOY_DIR"
 

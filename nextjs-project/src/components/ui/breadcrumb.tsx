@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { ChevronRight } from 'lucide-react'
+import { NavArrowRight } from 'iconoir-react'
 import { cn } from '@/lib/utils'
 
 function BreadcrumbRoot({
@@ -95,7 +95,7 @@ function BreadcrumbSeparator({
       className={cn('[&>svg]:w-3.5 [&>svg]:h-3.5 text-gray-400', className)}
       {...props}
     >
-      {children ?? <ChevronRight className="rtl:rotate-180" />}
+      {children ?? <NavArrowRight className="rtl:rotate-180" />}
     </li>
   )
 }

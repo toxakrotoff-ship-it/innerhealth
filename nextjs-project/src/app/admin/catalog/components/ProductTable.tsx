@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Trash2 } from 'lucide-react'
+import { Drag, Trash } from 'iconoir-react'
 import Button from '@/components/ui/button'
 import { Product } from '@prisma/client'
 import { NO_CATEGORY_ID } from '../constants'
@@ -223,7 +223,7 @@ function ProductCardRow({
               aria-label="Перетащить для изменения порядка"
               onClick={(e) => e.stopPropagation()}
             >
-              <GripVertical className="h-5 w-5" />
+              <Drag className="h-5 w-5" />
             </button>
           ) : (
             <span className="h-5 w-5" aria-hidden="true" />
@@ -476,7 +476,7 @@ function ProductCardRow({
               onDelete(product)
             }}
           >
-            {isDeleting ? <span className="text-xs">…</span> : <Trash2 className="h-4 w-4" />}
+            {isDeleting ? <span className="text-xs">…</span> : <Trash className="h-4 w-4" />}
           </button>
         </div>
       </div>
@@ -505,7 +505,7 @@ function ProductCardRow({
                 aria-label="Перетащить для изменения порядка"
                 onClick={(e) => e.stopPropagation()}
               >
-                <GripVertical className="h-5 w-5" />
+                <Drag className="h-5 w-5" />
               </button>
             )}
             <div className="relative flex items-center justify-start">

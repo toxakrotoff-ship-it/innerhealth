@@ -2,11 +2,21 @@
 # Deploy Inner Health on VPS: build and start containers.
 # Usage: from repo root (nextjs-project): ./deploy/deploy.sh
 
-set -e
+set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "==> Pulling latest code..."
-git pull
+git fetch --prune origin
+CURRENT_BRANCH="$(git branch --show-current)"
+if [ -z "${CURRENT_BRANCH}" ]; then
+  echo "ERROR: Unable to detect current git branch."
+  exit 1
+fi
+if ! git merge-base --is-ancestor "HEAD" "origin/${CURRENT_BRANCH}"; then
+  echo "ERROR: Local branch has commits not in origin/${CURRENT_BRANCH}. Resolve manually before deploy."
+  exit 1
+fi
+git pull --ff-only origin "${CURRENT_BRANCH}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):

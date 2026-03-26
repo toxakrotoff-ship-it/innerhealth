@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Mail, Phone } from 'lucide-react'
+import { Mail, Phone } from 'iconoir-react'
 
 /**
  * Блок призыва оставить отзыв в стиле тёмной карточки (как «Присоединяйтесь к сообществу»).

@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import { Unbounded } from 'next/font/google'
+import { IconoirProvider } from 'iconoir-react'
 import { Preloader } from '@/components/site/preloader'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 
@@ -132,8 +133,17 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-gray-50 font-sans subpixel-antialiased text-gray-900">
-        <Preloader />
-        {children}
+        <IconoirProvider
+          iconProps={{
+            color: 'currentColor',
+            strokeWidth: 1.7,
+            width: '1.25em',
+            height: '1.25em',
+          }}
+        >
+          <Preloader />
+          {children}
+        </IconoirProvider>
       </body>
     </html>
   )

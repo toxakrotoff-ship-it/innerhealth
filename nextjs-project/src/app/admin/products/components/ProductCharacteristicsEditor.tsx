@@ -16,7 +16,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Trash2 } from 'lucide-react'
+import { Drag, Trash } from 'iconoir-react'
 import Button from '@/components/ui/button'
 
 type CharacteristicKeyMode = 'preset' | 'custom'
@@ -316,7 +316,7 @@ function SortableCharacteristicRow({
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <Drag className="h-4 w-4" />
       </button>
 
       <div className="w-full max-w-md">
@@ -370,7 +370,7 @@ function SortableCharacteristicRow({
           aria-label="Удалить характеристику"
           onClick={() => onDelete(row.id)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash className="h-4 w-4" />
         </button>
       </div>
     </div>

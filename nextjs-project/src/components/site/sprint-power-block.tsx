@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, CheckCircle } from 'lucide-react'
+import { ArrowUpRight, CheckCircle } from 'iconoir-react'
 
 import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
