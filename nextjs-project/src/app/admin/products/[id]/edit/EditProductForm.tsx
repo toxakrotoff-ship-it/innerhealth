@@ -300,7 +300,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
           seoTitle: formData.seoTitle || null,
           seoDescr: formData.seoDescr || null,
           seoKeywords: formData.seoKeywords || null,
-          photo: formData.photos.map((entry) => entry.url.trim()).filter(Boolean).at(0) ?? null,
+          photo: formData.photos.map((entry) => entry.url.trim()).filter(Boolean)[0] ?? null,
           photos:
             formData.photos
               .map((entry) => ({
