@@ -2,6 +2,7 @@
 
 import { useCartStore } from '@/store/cart-store'
 import { cn } from '@/lib/utils'
+import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 
 interface AddToCartButtonProps {
   productId: string
@@ -39,6 +40,12 @@ export function AddToCartButton({
   const addItem = useCartStore((s) => s.addItem)
   const openDrawer = useCartStore((s) => s.openDrawer)
 
+  function getCurrentPath(): string {
+    if (typeof window === 'undefined') return '/catalog'
+    const { pathname, search } = window.location
+    return search ? `${pathname}${search}` : pathname
+  }
+
   const handleClick = () => {
     addItem({
       productId,
@@ -52,6 +59,30 @@ export function AddToCartButton({
       discountPrice,
     })
     openDrawer()
+
+    const path = getCurrentPath()
+
+    logAnalyticsEvent({
+      type: 'CLICK',
+      path,
+      meta: {
+        kind: 'cta_add_to_cart',
+        productId,
+        slug,
+      },
+    })
+
+    logAnalyticsEvent({
+      type: 'CART_ADD',
+      path,
+      meta: {
+        productId,
+        title,
+        price,
+        quantity: 1,
+        slug,
+      },
+    })
   }
 
   return (

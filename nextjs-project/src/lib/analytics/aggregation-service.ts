@@ -33,40 +33,74 @@ function getAnalyticsDeletionCutoff(now: Date): Date {
 export async function aggregateTrafficForDate(date: Date): Promise<void> {
   const { start, end } = getDateRangeForDay(date)
 
-  const events = await prisma.analyticsEvent.groupBy({
+  const pageViewsByPath = await prisma.analyticsEvent.groupBy({
     by: ['brand', 'path'],
     where: {
       occurredAt: { gte: start, lt: end },
+      type: 'PAGE_VIEW',
     },
     _count: {
       _all: true,
     },
   })
 
+  const clicksByPath = await prisma.analyticsEvent.groupBy({
+    by: ['brand', 'path'],
+    where: {
+      occurredAt: { gte: start, lt: end },
+      type: 'CLICK',
+    },
+    _count: {
+      _all: true,
+    },
+  })
+
+  const pageViewMap = new Map<string, number>()
+  for (const row of pageViewsByPath) {
+    pageViewMap.set(`${row.brand}:${row.path ?? ''}`, row._count._all)
+  }
+
+  const clickMap = new Map<string, number>()
+  for (const row of clicksByPath) {
+    clickMap.set(`${row.brand}:${row.path ?? ''}`, row._count._all)
+  }
+
+  const upsertKeys = new Set<string>([
+    ...Array.from(pageViewMap.keys()),
+    ...Array.from(clickMap.keys()),
+  ])
+
   await prisma.$transaction(
-    events.map((row) =>
-      prisma.dailyTrafficStats.upsert({
+    Array.from(upsertKeys).map((key) => {
+      const [brand, ...pathParts] = key.split(':')
+      const path = pathParts.join(':')
+      const normalizedPath = path.length > 0 ? path : null
+      const pageViews = pageViewMap.get(key) ?? 0
+      const clicks = clickMap.get(key) ?? 0
+
+      return prisma.dailyTrafficStats.upsert({
         where: {
           brand_date_path: {
-            brand: row.brand,
+            brand,
             date: start,
-            path: row.path ?? null,
+            path: normalizedPath,
           },
         },
         create: {
-          brand: row.brand,
+          brand,
           date: start,
-          path: row.path ?? null,
-          pageViews: row._count._all,
-          sessions: row._count._all,
-          clicks: 0,
+          path: normalizedPath,
+          pageViews,
+          sessions: pageViews,
+          clicks,
         },
         update: {
-          pageViews: row._count._all,
-          sessions: row._count._all,
+          pageViews,
+          sessions: pageViews,
+          clicks,
         },
       })
-    )
+    })
   )
 
   await upsertDailyDeviceStatsForDay(start, end)

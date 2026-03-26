@@ -1,15 +1,33 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTransition } from 'react'
 
 export function AdminStatsRefreshButton() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
 
   function handleRefresh() {
     startTransition(() => {
-      router.refresh()
+      void (async () => {
+        const from = searchParams.get('from')
+        const to = searchParams.get('to')
+        const period = searchParams.get('period')
+
+        await fetch('/api/admin/analytics/aggregate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: from ?? undefined,
+            to: to ?? undefined,
+            period: period ?? undefined,
+          }),
+        }).catch(() => {})
+
+        router.refresh()
+      })()
     })
   }
 

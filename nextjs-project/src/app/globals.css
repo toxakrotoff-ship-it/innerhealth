@@ -1052,12 +1052,13 @@ html.preloader-skip .preloader-overlay {
 
   /* ——— Страница админки ——— */
   .admin-layout {
+    --admin-sidebar-width: clamp(272px, 20vw, 320px);
     display: flex;
     min-height: 100vh;
   }
 
   .admin-sidebar {
-    width: 260px;
+    width: var(--admin-sidebar-width);
     background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     border-right: 1px solid rgba(255,255,255,0.06);
     height: 100vh;
@@ -1364,7 +1365,7 @@ html.preloader-skip .preloader-overlay {
 
   .admin-main {
     flex: 1;
-    margin-left: 260px;
+    margin-left: var(--admin-sidebar-width);
     min-width: 0;
     padding-top: 48px;
   }
@@ -1486,7 +1487,7 @@ html.preloader-skip .preloader-overlay {
 
   @media (min-width: 700px) {
     .admin-header {
-      left: 260px;
+      left: var(--admin-sidebar-width);
     }
   }
 
