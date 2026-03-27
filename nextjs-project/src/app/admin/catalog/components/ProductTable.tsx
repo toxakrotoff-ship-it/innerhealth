@@ -467,32 +467,18 @@ function ProductCardRow({
         </div>
 
         <div className="flex min-w-0 w-full items-center justify-end">
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              data-prevent-row-nav
-              className="rounded-full bg-highlight-blue px-3 py-1 text-xs font-medium text-(--color-text) hover:opacity-90"
-              aria-label="Изменить"
-              onClick={(e) => {
-                e.stopPropagation()
-                router.push(editProductHref)
-              }}
-            >
-              Изменить
-            </button>
-            <button
-              type="button"
-              data-prevent-row-nav
-              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
-              aria-label="Удалить"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(product)
-              }}
-            >
-              {isDeleting ? <span className="text-xs">…</span> : <Trash className="h-4 w-4" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            data-prevent-row-nav
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
+            aria-label="Удалить"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(product)
+            }}
+          >
+            {isDeleting ? <span className="text-xs">…</span> : <Trash className="h-4 w-4" />}
+          </button>
         </div>
       </div>
 
