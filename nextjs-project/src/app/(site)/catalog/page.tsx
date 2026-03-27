@@ -35,6 +35,7 @@ import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 interface CatalogPageProps {
   searchParams: Promise<{

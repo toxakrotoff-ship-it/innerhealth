@@ -431,7 +431,7 @@ export default async function AdminPage({
   const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(period, activeBrand, fromParam, toParam)
   const funnelByDate = funnelTotal.reduce<FunnelDateGroup[]>((acc, row) => {
     const dateKey = row.date.toISOString().slice(0, 10)
-    const lastGroup = acc.at(-1)
+    const lastGroup = acc.length > 0 ? acc[acc.length - 1] : undefined
     if (lastGroup && lastGroup.dateKey === dateKey) {
       lastGroup.rows.push(row)
       return acc

@@ -13,6 +13,7 @@ import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export const revalidate = 900
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteTitle } = await getServerBrandContext()

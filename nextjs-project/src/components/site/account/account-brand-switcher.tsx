@@ -3,11 +3,22 @@ import { getBrandDefinitions, type BrandId } from '@/lib/brand/brand';
 
 interface AccountBrandSwitcherProps {
   activeBrand: BrandId;
+  targetPath: string;
+  visibleBrandIds: readonly BrandId[];
   className?: string;
 }
 
-export function AccountBrandSwitcher({ activeBrand, className }: AccountBrandSwitcherProps) {
-  const brands = getBrandDefinitions();
+export function AccountBrandSwitcher({
+  activeBrand,
+  targetPath,
+  visibleBrandIds,
+  className,
+}: AccountBrandSwitcherProps) {
+  if (visibleBrandIds.length <= 1) return null;
+
+  const visibleBrandIdSet = new Set<BrandId>(visibleBrandIds);
+  const brands = getBrandDefinitions().filter((brand) => visibleBrandIdSet.has(brand.id));
+  if (brands.length <= 1) return null;
 
   return (
     <div className={className}>
@@ -17,7 +28,7 @@ export function AccountBrandSwitcher({ activeBrand, className }: AccountBrandSwi
           return (
             <Link
               key={brand.id}
-              href={`/?brand=${brand.id}`}
+              href={`${targetPath}?brand=${brand.id}`}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                 isActive
                   ? 'bg-action-blue text-white'

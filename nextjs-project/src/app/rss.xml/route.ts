@@ -6,6 +6,7 @@ import { getPostPath } from '@/lib/post-url'
 
 /** RSS для Яндекс.Новостей / лент / агрегаторов; обновление не чаще 10 мин. */
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 export async function GET(): Promise<Response> {
   const base = getSiteBaseUrl()

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getOrderStatusPresentation } from '@/lib/order-status-presentation'
 
 export interface AccountOrdersTableItem {
   id: string
@@ -24,26 +25,37 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
           <>
             {/* Mobile: карточки заказов */}
             <div className="mt-4 flex flex-col gap-3 sm:hidden">
-              {items.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/account/orders/${order.id}`}
-                  className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 active:bg-gray-100 min-h-[44px] flex flex-col gap-1"
-                >
-                  <span className="font-medium text-text">{order.id}</span>
-                  <span className="text-sm text-gray-600">{order.status}</span>
-                  <span className="text-sm text-gray-700">{order.total.toFixed(2)} ₽</span>
-                  <span className="text-xs text-gray-500">{order.createdAt.toLocaleString('ru-RU')}</span>
-                  <span className="mt-1 text-sm text-action-blue font-medium">Открыть →</span>
-                </Link>
-              ))}
+              {items.map((order) => {
+                const statusPresentation = getOrderStatusPresentation(order.status)
+
+                return (
+                  <Link
+                    key={order.id}
+                    href={`/account/orders/${order.id}`}
+                    className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 active:bg-gray-100 min-h-[44px] flex flex-col gap-1"
+                  >
+                    <span className="font-medium text-text">{order.id}</span>
+                    <span
+                      className={[
+                        'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                        statusPresentation.badgeClassName,
+                      ].join(' ')}
+                    >
+                      {statusPresentation.label}
+                    </span>
+                    <span className="text-sm text-gray-700">{order.total.toFixed(2)} ₽</span>
+                    <span className="text-xs text-gray-500">{order.createdAt.toLocaleString('ru-RU')}</span>
+                    <span className="mt-1 text-sm text-action-blue font-medium">Открыть →</span>
+                  </Link>
+                )
+              })}
             </div>
             {/* Desktop: таблица */}
             <div className="mt-4 hidden sm:block overflow-x-auto">
               <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-gray-500">
-                    <th className="py-2 pr-4">Заказ</th>
+                    <th className="py-2 pr-4">ID заказа</th>
                     <th className="py-2 pr-4">Статус</th>
                     <th className="py-2 pr-4">Сумма</th>
                     <th className="py-2 pr-4">Дата</th>
@@ -51,22 +63,35 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((order) => (
-                    <tr key={order.id} className="border-b border-gray-100">
-                      <td className="py-3 pr-4 font-medium text-text">{order.id}</td>
-                      <td className="py-3 pr-4 text-gray-700">{order.status}</td>
-                      <td className="py-3 pr-4 text-gray-700">{order.total.toFixed(2)} ₽</td>
-                      <td className="py-3 pr-4 text-gray-700">{order.createdAt.toLocaleString('ru-RU')}</td>
-                      <td className="py-3">
-                        <Link
-                          href={`/account/orders/${order.id}`}
-                          className="text-action-blue hover:underline"
-                        >
-                          Открыть
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((order) => {
+                    const statusPresentation = getOrderStatusPresentation(order.status)
+
+                    return (
+                      <tr key={order.id} className="border-b border-gray-100">
+                        <td className="py-3 pr-4 font-medium text-text">{order.id}</td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={[
+                              'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                              statusPresentation.badgeClassName,
+                            ].join(' ')}
+                          >
+                            {statusPresentation.label}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-gray-700">{order.total.toFixed(2)} ₽</td>
+                        <td className="py-3 pr-4 text-gray-700">{order.createdAt.toLocaleString('ru-RU')}</td>
+                        <td className="py-3">
+                          <Link
+                            href={`/account/orders/${order.id}`}
+                            className="text-action-blue hover:underline"
+                          >
+                            Открыть
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
