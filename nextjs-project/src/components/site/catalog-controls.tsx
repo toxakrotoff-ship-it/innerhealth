@@ -214,7 +214,7 @@ export function CatalogControls({
             onChange={(e) => updateParams({ sort: e.target.value })}
             className="form-input w-full"
           >
-            <option value="newest">Сначала новые</option>
+            <option value="newest">Как в каталоге</option>
             <option value="price_asc">Цена: по возрастанию</option>
             <option value="price_desc">Цена: по убыванию</option>
             <option value="name_asc">По названию</option>

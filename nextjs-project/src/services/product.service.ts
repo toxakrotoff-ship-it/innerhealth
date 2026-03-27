@@ -2,12 +2,17 @@ import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 import {
   isSprintPowerBrand,
   normalizeProductBrandForScope,
   productBelongsToBrandScope,
   SPRINT_POWER_PRODUCT_BRAND,
 } from '@/lib/brand/brand-scope';
+import {
+  applyPersistedCatalogOrder,
+  parsePersistedCatalogOrder,
+} from '@/lib/persisted-catalog-order';
 
 /** Select only fields needed for admin list — do NOT fetch photos Json or long text. */
 const adminListSelect = {
@@ -33,6 +38,37 @@ const adminListSelect = {
   },
 } as const;
 
+const GLOBAL_CATALOG_ORDER_KEY_PREFIX = 'catalog-global-product-order';
+
+function getGlobalCatalogOrderStorageKey(brandId?: BrandId | null): string {
+  return `${GLOBAL_CATALOG_ORDER_KEY_PREFIX}:${resolveDbBrand(brandId)}`;
+}
+
+async function getPersistedGlobalCatalogOrderIds(brandId?: BrandId | null): Promise<string[]> {
+  const row = await prisma.siteSetting.findUnique({
+    where: { key: getGlobalCatalogOrderStorageKey(brandId) },
+    select: { value: true },
+  });
+  return parsePersistedCatalogOrder(row?.value);
+}
+
+export async function saveGlobalCatalogOrder(
+  orderedProductIds: readonly string[],
+  brandId?: BrandId | null
+): Promise<void> {
+  const deduplicated = Array.from(new Set(orderedProductIds));
+  await prisma.siteSetting.upsert({
+    where: { key: getGlobalCatalogOrderStorageKey(brandId) },
+    create: {
+      key: getGlobalCatalogOrderStorageKey(brandId),
+      value: JSON.stringify(deduplicated),
+    },
+    update: {
+      value: JSON.stringify(deduplicated),
+    },
+  });
+}
+
 /** Get product by id with categories (for admin edit form). */
 export async function getProductById(id: string, brandId?: BrandId | null) {
   const product = await prisma.product.findUnique({
@@ -49,11 +85,13 @@ export async function getProductsWithCategories(brandId?: BrandId | null) {
   const where: Prisma.ProductWhereInput | undefined = isSprintPowerBrand(brandId)
     ? { brand: SPRINT_POWER_PRODUCT_BRAND }
     : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where,
     orderBy: { createdAt: 'desc' },
     select: adminListSelect,
   });
+  const persistedOrderIds = await getPersistedGlobalCatalogOrderIds(brandId);
+  return applyPersistedCatalogOrder(products, persistedOrderIds);
 }
 
 /** Fields for catalog/home product cards — no photos JSON to reduce payload (use `photo` for image). */
@@ -138,6 +176,25 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
   const skip = (page - 1) * pageSize;
   const where = buildCatalogWhere(options);
   const orderBy = buildCatalogOrderBy(options.sort);
+
+  if (options.sort === 'newest') {
+    const [allItems, total, persistedOrderIds] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }],
+        select: productCardSelect,
+      }),
+      prisma.product.count({ where }),
+      getPersistedGlobalCatalogOrderIds(options.brandId),
+    ]);
+    const ordered = applyPersistedCatalogOrder(allItems, persistedOrderIds);
+    const pageItems = ordered.slice(skip, skip + pageSize);
+    return {
+      items: pageItems,
+      total,
+      hasNextPage: skip + pageItems.length < total,
+    };
+  }
 
   const [items, total] = await Promise.all([
     prisma.product.findMany({
@@ -298,7 +355,7 @@ export async function getProductsForHomeInBrandScope(take: number, brandId?: Bra
   const brandFilter: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
     ? { brand: SPRINT_POWER_PRODUCT_BRAND }
     : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
-  const featured = await prisma.product.findMany({
+  return prisma.product.findMany({
     where: {
       slug: { not: null },
       isDraft: false,
@@ -309,22 +366,6 @@ export async function getProductsForHomeInBrandScope(take: number, brandId?: Bra
     take: safeTake,
     select: productCardSelect,
   });
-
-  if (featured.length >= safeTake) return featured;
-
-  const rest = await prisma.product.findMany({
-    where: {
-      slug: { not: null },
-      isDraft: false,
-      id: { notIn: featured.map((item) => item.id) },
-      ...brandFilter,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: safeTake - featured.length,
-    select: productCardSelect,
-  });
-
-  return [...featured, ...rest];
 }
 
 /** Get products by ids with price/promo fields (for order creation). */

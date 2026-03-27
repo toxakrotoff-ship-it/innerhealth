@@ -6,9 +6,11 @@ import { prisma } from '@/lib/prisma';
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
 import { productBelongsToBrandScope } from '@/lib/brand/brand-scope';
+import { buildCatalogRevalidationPaths } from '@/lib/catalog-revalidation';
+import { revalidatePath } from 'next/cache';
 
 const reorderSchema = z.object({
-  categoryId: z.string().min(1, 'Category ID is required'),
+  categoryId: z.string().min(1, 'Category ID is required').optional().nullable(),
   items: z
     .array(
       z.object({
@@ -18,6 +20,8 @@ const reorderSchema = z.object({
     )
     .min(1, 'At least one item is required'),
 });
+
+const GLOBAL_CATALOG_ORDER_KEY_PREFIX = 'catalog-global-product-order';
 
 export async function POST(request: Request) {
   const session = await requireAdminSession();
@@ -40,17 +44,6 @@ export async function POST(request: Request) {
   const { categoryId, items } = parsed;
 
   try {
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
-      select: { id: true, brand: true },
-    });
-    if (!category || category.brand !== dbBrand) {
-      return NextResponse.json(
-        { error: 'Category not found in selected brand' },
-        { status: 404 }
-      );
-    }
-
     const productIds = items.map((item) => item.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
@@ -66,6 +59,40 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!categoryId) {
+      const orderedProductIds = items
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((item) => item.productId);
+      const deduplicatedProductIds = Array.from(new Set(orderedProductIds));
+      const storageKey = `${GLOBAL_CATALOG_ORDER_KEY_PREFIX}:${resolveDbBrand(brandId)}`;
+      await prisma.siteSetting.upsert({
+        where: { key: storageKey },
+        create: {
+          key: storageKey,
+          value: JSON.stringify(deduplicatedProductIds),
+        },
+        update: {
+          value: JSON.stringify(deduplicatedProductIds),
+        },
+      });
+      for (const path of buildCatalogRevalidationPaths([])) {
+        revalidatePath(path);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { id: true, brand: true, slug: true },
+    });
+    if (!category || category.brand !== dbBrand) {
+      return NextResponse.json(
+        { error: 'Category not found in selected brand' },
+        { status: 404 }
+      );
+    }
+
     await reorderProductsInCategory(
       categoryId,
       items.map((item, index) => ({
@@ -73,6 +100,9 @@ export async function POST(request: Request) {
         sortOrder: index,
       }))
     );
+    for (const path of buildCatalogRevalidationPaths([category.slug])) {
+      revalidatePath(path);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

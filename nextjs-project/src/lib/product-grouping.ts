@@ -86,20 +86,35 @@ export function pickDefaultVariant(variants: ProductVariantForListing[]): Produc
 
 export function groupProductsForListing(items: ProductVariantForListing[]): ProductListingItem[] {
   const groupedByParent = new Map<string, ProductVariantForListing[]>()
-  const listingItems: ProductListingItem[] = []
+  const singlesById = new Map<string, ProductVariantForListing>()
+  const listingOrder: Array<{ kind: 'single'; id: string } | { kind: 'group'; parentUid: string }> = []
 
   for (const item of items) {
     const parentUid = normalizeParentUid(item.parentUid)
     if (!parentUid) {
-      listingItems.push({ kind: 'single', product: item })
+      singlesById.set(item.id, item)
+      listingOrder.push({ kind: 'single', id: item.id })
       continue
     }
     const existing = groupedByParent.get(parentUid)
-    if (existing) existing.push(item)
-    else groupedByParent.set(parentUid, [item])
+    if (existing) {
+      existing.push(item)
+    } else {
+      groupedByParent.set(parentUid, [item])
+      listingOrder.push({ kind: 'group', parentUid })
+    }
   }
 
-  for (const [parentUid, variants] of Array.from(groupedByParent.entries())) {
+  const listingItems: ProductListingItem[] = []
+  for (const entry of listingOrder) {
+    if (entry.kind === 'single') {
+      const product = singlesById.get(entry.id)
+      if (product) listingItems.push({ kind: 'single', product })
+      continue
+    }
+
+    const variants = groupedByParent.get(entry.parentUid)
+    if (!variants || variants.length === 0) continue
     if (variants.length === 1) {
       listingItems.push({ kind: 'single', product: variants[0]! })
       continue
@@ -118,7 +133,7 @@ export function groupProductsForListing(items: ProductVariantForListing[]): Prod
 
     listingItems.push({
       kind: 'group',
-      parentUid,
+      parentUid: entry.parentUid,
       variants,
       defaultVariantId: defaultVariant.id,
       baseTitle: defaultLabels.baseTitle,

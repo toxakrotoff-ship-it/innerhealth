@@ -22,6 +22,7 @@ import Button from '@/components/ui/button'
 import { Product } from '@prisma/client'
 import { NO_CATEGORY_ID } from '../constants'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
+import { reorderProductsByIds } from './product-table.helpers'
 
 type ProductWithCategories = Product & {
   categories?: {
@@ -466,18 +467,32 @@ function ProductCardRow({
         </div>
 
         <div className="flex min-w-0 w-full items-center justify-end">
-          <button
-            type="button"
-            data-prevent-row-nav
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
-            aria-label="Удалить"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(product)
-            }}
-          >
-            {isDeleting ? <span className="text-xs">…</span> : <Trash className="h-4 w-4" />}
-          </button>
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="rounded-full bg-highlight-blue px-3 py-1 text-xs font-medium text-(--color-text) hover:opacity-90"
+              aria-label="Изменить"
+              onClick={(e) => {
+                e.stopPropagation()
+                router.push(editProductHref)
+              }}
+            >
+              Изменить
+            </button>
+            <button
+              type="button"
+              data-prevent-row-nav
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
+              aria-label="Удалить"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(product)
+              }}
+            >
+              {isDeleting ? <span className="text-xs">…</span> : <Trash className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -691,7 +706,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
     })
   )
 
-  const canReorder = selectedCategory !== null && selectedCategory !== NO_CATEGORY_ID
+  const canReorder = selectedCategory !== NO_CATEGORY_ID
   /** Перетаскивание только без поиска — иначе порядок в state расходится со списком. */
   const dragEnabled = canReorder && !searchTerm.trim()
 
@@ -877,18 +892,15 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    if (!dragEnabled || !selectedCategory) return
+    if (!dragEnabled) return
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const current = [...filteredAndSorted]
-    const fromIndex = current.findIndex((p) => p.id === active.id)
-    const toIndex = current.findIndex((p) => p.id === over.id)
-    if (fromIndex === -1 || toIndex === -1) return
-
-    const reordered = [...current]
-    const [moved] = reordered.splice(fromIndex, 1)
-    reordered.splice(toIndex, 0, moved)
+    const reordered = reorderProductsByIds(
+      filteredAndSorted,
+      String(active.id),
+      String(over.id)
+    )
 
     setFilteredProducts((prev) => {
       const inReorder = new Set(reordered.map((p) => p.id))
@@ -907,7 +919,7 @@ export function ProductTable({ products, onRefresh, selectedCategory }: ProductT
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          categoryId: selectedCategory,
+          ...(selectedCategory ? { categoryId: selectedCategory } : {}),
           items: payloadItems,
         }),
       })
