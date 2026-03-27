@@ -18,7 +18,15 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
   return (
     <section className="space-y-4">
       <div className="rounded-2xl sm:rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
-        <h1 className="text-xl sm:text-2xl font-semibold text-text">Мои заказы</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-semibold text-text">Мои заказы</h1>
+          <Link
+            href="/account"
+            className="rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue"
+          >
+            Вернуться в профиль
+          </Link>
+        </div>
         {items.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">Пока нет заказов.</p>
         ) : (
