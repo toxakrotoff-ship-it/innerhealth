@@ -1,4 +1,4 @@
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
 import { cookies, headers } from 'next/headers'
@@ -35,23 +35,23 @@ import { resolveBrand } from '@/lib/brand/brand'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
-const SprintPowerBlock = dynamic(
+const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
   { ssr: true }
 )
 
-const PartnersBlock = dynamic(
+const PartnersBlock = nextDynamic(
   () => import('@/components/site/partners-block').then((m) => ({ default: m.PartnersBlock })),
   { ssr: true }
 )
 
-const ReviewsCarousel = dynamic(
+const ReviewsCarousel = nextDynamic(
   () =>
     import('@/components/site/reviews-carousel').then((m) => ({ default: m.ReviewsCarousel })),
   { ssr: true }
 )
 
-const ReviewCtaBlock = dynamic(
+const ReviewCtaBlock = nextDynamic(
   () => import('@/components/site/review-cta-block').then((m) => ({ default: m.ReviewCtaBlock })),
   { ssr: true }
 )
@@ -100,6 +100,7 @@ export async function generateMetadata(
 }
 
 export const revalidate = 300
+export const dynamic = 'force-dynamic'
 
 type HomeReview = {
   id: string

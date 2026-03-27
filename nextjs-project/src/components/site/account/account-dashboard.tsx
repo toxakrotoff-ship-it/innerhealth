@@ -9,6 +9,10 @@ export interface AccountDashboardProps {
   userRole?: string
 }
 
+function normalizeUserIdentityValue(value: string): string {
+  return value.trim().toLowerCase()
+}
+
 export function AccountDashboard({
   userName,
   userEmail,
@@ -16,11 +20,15 @@ export function AccountDashboard({
   totalSpent,
   userRole,
 }: AccountDashboardProps) {
+  const normalizedUserName = normalizeUserIdentityValue(userName)
+  const normalizedUserEmail = normalizeUserIdentityValue(userEmail)
+  const shouldRenderUserName = normalizedUserName.length > 0 && normalizedUserName !== normalizedUserEmail
+
   return (
     <section className="space-y-6">
       <AccountHeader title="Личный кабинет" />
       <div className="rounded-3xl border border-gray-200 bg-white p-6">
-        <p className="mt-1 text-sm text-gray-600">{userName}</p>
+        {shouldRenderUserName && <p className="mt-1 text-sm text-gray-600">{userName}</p>}
         <p className="text-sm text-gray-500">{userEmail}</p>
       </div>
 

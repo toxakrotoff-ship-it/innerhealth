@@ -42,6 +42,7 @@ function htmlToPlainText(html: string): string {
 
 /** Статический рендер категории, ревалидация раз в 10 минут. */
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: Promise<{ categorySlug: string }>

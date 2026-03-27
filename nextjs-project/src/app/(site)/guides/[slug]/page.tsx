@@ -21,6 +21,7 @@ interface PageProps {
 }
 
 export const revalidate = 600
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { siteTitle } = await getServerBrandContext()

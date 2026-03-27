@@ -6,6 +6,7 @@ import {
   getUserOrderById,
 } from '@/services/account.service'
 import { requireUserPageSession } from '@/lib/auth/require-user-page-session'
+import { getOrderStatusPresentation } from '@/lib/order-status-presentation'
 
 function isAccountServiceError(error: unknown): error is AccountServiceError {
   if (!error || typeof error !== 'object') return false
@@ -33,6 +34,9 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
   }
 
   const shipping = order.shippingInfo
+  const statusPresentation = getOrderStatusPresentation(order.status)
+  const shouldShowCdekTrackingBlock =
+    shipping?.deliveryMethod === 'cdek_pvz' || shipping?.deliveryMethod === 'cdek_door'
   const cdekTrackingLink = order.cdekTrackNumber
     ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(order.cdekTrackNumber)}`
     : null
@@ -42,14 +46,27 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
       <div className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-text">Заказ {order.id}</h1>
-          <Link href="/account/orders" className="text-sm text-action-blue hover:underline">
-            К списку заказов
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/account" className="text-sm text-action-blue hover:underline">
+              Вернуться в профиль
+            </Link>
+            <Link href="/account/orders" className="text-sm text-action-blue hover:underline">
+              К списку заказов
+            </Link>
+          </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <p className="text-sm text-gray-700">
-            <span className="font-medium">Статус:</span> {order.status}
+            <span className="font-medium">Статус:</span>{' '}
+            <span
+              className={[
+                'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                statusPresentation.badgeClassName,
+              ].join(' ')}
+            >
+              {statusPresentation.label}
+            </span>
           </p>
           <p className="text-sm text-gray-700">
             <span className="font-medium">Сумма:</span> {order.total.toFixed(2)} ₽
@@ -84,25 +101,27 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
           )}
         </div>
 
-        <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-text">Трекинг CDEK</h2>
-          <p className="mt-2 text-sm text-gray-700">
-            <span className="font-medium">UUID заказа CDEK:</span> {order.cdekOrderUuid ?? '—'}
-          </p>
-          <p className="mt-1 text-sm text-gray-700">
-            <span className="font-medium">Трек-номер:</span> {order.cdekTrackNumber ?? 'Ещё не присвоен'}
-          </p>
-          {cdekTrackingLink ? (
-            <a
-              href={cdekTrackingLink}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-block text-sm text-action-blue hover:underline"
-            >
-              Отследить отправление
-            </a>
-          ) : null}
-        </div>
+        {shouldShowCdekTrackingBlock ? (
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <h2 className="text-lg font-semibold text-text">Трекинг CDEK</h2>
+            <p className="mt-2 text-sm text-gray-700">
+              <span className="font-medium">UUID заказа CDEK:</span> {order.cdekOrderUuid ?? '—'}
+            </p>
+            <p className="mt-1 text-sm text-gray-700">
+              <span className="font-medium">Трек-номер:</span> {order.cdekTrackNumber ?? 'Ещё не присвоен'}
+            </p>
+            {cdekTrackingLink ? (
+              <a
+                href={cdekTrackingLink}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-sm text-action-blue hover:underline"
+              >
+                Отследить отправление
+              </a>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   )

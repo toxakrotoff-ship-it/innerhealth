@@ -6,6 +6,7 @@ import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 
 /** Регенерация sitemap не чаще раза в час — при добавлении товаров/статей/категорий ссылки появятся в течение часа. */
 export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 /** Статические страницы сайта (без учёта пагинации каталога). */
 const STATIC_PATHS: { path: string; changeFrequency: 'yearly' | 'monthly' | 'weekly' | 'daily'; priority: number }[] = [
