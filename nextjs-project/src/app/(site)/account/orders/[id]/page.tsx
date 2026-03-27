@@ -47,10 +47,16 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-text">Заказ {order.id}</h1>
           <div className="flex flex-wrap items-center gap-3">
-            <Link href="/account" className="text-sm text-action-blue hover:underline">
+            <Link
+              href="/account"
+              className="rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue"
+            >
               Вернуться в профиль
             </Link>
-            <Link href="/account/orders" className="text-sm text-action-blue hover:underline">
+            <Link
+              href="/account/orders"
+              className="rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue"
+            >
               К списку заказов
             </Link>
           </div>
