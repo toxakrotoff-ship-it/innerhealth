@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { AdminDatePicker } from './components/AdminDatePicker'
 import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
 import { AdminStatsRefreshButton } from './components/AdminStatsRefreshButton'
+import { buildFallbackTrafficRowsByPath } from './admin-stats-helpers'
 import type { BrandId } from '@/lib/brand/brand'
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
@@ -62,6 +63,18 @@ interface PageStat {
   clicks: number
 }
 
+interface FunnelStat {
+  date: Date
+  step: string
+  count: number
+  conversionToNext: number | null
+}
+
+interface FunnelDateGroup {
+  dateKey: string
+  rows: FunnelStat[]
+}
+
 async function getSummary(
   period: PeriodKey,
   activeBrand: BrandId,
@@ -106,12 +119,7 @@ async function getSummary(
   if (!hasAnalytics) {
     return {
       trafficTotal: { _sum: { pageViews: 0, sessions: 0, clicks: 0 } },
-      funnelTotal: [] as Array<{
-        date: Date
-        step: string
-        count: number
-        conversionToNext: number | null
-      }>,
+      funnelTotal: [] as FunnelStat[],
       ordersCount: 0,
       pageStats: [] as PageStat[],
       deviceStats: { desktop: 0, mobile: 0, tablet: 0, other: 0 } as DeviceStats,
@@ -263,7 +271,7 @@ async function getSummary(
     (!aggregateHasTrafficData || !aggregateHasFunnelData || !hasTrafficRowsFromAggregate)
 
   if (shouldUseRawFallback && anyPrisma.analyticsEvent) {
-    const [totalPageViewsRaw, totalClicksRaw, pageViewByPathRaw, funnelByTypeRaw] =
+    const [totalPageViewsRaw, totalClicksRaw, pageViewByPathRaw, clickByPathRaw, funnelByTypeRaw] =
       await Promise.all([
         anyPrisma.analyticsEvent.count({
           where: {
@@ -283,6 +291,17 @@ async function getSummary(
           by: ['path'],
           where: {
             type: 'PAGE_VIEW',
+            brand: activeBrand,
+            occurredAt: dateWhere,
+          },
+          _count: {
+            _all: true,
+          },
+        }),
+        anyPrisma.analyticsEvent.groupBy({
+          by: ['path'],
+          where: {
+            type: 'CLICK',
             brand: activeBrand,
             occurredAt: dateWhere,
           },
@@ -311,12 +330,11 @@ async function getSummary(
       },
     }
 
-    trafficRows = pageViewByPathRaw.map((row) => ({
-      date: from ?? new Date(),
-      path: row.path ?? null,
-      pageViews: row._count._all,
-      clicks: 0,
-    }))
+    trafficRows = buildFallbackTrafficRowsByPath({
+      from,
+      pageViewByPathRows: pageViewByPathRaw,
+      clickByPathRows: clickByPathRaw,
+    })
 
     const funnelMap = new Map<string, number>()
     for (const row of funnelByTypeRaw) {
@@ -411,6 +429,20 @@ export default async function AdminPage({
 
   const { from, to, isCustom } = getDateRange(period, fromParam, toParam)
   const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(period, activeBrand, fromParam, toParam)
+  const funnelByDate = funnelTotal.reduce<FunnelDateGroup[]>((acc, row) => {
+    const dateKey = row.date.toISOString().slice(0, 10)
+    const lastGroup = acc.at(-1)
+    if (lastGroup && lastGroup.dateKey === dateKey) {
+      lastGroup.rows.push(row)
+      return acc
+    }
+
+    acc.push({
+      dateKey,
+      rows: [row],
+    })
+    return acc
+  }, [])
 
   return (
     <div className="admin-container">
@@ -643,25 +675,31 @@ export default async function AdminPage({
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Воронка за последние дни</h2>
           <div className="space-y-3.5 md:hidden">
-            {funnelTotal.map((row) => (
-              <div key={`${row.date.toISOString()}-${row.step}`} className="rounded-lg border border-gray-200 bg-white p-4">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-gray-600">Дата</span>
-                  <span className="font-medium text-gray-900">{row.date.toISOString().slice(0, 10)}</span>
+            {funnelByDate.map((group) => (
+              <div key={group.dateKey} className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="mb-2 border-b border-gray-200 pb-2">
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Дата</p>
+                  <p className="text-sm font-semibold text-gray-900">{group.dateKey}</p>
                 </div>
-                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-gray-600">Шаг</span>
-                  <span className="font-medium text-gray-900 text-right">{getFunnelStepLabel(row.step)}</span>
-                </div>
-                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-gray-600">Кол-во</span>
-                  <span className="font-semibold text-gray-900">{row.count}</span>
-                </div>
-                <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-gray-600">Конверсия</span>
-                  <span className="font-semibold text-gray-900">
-                    {row.conversionToNext != null ? `${Math.round(row.conversionToNext * 100)}%` : '—'}
-                  </span>
+                <div className="space-y-3">
+                  {group.rows.map((row) => (
+                    <div key={`${group.dateKey}-${row.step}`} className="rounded-md border border-gray-100 bg-gray-50 p-3">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-600">Шаг</span>
+                        <span className="font-medium text-gray-900 text-right">{getFunnelStepLabel(row.step)}</span>
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-600">Кол-во</span>
+                        <span className="font-semibold text-gray-900">{row.count}</span>
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-600">Конверсия</span>
+                        <span className="font-semibold text-gray-900">
+                          {row.conversionToNext != null ? `${Math.round(row.conversionToNext * 100)}%` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -690,20 +728,27 @@ export default async function AdminPage({
                 </tr>
               </thead>
               <tbody>
-                {funnelTotal.map((row) => (
-                  <tr key={`${row.date.toISOString()}-${row.step}`} className="border-b border-gray-100">
-                    <td className="px-4 py-2 text-sm text-gray-600">
-                      {row.date.toISOString().slice(0, 10)}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-700">{getFunnelStepLabel(row.step)}</td>
-                    <td className="px-4 py-2 text-sm text-gray-700">{row.count}</td>
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      {row.conversionToNext != null
-                        ? `${Math.round(row.conversionToNext * 100)}%`
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {funnelByDate.flatMap((group) => [
+                  (
+                    <tr key={`group-${group.dateKey}`} className="bg-gray-50">
+                      <td colSpan={4} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        {group.dateKey}
+                      </td>
+                    </tr>
+                  ),
+                  ...group.rows.map((row) => (
+                    <tr key={`${group.dateKey}-${row.step}`} className="border-b border-gray-100">
+                      <td className="px-4 py-2 text-sm text-gray-500">—</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{getFunnelStepLabel(row.step)}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{row.count}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">
+                        {row.conversionToNext != null
+                          ? `${Math.round(row.conversionToNext * 100)}%`
+                          : '—'}
+                      </td>
+                    </tr>
+                  )),
+                ])}
                 {funnelTotal.length === 0 && (
                   <tr>
                     <td
