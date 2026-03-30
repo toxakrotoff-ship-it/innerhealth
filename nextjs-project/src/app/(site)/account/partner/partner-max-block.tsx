@@ -89,7 +89,7 @@ export function PartnerMaxBlock() {
               <div>
                 <p className="font-medium text-green-800">MAX подключён</p>
                 <p className="mt-0.5 text-sm text-green-700">
-                  Вы получаете уведомления о заказах по вашим промокодам. В боте доступна команда /stats — статистика по промокодам.
+                  Вы получаете уведомления о заказах по вашим промокодам. В боте доступна команда /stats с количеством заказов по промокодам.
                 </p>
                 {status.linkedAt && (
                   <p className="mt-1 text-xs text-green-600">
@@ -111,7 +111,7 @@ export function PartnerMaxBlock() {
       ) : (
         <>
           <p className="text-gray-600 text-sm mb-4">
-            Подключите MAX, чтобы получать уведомления о заказах по вашим промокодам и смотреть статистику командой /stats в боте.
+            Подключите MAX, чтобы получать уведомления о заказах по вашим промокодам и смотреть количество заказов командой /stats в боте.
           </p>
           {linkResult ? (
             <div className="space-y-3">

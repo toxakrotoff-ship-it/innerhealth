@@ -3,30 +3,18 @@ import type { PartnerStatForPartner } from '@/services/partner.service';
 interface PartnerStatsContentProps {
   stats: PartnerStatForPartner[];
   totalOrders: number;
-  totalIncome: number;
 }
 
 export function PartnerStatsContent({
   stats,
   totalOrders,
-  totalIncome,
 }: PartnerStatsContentProps) {
   return (
     <section className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4">
         <div className="rounded-2xl sm:rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
           <p className="text-sm text-gray-500">Оплачено заказов по промокодам</p>
           <p className="mt-2 text-2xl sm:text-3xl font-semibold text-text">{totalOrders}</p>
-        </div>
-        <div className="rounded-2xl sm:rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
-          <p className="text-sm text-gray-500">Ваш доход</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-semibold text-text">
-            {new Intl.NumberFormat('ru-RU', {
-              style: 'currency',
-              currency: 'RUB',
-              maximumFractionDigits: 0,
-            }).format(totalIncome)}
-          </p>
         </div>
       </div>
 
@@ -42,17 +30,7 @@ export function PartnerStatsContent({
             {stats.map((row) => (
               <div key={row.promoCodeId} className="p-4 flex flex-col gap-1">
                 <span className="font-medium text-gray-900">{row.code}</span>
-                <div className="flex flex-wrap gap-x-4 gap-y-0 text-sm text-gray-600">
-                  <span>Применений: {row.applicationsCount}</span>
-                  <span>Оплачено: {row.ordersCount}</span>
-                </div>
-                <span className="text-sm font-medium text-text">
-                  {new Intl.NumberFormat('ru-RU', {
-                    style: 'currency',
-                    currency: 'RUB',
-                    maximumFractionDigits: 0,
-                  }).format(row.partnerIncome)}
-                </span>
+                <span className="text-sm text-gray-600">Заказов: {row.ordersCount}</span>
               </div>
             ))}
           </div>
@@ -65,13 +43,7 @@ export function PartnerStatsContent({
                   Промокод
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Применений
-                </th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Оплачено
-                </th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ваш доход
+                  Заказов
                 </th>
               </tr>
             </thead>
@@ -79,15 +51,7 @@ export function PartnerStatsContent({
               {stats.map((row) => (
                 <tr key={row.promoCodeId}>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.code}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{row.applicationsCount}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">{row.ordersCount}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {new Intl.NumberFormat('ru-RU', {
-                      style: 'currency',
-                      currency: 'RUB',
-                      maximumFractionDigits: 0,
-                    }).format(row.partnerIncome)}
-                  </td>
                 </tr>
               ))}
             </tbody>

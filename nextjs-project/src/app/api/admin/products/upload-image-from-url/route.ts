@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as productService from '@/services/product.service';
+import { lookup } from 'node:dns/promises';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
+import net from 'node:net';
 import path from 'path';
 import { getProjectRoot } from '@/lib/project-root';
 import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
@@ -31,26 +33,74 @@ function parsePhotosJson(photos: unknown): PhotoEntry[] {
   return result;
 }
 
-/** Block private/local URLs to prevent SSRF. */
+/** Block non-http(s), localhost and direct private addresses to reduce SSRF risk. */
 function isUrlAllowed(url: URL): boolean {
   const protocol = url.protocol.toLowerCase();
   if (protocol !== 'http:' && protocol !== 'https:') return false;
   const hostname = url.hostname.toLowerCase();
   if (hostname === 'localhost' || hostname === '::1') return false;
-  // IPv4 private / loopback / link-local
-  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-  const m = hostname.match(ipv4);
-  if (m) {
-    const a = parseInt(m[1], 10); const b = parseInt(m[2], 10);
-    if (a === 127) return false;
-    if (a === 10) return false;
-    if (a === 172 && b >= 16 && b <= 31) return false;
-    if (a === 192 && b === 168) return false;
-    if (a === 169 && b === 254) return false;
-  }
-  // IPv6 private / loopback
-  if (hostname.startsWith('fd') || hostname.startsWith('fe80')) return false;
+  const ipVersion = net.isIP(hostname);
+  if (ipVersion > 0 && isPrivateAddress(hostname)) return false;
   return true;
+}
+
+function isPrivateIpv4(address: string): boolean {
+  const parts = address.split('.').map((part) => Number.parseInt(part, 10));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) {
+    return true;
+  }
+
+  const [a, b] = parts;
+  if (a === 0 || a === 10 || a === 127) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return false;
+}
+
+function normalizeIpv6(address: string): string {
+  return address.toLowerCase().replace(/^\[|\]$/g, '');
+}
+
+function isPrivateIpv6(address: string): boolean {
+  const normalized = normalizeIpv6(address);
+  if (normalized === '::1' || normalized === '::') return true;
+  if (normalized.startsWith('fe80:')) return true;
+  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+  if (normalized.startsWith('::ffff:')) {
+    const mappedIpv4 = normalized.slice('::ffff:'.length);
+    return isPrivateIpv4(mappedIpv4);
+  }
+  return false;
+}
+
+function isPrivateAddress(address: string): boolean {
+  const ipVersion = net.isIP(address);
+  if (ipVersion === 4) return isPrivateIpv4(address);
+  if (ipVersion === 6) return isPrivateIpv6(address);
+  return true;
+}
+
+async function assertPublicDnsTarget(url: URL): Promise<void> {
+  const hostname = url.hostname;
+  const ipVersion = net.isIP(hostname);
+  if (ipVersion > 0) {
+    if (isPrivateAddress(hostname)) {
+      throw new Error('Private address is not allowed');
+    }
+    return;
+  }
+
+  const results = await lookup(hostname, { all: true, verbatim: true });
+  if (results.length === 0) {
+    throw new Error('DNS resolution failed');
+  }
+
+  for (const result of results) {
+    if (isPrivateAddress(result.address)) {
+      throw new Error('Resolved address is not allowed');
+    }
+  }
 }
 
 export async function POST(request: Request) {
@@ -91,9 +141,11 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    await assertPublicDnsTarget(imageUrl);
     
-    // Получаем содержимое изображения
-    const response = await fetch(imageUrl);
+    // Do not follow redirects to avoid redirecting into internal networks.
+    const response = await fetch(imageUrl, { redirect: 'error' });
     
     if (!response.ok) {
       return NextResponse.json(

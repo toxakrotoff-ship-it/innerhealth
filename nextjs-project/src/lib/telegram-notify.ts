@@ -221,12 +221,14 @@ export interface ReviewNotifyPayload {
   reviewId: string;
   authorName: string;
   text: string;
+  brandId?: BrandId;
 }
 
 /** Уведомление в Telegram о новом отзыве с кнопками «Разместить» / «Отклонить». Только для чатов из вайтлиста. */
 export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
-  const { reviewId, authorName, text } = payload;
-  settingsService.getTelegramBotToken().then((token) => {
+  const { reviewId, authorName, text, brandId } = payload;
+  const settingsScope = brandId ? { brandId } : {};
+  settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
     return getWhitelistChatIds(token).then(async (chatIds) => {
       if (chatIds.length === 0) return;

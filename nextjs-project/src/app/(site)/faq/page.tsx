@@ -31,8 +31,8 @@ export default async function FaqPage() {
   const { brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
   const [faqItemsFromDb, settings, faqBlocks, homeBlocks] = await Promise.all([
-    faqService.getPublishedFaqItems(),
-    getSettingsMap(),
+    faqService.getPublishedFaqItems(brandId),
+    getSettingsMap(undefined, { brandId }),
     getResolvedBlocksForPage('faq', brandId),
     getResolvedBlocksForPage('home', brandId),
   ])
@@ -40,53 +40,7 @@ export default async function FaqPage() {
     const text = faqBlocks.find((b) => b.key === key)?.text?.trim()
     return text && text.length > 0 ? text : fallback
   }
-  const sprintFaqItems = [
-    {
-      id: 'sp-faq-1',
-      question: getBlockText(
-        'faq.q1',
-        'Как выбрать продукт Sprint Power под цель тренировки?'
-      ),
-      answer: getBlockText(
-        'faq.a1',
-        'Для набора и восстановления выбирайте белковые комплексы, для выносливости — формулы поддержки энергии и электролитов. Начните с базового продукта и отслеживайте самочувствие 2-3 недели.'
-      ),
-    },
-    {
-      id: 'sp-faq-2',
-      question: getBlockText(
-        'faq.q2',
-        'Можно ли сочетать несколько продуктов Sprint Power одновременно?'
-      ),
-      answer: getBlockText(
-        'faq.a2',
-        'Да, но лучше вводить их поэтапно. Начните с одного продукта, затем добавляйте следующий с интервалом 5-7 дней, чтобы оценить переносимость и эффект.'
-      ),
-    },
-    {
-      id: 'sp-faq-3',
-      question: getBlockText(
-        'faq.q3',
-        'Когда принимать продукты: до или после тренировки?'
-      ),
-      answer: getBlockText(
-        'faq.a3',
-        'Зависит от формулы: продукты для энергии обычно принимают до тренировки, для восстановления — после. Ориентируйтесь на рекомендации на странице товара.'
-      ),
-    },
-    {
-      id: 'sp-faq-4',
-      question: getBlockText(
-        'faq.q4',
-        'Есть ли доставка по России и как быстро приходит заказ?'
-      ),
-      answer: getBlockText(
-        'faq.a4',
-        'Да, доставляем по России через СДЭК. Срок зависит от региона и обычно отображается при оформлении заказа.'
-      ),
-    },
-  ] as const
-  const faqItems = isSprintTheme ? sprintFaqItems : faqItemsFromDb
+  const faqItems = faqItemsFromDb
 
   const faqJsonLd = buildFaqPageJsonLd({
     settings,
@@ -100,7 +54,7 @@ export default async function FaqPage() {
     <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
       <AdaptiveContainer maxWidth="default" className={`py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}>
         <Heading1 className={`mb-2 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-          Часто задаваемые вопросы
+          {getBlockText('faq.title', 'Часто задаваемые вопросы')}
         </Heading1>
         <ResponsiveText
           as="p"
@@ -108,12 +62,12 @@ export default async function FaqPage() {
           color={isSprintTheme ? 'primary' : 'secondary'}
           className={`mb-8 ${isSprintTheme ? 'text-slate-300' : ''}`}
         >
-          {isSprintTheme
-            ? getBlockText(
-                'faq.subtitle',
-                'Ответы на частые вопросы о линейке Sprint Power, приеме продуктов, доставке и заказах.'
-              )
-            : 'Ответы на популярные вопросы о товарах, доставке и оформлении заказа.'}
+          {getBlockText(
+            'faq.subtitle',
+            isSprintTheme
+              ? 'Ответы на частые вопросы о линейке Sprint Power, приеме продуктов, доставке и заказах.'
+              : 'Ответы на популярные вопросы о товарах, доставке и оформлении заказа.'
+          )}
         </ResponsiveText>
         <FaqAccordion items={faqItems} isSprintTheme={isSprintTheme} />
         <HowToOrderSteps

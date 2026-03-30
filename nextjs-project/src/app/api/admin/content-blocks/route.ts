@@ -4,9 +4,9 @@ import type { Prisma } from '@prisma/client'
 import { requireAdminSession } from '@/lib/require-admin'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import {
-  getBlocksForPage,
   upsertBlocks,
-  getResolvedBlocksForPage,
+  getAdminBlocksForPage,
+  resetBlockOverrides,
 } from '@/services/content-block.service'
 
 function validateInternalHref(value: string): boolean {
@@ -36,6 +36,7 @@ const contentBlockSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
   type: z.enum(['short', 'rich']),
+  reset: z.boolean().optional(),
   text: z.string().nullable().optional(),
   richJson: z.unknown().nullable().optional(),
   colorToken: z.string().nullable().optional(),
@@ -61,8 +62,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Возвращаем блоки, объединённые с дефолтами, чтобы админ видел текущие тексты
-    const blocks = await getResolvedBlocksForPage(parseResult.data.page, brandId)
+    // Для inner можно подмешивать тексты из дефолтов, но для Sprint нельзя показывать inner-копирайт
+    // как будто он уже сохранён в бренде. Поэтому admin использует отдельную проекцию.
+    const blocks = await getAdminBlocksForPage(parseResult.data.page, brandId)
     return NextResponse.json(blocks)
   } catch (error) {
     console.error('Error fetching content blocks:', error)
@@ -100,15 +102,24 @@ export async function PUT(request: Request) {
   }
 
   try {
-    await upsertBlocks(
-      body.blocks.map((b) => ({
+    const resetInputs = body.blocks
+      .filter((block) => block.reset)
+      .map((block) => ({
+        page: block.page,
+        key: block.key,
+      }))
+
+    const upsertInputs = body.blocks
+      .filter((block) => !block.reset)
+      .map((b) => ({
         ...b,
         richJson: (b.richJson ?? null) as Prisma.JsonValue | null,
-      })),
-      brandId
-    )
+      }))
 
-    const refreshed = await getBlocksForPage(body.page, brandId)
+    await resetBlockOverrides(resetInputs, brandId)
+    await upsertBlocks(upsertInputs, brandId)
+
+    const refreshed = await getAdminBlocksForPage(body.page, brandId)
     return NextResponse.json(refreshed)
   } catch (error) {
     console.error('Error saving content blocks:', error)
@@ -121,4 +132,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

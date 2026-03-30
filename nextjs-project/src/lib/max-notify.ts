@@ -268,7 +268,9 @@ export async function notifyMaxNewReview(payload: {
   reviewId: string;
   authorName: string;
   text: string;
+  brandId?: BrandId;
 }): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const whitelist = await maxService.getMaxWhitelist();
   if (whitelist.length === 0) return;
   const textPreview = payload.text.length > 300 ? `${payload.text.slice(0, 297)}...` : payload.text;
@@ -299,6 +301,6 @@ export async function notifyMaxNewReview(payload: {
   await sendToUsers(
     whitelist.map((row) => row.maxUserId),
     messageText,
-    { attachments: [keyboard], reviewId: payload.reviewId }
+    { ...scope, attachments: [keyboard], reviewId: payload.reviewId }
   );
 }

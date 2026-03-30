@@ -200,7 +200,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <Suspense fallback={null}>
           <CatalogZeroHitReporter query={q} hasProducts={products.length > 0} />
         </Suspense>
-        <Breadcrumbs items={breadcrumbItems} />
+        <Breadcrumbs items={breadcrumbItems} isInverted={isSprintTheme} />
         <Heading1 className={`mb-6 mt-0 ${isSprintTheme ? 'text-slate-100' : ''}`}>
           {page > 1 ? `Каталог — страница ${page}` : 'Каталог'}
         </Heading1>

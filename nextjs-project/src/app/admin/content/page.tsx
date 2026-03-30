@@ -7,6 +7,7 @@ import { RichTextEditor } from '../news/components/RichTextEditor'
 import { CoverImageDropzone } from '../news/components/CoverImageDropzone'
 
 type BlockType = 'short' | 'rich'
+type ValueSource = 'override' | 'brand_default' | 'generic_default'
 
 interface ContentBlockAdmin {
   id?: string
@@ -16,6 +17,13 @@ interface ContentBlockAdmin {
   type: BlockType
   text: string
   richJson: JSONContent | null
+  rawText: string
+  rawRichJson: JSONContent | null
+  defaultText: string
+  defaultRichJson: JSONContent | null
+  valueSource: ValueSource
+  isInherited: boolean
+  isDirty: boolean
   colorToken: string
   fontVariant: string
   fontWeight: string
@@ -63,6 +71,46 @@ const FONT_WEIGHT_OPTIONS: Array<{ value: string; label: string }> = [
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [] }
 
+function mapApiBlock(
+  block: Record<string, unknown>,
+  currentPage: string
+): ContentBlockAdmin {
+  return {
+    id: 'id' in block ? (block.id as string | undefined) : undefined,
+    page: (block.page as string) ?? currentPage,
+    key: block.key as string,
+    label: block.label as string,
+    type: block.type as BlockType,
+    text: (block.effectiveText as string | null) ?? (block.text as string | null) ?? '',
+    richJson:
+      ((block.effectiveRichJson as JSONContent | null) ??
+        (block.richJson as JSONContent | null) ??
+        null),
+    rawText: (block.rawText as string | null) ?? '',
+    rawRichJson: (block.rawRichJson as JSONContent | null) ?? null,
+    defaultText: (block.defaultText as string | null) ?? '',
+    defaultRichJson: (block.defaultRichJson as JSONContent | null) ?? null,
+    valueSource: (block.valueSource as ValueSource | undefined) ?? 'generic_default',
+    isInherited: Boolean(block.isInherited),
+    isDirty: false,
+    colorToken: (block.colorToken as string | null) ?? '',
+    fontVariant: (block.fontVariant as string | null) ?? '',
+    fontWeight: (block.fontWeight as string | null) ?? '',
+  }
+}
+
+function getSourceLabel(source: ValueSource): string {
+  switch (source) {
+    case 'override':
+      return 'Переопределено'
+    case 'brand_default':
+      return 'Наследуется из default бренда'
+    case 'generic_default':
+    default:
+      return 'Наследуется из общего default'
+  }
+}
+
 export default function AdminContentPage() {
   const [page, setPage] = useState<string>('home')
   const [blocks, setBlocks] = useState<ContentBlockAdmin[]>([])
@@ -93,21 +141,10 @@ export default function AdminContentPage() {
       }
       const data = (await res.json()) as Array<Record<string, unknown>>
 
-      const mapped: ContentBlockAdmin[] = data.map((b) => ({
-        id: 'id' in b ? (b.id as string | undefined) : undefined,
-        page: (b.page as string) ?? currentPage,
-        key: b.key as string,
-        label: b.label as string,
-        type: b.type as BlockType,
-        text: (b.text as string | null) ?? '',
-        richJson: (b.richJson as JSONContent | null) ?? null,
-        colorToken: (b.colorToken as string | null) ?? '',
-        fontVariant: (b.fontVariant as string | null) ?? '',
-        fontWeight: (b.fontWeight as string | null) ?? '',
-      }))
+      const mapped: ContentBlockAdmin[] = data.map((b) => mapApiBlock(b, currentPage))
 
       setBlocks(mapped)
-      setSelectedKey((prev) => prev ?? mapped[0]?.key ?? null)
+      setSelectedKey(mapped[0]?.key ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка')
       setBlocks([])
@@ -118,7 +155,19 @@ export default function AdminContentPage() {
   }
 
   function updateBlock(key: string, patch: Partial<ContentBlockAdmin>) {
-    setBlocks((prev) => prev.map((b) => (b.key === key ? { ...b, ...patch } : b)))
+    setBlocks((prev) =>
+      prev.map((b) =>
+        b.key === key
+          ? {
+              ...b,
+              ...patch,
+              isDirty: true,
+              isInherited: false,
+              valueSource: 'override',
+            }
+          : b
+      )
+    )
   }
 
   function autoResizeTextarea(target: HTMLTextAreaElement): void {
@@ -132,9 +181,15 @@ export default function AdminContentPage() {
       setError(null)
       setSuccess(false)
 
+      const dirtyBlocks = blocks.filter((block) => block.isDirty)
+      if (dirtyBlocks.length === 0) {
+        setSuccess(true)
+        return
+      }
+
       const payload = {
         page,
-        blocks: blocks.map((b) => ({
+        blocks: dirtyBlocks.map((b) => ({
           id: b.id,
           page: b.page,
           key: b.key,
@@ -161,7 +216,46 @@ export default function AdminContentPage() {
       }
 
       setSuccess(true)
-      await loadBlocks(page)
+      setBlocks((data as Array<Record<string, unknown>>).map((b) => mapApiBlock(b, page)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleResetSelectedBlock() {
+    if (!selectedBlock) return
+
+    try {
+      setSaving(true)
+      setError(null)
+      setSuccess(false)
+
+      const res = await fetch('/api/admin/content-blocks', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page,
+          blocks: [
+            {
+              page: selectedBlock.page,
+              key: selectedBlock.key,
+              label: selectedBlock.label,
+              type: selectedBlock.type,
+              reset: true,
+            },
+          ],
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error((data && data.error) || 'Не удалось сбросить override')
+      }
+
+      setSuccess(true)
+      setBlocks((data as Array<Record<string, unknown>>).map((b) => mapApiBlock(b, page)))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка')
     } finally {
@@ -210,7 +304,7 @@ export default function AdminContentPage() {
         ) : blocks.length === 0 ? (
           <p className="text-gray-500">Для этой страницы пока нет блоков.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] gap-6 items-start">
             <aside className="space-y-2">
               {blocks.map((b) => {
                 const isActive = selectedBlock?.key === b.key
@@ -233,19 +327,35 @@ export default function AdminContentPage() {
             </aside>
 
             {selectedBlock && (
-              <section className="space-y-6">
+              <section className="space-y-6 self-start md:sticky md:top-6">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <h2 className="text-lg font-semibold text-gray-900">
                       {selectedBlock.label}
                     </h2>
-                    <span className="text-xs rounded-full border border-gray-200 px-2 py-0.5 text-gray-500">
-                      {selectedBlock.type === 'short' ? 'Короткий текст' : 'Rich text'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs rounded-full border border-gray-200 px-2 py-0.5 text-gray-500">
+                        {selectedBlock.type === 'short' ? 'Короткий текст' : 'Rich text'}
+                      </span>
+                      <span
+                        className={`text-xs rounded-full border px-2 py-0.5 ${
+                          selectedBlock.isInherited
+                            ? 'border-amber-200 bg-amber-50 text-amber-800'
+                            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        }`}
+                      >
+                        {getSourceLabel(selectedBlock.valueSource)}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500">
                     Ключ: <code className="text-[11px]">{selectedBlock.key}</code>
                   </p>
+                  {selectedBlock.isInherited && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      Редактор показывает фактическое значение с витрины. Override для этого блока в бренде сейчас не сохранён.
+                    </p>
+                  )}
                 </div>
 
                 {selectedBlock.type === 'short' ? (
@@ -448,9 +558,19 @@ export default function AdminContentPage() {
                 )}
 
                 <div className="pt-2">
-                  <Button type="button" onClick={handleSave} disabled={saving}>
-                    {saving ? 'Сохранение…' : 'Сохранить изменения'}
-                  </Button>
+                  <div className="flex flex-wrap gap-3">
+                    <Button type="button" onClick={handleSave} disabled={saving}>
+                      {saving ? 'Сохранение…' : 'Сохранить как override'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleResetSelectedBlock}
+                      disabled={saving || (selectedBlock.isInherited && !selectedBlock.isDirty)}
+                    >
+                      Сбросить override
+                    </Button>
+                  </div>
                 </div>
               </section>
             )}
@@ -460,4 +580,3 @@ export default function AdminContentPage() {
     </div>
   )
 }
-

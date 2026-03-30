@@ -3,11 +3,19 @@ import * as settingsService from '@/services/settings.service';
 import * as reviewService from '@/services/review.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import { getMaxBotConfig } from '@/lib/max/max-config';
+import type { BrandId } from '@/lib/brand/brand';
 
 interface SyncInput {
   reviewId: string;
   status: 'APPROVED' | 'REJECTED';
   correlationId?: string;
+}
+
+interface ReviewSyncContext {
+  id: string;
+  brand: string;
+  authorName: string;
+  text: string;
 }
 
 const EXTERNAL_SYNC_TIMEOUT_MS = 5_000;
@@ -50,15 +58,18 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = EXTERNAL_SYNC_TIM
   }
 }
 
-async function syncTelegramReviewModeration(input: SyncInput): Promise<string[]> {
-  const token = await settingsService.getTelegramBotToken();
+function resolveReviewBrandId(reviewBrand: string | null | undefined): BrandId {
+  return reviewBrand === 'sprint-power' ? 'sprint-power' : 'inner';
+}
+
+async function syncTelegramReviewModeration(input: SyncInput, review: ReviewSyncContext): Promise<string[]> {
+  const token = await settingsService.getTelegramBotToken({
+    brandId: resolveReviewBrandId(review.brand),
+  });
   if (!token) return [];
   const rows = await reviewModerationMessageService.listReviewModerationMessages(input.reviewId);
   const telegramRows = rows.filter((r) => r.channel === 'TELEGRAM');
   if (telegramRows.length === 0) return [];
-
-  const review = await reviewService.findReviewById(input.reviewId);
-  if (!review) return [];
 
   const TELEGRAM_API = 'https://api.telegram.org';
   const label = input.status === 'APPROVED' ? '✅ Отзыв размещён' : '❌ Отзыв отклонён';
@@ -155,16 +166,15 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<string[]>
   return warnings;
 }
 
-async function syncMaxReviewModeration(input: SyncInput): Promise<string[]> {
-  const config = await getMaxBotConfig();
+async function syncMaxReviewModeration(input: SyncInput, review: ReviewSyncContext): Promise<string[]> {
+  const config = await getMaxBotConfig({
+    brandId: resolveReviewBrandId(review.brand),
+  });
   if (!config.token) return [];
   const bot = new Bot(config.token);
   const rows = await reviewModerationMessageService.listReviewModerationMessages(input.reviewId);
   const maxRows = rows.filter((r) => r.channel === 'MAX');
   if (maxRows.length === 0) return [];
-
-  const review = await reviewService.findReviewById(input.reviewId);
-  if (!review) return [];
 
   const label = input.status === 'APPROVED' ? '✅ Отзыв размещён' : '❌ Отзыв отклонён';
   const textPreview = review.text.length > 300 ? review.text.slice(0, 297) + '…' : review.text;
@@ -208,9 +218,19 @@ async function syncMaxReviewModeration(input: SyncInput): Promise<string[]> {
 }
 
 export async function syncReviewModerationMessages(input: SyncInput): Promise<ReviewModerationSyncResult> {
+  const review = await reviewService.findReviewById(input.reviewId);
+  if (!review) return { warnings: [] };
+
+  const reviewContext: ReviewSyncContext = {
+    id: review.id,
+    brand: review.brand,
+    authorName: review.authorName,
+    text: review.text,
+  };
+
   const [telegramWarnings, maxWarnings] = await Promise.all([
-    syncTelegramReviewModeration(input),
-    syncMaxReviewModeration(input),
+    syncTelegramReviewModeration(input, reviewContext),
+    syncMaxReviewModeration(input, reviewContext),
   ]);
   return {
     warnings: [...telegramWarnings, ...maxWarnings],

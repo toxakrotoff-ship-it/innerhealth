@@ -1,6 +1,11 @@
-# Inner Health
+# Inner Health Platform
 
-Сайт интернет-магазина **Inner Health** ([innerhealth.ru](https://innerhealth.ru)): каталог товаров, корзина, оформление заказов, админ-панель, интеграции (YooKassa, СДЭК, Telegram-бот, Tilda).
+Платформа e-commerce для двух брендов: **Inner Health** и **Sprint Power**.
+
+- две storefront-витрины
+- одна общая админка с переключателем бренда
+- общие модули каталога, заказов и интеграций
+- бренд-специфичные контент, SEO, контакты и bot tokens
 
 ---
 
@@ -55,6 +60,8 @@ npm run dev
 ```
 
 Приложение: [http://localhost:3000](http://localhost:3000). Админка: `/admin` (или путь из `ADMIN_SECRET_PATH`).
+
+Витрина бренда определяется по `host`, `x-brand` и brand-cookie. В админке активный бренд выбирается встроенным switcher и влияет на brand-scoped данные и настройки.
 
 ---
 

@@ -20,7 +20,7 @@ export async function SiteLayoutJsonLd() {
   const brandConfig = getBrandSiteConfig(activeBrand)
   const brandUrl = getBrandSiteUrl(activeBrand)
 
-  const settings = await getSettingsMap()
+  const settings = await getSettingsMap(undefined, { brandId: activeBrand })
   const organizationJsonLd = buildOrganizationJsonLd(settings, {
     name: brandConfig.title,
     url: brandUrl,

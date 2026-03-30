@@ -20,10 +20,20 @@ const PARTNERS = [
   },
 ] as const
 
-export function PartnersBlock() {
+type PartnersBlockProps = {
+  brand: 'inner' | 'sprint-power'
+}
+
+export function PartnersBlock({ brand }: PartnersBlockProps) {
+  const isSprint = brand === 'sprint-power'
+
   return (
     <section
-      className="py-16 sm:py-24 bg-white border-t border-slate-100"
+      className={
+        isSprint
+          ? 'border-t border-white/10 bg-slate-950 py-16 sm:py-24'
+          : 'border-t border-slate-100 bg-white py-16 sm:py-24'
+      }
       aria-labelledby="partners-heading"
     >
       <AdaptiveContainer maxWidth="default">
@@ -31,7 +41,11 @@ export function PartnersBlock() {
           as="h2"
           variant="fade-up"
           id="partners-heading"
-          className="text-3xl font-semibold tracking-tighter text-slate-900 mb-12 text-center"
+          className={
+            isSprint
+              ? 'mb-12 text-center text-3xl font-semibold uppercase tracking-[0.18em] text-white sm:text-4xl'
+              : 'mb-12 text-center text-3xl font-semibold tracking-tighter text-slate-900'
+          }
         >
           Наши Партнёры
         </ScrollReveal>
@@ -46,9 +60,19 @@ export function PartnersBlock() {
               href={partner.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex min-h-[360px] flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50/50 p-6 transition-colors hover:border-gray-300 hover:bg-gray-50 sm:min-h-[420px] sm:flex-row 2xl:min-h-[460px]"
+              className={
+                isSprint
+                  ? 'group flex min-h-[360px] flex-col gap-4 rounded-[2rem] border border-white/12 bg-white/[0.04] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-action-blue/60 hover:bg-white/[0.07] sm:min-h-[420px] sm:flex-row 2xl:min-h-[460px]'
+                  : 'group flex min-h-[360px] flex-col gap-4 rounded-2xl border border-gray-200 bg-gray-50/50 p-6 transition-colors hover:border-gray-300 hover:bg-gray-50 sm:min-h-[420px] sm:flex-row 2xl:min-h-[460px]'
+              }
             >
-              <div className="relative shrink-0 w-full sm:w-40 lg:w-48 2xl:w-56 3xl:w-64 h-32 lg:h-36 2xl:h-40 3xl:h-44 bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div
+                className={
+                  isSprint
+                    ? 'relative h-32 w-full shrink-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white sm:w-40 lg:h-36 lg:w-48 2xl:h-40 2xl:w-56 3xl:h-44 3xl:w-64'
+                    : 'relative h-32 w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white sm:w-40 lg:h-36 lg:w-48 2xl:h-40 2xl:w-56 3xl:h-44 3xl:w-64'
+                }
+              >
                 <Image
                   src={partner.imageUrl}
                   alt={partner.name}
@@ -58,13 +82,31 @@ export function PartnersBlock() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="mb-2 font-semibold text-text transition-colors group-hover:text-primary 2xl:text-2xl">
+                <h3
+                  className={
+                    isSprint
+                      ? 'mb-3 font-semibold uppercase tracking-[0.08em] text-white transition-colors group-hover:text-action-blue 2xl:text-2xl'
+                      : 'mb-2 font-semibold text-text transition-colors group-hover:text-primary 2xl:text-2xl'
+                  }
+                >
                   {partner.name}
                 </h3>
-                <p className="text-sm leading-relaxed text-gray-600 2xl:text-base [display:-webkit-box] [-webkit-line-clamp:11] [-webkit-box-orient:vertical] overflow-hidden">
+                <p
+                  className={
+                    isSprint
+                      ? 'overflow-hidden text-sm leading-relaxed text-slate-300 2xl:text-base [display:-webkit-box] [-webkit-line-clamp:11] [-webkit-box-orient:vertical]'
+                      : 'overflow-hidden text-sm leading-relaxed text-gray-600 2xl:text-base [display:-webkit-box] [-webkit-line-clamp:11] [-webkit-box-orient:vertical]'
+                  }
+                >
                   {partner.description}
                 </p>
-                <span className="mt-2 inline-block text-sm font-medium text-primary 2xl:text-base">
+                <span
+                  className={
+                    isSprint
+                      ? 'mt-4 inline-flex items-center text-sm font-semibold uppercase tracking-[0.14em] text-action-blue 2xl:text-base'
+                      : 'mt-2 inline-block text-sm font-medium text-primary 2xl:text-base'
+                  }
+                >
                   Перейти на сайт →
                 </span>
               </div>

@@ -5,6 +5,7 @@ import { ReviewsCarousel, type ReviewItem } from '@/components/site/reviews-caro
 import { ReviewForm } from '@/components/site/review-form';
 import { Heading2 } from '@/components/ui/responsive-text';
 import { ScalableSpacing } from '@/components/ui/scalable-spacing';
+import { cn } from '@/lib/utils';
 
 interface ReviewsSectionProps {
   initialReviews: ReviewItem[];
@@ -17,9 +18,6 @@ export function ReviewsSection({ initialReviews, isSprintTheme = false }: Review
   return (
     <>
       <section>
-        <Heading2 className={`mb-6 ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
-          Отзывы наших клиентов
-        </Heading2>
         <ReviewsCarousel reviews={initialReviews} isSprintTheme={isSprintTheme} />
       </section>
       <ScalableSpacing size="lg" />
@@ -35,8 +33,13 @@ export function ReviewsSection({ initialReviews, isSprintTheme = false }: Review
                 Ваш отзыв появится на странице после модерации.
               </p>
             </div>
-            <div className="rounded-2xl bg-white p-6 sm:p-8 shadow-xl max-w-3xl mx-auto">
-              <ReviewForm onSuccess={() => router.refresh()} />
+            <div
+              className={cn(
+                'rounded-2xl p-6 sm:p-8 shadow-xl max-w-3xl mx-auto',
+                isSprintTheme ? 'border border-slate-700 bg-[#0F172A]' : 'bg-white'
+              )}
+            >
+              <ReviewForm onSuccess={() => router.refresh()} isSprintTheme={isSprintTheme} />
             </div>
           </div>
         </div>

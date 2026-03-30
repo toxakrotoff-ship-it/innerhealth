@@ -75,6 +75,7 @@ export async function POST(request: Request) {
     password: hashedPassword,
     mustChangePassword: false,
   })
+  await userService.bumpSessionVersion(user.id)
 
   return NextResponse.json(
     { message: 'Пароль успешно изменён.' },

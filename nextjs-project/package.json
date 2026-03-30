@@ -25,6 +25,7 @@
     "add-admin": "ts-node scripts/add-admin-user.ts",
     "import-tilda-leads": "ts-node scripts/import-tilda-leads.ts",
     "manage-users": "ts-node scripts/manage-users.ts",
+    "security:hash-legacy-passwords": "ts-node scripts/hash-legacy-passwords.ts",
     "migrate:user-role": "ts-node scripts/migrate-add-user-role.ts",
     "backfill:slug": "ts-node scripts/backfill-product-slug.ts",
     "backfill:sanitize-text": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/backfill-product-text-sanitize.ts",

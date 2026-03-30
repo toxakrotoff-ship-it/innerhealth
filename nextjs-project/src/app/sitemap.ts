@@ -56,7 +56,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
       prisma.seoHub.findMany({
         where: { published: true },
-        select: { slug: true, updatedAt: true },
+        select: { slug: true, updatedAt: true, brand: true },
       }),
     ])
 
@@ -105,6 +105,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
 
       for (const hub of hubs) {
+        const hubBrand = (hub as { brand?: string | null }).brand ?? 'inner'
+        if ((isSprint && hubBrand !== 'sprint-power') || (!isSprint && hubBrand === 'sprint-power')) {
+          continue
+        }
         entries.push({
           url: `${baseUrl}/guides/${hub.slug}`,
           lastModified: hub.updatedAt,

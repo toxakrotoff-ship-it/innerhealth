@@ -24,9 +24,9 @@ export const revalidate = 600
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
+  const { siteTitle, brandId } = await getServerBrandContext()
   const { slug } = await params
-  const hub = await seoHubService.getPublishedSeoHubBySlug(slug)
+  const hub = await seoHubService.getPublishedSeoHubBySlug(slug, brandId)
   if (!hub) return {}
   const fromBody = extractPlainTextFromPostContent(hub.content, 200)
   const description =
@@ -49,7 +49,7 @@ export default async function SeoHubPage({ params }: PageProps) {
   const { siteTitle, brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
   const { slug } = await params
-  const hub = await seoHubService.getPublishedSeoHubBySlug(slug)
+  const hub = await seoHubService.getPublishedSeoHubBySlug(slug, brandId)
   if (!hub) notFound()
 
   const slugOrder: Map<string, number> = new Map(
@@ -58,7 +58,12 @@ export default async function SeoHubPage({ params }: PageProps) {
   const products =
     hub.productSlugs.length > 0
       ? await prisma.product.findMany({
-          where: { slug: { in: hub.productSlugs } },
+          where: {
+            slug: { in: hub.productSlugs },
+            ...(isSprintTheme
+              ? { brand: 'sprint-power' }
+              : { OR: [{ brand: null }, { brand: { not: 'sprint-power' } }] }),
+          },
           select: {
             id: true,
             title: true,

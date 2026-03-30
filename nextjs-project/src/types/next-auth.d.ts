@@ -7,6 +7,7 @@ declare module 'next-auth' {
     role?: string
     mustChangePassword?: boolean
     isEmailVerified?: boolean
+    sessionVersion?: number
   }
 
   interface Session {
@@ -19,6 +20,7 @@ declare module 'next-auth' {
       lastLogin?: string
       mustChangePassword?: boolean
       isEmailVerified?: boolean
+      sessionVersion?: number
     }
   }
 }
@@ -30,5 +32,6 @@ declare module 'next-auth/jwt' {
     role?: string
     mustChangePassword?: boolean
     isEmailVerified?: boolean
+    sessionVersion?: number
   }
 }

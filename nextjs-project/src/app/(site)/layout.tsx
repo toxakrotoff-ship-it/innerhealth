@@ -67,7 +67,9 @@ export default async function SiteLayout({
     activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
-  const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'])
+  const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'], {
+    brandId: activeBrand,
+  })
   const bodyCode = map.yandexMetrikaBodyCode
   const redirects = await getRedirectMap({ brandId: activeBrand })
   const hashRedirects = redirects.reduce<Record<string, string>>((acc, item) => {

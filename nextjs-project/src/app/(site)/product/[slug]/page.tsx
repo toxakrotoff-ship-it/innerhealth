@@ -125,7 +125,7 @@ export default async function ProductPage({ params }: PageProps) {
   const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
-  const settings = await getSettingsMap()
+  const settings = await getSettingsMap(undefined, { brandId })
   const schemaUrl = settings.schema_org_url?.trim()
   const url = schemaUrl ? `${schemaUrl.replace(/\/+$/, '')}/product/${slug}` : toAbsoluteSiteUrl(`/product/${slug}`)
   const imageUrls = photos.map((p) => p.url)

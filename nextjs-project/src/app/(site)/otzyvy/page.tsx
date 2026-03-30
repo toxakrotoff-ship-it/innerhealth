@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { ReviewsSection } from './reviews-section'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
-import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import * as reviewService from '@/services/review.service'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
@@ -48,8 +47,10 @@ export default async function ReviewsPage() {
 
   return (
     <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
-      <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'text-slate-100' : ''}>
-        <ScalableSpacing size="lg" />
+      <AdaptiveContainer
+        maxWidth="default"
+        className={`pt-8 md:pt-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+      >
         <Heading1 className={`mb-10 ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>
           Отзывы
         </Heading1>

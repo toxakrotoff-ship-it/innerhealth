@@ -46,10 +46,10 @@ async function getArticlesList(brandId: 'inner' | 'sprint-power') {
   }
 }
 
-async function getPublishedHubs() {
+async function getPublishedHubs(brandId: 'inner' | 'sprint-power') {
   try {
     return await prisma.seoHub.findMany({
-      where: { published: true },
+      where: { brand: brandId, published: true },
       orderBy: { updatedAt: 'desc' },
       select: { id: true, title: true, slug: true },
     })
@@ -66,7 +66,7 @@ const breadcrumbItems = [
 export default async function InformaciyaPage() {
   const { brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
-  const [posts, hubs] = await Promise.all([getArticlesList(brandId), getPublishedHubs()])
+  const [posts, hubs] = await Promise.all([getArticlesList(brandId), getPublishedHubs(brandId)])
 
   return (
     <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
@@ -76,9 +76,19 @@ export default async function InformaciyaPage() {
       >
         <BreadcrumbJsonLd items={breadcrumbItems} currentPath="/informaciya" />
         <Breadcrumbs items={breadcrumbItems} />
-        <Heading1 className={`mb-6 mt-2 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>Статьи</Heading1>
+        {isSprintTheme ? (
+          <div className="mt-4 rounded-[28px] border border-[#C9D8FF] bg-[#EEF4FF] p-7 md:p-10 text-slate-900">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#335CFF]">Sprint Power</p>
+            <Heading1 className="mt-3 text-slate-900">Статьи</Heading1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+              Разборы составов, рекомендации по приёму, материалы о тренировках и восстановлении, связанные с Sprint Power.
+            </p>
+          </div>
+        ) : (
+          <Heading1 className="mb-6 mt-2 text-text">Статьи</Heading1>
+        )}
         {hubs.length > 0 && (
-          <section className="mb-10">
+          <section className={`mb-10 ${isSprintTheme ? 'mt-8' : ''}`}>
             <h2 className={`text-lg font-semibold mb-3 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               Подборки и гайды
             </h2>
@@ -106,14 +116,14 @@ export default async function InformaciyaPage() {
               <li key={post.id}>
                 <Link
                   href={getPostPathByType('article', post.slug)}
-                  className={`flex flex-col sm:flex-row overflow-hidden rounded-xl border transition-all ${
+                  className={`group flex flex-col overflow-hidden rounded-2xl border transition-all ${
                     isSprintTheme
-                      ? 'bg-[#0F172A] border-slate-700 hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
+                      ? 'bg-[#0F172A] border-[#1B2946] hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.25)]'
                       : 'bg-white border-gray-200 hover:border-action-blue hover:shadow-sm'
                   }`}
                 >
                   <div
-                    className={`relative w-full sm:w-40 sm:min-w-40 aspect-video sm:aspect-square shrink-0 ${
+                    className={`relative aspect-[16/10] w-full shrink-0 ${
                       isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
                     }`}
                   >
@@ -138,14 +148,25 @@ export default async function InformaciyaPage() {
                         Статья
                       </span>
                     )}
+                    {isSprintTheme && (
+                      <>
+                        <div className="absolute inset-0 bg-linear-to-t from-[#0A1128]/15 via-transparent to-transparent" />
+                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
+                          Статья
+                        </span>
+                      </>
+                    )}
                   </div>
-                  <span
-                    className={`flex flex-1 items-center p-4 font-medium transition-colors ${
-                      isSprintTheme ? 'text-slate-100 hover:text-[#7AA2FF]' : 'text-text hover:text-action-blue'
-                    }`}
-                  >
-                    {post.title}
-                  </span>
+                  <div className="flex flex-1 flex-col justify-between gap-3 p-5">
+                    <span
+                      className={`font-semibold leading-6 transition-colors ${
+                        isSprintTheme ? 'text-slate-100 group-hover:text-[#9CC0FF]' : 'text-text hover:text-action-blue'
+                      }`}
+                    >
+                      {post.title}
+                    </span>
+                    {isSprintTheme && <span className="text-sm font-medium text-slate-400">Читать материал</span>}
+                  </div>
                 </Link>
               </li>
             ))}

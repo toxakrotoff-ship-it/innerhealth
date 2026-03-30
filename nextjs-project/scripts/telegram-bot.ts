@@ -615,15 +615,13 @@ async function run(): Promise<void> {
             continue;
           }
           const totalOrders = stats.reduce((s, x) => s + x.ordersCount, 0);
-          const totalIncome = stats.reduce((s, x) => s + x.partnerIncome, 0);
           const lines = stats.map((p) => {
             const code = escapeHtml(p.code.slice(0, 50));
-            return `• <code>${code}</code> — применений: ${p.applicationsCount}, оплачено: ${p.ordersCount}, доход: ${p.partnerIncome.toFixed(0)} ₽`;
+            return `• <code>${code}</code> — заказов: ${p.ordersCount}`;
           });
           const header =
             '<b>Ваша статистика</b>\n\n' +
-            `Оплачено заказов: <b>${totalOrders}</b>\n` +
-            `Ваш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n` +
+            `Всего заказов: <b>${totalOrders}</b>\n\n` +
             lines.join('\n');
           await sendMessage(chatId, header, {
             replyMarkup: buildTelegramReplyMarkup(capabilities),

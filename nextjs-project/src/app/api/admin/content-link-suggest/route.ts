@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 import * as postService from '@/services/post.service';
 import * as categoryService from '@/services/category.service';
 
@@ -23,11 +24,12 @@ export async function GET(request: Request) {
   }
 
   const { q, limit } = parsed.data;
+  const brandId = resolveBrandOrDefaultFromRequest(request);
 
   try {
     const [posts, categories] = await Promise.all([
-      postService.suggestPostsForLink(q, limit),
-      categoryService.suggestCategoriesForLink(q, limit),
+      postService.suggestPostsForLink(q, limit, brandId),
+      categoryService.suggestCategoriesForLink(q, limit, brandId),
     ]);
     return NextResponse.json({ posts, categories });
   } catch (error) {

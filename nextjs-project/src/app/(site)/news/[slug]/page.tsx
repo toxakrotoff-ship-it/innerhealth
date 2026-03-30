@@ -86,7 +86,7 @@ export default async function NewsPostPage({ params }: PageProps) {
   if (!postBelongsToBrandScope(slug, brandId)) notFound()
   if (post.type === 'article') redirect(getPostPathByType('article', post.slug))
 
-  const settings = await getSettingsMap()
+  const settings = await getSettingsMap(undefined, { brandId })
   const schemaUrl = settings.schema_org_url?.trim()
   const postPath = getPostPath({ type: post.type, slug: post.slug })
   const canonicalUrl = schemaUrl

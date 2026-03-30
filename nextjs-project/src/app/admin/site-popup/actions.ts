@@ -5,6 +5,14 @@ import { revalidatePath } from 'next/cache'
 import type { Prisma } from '@prisma/client'
 import { getOrCreateSingletonSitePopup } from '@/services/site-popup.service'
 import { prisma } from '@/lib/prisma'
+import { cookies, headers } from 'next/headers'
+import type { BrandId } from '@/lib/brand/brand'
+import {
+  ACTIVE_BRAND_COOKIE_NAME,
+  ADMIN_BRAND_COOKIE_NAME,
+  resolveAdminBrand,
+} from '@/lib/brand/brand-context'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 const sitePopupFormSchema = z.object({
   id: z.string(),
@@ -21,8 +29,21 @@ const sitePopupFormSchema = z.object({
 
 export type SitePopupFormInput = z.infer<typeof sitePopupFormSchema>
 
+async function resolveEffectiveBrandId(): Promise<BrandId> {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+
+  return resolveAdminBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    adminBrandCookie: cookieStore.get(ADMIN_BRAND_COOKIE_NAME)?.value ?? null,
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+}
+
 export async function loadSitePopup(): Promise<SitePopupFormInput> {
-  const popup = await getOrCreateSingletonSitePopup()
+  const brandId = await resolveEffectiveBrandId()
+  const popup = await getOrCreateSingletonSitePopup({ brandId })
 
   return {
     id: popup.id,
@@ -50,8 +71,10 @@ export async function updateSitePopup(input: SitePopupFormInput): Promise<{ succ
   const data = parsed.data
 
   try {
-    await prisma.sitePopup.update({
-      where: { id: data.id },
+    const brandId = await resolveEffectiveBrandId()
+    const dbBrand = resolveDbBrand(brandId)
+    const updated = await prisma.sitePopup.updateMany({
+      where: { id: data.id, brand: dbBrand },
       data: {
         title: data.title,
         isEnabled: data.isEnabled,
@@ -65,7 +88,12 @@ export async function updateSitePopup(input: SitePopupFormInput): Promise<{ succ
       },
     })
 
+    if (updated.count === 0) {
+      return { success: false, error: 'Попап не найден в активном бренде' }
+    }
+
     revalidatePath('/')
+    revalidatePath('/admin/site-popup')
 
     return { success: true }
   } catch (error) {
@@ -73,4 +101,3 @@ export async function updateSitePopup(input: SitePopupFormInput): Promise<{ succ
     return { success: false, error: 'Не удалось сохранить попап. Попробуйте ещё раз.' }
   }
 }
-

@@ -31,12 +31,17 @@ export async function deletePasswordResetToken(id: string) {
 export async function usePasswordResetTokenAndUpdateUser(
   recordId: string,
   userId: string,
-  updateData: { password: string; mustChangePassword?: boolean }
+  updateData: { password: string; mustChangePassword?: boolean; sessionVersion?: number }
 ) {
   return prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
-      data: updateData,
+      data: {
+        ...updateData,
+        sessionVersion: {
+          increment: 1,
+        },
+      },
     }),
     prisma.passwordResetToken.update({
       where: { id: recordId },
@@ -86,12 +91,17 @@ export async function updateSetInitialPasswordToken(
 export async function useSetInitialPasswordTokenAndUpdateUser(
   recordId: string,
   userId: string,
-  updateData: { password: string; mustChangePassword: boolean }
+  updateData: { password: string; mustChangePassword: boolean; sessionVersion?: number }
 ) {
   return prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
-      data: updateData,
+      data: {
+        ...updateData,
+        sessionVersion: {
+          increment: 1,
+        },
+      },
     }),
     prisma.setInitialPasswordToken.update({
       where: { id: recordId },

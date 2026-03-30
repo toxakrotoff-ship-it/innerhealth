@@ -38,13 +38,7 @@ export default async function AccountPartnerPage() {
     return baseBrandIds;
   })();
 
-  const { totalOrders, totalIncome } = stats.reduce(
-    (acc, x) => ({
-      totalOrders: acc.totalOrders + x.ordersCount,
-      totalIncome: acc.totalIncome + x.partnerIncome,
-    }),
-    { totalOrders: 0, totalIncome: 0 },
-  );
+  const totalOrders = stats.reduce((sum, row) => sum + row.ordersCount, 0);
 
   return (
     <div className="mx-auto max-w-[min(70rem,92vw)] px-4 py-6 sm:py-10 sm:px-6 lg:px-8">
@@ -56,14 +50,13 @@ export default async function AccountPartnerPage() {
         />
         <h1 className="text-xl sm:text-2xl font-semibold text-text">Партнёрская программа</h1>
         <p className="text-sm text-gray-600">
-          Статистика по вашим промокодам: применение промокода, оплаченные заказы и ваш доход.
+          Статистика по вашим промокодам: количество оплаченных заказов по каждому промокоду.
         </p>
         <PartnerTelegramBlock />
         <PartnerMaxBlock />
         <PartnerStatsContent
           stats={stats}
           totalOrders={totalOrders}
-          totalIncome={totalIncome}
         />
       </div>
     </div>

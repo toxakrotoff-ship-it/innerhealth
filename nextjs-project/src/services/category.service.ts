@@ -5,15 +5,17 @@ import type { BrandId } from '@/lib/brand/brand';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 /** Get all categories (for admin catalog). */
-export async function getCategories() {
+export async function getCategories(brandId: BrandId | null = null) {
   return prisma.category.findMany({
+    where: { brand: resolveDbBrand(brandId) },
     orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
   });
 }
 
 /** Get categories with product count. */
-export async function getCategoriesWithProductCount() {
+export async function getCategoriesWithProductCount(brandId: BrandId | null = null) {
   const categories = await prisma.category.findMany({
+    where: { brand: resolveDbBrand(brandId) },
     select: {
       id: true,
       title: true,
@@ -107,12 +109,17 @@ export async function getCategoryProductCount(categoryId: string) {
 }
 
 /** Suggest catalog categories for internal links in the news editor (admin). */
-export async function suggestCategoriesForLink(query: string, limit: number) {
+export async function suggestCategoriesForLink(
+  query: string,
+  limit: number,
+  brandId: BrandId | null = null
+) {
   const q = query.trim();
   const where =
     q.length === 0
-      ? undefined
+      ? { brand: resolveDbBrand(brandId) }
       : {
+          brand: resolveDbBrand(brandId),
           OR: [
             { title: { contains: q, mode: 'insensitive' as const } },
             { slug: { contains: q, mode: 'insensitive' as const } },

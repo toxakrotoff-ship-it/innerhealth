@@ -121,12 +121,11 @@ async function buildMaxCommandResponse(
     return { text: 'У вас пока нет статистики.', format: 'markdown' };
   }
   const totalOrders = stats.reduce((sum, row) => sum + row.ordersCount, 0);
-  const totalIncome = stats.reduce((sum, row) => sum + row.partnerIncome, 0);
   const lines = stats.map((row) =>
-    `• ${row.code} — применений: ${row.applicationsCount}, оплачено: ${row.ordersCount}, доход: ${row.partnerIncome.toFixed(0)} ₽`
+    `• ${row.code} — заказов: ${row.ordersCount}`
   );
   return {
-    text: `<b>Ваша статистика</b>\n\nОплачено заказов: <b>${totalOrders}</b>\nВаш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n${lines.join('\n')}`,
+    text: `<b>Ваша статистика</b>\n\nВсего заказов: <b>${totalOrders}</b>\n\n${lines.join('\n')}`,
     format: 'html',
   };
 }

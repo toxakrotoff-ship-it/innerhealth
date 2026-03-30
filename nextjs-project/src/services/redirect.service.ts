@@ -280,7 +280,7 @@ async function listSuggestionCandidates(options: RedirectBrandScope = {}): Promi
       take: 2000,
     }),
     prisma.seoHub.findMany({
-      where: { published: true },
+      where: { brand: dbBrand, published: true },
       select: { slug: true, title: true, excerpt: true },
       take: 1000,
     }),

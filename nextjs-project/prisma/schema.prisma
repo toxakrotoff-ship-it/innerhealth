@@ -208,6 +208,8 @@ model User {
   emailVerifiedAt          DateTime?
   /// Дата и время последнего входа в систему
   lastLoginAt              DateTime?
+  /// Версия сессии для принудительной инвалидaции старых JWT
+  sessionVersion           Int                       @default(0)
   /// База расчёта дохода партнёра: order_total | discount_amount (только для role PARTNER)
   partnerIncomeBase        String?
   emailVerificationTokens  EmailVerificationToken[]
@@ -428,7 +430,8 @@ model CatalogSearchZeroHit {
 /// SEO-хабы: кластерные страницы со ссылками на товары.
 model SeoHub {
   id            String   @id @default(cuid())
-  slug          String   @unique
+  brand         String   @default("inner")
+  slug          String
   title         String
   excerpt       String?
   content       Json
@@ -437,7 +440,8 @@ model SeoHub {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  @@index([published, slug])
+  @@unique([brand, slug])
+  @@index([brand, published, slug])
 }
 
 model PromoCode {
@@ -514,9 +518,10 @@ model PartnershipLead {
   @@index([brand, createdAt])
 }
 
-/// Глобальный FAQ для страницы /faq.
+/// FAQ по брендам для страницы /faq.
 model Faq {
   id          String   @id @default(cuid())
+  brand       String   @default("inner")
   question    String
   answer      String
   sortOrder   Int      @default(0)
@@ -524,7 +529,7 @@ model Faq {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([isPublished, sortOrder])
+  @@index([brand, isPublished, sortOrder])
 }
 
 /// Быстрые заявки "Купить в 1 клик".
@@ -576,6 +581,7 @@ model ContentBlock {
 
 model SitePopup {
   id               String   @id @default(cuid())
+  brand            String   @default("inner") @unique
   title            String
   isEnabled        Boolean  @default(false)
   richJson         Json?

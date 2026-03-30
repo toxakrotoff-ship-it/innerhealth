@@ -151,11 +151,13 @@ export async function POST(request: Request) {
       reviewId: review.id,
       authorName,
       text,
+      brandId,
     });
     void notifyMaxNewReview({
       reviewId: review.id,
       authorName,
       text,
+      brandId,
     });
 
     return NextResponse.json({ success: true });

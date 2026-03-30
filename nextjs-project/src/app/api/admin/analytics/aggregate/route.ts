@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { aggregateForDateRange } from '@/lib/analytics/aggregation-service'
+import { requireAdminSession } from '@/lib/require-admin'
 
 const periodSchema = z.enum(['7d', '30d', '90d', 'all'])
 
@@ -44,6 +45,9 @@ function resolveDateRange(input: z.infer<typeof requestSchema>): DateRange {
 }
 
 export async function POST(request: Request) {
+  const session = await requireAdminSession()
+  if (session instanceof NextResponse) return session
+
   let payload: unknown
 
   try {

@@ -1,25 +1,6 @@
 import { isBrandId, type BrandId } from '@/lib/brand/brand';
 
 export const BRAND_SCOPED_SETTING_KEYS = [
-  'cdek_api_key',
-  'cdek_client_secret',
-  'cdek_use_test',
-  'cdek_sender_name',
-  'cdek_sender_phone',
-  'cdek_sender_address',
-  'cdek_from_pvz_code',
-  'cdek_from_city_code',
-  'cdek_default_package_weight_g',
-  'cdek_default_package_length_mm',
-  'cdek_default_package_width_mm',
-  'cdek_default_package_height_mm',
-  'cdek_preferred_tariff_code_pvz',
-  'cdek_preferred_tariff_code_address',
-  'yookassa_shop_id',
-  'yookassa_secret_key',
-  'yookassa_term_id',
-  'yookassa_receipt_vat_code',
-  'yookassa_receipt_vat_code_delivery',
   'site_name',
   'site_contact_email',
   'telegram_bot_token',
@@ -56,4 +37,3 @@ export function parseBrandFromSearchParams(searchParams: URLSearchParams): Brand
   if (!normalized) return null;
   return isBrandId(normalized) ? normalized : null;
 }
-

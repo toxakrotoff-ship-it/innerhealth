@@ -225,6 +225,7 @@ export default async function CategoryPage({ params }: PageProps) {
           <BreadcrumbJsonLd items={breadcrumbItems} currentPath={`/catalog/${categorySlug}`} />
           <Breadcrumbs
             items={breadcrumbItems}
+            isInverted={isSprintTheme}
           />
         </AdaptiveContainer>
       </section>

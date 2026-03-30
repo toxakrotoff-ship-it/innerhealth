@@ -113,11 +113,14 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { brandId } = await getServerBrandContext()
+  const shouldShowPreloader = brandId !== 'sprint-power'
+
   return (
     <html
       lang="ru"
@@ -141,7 +144,7 @@ export default function RootLayout({
             height: '1.25em',
           }}
         >
-          <Preloader />
+          {shouldShowPreloader ? <Preloader /> : null}
           {children}
         </IconoirProvider>
       </body>

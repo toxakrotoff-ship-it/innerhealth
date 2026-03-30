@@ -5,11 +5,25 @@ import { prisma } from '@/lib/prisma';
 /** Find user by id (for session callback). */
 export async function findUserById(
   id: string,
-  select?: { id: true; mustChangePassword: true; name: true; lastName: true; emailVerifiedAt: true }
+  select?: {
+    id: true;
+    mustChangePassword: true;
+    name: true;
+    lastName: true;
+    emailVerifiedAt: true;
+    sessionVersion: true;
+  }
 ) {
   return prisma.user.findUnique({
     where: { id },
-    select: select ?? { id: true, mustChangePassword: true, name: true, lastName: true, emailVerifiedAt: true },
+    select: select ?? {
+      id: true,
+      mustChangePassword: true,
+      name: true,
+      lastName: true,
+      emailVerifiedAt: true,
+      sessionVersion: true,
+    },
   });
 }
 
@@ -24,6 +38,7 @@ export async function findUserByIdForAuth(id: string) {
       role: true,
       mustChangePassword: true,
       emailVerifiedAt: true,
+      sessionVersion: true,
     },
   });
 }
@@ -146,6 +161,7 @@ export async function updateUser(
     totpSecretEncrypted?: string | null;
     notificationEmail?: string | null;
     emailVerifiedAt?: Date | null;
+    sessionVersion?: number;
   },
   select?: { id: true; email: true; name: true; role: true; createdAt: true }
 ) {
@@ -153,6 +169,17 @@ export async function updateUser(
     where: { id },
     data,
     select: select ?? { id: true, email: true, name: true, role: true, createdAt: true },
+  });
+}
+
+export async function bumpSessionVersion(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      sessionVersion: {
+        increment: 1,
+      },
+    },
   });
 }
 

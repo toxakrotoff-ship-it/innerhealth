@@ -2,10 +2,11 @@ import 'server-only';
 import { getMaxBotSettings } from '@/services/settings.service';
 import { resolveMaxBotConfig } from '@/lib/max/max-config-resolver';
 import type { MaxBotConfig } from '@/lib/max/max-config-resolver';
+import type { BrandId } from '@/lib/brand/brand';
 export type { MaxBotConfig } from '@/lib/max/max-config-resolver';
 
-export async function getMaxBotConfig(): Promise<MaxBotConfig> {
-  const settings = await getMaxBotSettings();
+export async function getMaxBotConfig(options?: { brandId?: BrandId | null }): Promise<MaxBotConfig> {
+  const settings = await getMaxBotSettings(options ?? {});
   return resolveMaxBotConfig({
     settings,
     env: {

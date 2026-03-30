@@ -78,6 +78,18 @@ SMTP_FROM=ваш@mail.ru
 
 После изменения `.env.local` перезапустите `npm run dev`. В консоли при отправке «Забыли пароль» появится строка `[forgot-password] Reset email sent to …` или ошибка SMTP.
 
+## Локальная синхронизация Prisma после auth-изменений
+
+Если после изменений в auth/session локальный вход доходит до `POST /api/auth/callback/credentials`, а затем падает на `getSession` / `session callback` с ошибкой вида `Unknown field ... for select statement on model User`, значит код и локальная схема БД рассинхронизированы.
+
+Из корня `nextjs-project` синхронизируйте локальную схему перед повторной проверкой входа:
+
+```bash
+npm run db:migrate
+```
+
+Если миграция в dev-окружении недоступна, используйте эквивалентный Prisma workflow для локальной базы, но цель та же: локальная таблица `User` должна содержать новые auth-поля до повторной проверки `/api/auth/session`.
+
 ---
 
 ## VK WorkSpace: support@innerhealth.ru

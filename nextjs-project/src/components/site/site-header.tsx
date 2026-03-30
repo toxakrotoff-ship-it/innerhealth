@@ -74,10 +74,10 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
           w-full mx-auto px-4 sm:px-6 lg:px-8
           xl:px-10 2xl:px-12 3xl:px-16 4xl:px-20 5xl:px-24 6xl:px-32
           h-16 2xl:h-18 3xl:h-20 4xl:h-24 5xl:h-28 6xl:h-32
-          flex items-center justify-between
+          flex items-center justify-between gap-4 lg:gap-6 2xl:gap-8
         `}
       >
-        <div className="flex items-center gap-8 lg:gap-12 2xl:gap-16 3xl:gap-20 4xl:gap-24 5xl:gap-28 6xl:gap-32">
+        <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-8 2xl:gap-12 3xl:gap-16 4xl:gap-20 5xl:gap-24 6xl:gap-28">
           <HeaderNavMobile
             variant={isSprintTheme ? 'dark' : 'light'}
             isAuthenticated={isAuthenticated}
@@ -101,8 +101,8 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
           <AdaptiveNav links={siteConfig.navLinks} variant={isSprintTheme ? 'dark' : 'light'} />
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 2xl:gap-6 3xl:gap-8 4xl:gap-10 5xl:gap-12 6xl:gap-16 shrink-0">
-          <div className="hidden xl:flex flex-col items-end mr-1 sm:mr-4 2xl:mr-6 3xl:mr-8">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4 2xl:gap-5 3xl:gap-8 4xl:gap-10 5xl:gap-12 6xl:gap-16">
+          <div className="hidden 3xl:flex flex-col items-end leading-tight mr-1 3xl:mr-4 4xl:mr-6">
             <a
               href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
               className={`

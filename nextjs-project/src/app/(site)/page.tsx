@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import * as reviewService from '@/services/review.service'
+import * as faqService from '@/services/faq.service'
 import { ProductCard } from '@/components/site/product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
@@ -19,11 +20,12 @@ import {
   getCategoryImageObjectPosition,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { NavArrowRight } from 'iconoir-react'
+import { CheckCircle, NavArrowRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import {
   getResolvedBlocksForPage,
   type ContentBlockResolved,
+  getDefaultBlockForPageBrand,
 } from '@/services/content-block.service'
 import { getActiveSitePopup } from '@/services/site-popup.service'
 import { HomePopupClient } from '@/components/site/home-popup-client'
@@ -31,6 +33,7 @@ import { Heading2 } from '@/components/ui/responsive-text'
 import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
+import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveBrand } from '@/lib/brand/brand'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
@@ -118,6 +121,17 @@ function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBloc
 function getBlockText(blocks: ContentBlockResolved[], key: string, fallback: string): string {
   const text = getBlockByKey(blocks, key)?.text?.trim()
   return text && text.length > 0 ? text : fallback
+}
+
+function getBlockTextForBrand(
+  blocks: ContentBlockResolved[],
+  page: string,
+  key: string,
+  brandId: 'inner' | 'sprint-power',
+  fallback: string
+): string {
+  const brandDefault = getDefaultBlockForPageBrand(page, key, brandId)?.text?.trim()
+  return getBlockText(blocks, key, brandDefault && brandDefault.length > 0 ? brandDefault : fallback)
 }
 
 function getHowToOrderContent(blocks: ContentBlockResolved[]) {
@@ -252,6 +266,14 @@ type SprintHomeData = {
     slug: string | null
     brand: string | null
   }>
+  featuredProduct: {
+    id: string
+    title: string
+    price: number
+    photo: string | null
+    slug: string | null
+    brand: string | null
+  } | null
   categories: Array<{
     id: string
     title: string
@@ -261,7 +283,20 @@ type SprintHomeData = {
   reviews: Array<{
     id: string
     authorName: string
+    socialLink: string | null
     text: string
+  }>
+  newsPosts: Array<{
+    id: string
+    title: string
+    slug: string
+    previewImage: string | null
+  }>
+  articlePosts: Array<{
+    id: string
+    title: string
+    slug: string
+    previewImage: string | null
   }>
 }
 
@@ -285,7 +320,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
     `
   )
 
-  const [products, categories, reviews] = await Promise.all([
+  const [products, categories, reviews, newsPosts, articlePosts] = await Promise.all([
     prisma.product.findMany({
       where: {
         isDraft: false,
@@ -315,27 +350,72 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       items.slice(0, 2).map((item) => ({
         id: item.id,
         authorName: item.authorName,
+        socialLink: item.socialLink,
         text: item.text,
       }))
     ),
+    prisma.post.findMany({
+      where: {
+        published: true,
+        type: 'news',
+        slug: { startsWith: 'sp-' },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: { id: true, title: true, slug: true, previewImage: true },
+    }),
+    prisma.post.findMany({
+      where: {
+        published: true,
+        type: 'article',
+        slug: { startsWith: 'sp-' },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+      select: { id: true, title: true, slug: true, previewImage: true },
+    }),
   ])
 
-  return { products, categories, reviews }
+  const featuredProduct =
+    products[0] ??
+    (await prisma.product.findFirst({
+      where: {
+        isDraft: false,
+        brand: SPRINT_POWER_PRODUCT_BRAND,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        photo: true,
+        slug: true,
+        brand: true,
+      },
+    }))
+
+  return { products, featuredProduct, categories, reviews, newsPosts, articlePosts }
 }
 
-function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: ContentBlockResolved[] }) {
-  const heroImage = data.products[0]?.photo ?? null
+function SprintPowerHome({
+  data,
+  blocks,
+  faqItems,
+}: {
+  data: SprintHomeData
+  blocks: ContentBlockResolved[]
+  faqItems: ReadonlyArray<{ id: string; question: string; answer: string }>
+}) {
+  const heroProduct = data.featuredProduct
+  const heroImage = heroProduct?.photo ?? null
+  const heroFeaturedHref = heroProduct?.slug ? `/product/${heroProduct.slug}` : '/catalog'
   const innerSiteUrl = getBrandSiteUrl('inner')
   const markers = [
-    getBlockText(blocks, 'markers.item1', 'GMP и HACCP стандарты'),
-    getBlockText(blocks, 'markers.item2', 'Прозрачный состав'),
-    getBlockText(blocks, 'markers.item3', 'Регулярные обзоры'),
+    getBlockTextForBrand(blocks, 'home', 'markers.item1', 'sprint-power', 'GMP и HACCP стандарты'),
+    getBlockTextForBrand(blocks, 'home', 'markers.item2', 'sprint-power', 'Прозрачный состав'),
+    getBlockTextForBrand(blocks, 'home', 'markers.item3', 'sprint-power', 'Регулярные обзоры'),
   ]
-  const faqItems = [
-    getBlockText(blocks, 'faq.item1', 'Как выбрать продукт под цель?'),
-    getBlockText(blocks, 'faq.item2', 'Можно ли сочетать протеин и коллаген?'),
-    getBlockText(blocks, 'faq.item3', 'Сколько протеина нужно в день?'),
-  ]
+  const reviewsCtaHref = getBlockTextForBrand(blocks, 'home', 'reviewsCta.href', 'sprint-power', '/otzyvy')
 
   return (
     <section className="bg-[#060A14] py-10 md:py-12">
@@ -344,51 +424,66 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
               <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">
-                {getBlockText(blocks, 'hero.badge', 'SPRINT POWER')}
+                {getBlockTextForBrand(blocks, 'home', 'hero.badge', 'sprint-power', 'SPRINT POWER')}
               </p>
               <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
-                {getBlockText(blocks, 'hero.title', 'Почувствуй разницу с первой тренировки')}
+                {getBlockTextForBrand(
+                  blocks,
+                  'home',
+                  'hero.title',
+                  'sprint-power',
+                  'Почувствуй разницу с первой тренировки'
+                )}
               </h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
-                {getBlockText(
+                {getBlockTextForBrand(
                   blocks,
+                  'home',
                   'hero.subtitle',
+                  'sprint-power',
                   'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
                 )}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/catalog"
-                  className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
+                  className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
                 >
-                  {getBlockText(blocks, 'hero.cta.primary', 'Выбрать продукт')}
+                  {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
                 </Link>
                 <Link
                   href="/otzyvy"
-                  className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100"
+                  className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-slate-400 hover:bg-slate-800"
                 >
-                  {getBlockText(blocks, 'hero.cta.secondary', 'Читать отзывы')}
+                  {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
                 </Link>
               </div>
             </div>
-            <div
-              className="min-h-[240px] rounded-2xl border border-slate-700 bg-cover bg-center p-5"
+            <Link
+              href={heroFeaturedHref}
+              className="group flex min-h-[240px] rounded-2xl border border-slate-700 bg-cover bg-center p-5 transition-colors hover:border-slate-500"
               style={
                 heroImage
                   ? { backgroundImage: `url('${heroImage}')` }
                   : { backgroundImage: 'linear-gradient(135deg, #0b132b 0%, #1c2541 100%)' }
               }
             >
-              <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100">
-                {getBlockText(blocks, 'hero.featured', 'Hydro Protein - флагман линейки')}
+              <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100 transition-colors group-hover:bg-black/50">
+                {getBlockTextForBrand(
+                  blocks,
+                  'home',
+                  'hero.featured',
+                  'sprint-power',
+                  'Hydro Protein - флагман линейки'
+                )}
               </div>
-            </div>
+            </Link>
           </div>
 
           {data.products.length > 0 && (
             <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
               <h2 className="mb-4 text-2xl font-bold text-slate-100">
-                {getBlockText(blocks, 'hits.title', 'Хиты продаж')}
+                {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Хиты продаж')}
               </h2>
               <div className="grid gap-3 md:grid-cols-2">
                 {data.products.map((product) => (
@@ -419,30 +514,97 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
           <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
-                {getBlockText(blocks, 'reviews.title', 'Отзывы спортсменов')}
+                {getBlockTextForBrand(blocks, 'home', 'reviews.title', 'sprint-power', 'Отзывы спортсменов')}
               </h3>
               {data.reviews.map((review) => (
-                <div key={review.id} className="rounded-xl bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-900">{review.authorName}</p>
-                  <p className="mt-1 text-sm text-slate-600">{review.text}</p>
+                <div key={review.id} className="rounded-xl bg-slate-50 px-4 py-4">
+                  <p className="whitespace-pre-wrap text-[15px] font-normal leading-[1.5] text-slate-800">
+                    {review.text}
+                  </p>
+                  {review.socialLink ? (
+                    <a
+                      href={review.socialLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex text-[13px] font-semibold text-slate-500 transition-colors hover:text-slate-700 hover:underline"
+                    >
+                      {review.authorName}
+                    </a>
+                  ) : (
+                    <p className="mt-2 text-[13px] font-semibold text-slate-500">{review.authorName}</p>
+                  )}
                 </div>
               ))}
             </div>
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
-                {getBlockText(blocks, 'markers.title', 'Доверительные маркеры')}
+                {getBlockTextForBrand(
+                  blocks,
+                  'home',
+                  'markers.title',
+                  'sprint-power',
+                  'Доверительные маркеры'
+                )}
               </h3>
               {markers.map((item) => (
-                <div key={item} className="rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700">
-                  {item}
+                <div
+                  key={item}
+                  className="flex items-center gap-3 rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700"
+                >
+                  <CheckCircle className="h-5 w-5 shrink-0 text-[#3B82F6]" aria-hidden />
+                  <span>{item}</span>
                 </div>
               ))}
             </div>
           </div>
 
+          <div className="relative overflow-hidden rounded-3xl border border-[#22304F] bg-[#0C1730] p-6 md:p-8">
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[#3B82F6]/10 blur-3xl"
+              aria-hidden
+            />
+            <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl space-y-3">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7AA2FF]">
+                  Отзывы и форма
+                </p>
+                <h3 className="text-2xl font-bold text-white md:text-3xl">
+                  {getBlockTextForBrand(
+                    blocks,
+                    'home',
+                    'reviewsCta.title',
+                    'sprint-power',
+                    'Реальные отзывы о Sprint Power'
+                  )}
+                </h3>
+                <p className="text-sm leading-6 text-slate-300 md:text-base">
+                  {getBlockTextForBrand(
+                    blocks,
+                    'home',
+                    'reviewsCta.text',
+                    'sprint-power',
+                    'На странице отзывов можно посмотреть все отзывы и сразу оставить свой после покупки.'
+                  )}
+                </p>
+              </div>
+              <Link
+                href={reviewsCtaHref}
+                className="inline-flex items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] md:shrink-0"
+              >
+                {getBlockTextForBrand(
+                  blocks,
+                  'home',
+                  'reviewsCta.buttonLabel',
+                  'sprint-power',
+                  'Перейти к отзывам'
+                )}
+              </Link>
+            </div>
+          </div>
+
           <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-100">
-              {getBlockText(blocks, 'lineup.title', 'Вся линейка')}
+              {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
             </h3>
             <div className="grid gap-3 md:grid-cols-3">
               {data.categories.map((category) => (
@@ -458,43 +620,173 @@ function SprintPowerHome({ data, blocks }: { data: SprintHomeData; blocks: Conte
             </div>
           </div>
 
+          <div className="rounded-3xl border border-[#1B2946] bg-[#0A1128] p-6 md:p-8">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7AA2FF]">
+                  {getBlockTextForBrand(blocks, 'home', 'newsBlock.eyebrow', 'sprint-power', 'Контент Sprint')}
+                </p>
+                <h3 className="text-2xl font-bold text-white">
+                  {getBlockTextForBrand(blocks, 'home', 'newsBlock.title', 'sprint-power', 'Новости')}
+                </h3>
+                <p className="max-w-2xl text-sm leading-6 text-slate-300">
+                  {getBlockTextForBrand(
+                    blocks,
+                    'home',
+                    'home.news.subtitle',
+                    'sprint-power',
+                    'Запуски продуктов, обновления линейки и события бренда Sprint Power.'
+                  )}
+                </p>
+              </div>
+              <Link
+                href="/news"
+                className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white md:inline-flex"
+              >
+                Все новости
+              </Link>
+            </div>
+            {data.newsPosts.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                {data.newsPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/news/${post.slug}`}
+                    className="group overflow-hidden rounded-2xl border border-[#1B2946] bg-[#0F172A] transition-all hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]"
+                  >
+                    <div className="relative aspect-[16/10] bg-slate-900">
+                      {post.previewImage ? (
+                        <Image
+                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                          alt={post.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-linear-to-br from-[#12203D] to-[#0B1327]" />
+                      )}
+                      <div className="absolute inset-0 bg-linear-to-t from-[#060A14] via-[#060A14]/40 to-transparent" />
+                      <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 backdrop-blur">
+                        Новость
+                      </span>
+                    </div>
+                    <div className="space-y-3 p-5">
+                      <p className="line-clamp-3 text-base font-semibold leading-6 text-white transition-colors group-hover:text-[#9CC0FF]">
+                        {post.title}
+                      </p>
+                      <p className="text-sm font-medium text-[#7AA2FF]">Открыть новость</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Пока нет новостей.</p>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-[#D8E4FF] bg-[#EEF4FF] p-6 md:p-8">
+            <div className="mb-6 flex items-end justify-between gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#335CFF]">
+                  {getBlockTextForBrand(blocks, 'home', 'articlesBlock.eyebrow', 'sprint-power', 'Материалы и гайды')}
+                </p>
+                <h3 className="text-2xl font-bold text-slate-900">
+                  {getBlockTextForBrand(blocks, 'home', 'articlesBlock.title', 'sprint-power', 'Статьи')}
+                </h3>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  {getBlockTextForBrand(
+                    blocks,
+                    'home',
+                    'home.articles.subtitle',
+                    'sprint-power',
+                    'Разборы составов, рекомендации по приёму и материалы про тренировки и восстановление.'
+                  )}
+                </p>
+              </div>
+              <Link
+                href="/informaciya"
+                className="hidden shrink-0 rounded-full border border-[#B5C9FF] px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-[#335CFF] hover:text-[#1D4ED8] md:inline-flex"
+              >
+                Все статьи
+              </Link>
+            </div>
+            {data.articlePosts.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-3">
+                {data.articlePosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/informaciya/${post.slug}`}
+                    className="group overflow-hidden rounded-2xl border border-[#D5E2FF] bg-white transition-all hover:border-[#7AA2FF] hover:shadow-[0_8px_30px_rgba(51,92,255,0.08)]"
+                  >
+                    <div className="relative aspect-[16/10] bg-slate-100">
+                      {post.previewImage ? (
+                        <Image
+                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                          alt={post.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-linear-to-br from-[#E8EEFF] to-[#D6E4FF]" />
+                      )}
+                      <div className="absolute inset-0 bg-linear-to-t from-[#0F172A]/20 via-transparent to-transparent" />
+                      <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
+                        Статья
+                      </span>
+                    </div>
+                    <div className="space-y-3 p-5">
+                      <p className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition-colors group-hover:text-[#1D4ED8]">
+                        {post.title}
+                      </p>
+                      <p className="text-sm font-medium text-slate-500">Читать материал</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Пока нет статей.</p>
+            )}
+          </div>
+
           <div className="rounded-3xl bg-[#111D3A] p-6 md:p-8">
             <p className="text-2xl font-bold text-white">
-              {getBlockText(blocks, 'crossBrand.title', 'Inner Health')}
+              {getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
             </p>
             <p className="mt-2 text-sm text-slate-300">
-              {getBlockText(
+              {getBlockTextForBrand(
                 blocks,
+                'home',
                 'crossBrand.text',
+                'sprint-power',
                 'Активное долголетие, превентивная медицина, нутрицевтика.'
               )}
             </p>
             <a
               href={innerSiteUrl}
-              className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white"
+              className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
             >
-              {getBlockText(blocks, 'crossBrand.cta', 'На Inner Health')}
+              {getBlockTextForBrand(blocks, 'home', 'crossBrand.cta', 'sprint-power', 'На Inner Health')}
             </a>
           </div>
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-900">
-              {getBlockText(blocks, 'faq.title', 'Частые вопросы')}
+              {getBlockTextForBrand(blocks, 'home', 'faq.title', 'sprint-power', 'Частые вопросы')}
             </h3>
-            {faqItems.map((item) => (
-              <div
-                key={item}
-                className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
-              >
-                <p className="text-sm font-semibold text-slate-800">{item}</p>
-                <span className="text-slate-400">+</span>
-              </div>
-            ))}
+            <FaqAccordion items={faqItems.slice(0, 3)} variant="compact" />
             <Link
-              href="/catalog"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white"
+              href="/faq"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
             >
-              {getBlockText(blocks, 'faq.cta', 'Выбрать продукт сейчас')}
+              {getBlockTextForBrand(
+                blocks,
+                'home',
+                'faq.cta',
+                'sprint-power',
+                'Посмотреть ответы на все частозадаваемые вопросы'
+              )}
             </Link>
           </div>
         </div>
@@ -513,18 +805,19 @@ export default async function HomePage() {
   })
 
   if (activeBrand === 'sprint-power') {
-    const [sprintHomeData, sprintHomeBlocks] = await Promise.all([
+    const [sprintHomeData, sprintHomeBlocks, sprintFaqItems] = await Promise.all([
       getSprintHomeData(),
       getResolvedBlocksForPage('home', activeBrand),
+      faqService.getPublishedFaqItems(activeBrand),
     ])
-    return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} />
+    return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} faqItems={sprintFaqItems} />
   }
 
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData(activeBrand)
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
     getResolvedBlocksForPage('home', activeBrand),
     getResolvedBlocksForPage('catalog', activeBrand),
-    getActiveSitePopup(),
+    getActiveSitePopup({ brandId: activeBrand }),
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
@@ -935,7 +1228,7 @@ export default async function HomePage() {
       <SprintPowerBlock />
 
       {/* Наши Партнёры */}
-      <PartnersBlock />
+      <PartnersBlock brand={activeBrand} />
     </div>
   )
 }

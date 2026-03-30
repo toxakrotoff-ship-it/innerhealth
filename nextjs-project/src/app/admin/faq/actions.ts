@@ -2,7 +2,14 @@
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { cookies, headers } from 'next/headers'
 import * as faqService from '@/services/faq.service'
+import {
+  ACTIVE_BRAND_COOKIE_NAME,
+  ADMIN_BRAND_COOKIE_NAME,
+  resolveAdminBrand,
+} from '@/lib/brand/brand-context'
+import type { BrandId } from '@/lib/brand/brand'
 
 const faqSchema = z.object({
   question: z.string().trim().min(3, 'Вопрос должен содержать минимум 3 символа'),
@@ -16,8 +23,22 @@ function getFirstZodErrorMessage(error: z.ZodError): string {
   return firstIssue?.message ?? 'Проверьте корректность заполнения полей'
 }
 
+async function resolveActiveBrand(): Promise<BrandId> {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+
+  return resolveAdminBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    adminBrandCookie: cookieStore.get(ADMIN_BRAND_COOKIE_NAME)?.value ?? null,
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+}
+
 export async function getFaqItems() {
-  return faqService.getFaqItemsForAdmin()
+  const brandId = await resolveActiveBrand()
+  await faqService.ensureFaqSeedForBrand(brandId)
+  return faqService.getFaqItemsForAdmin(brandId)
 }
 
 export async function createFaqItem(input: unknown) {
@@ -25,7 +46,8 @@ export async function createFaqItem(input: unknown) {
   if (!parsed.success) {
     throw new Error(getFirstZodErrorMessage(parsed.error))
   }
-  const item = await faqService.createFaqItem(parsed.data)
+  const brandId = await resolveActiveBrand()
+  const item = await faqService.createFaqItem(parsed.data, brandId)
   revalidatePath('/faq')
   revalidatePath('/admin/faq')
   return item
@@ -36,14 +58,16 @@ export async function updateFaqItem(id: string, input: unknown) {
   if (!parsed.success) {
     throw new Error(getFirstZodErrorMessage(parsed.error))
   }
-  const item = await faqService.updateFaqItem(id, parsed.data)
+  const brandId = await resolveActiveBrand()
+  const item = await faqService.updateFaqItem(id, parsed.data, brandId)
   revalidatePath('/faq')
   revalidatePath('/admin/faq')
   return item
 }
 
 export async function deleteFaqItem(id: string) {
-  await faqService.deleteFaqItem(id)
+  const brandId = await resolveActiveBrand()
+  await faqService.deleteFaqItem(id, brandId)
   revalidatePath('/faq')
   revalidatePath('/admin/faq')
 }

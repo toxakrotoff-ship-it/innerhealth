@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { requireAdminSession } from '@/lib/require-admin'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import * as seoHubService from '@/services/seo-hub.service'
 
 const patchSchema = z.object({
@@ -20,8 +21,9 @@ interface RouteParams {
 export async function GET(_request: Request, { params }: RouteParams) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(_request)
   const { id } = await params
-  const hub = await seoHubService.getSeoHubByIdForAdmin(id)
+  const hub = await seoHubService.getSeoHubByIdForAdmin(id, brandId)
   if (!hub) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(hub)
 }
@@ -29,6 +31,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 export async function PATCH(request: Request, { params }: RouteParams) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
   const { id } = await params
 
   let body: z.infer<typeof patchSchema>
@@ -56,7 +59,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.published !== undefined) data.published = body.published
 
   try {
-    const hub = await seoHubService.updateSeoHub(id, data)
+    const hub = await seoHubService.updateSeoHub(id, data, brandId)
     return NextResponse.json(hub)
   } catch {
     return NextResponse.json({ error: 'Update failed' }, { status: 500 })
@@ -66,9 +69,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(_request)
   const { id } = await params
   try {
-    await seoHubService.deleteSeoHub(id)
+    await seoHubService.deleteSeoHub(id, brandId)
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Delete failed' }, { status: 500 })

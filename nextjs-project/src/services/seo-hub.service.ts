@@ -2,29 +2,34 @@ import 'server-only'
 
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import type { BrandId } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 
-export async function getPublishedSeoHubBySlug(slug: string) {
+export async function getPublishedSeoHubBySlug(slug: string, brandId?: BrandId | null) {
   return prisma.seoHub.findFirst({
-    where: { slug, published: true },
+    where: { brand: resolveDbBrand(brandId), slug, published: true },
   })
 }
 
-export async function listPublishedSeoHubsForSitemap() {
+export async function listPublishedSeoHubsForSitemap(brandId?: BrandId | null) {
   return prisma.seoHub.findMany({
-    where: { published: true },
+    where: { brand: resolveDbBrand(brandId), published: true },
     select: { slug: true, updatedAt: true },
     orderBy: { updatedAt: 'desc' },
   })
 }
 
-export async function listSeoHubsForAdmin() {
+export async function listSeoHubsForAdmin(brandId?: BrandId | null) {
   return prisma.seoHub.findMany({
+    where: { brand: resolveDbBrand(brandId) },
     orderBy: { updatedAt: 'desc' },
   })
 }
 
-export async function getSeoHubByIdForAdmin(id: string) {
-  return prisma.seoHub.findUnique({ where: { id } })
+export async function getSeoHubByIdForAdmin(id: string, brandId?: BrandId | null) {
+  return prisma.seoHub.findFirst({
+    where: { id, brand: resolveDbBrand(brandId) },
+  })
 }
 
 export async function createSeoHub(data: {
@@ -34,9 +39,10 @@ export async function createSeoHub(data: {
   content: Prisma.InputJsonValue
   productSlugs: string[]
   published: boolean
-}) {
+}, brandId?: BrandId | null) {
   return prisma.seoHub.create({
     data: {
+      brand: resolveDbBrand(brandId),
       slug: data.slug,
       title: data.title,
       excerpt: data.excerpt,
@@ -56,14 +62,24 @@ export async function updateSeoHub(
     content?: Prisma.InputJsonValue
     productSlugs?: string[]
     published?: boolean
-  }
+  },
+  brandId?: BrandId | null
 ) {
-  return prisma.seoHub.update({
-    where: { id },
+  const updated = await prisma.seoHub.updateMany({
+    where: { id, brand: resolveDbBrand(brandId) },
     data,
   })
+  if (updated.count === 0) {
+    throw new Error('SEO hub not found in selected brand scope')
+  }
+  return prisma.seoHub.findUniqueOrThrow({ where: { id } })
 }
 
-export async function deleteSeoHub(id: string) {
-  return prisma.seoHub.delete({ where: { id } })
+export async function deleteSeoHub(id: string, brandId?: BrandId | null) {
+  const deleted = await prisma.seoHub.deleteMany({
+    where: { id, brand: resolveDbBrand(brandId) },
+  })
+  if (deleted.count === 0) {
+    throw new Error('SEO hub not found in selected brand scope')
+  }
 }

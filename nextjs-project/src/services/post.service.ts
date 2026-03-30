@@ -94,7 +94,11 @@ export async function deletePost(id: string, brandId?: BrandId | null) {
 }
 
 /** Suggest posts for internal links in the news editor (admin). */
-export async function suggestPostsForLink(query: string, limit: number) {
+export async function suggestPostsForLink(
+  query: string,
+  limit: number,
+  brandId?: BrandId | null
+) {
   const q = query.trim();
   const where =
     q.length === 0
@@ -113,11 +117,13 @@ export async function suggestPostsForLink(query: string, limit: number) {
     take: limit,
   });
 
-  return rows.map((p) => ({
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    type: p.type,
-    href: getPostPath({ type: p.type, slug: p.slug }),
-  }));
+  return rows
+    .filter((post) => isPostInBrandScope(post.slug, brandId))
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      type: p.type,
+      href: getPostPath({ type: p.type, slug: p.slug }),
+    }));
 }

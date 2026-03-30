@@ -10,7 +10,7 @@ if (!NEXTAUTH_SECRET || NEXTAUTH_SECRET.length < 32) {
   console.warn('[NextAuth Debug] NEXTAUTH_SECRET is missing or too short:', NEXTAUTH_SECRET ? `length=${NEXTAUTH_SECRET.length}` : 'undefined')
   console.warn('[NextAuth Debug] Ensure NEXTAUTH_SECRET is set in .env.local and restart dev server')
 } else {
-  console.log('[NextAuth Debug] NEXTAUTH_SECRET is set, length:', NEXTAUTH_SECRET.length, 'first 4 chars:', NEXTAUTH_SECRET.substring(0, 4))
+  console.log('[NextAuth Debug] NEXTAUTH_SECRET is set, length:', NEXTAUTH_SECRET.length)
 }
 
 export const authOptions = {
@@ -48,6 +48,7 @@ export const authOptions = {
             role: user.role,
             mustChangePassword: user.mustChangePassword,
             isEmailVerified: Boolean(user.emailVerifiedAt),
+            sessionVersion: user.sessionVersion,
           }
         }
 
@@ -67,6 +68,7 @@ export const authOptions = {
           role: user.role,
           mustChangePassword: user.mustChangePassword,
           isEmailVerified: Boolean(user.emailVerifiedAt),
+          sessionVersion: user.sessionVersion,
         }
       },
     }),
@@ -79,6 +81,7 @@ export const authOptions = {
         token.role = user.role
         token.mustChangePassword = user.mustChangePassword
         token.isEmailVerified = Boolean(user.isEmailVerified)
+        token.sessionVersion = user.sessionVersion
         try {
           await userService.updateLastLoginAt(user.id)
         } catch (err) {
@@ -94,12 +97,16 @@ export const authOptions = {
       if (!user) {
         return { ...session, user: null as unknown as typeof session.user }
       }
+      if ((token.sessionVersion as number | undefined) !== user.sessionVersion) {
+        return { ...session, user: null as unknown as typeof session.user }
+      }
       if (session.user) {
         session.user.id = userId
         session.user.email = token.email as string
         session.user.role = token.role as string
         session.user.mustChangePassword = user.mustChangePassword
         session.user.isEmailVerified = Boolean(user.emailVerifiedAt)
+        session.user.sessionVersion = user.sessionVersion
         const fullName = [user.name, user.lastName].filter(Boolean).join(' ') || (token.email as string)
         session.user.name = fullName
       }

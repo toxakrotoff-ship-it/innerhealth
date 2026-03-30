@@ -29,12 +29,19 @@ const DEFAULT_ADDRESS_PREFIX = 'г. Москва, набережная Нови�
 const DEFAULT_WORKING_WEEKDAYS = 'Будние дни: с 10 до 22'
 const DEFAULT_WORKING_WEEKENDS = 'Выходные: с 12 до 18'
 const DEFAULT_WORKING_NOTE = '*по предварительному звонку'
+const DEFAULT_TITLE = 'Контакты'
+const DEFAULT_CONTACTS_TITLE = 'Контакты'
+const DEFAULT_PHONE_LABEL = 'Телефон:'
+const DEFAULT_EMAIL_LABEL = 'Электронная почта:'
+const DEFAULT_SHOWROOM_TITLE = 'Наш шоурум находится по адресу:'
+const DEFAULT_SCHEDULE_TITLE = 'Режим работы:'
+const DEFAULT_WRITE_TITLE = 'Написать или позвонить:'
 
 export const revalidate = 86400
 
 function getText(block: { text: string | null } | undefined, fallback: string): string {
   const t = block?.text?.trim()
-  return t ?? fallback
+  return t && t.length > 0 ? t : fallback
 }
 
 export default async function ContactsPage() {
@@ -58,6 +65,19 @@ export default async function ContactsPage() {
     byKey('contacts.working_note'),
     DEFAULT_WORKING_NOTE
   )
+  const pageTitle = getText(byKey('contacts.title'), DEFAULT_TITLE)
+  const contactsTitle = getText(byKey('contacts.section.contacts_title'), DEFAULT_CONTACTS_TITLE)
+  const phoneLabel = getText(byKey('contacts.label.phone'), DEFAULT_PHONE_LABEL)
+  const emailLabel = getText(byKey('contacts.label.email'), DEFAULT_EMAIL_LABEL)
+  const showroomTitle = getText(
+    byKey('contacts.section.showroom_title'),
+    DEFAULT_SHOWROOM_TITLE
+  )
+  const scheduleTitle = getText(
+    byKey('contacts.section.schedule_title'),
+    DEFAULT_SCHEDULE_TITLE
+  )
+  const writeTitle = getText(byKey('contacts.section.write_title'), DEFAULT_WRITE_TITLE)
 
   const phoneHref = `tel:${phone.replace(/\s|\(|\)|-/g, '')}`
 
@@ -74,7 +94,7 @@ export default async function ContactsPage() {
           weight="bold"
           className={`mb-8 ${isSprintTheme ? 'text-slate-100' : ''}`}
         >
-          Контакты
+          {pageTitle}
         </ResponsiveText>
 
         <ScalableSpacing size="lg">
@@ -101,11 +121,11 @@ export default async function ContactsPage() {
                   weight="semibold"
                   className={`mb-3 ${isSprintTheme ? 'text-slate-100' : ''}`}
                 >
-                  Контакты
+                  {contactsTitle}
                 </ResponsiveText>
                 <p>
                   <span className={`font-medium ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
-                    Телефон:
+                    {phoneLabel}
                   </span>{' '}
                   <a
                     href={phoneHref}
@@ -116,7 +136,7 @@ export default async function ContactsPage() {
                 </p>
                 <p>
                   <span className={`font-medium ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
-                    Электронная почта:
+                    {emailLabel}
                   </span>{' '}
                   <a
                     href={`mailto:${email}`}
@@ -134,14 +154,14 @@ export default async function ContactsPage() {
                   weight="semibold"
                   className={`mb-2 ${isSprintTheme ? 'text-slate-100' : ''}`}
                 >
-                  Наш шоурум находится по адресу:
+                  {showroomTitle}
                 </ResponsiveText>
                 <p className={isSprintTheme ? 'text-slate-300' : 'text-gray-700'}>{address}</p>
               </div>
 
               <div>
                 <p className={`font-medium mb-1 ${isSprintTheme ? 'text-slate-100' : 'text-gray-900'}`}>
-                  Режим работы:
+                  {scheduleTitle}
                 </p>
                 <p>{workingWeekdays}</p>
                 <p>{workingWeekends}</p>
@@ -150,7 +170,7 @@ export default async function ContactsPage() {
 
               <div className="pt-2">
                 <p className={`text-sm font-medium mb-2 ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
-                  Написать или позвонить:
+                  {writeTitle}
                 </p>
                 <ContactLinks />
               </div>

@@ -6,6 +6,19 @@ export const TWO_FACTOR_PENDING_COOKIE = 'two_factor_pending'
 const PENDING_TTL_SEC = 10 * 60 // 10 min
 const GRANT_TTL_SEC = 2 * 60 // 2 min
 
+function buildPendingCookieAttributes(maxAgeSec: number): string {
+  const parts = [
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSec}`,
+  ]
+  if (process.env.NODE_ENV === 'production') {
+    parts.push('Secure')
+  }
+  return parts.join('; ')
+}
+
 function getSigningSecret(): string {
   const secret = process.env.NEXTAUTH_SECRET
   if (!secret || !secret.trim()) {
@@ -50,7 +63,7 @@ export function buildPendingCookieValue(pendingId: string): string {
   const payload = Buffer.from(pendingId, 'utf8').toString('base64url')
   const signature = signPayload(payload)
   const value = `${payload}.${signature}`
-  return `${TWO_FACTOR_PENDING_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${PENDING_TTL_SEC}; Secure`
+  return `${TWO_FACTOR_PENDING_COOKIE}=${value}; ${buildPendingCookieAttributes(PENDING_TTL_SEC)}`
 }
 
 /**
@@ -78,7 +91,7 @@ export function getPendingIdFromCookie(cookieHeader: string | null): string | nu
  * Build Set-Cookie header to clear the pending cookie.
  */
 export function clearPendingCookieHeader(): string {
-  return `${TWO_FACTOR_PENDING_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+  return `${TWO_FACTOR_PENDING_COOKIE}=; ${buildPendingCookieAttributes(0)}`
 }
 
 /**

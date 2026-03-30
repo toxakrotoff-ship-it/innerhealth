@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
 import { requireAdminSession } from '@/lib/require-admin'
 import { slugify, slugifyUnique } from '@/lib/slugify'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import * as seoHubService from '@/services/seo-hub.service'
 
 const postBodySchema = z.object({
@@ -14,11 +15,12 @@ const postBodySchema = z.object({
   published: z.boolean().default(false),
 })
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
   try {
-    const hubs = await seoHubService.listSeoHubsForAdmin()
+    const hubs = await seoHubService.listSeoHubsForAdmin(brandId)
     return NextResponse.json(hubs)
   } catch (e) {
     console.error(e)
@@ -29,6 +31,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   let body: z.infer<typeof postBodySchema>
   try {
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const existing = (await seoHubService.listSeoHubsForAdmin()).map((h) => h.slug)
+  const existing = (await seoHubService.listSeoHubsForAdmin(brandId)).map((h) => h.slug)
   let slug = body.slug ?? ''
   if (!slug) {
     const base = slugify(body.title) || 'hub'
@@ -57,7 +60,7 @@ export async function POST(request: Request) {
       content,
       productSlugs,
       published: body.published,
-    })
+    }, brandId)
     return NextResponse.json(hub)
   } catch (e) {
     console.error(e)

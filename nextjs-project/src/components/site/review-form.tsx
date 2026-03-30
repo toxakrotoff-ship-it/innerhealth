@@ -4,8 +4,14 @@ import { useState, useRef } from 'react';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
-export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
+interface ReviewFormProps {
+  onSuccess?: () => void;
+  isSprintTheme?: boolean;
+}
+
+export function ReviewForm({ onSuccess, isSprintTheme = false }: ReviewFormProps) {
   const [authorName, setAuthorName] = useState('');
   const [socialLink, setSocialLink] = useState('');
   const [text, setText] = useState('');
@@ -51,8 +57,15 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
 
   if (status === 'success') {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-green-50/80 p-8 text-center">
-        <p className="text-lg font-medium text-green-800">
+      <div
+        className={cn(
+          'rounded-2xl border p-8 text-center',
+          isSprintTheme
+            ? 'border-emerald-600/40 bg-emerald-500/10'
+            : 'border-gray-200 bg-green-50/80'
+        )}
+      >
+        <p className={cn('text-lg font-medium', isSprintTheme ? 'text-emerald-300' : 'text-green-800')}>
           Спасибо! Ваш отзыв отправлен и скоро появится на странице.
         </p>
       </div>
@@ -62,7 +75,10 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6 2xl:space-y-7 3xl:space-y-8">
       <div>
-        <label htmlFor="review-authorName" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="review-authorName"
+          className={cn('mb-1.5 block text-sm font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-700')}
+        >
           Имя <span className="text-red-500">*</span>
         </label>
         <Input
@@ -74,11 +90,18 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
           onChange={(e) => setAuthorName(e.target.value)}
           disabled={status === 'loading'}
           maxLength={120}
-          className="w-full"
+          className={cn(
+            'w-full',
+            isSprintTheme &&
+              'border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-[#0F172A]'
+          )}
         />
       </div>
       <div>
-        <label htmlFor="review-socialLink" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="review-socialLink"
+          className={cn('mb-1.5 block text-sm font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-700')}
+        >
           Ссылка на профиль в соцсети
         </label>
         <Input
@@ -88,11 +111,18 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
           value={socialLink}
           onChange={(e) => setSocialLink(e.target.value)}
           disabled={status === 'loading'}
-          className="w-full"
+          className={cn(
+            'w-full',
+            isSprintTheme &&
+              'border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-[#0F172A]'
+          )}
         />
       </div>
       <div>
-        <label htmlFor="review-text" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="review-text"
+          className={cn('mb-1.5 block text-sm font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-700')}
+        >
           Ваш отзыв <span className="text-red-500">*</span>
         </label>
         <Textarea
@@ -105,11 +135,18 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
           rows={5}
           minLength={10}
           maxLength={3000}
-          className="w-full resize-y"
+          className={cn(
+            'w-full resize-y',
+            isSprintTheme &&
+              'border-slate-600 bg-slate-900 text-slate-100 placeholder:text-slate-400 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-[#0F172A]'
+          )}
         />
       </div>
       <div>
-        <label htmlFor="review-photo" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="review-photo"
+          className={cn('mb-1.5 block text-sm font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-700')}
+        >
           Фото (по желанию)
         </label>
         <input
@@ -119,20 +156,31 @@ export function ReviewForm({ onSuccess }: { onSuccess?: () => void }) {
           accept="image/jpeg,image/png,image/gif,image/webp"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           disabled={status === 'loading'}
-          className="flex h-10 w-full rounded-[16px] border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+          className={cn(
+            'flex h-10 w-full rounded-[16px] border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium',
+            isSprintTheme &&
+              'border-slate-600 bg-slate-900 text-slate-200 file:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F172A]'
+          )}
         />
         {file && (
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className={cn('mt-1 text-sm text-muted-foreground', isSprintTheme && 'text-slate-400')}>
             Выбрано: {file.name} ({(file.size / 1024).toFixed(1)} КБ)
           </p>
         )}
       </div>
       {errorMessage && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className={cn('text-sm', isSprintTheme ? 'text-red-300' : 'text-red-600')} role="alert">
           {errorMessage}
         </p>
       )}
-      <Button type="submit" disabled={status === 'loading'} className="w-full sm:w-auto">
+      <Button
+        type="submit"
+        disabled={status === 'loading'}
+        className={cn(
+          'w-full sm:w-auto',
+          isSprintTheme && 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
+        )}
+      >
         {status === 'loading' ? 'Отправка…' : 'Отправить отзыв'}
       </Button>
     </form>
