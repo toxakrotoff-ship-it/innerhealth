@@ -19,6 +19,7 @@ const TELEGRAM_SITE_URL =
 const TELEGRAM_API = 'https://api.telegram.org';
 
 const FETCH_TIMEOUT_MS = 15_000;
+const TELEGRAM_LONG_POLL_TIMEOUT_MS = 35_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_PER_USER = 20;
 const MAX_MESSAGE_LENGTH = 500;
@@ -52,9 +53,9 @@ function checkRateLimit(userId: string): boolean {
   return entry.count <= RATE_LIMIT_MAX_PER_USER;
 }
 
-function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
@@ -329,7 +330,7 @@ type TelegramUpdate = {
 
 async function getUpdates(offset: number): Promise<{ result?: TelegramUpdate[] }> {
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${offset}&timeout=30&limit=50`;
-  const res = await fetchWithTimeout(url);
+  const res = await fetchWithTimeout(url, {}, TELEGRAM_LONG_POLL_TIMEOUT_MS);
   const data = (await res.json()) as { result?: TelegramUpdate[] };
   const result = Array.isArray(data.result) ? data.result.slice(0, 50) : [];
   return { result };
@@ -357,11 +358,6 @@ async function run(): Promise<void> {
         if (cq?.id != null && cq.from?.id != null && typeof cq.data === 'string') {
           try {
             const fromId = String(cq.from.id);
-            const capabilities = await getTelegramCapabilities(fromId);
-            if (!capabilities.isAdmin) {
-              await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
-              continue;
-            }
             const data = cq.data;
             if (data.startsWith(REVIEW_APPROVE_PREFIX)) {
               const reviewId = data.slice(REVIEW_APPROVE_PREFIX.length).trim();
@@ -369,17 +365,42 @@ async function run(): Promise<void> {
                 await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
                 continue;
               }
+              await answerCallbackQuery(cq.id, 'Обрабатываю...');
+              const capabilities = await getTelegramCapabilities(fromId);
+              if (!capabilities.isAdmin) {
+                if (cq.message?.chat?.id != null) {
+                  await sendMessage(String(cq.message.chat.id), 'Доступ только для администраторов.').catch(() => {});
+                }
+                continue;
+              }
               const result = await setReviewStatus(reviewId, 'APPROVED');
-              await answerCallbackQuery(cq.id, result.message);
+              if (!result.success && cq.message?.chat?.id != null) {
+                await sendMessage(String(cq.message.chat.id), result.message).catch(() => {});
+              }
             } else if (data.startsWith(REVIEW_REJECT_PREFIX)) {
               const reviewId = data.slice(REVIEW_REJECT_PREFIX.length).trim();
               if (!reviewId) {
                 await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
                 continue;
               }
+              await answerCallbackQuery(cq.id, 'Обрабатываю...');
+              const capabilities = await getTelegramCapabilities(fromId);
+              if (!capabilities.isAdmin) {
+                if (cq.message?.chat?.id != null) {
+                  await sendMessage(String(cq.message.chat.id), 'Доступ только для администраторов.').catch(() => {});
+                }
+                continue;
+              }
               const result = await setReviewStatus(reviewId, 'REJECTED');
-              await answerCallbackQuery(cq.id, result.message);
+              if (!result.success && cq.message?.chat?.id != null) {
+                await sendMessage(String(cq.message.chat.id), result.message).catch(() => {});
+              }
             } else {
+              const capabilities = await getTelegramCapabilities(fromId);
+              if (!capabilities.isAdmin) {
+                await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
+                continue;
+              }
               await answerCallbackQuery(cq.id, 'Неизвестная кнопка.');
             }
           } catch (callbackErr) {
