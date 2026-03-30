@@ -1,4 +1,4 @@
-import { Bot } from '@maxhub/max-bot-api';
+import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
@@ -17,14 +17,19 @@ async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | 
 async function sendToUsers(
   userIds: string[],
   text: string,
-  options?: { brandId?: BrandId | null }
+  options?: { brandId?: BrandId | null; attachments?: unknown[] }
 ): Promise<void> {
   const bot = await getMaxBot(options);
   if (!bot || userIds.length === 0) return;
   for (const userId of userIds) {
     const id = Number.parseInt(userId, 10);
     if (!Number.isFinite(id)) continue;
-    await bot.api.sendMessageToUser(id, text).catch((error) => {
+    await bot.api
+      .sendMessageToUser(id, text, {
+        format: 'html',
+        attachments: options?.attachments,
+      })
+      .catch((error) => {
       console.error('[max-notify] sendMessageToUser failed', userId, error);
     });
   }
@@ -178,6 +183,9 @@ export async function notifyMaxNewReview(payload: {
   const whitelist = await maxService.getMaxWhitelist();
   if (whitelist.length === 0) return;
   const textPreview = payload.text.length > 300 ? `${payload.text.slice(0, 297)}...` : payload.text;
+  const callbackPrefix = 'review_';
+  const approvePayload = `${callbackPrefix}approve_${payload.reviewId}`.slice(0, 256);
+  const rejectPayload = `${callbackPrefix}reject_${payload.reviewId}`.slice(0, 256);
   const messageText = [
     '📝 <b>Новый отзыв (на модерации)</b>',
     `Автор: ${escapeHtml(payload.authorName)}`,
@@ -185,10 +193,19 @@ export async function notifyMaxNewReview(payload: {
     escapeHtml(textPreview),
     '',
     `ID: <code>${escapeHtml(payload.reviewId)}</code>`,
-    'Модерация выполняется в админке.',
+    'Модерация: кнопками ниже или в админке.',
   ].join('\n');
+  const adminUrl = '/admin/reviews';
+  const keyboard = Keyboard.inlineKeyboard([
+    [
+      Keyboard.button.callback('✅ Разместить', approvePayload),
+      Keyboard.button.callback('❌ Отклонить', rejectPayload),
+    ],
+    [Keyboard.button.link('🔎 Открыть в админке', adminUrl)],
+  ]);
   await sendToUsers(
     whitelist.map((row) => row.maxUserId),
-    messageText
+    messageText,
+    { attachments: [keyboard] }
   );
 }

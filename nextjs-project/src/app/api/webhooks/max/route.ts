@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getMaxBotConfig } from '@/lib/max/max-config';
+import { Bot } from '@maxhub/max-bot-api';
 import { notifyMaxConnection } from '@/lib/max-notify';
 import * as maxService from '@/services/max.service';
+import * as reviewService from '@/services/review.service';
 
 const maxWebhookUpdateSchema = z.object({
   update_type: z.string(),
@@ -14,10 +16,21 @@ const maxWebhookUpdateSchema = z.object({
       user_id: z.union([z.number(), z.string()]),
     })
     .optional(),
+  callback: z
+    .object({
+      callback_id: z.string(),
+      payload: z.string().optional(),
+      user: z.object({
+        user_id: z.union([z.number(), z.string()]),
+      }),
+    })
+    .optional(),
 });
 
 const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 const MAX_START_CODE_LENGTH = 64;
+const REVIEW_APPROVE_PREFIX = 'review_approve_';
+const REVIEW_REJECT_PREFIX = 'review_reject_';
 
 function isSecureRequest(request: Request): boolean {
   if (process.env.NODE_ENV !== 'production') return true;
@@ -57,6 +70,52 @@ export async function POST(request: Request) {
       const userId = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
       if (userId) void notifyMaxConnection({ userId, maxUserId });
     }
+  }
+
+  if (parsed.data.update_type === 'message_callback' && parsed.data.callback) {
+    const callbackId = parsed.data.callback.callback_id;
+    const payloadValue = (parsed.data.callback.payload ?? '').trim();
+    const maxUserId = String(parsed.data.callback.user.user_id);
+
+    const whitelist = await maxService.getMaxWhitelist();
+    const isAllowed = whitelist.some((row) => row.maxUserId === maxUserId);
+
+    const bot = config.token ? new Bot(config.token) : null;
+    if (!isAllowed) {
+      if (bot) await bot.api.answerOnCallback(callbackId, { notification: 'Доступ только для администраторов.' }).catch(() => {});
+      return NextResponse.json({ ok: true });
+    }
+
+    const makeNotification = async (text: string) => {
+      if (!bot) return;
+      await bot.api.answerOnCallback(callbackId, { notification: text.slice(0, 200) }).catch(() => {});
+    };
+
+    if (payloadValue.startsWith(REVIEW_APPROVE_PREFIX) || payloadValue.startsWith(REVIEW_REJECT_PREFIX)) {
+      const status = payloadValue.startsWith(REVIEW_APPROVE_PREFIX) ? 'APPROVED' : 'REJECTED';
+      const reviewId = payloadValue
+        .slice(payloadValue.startsWith(REVIEW_APPROVE_PREFIX) ? REVIEW_APPROVE_PREFIX.length : REVIEW_REJECT_PREFIX.length)
+        .trim();
+      if (!reviewId) {
+        await makeNotification('Ошибка: неверные данные кнопки.');
+        return NextResponse.json({ ok: true });
+      }
+      const review = await reviewService.findReviewById(reviewId);
+      if (!review) {
+        await makeNotification('Отзыв не найден.');
+        return NextResponse.json({ ok: true });
+      }
+      if (review.status !== 'PENDING') {
+        await makeNotification('Отзыв уже промодерирован.');
+        return NextResponse.json({ ok: true });
+      }
+      await reviewService.updateReview(reviewId, { status });
+      await makeNotification(status === 'APPROVED' ? 'Отзыв размещён на сайте.' : 'Отзыв отклонён.');
+      return NextResponse.json({ ok: true });
+    }
+
+    await makeNotification('Неизвестная кнопка.');
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ ok: true });
