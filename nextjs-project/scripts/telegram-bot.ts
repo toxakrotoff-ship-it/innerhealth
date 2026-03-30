@@ -6,6 +6,7 @@
  */
 import dotenv from 'dotenv';
 import path from 'path';
+import { Agent } from 'undici';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -17,6 +18,7 @@ const TELEGRAM_SITE_URL =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
 const TELEGRAM_API = 'https://api.telegram.org';
+const TELEGRAM_API_HOST = 'api.telegram.org';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const TELEGRAM_LONG_POLL_TIMEOUT_MS = 35_000;
@@ -36,6 +38,13 @@ if (!TELEGRAM_SERVICE_SECRET) {
 }
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const telegramApiDispatcher = new Agent({
+  connect: {
+    timeout: 30_000,
+  },
+  // Helps in environments where one Telegram IP family/address intermittently stalls.
+  autoSelectFamily: true,
+});
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
@@ -56,7 +65,8 @@ function checkRateLimit(userId: string): boolean {
 function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+  const dispatcher = url.includes(TELEGRAM_API_HOST) ? telegramApiDispatcher : undefined;
+  return fetch(url, { ...options, signal: controller.signal, dispatcher }).finally(() => clearTimeout(timeoutId));
 }
 
 async function confirmLink(code: string, telegramUserId: string): Promise<{ success?: boolean; error?: string }> {
