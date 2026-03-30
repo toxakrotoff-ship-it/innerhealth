@@ -12,6 +12,15 @@ const maxWebhookUpdateSchema = z.object({
   update_type: z.string(),
   chat_id: z.union([z.number(), z.string()]).optional(),
   payload: z.string().nullable().optional(),
+  message: z
+    .object({
+      body: z
+        .object({
+          text: z.string().nullable().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   user: z
     .object({
       user_id: z.union([z.number(), z.string()]),
@@ -32,6 +41,34 @@ const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 const MAX_START_CODE_LENGTH = 64;
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
+const MAX_MESSAGE_LENGTH = 500;
+
+function buildHelpTextForMax(input: { isLinked: boolean }): string {
+  if (!input.isLinked) {
+    return [
+      'Помощь',
+      '',
+      'Вы пока не подключены к уведомлениям.',
+      '',
+      'Как подключиться:',
+      '1) Откройте сайт → профиль/настройки → «Подключить MAX»',
+      '2) Перейдите по ссылке и нажмите Start',
+      '',
+      'Команды:',
+      '• /status — проверить, подключены ли вы',
+    ].join('\n');
+  }
+  return [
+    'Помощь',
+    '',
+    'Вы подключены к уведомлениям.',
+    '',
+    'Команды:',
+    '• /status — статус подключения',
+    '• /promo — список промокодов (админам)',
+    '• /stats — статистика по промокодам (партнёрам)',
+  ].join('\n');
+}
 
 function isSecureRequest(request: Request): boolean {
   if (process.env.NODE_ENV !== 'production') return true;
@@ -71,6 +108,25 @@ export async function POST(request: Request) {
       const userId = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
       if (userId) void notifyMaxConnection({ userId, maxUserId });
     }
+  }
+
+  if (parsed.data.update_type === 'message_created') {
+    const text = String(parsed.data.message?.body?.text ?? '').trim().slice(0, MAX_MESSAGE_LENGTH);
+    if (!text) return NextResponse.json({ ok: true });
+    const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
+    if (!maxUserId) return NextResponse.json({ ok: true });
+
+    if (text !== '/help') return NextResponse.json({ ok: true });
+
+    const whitelist = await maxService.getMaxWhitelist();
+    const isLinked = whitelist.some((row) => row.maxUserId === maxUserId);
+
+    const bot = config.token ? new Bot(config.token) : null;
+    if (!bot) return NextResponse.json({ ok: true });
+    await bot.api
+      .sendMessageToUser(Number.parseInt(maxUserId, 10), buildHelpTextForMax({ isLinked }), { format: 'markdown' })
+      .catch(() => {});
+    return NextResponse.json({ ok: true });
   }
 
   if (parsed.data.update_type === 'message_callback' && parsed.data.callback) {

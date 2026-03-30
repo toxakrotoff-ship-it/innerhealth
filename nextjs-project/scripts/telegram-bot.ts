@@ -173,6 +173,74 @@ async function sendMessage(chatId: string, text: string): Promise<void> {
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
 
+async function buildHelpTextForTelegram(fromId: string): Promise<string> {
+  const whitelist = await getWhitelistIds();
+  if (!whitelist.has(fromId)) {
+    return [
+      '<b>Помощь</b>',
+      '',
+      'Вы пока не подключены к уведомлениям.',
+      '',
+      'Как подключиться:',
+      '1) Откройте сайт → профиль/настройки → «Подключить Telegram»',
+      '2) Перейдите по ссылке в бота и нажмите <b>Start</b>',
+      '',
+      'Команды:',
+      '• /status — проверить, подключены ли вы',
+    ].join('\n');
+  }
+
+  // Для партнёров доступна /stats. Не фейлим /help, если сервис недоступен.
+  let isPartner = false;
+  try {
+    const partnerStats = await getPartnerStatsByTelegramUserId(fromId);
+    isPartner = !('error' in partnerStats);
+  } catch {
+    isPartner = false;
+  }
+
+  const commands = [
+    '• /status — статус подключения',
+    '• /promo — список промокодов (админам)',
+    ...(isPartner ? ['• /stats — статистика по вашим промокодам (партнёрам)'] : ['• /stats — статистика (только партнёрам)']),
+  ];
+
+  return [
+    '<b>Помощь</b>',
+    '',
+    'Вы подключены к уведомлениям.',
+    '',
+    'Команды:',
+    ...commands,
+  ].join('\n');
+}
+
+async function buildWelcomeTextForTelegram(fromId: string): Promise<string> {
+  const partnerRes = await getPartnerStatsByTelegramUserId(fromId);
+  const isPartner = !('error' in partnerRes);
+  if (!isPartner) {
+    return [
+      '✅ Вас подключили к уведомлениям.',
+      '',
+      'Вы можете:',
+      '• /status — проверить подключение',
+      '• /promo — промокоды (для админов/модерации)',
+      '',
+      'Партнёрская статистика доступна командой /stats, если Telegram привязан в личном кабинете партнёра.',
+    ].join('\n');
+  }
+
+  return [
+    '✅ Вас подключили к уведомлениям.',
+    '',
+    'Вы можете:',
+    '• /status — проверить подключение',
+    '• /stats — статистика по вашим промокодам',
+    '',
+    'Админам доступна команда /promo.',
+  ].join('\n');
+}
+
 async function setReviewStatus(reviewId: string, status: 'approved' | 'rejected'): Promise<{ success: boolean; error?: string }> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
@@ -380,10 +448,8 @@ async function run(): Promise<void> {
             }
             const result = await confirmLink(safeCode, fromId);
             if (result.success) {
-              await sendMessage(
-                chatId,
-                '✅ Вас подключили к уведомлениям.\n\nВы будете получать сообщения о новых заказах и заявках с сайта Inner Health. Партнёрам: команда /stats — статистика по вашим промокодам.'
-              ).catch(() => {});
+              const welcomeText = await buildWelcomeTextForTelegram(fromId);
+              await sendMessage(chatId, welcomeText).catch(() => {});
             } else {
               const errMsg = result.error === 'Code expired' ? 'Код истёк. Создайте новую ссылку в админке (Профиль → Подключить Telegram).' : (result.error || 'Не удалось привязать. Попробуйте снова.');
               await sendMessage(chatId, errMsg).catch(() => {});
@@ -393,6 +459,16 @@ async function run(): Promise<void> {
               chatId,
               'Используйте ссылку из админки (Профиль → Подключить Telegram) или из личного кабинета партнёра на сайте, чтобы подключить уведомления.'
             ).catch(() => {});
+          }
+          continue;
+        }
+
+        if (text === '/help') {
+          try {
+            await sendMessage(chatId, await buildHelpTextForTelegram(fromId)).catch(() => {});
+          } catch (e) {
+            console.error('[bot] /help error:', e instanceof Error ? e.message : e);
+            await sendMessage(chatId, '⚠️ Не удалось показать справку. Попробуйте позже.').catch(() => {});
           }
           continue;
         }
@@ -474,7 +550,7 @@ async function run(): Promise<void> {
         }
 
         if (text.startsWith('/')) {
-          await sendMessage(chatId, 'Неизвестная команда. Доступны: /start, /status, /promo, /stats (для партнёров).').catch(() => {});
+          await sendMessage(chatId, 'Неизвестная команда. Доступны: /help, /start, /status, /promo, /stats (для партнёров).').catch(() => {});
         }
       } catch (e) {
         console.error('Bot update error:', e);

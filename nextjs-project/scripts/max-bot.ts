@@ -115,6 +115,71 @@ async function getPartnerStats(maxUserId: string): Promise<{ stats: Array<{ code
   }
 }
 
+function buildHelpTextForMax(input: { isLinked: boolean; isPartner: boolean }): string {
+  if (!input.isLinked) {
+    return [
+      'Помощь',
+      '',
+      'Вы пока не подключены к уведомлениям.',
+      '',
+      'Как подключиться:',
+      '1) Откройте сайт → профиль/настройки → «Подключить MAX»',
+      '2) Перейдите по ссылке и нажмите Start',
+      '',
+      'Команды:',
+      '• /status — проверить, подключены ли вы',
+    ].join('\n');
+  }
+
+  if (input.isPartner) {
+    return [
+      'Помощь',
+      '',
+      'Вы подключены к уведомлениям.',
+      '',
+      'Команды:',
+      '• /status — статус подключения',
+      '• /stats — статистика по вашим промокодам (партнёрам)',
+      '• /promo — промокоды (доступно, если вы в whitelist)',
+    ].join('\n');
+  }
+
+  return [
+    'Помощь',
+    '',
+    'Вы подключены к уведомлениям.',
+    '',
+    'Команды:',
+    '• /status — статус подключения',
+    '• /promo — промокоды (админам/модерации)',
+    '• /stats — недоступна, пока Telegram не привязан в личном кабинете партнёра',
+  ].join('\n');
+}
+
+function buildWelcomeTextForMax(input: { isPartner: boolean }): string {
+  if (input.isPartner) {
+    return [
+      '✅ Вас подключили к уведомлениям.',
+      '',
+      'Доступные команды:',
+      '• /status — проверить подключение',
+      '• /stats — статистика по вашим промокодам',
+      '',
+      'Админам также доступна команда /promo (список промокодов).',
+    ].join('\n');
+  }
+
+  return [
+    '✅ Вас подключили к уведомлениям.',
+    '',
+    'Доступные команды:',
+    '• /status — проверить подключение',
+    '• /promo — список промокодов (админам/модерации)',
+    '',
+    'Чтобы появилась /stats, привяжите Telegram в личном кабинете партнёра.',
+  ].join('\n');
+}
+
 async function bootstrap(): Promise<void> {
   const config = await getMaxBotConfig();
   if (!config.token) {
@@ -143,9 +208,10 @@ async function bootstrap(): Promise<void> {
       }
       return confirmLink(safeCode, maxUserId).then((result) => {
         if (result.success) {
-          return botStartedContext.reply(
-            '✅ Вас подключили к уведомлениям. Доступны команды /status, /promo, /stats.'
-          );
+          return getPartnerStats(maxUserId).then((partnerRes) => {
+            const isPartner = !('error' in partnerRes);
+            return botStartedContext.reply(buildWelcomeTextForMax({ isPartner }));
+          });
         }
         return botStartedContext.reply(result.error || 'Не удалось привязать. Попробуйте снова.');
       });
@@ -154,6 +220,15 @@ async function bootstrap(): Promise<void> {
   });
 
   bot.command('ping', (ctx) => (ctx as MaxBotContextLike).reply('pong'));
+  bot.command('help', async (ctx) => {
+    const commandContext = ctx as MaxBotContextLike;
+    const maxUserId = String(commandContext.user?.user_id ?? '');
+    const whitelist = await getWhitelistIds();
+    const isLinked = whitelist.has(maxUserId);
+    const partnerRes = isLinked ? await getPartnerStats(maxUserId) : { error: 'Not linked' as const };
+    const isPartner = !('error' in partnerRes);
+    return commandContext.reply(buildHelpTextForMax({ isLinked, isPartner }));
+  });
   bot.command('status', async (ctx) => {
     const commandContext = ctx as MaxBotContextLike;
     const maxUserId = String(commandContext.user?.user_id ?? '');
@@ -203,8 +278,16 @@ async function bootstrap(): Promise<void> {
       await messageContext.reply('⏳ Слишком много запросов. Подождите минуту.');
       return;
     }
+    if (text === '/help') {
+      const whitelist = await getWhitelistIds();
+      const isLinked = whitelist.has(userId);
+      const partnerRes = isLinked ? await getPartnerStats(userId) : { error: 'Not linked' as const };
+      const isPartner = !('error' in partnerRes);
+      await messageContext.reply(buildHelpTextForMax({ isLinked, isPartner }));
+      return;
+    }
     if (text.startsWith('/')) return;
-    await messageContext.reply('Доступные команды: /status, /promo, /stats');
+    await messageContext.reply('Доступные команды: /help, /status, /promo, /stats');
   });
 
   bot.catch((error) => {
