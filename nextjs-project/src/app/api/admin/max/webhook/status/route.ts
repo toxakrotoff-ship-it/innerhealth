@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { normalizeMaxSubscriptionsPayload } from '@/lib/max/normalize-max-subscriptions-payload';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as settingsService from '@/services/settings.service';
 
@@ -44,7 +45,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      data,
+      data: normalizeMaxSubscriptionsPayload(data),
     });
   } catch (error) {
     console.error('MAX webhook status error:', error);

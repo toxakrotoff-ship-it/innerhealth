@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 import { Bot } from '@maxhub/max-bot-api';
+import { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
@@ -51,8 +52,20 @@ export async function POST() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('MAX link-code error:', message, error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2021') {
+      return NextResponse.json(
+        {
+          error:
+            'Таблица привязки MAX отсутствует в БД. Примените миграции Prisma (MaxLinkCode / MaxWhitelist).',
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to create link code' },
+      {
+        error: 'Failed to create link code',
+        ...(process.env.NODE_ENV === 'development' ? { details: message } : {}),
+      },
       { status: 500 }
     );
   }
