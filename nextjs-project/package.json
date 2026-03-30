@@ -32,7 +32,7 @@
     "sync:product-photos": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/sync-product-photos-from-tilda.ts",
     "tilda:download-images": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/download-tildacdn-images-to-local.ts",
     "telegram-bot": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/telegram-bot.ts",
-    "max-bot:dev": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/max-bot.ts",
+    "max-bot:dev": "ts-node -r tsconfig-paths/register --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/max-bot.ts",
     "redirects:compare": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/compare-sites-redirects.ts",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
@@ -81,6 +81,7 @@
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.5.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "validator": "^13.15.26",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"

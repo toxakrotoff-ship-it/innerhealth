@@ -55,6 +55,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./.next/standalone/public
 
 # Скрипты для telegram-bot (ts-node запускает scripts/telegram-bot.ts)
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+# src/ нужен раннерам ботов (MAX читает настройки через DAL)
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 # typescript нужен ts-node в рантайме (в production иначе только --omit=dev)
 RUN npm install typescript --no-save
 
