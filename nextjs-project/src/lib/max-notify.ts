@@ -4,6 +4,11 @@ import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
 import type { BrandId } from '@/lib/brand/brand';
 
+interface MaxAttachmentRequest {
+  type: string;
+  payload: unknown;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -17,7 +22,7 @@ async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | 
 async function sendToUsers(
   userIds: string[],
   text: string,
-  options?: { brandId?: BrandId | null; attachments?: unknown[] }
+  options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[] }
 ): Promise<void> {
   const bot = await getMaxBot(options);
   if (!bot || userIds.length === 0) return;
@@ -27,7 +32,7 @@ async function sendToUsers(
     await bot.api
       .sendMessageToUser(id, text, {
         format: 'html',
-        attachments: options?.attachments,
+        attachments: options?.attachments as unknown as never,
       })
       .catch((error) => {
       console.error('[max-notify] sendMessageToUser failed', userId, error);
@@ -195,7 +200,11 @@ export async function notifyMaxNewReview(payload: {
     `ID: <code>${escapeHtml(payload.reviewId)}</code>`,
     'Модерация: кнопками ниже или в админке.',
   ].join('\n');
-  const adminUrl = '/admin/reviews';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const adminUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/reviews` : '/admin/reviews';
   const keyboard = Keyboard.inlineKeyboard([
     [
       Keyboard.button.callback('✅ Разместить', approvePayload),
