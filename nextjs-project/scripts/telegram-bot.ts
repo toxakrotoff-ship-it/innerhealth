@@ -6,6 +6,7 @@
  */
 import dotenv from 'dotenv';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { Agent } from 'undici';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -274,26 +275,35 @@ async function sendMessage(
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
 
+type ReviewModerationResponse = {
+  success: boolean;
+  message: string;
+  reason?: 'updated' | 'already_moderated' | 'not_found' | 'unauthorized' | 'invalid' | 'error';
+  syncWarnings?: string[];
+};
+
 async function setReviewStatus(
   reviewId: string,
-  status: 'APPROVED' | 'REJECTED'
-): Promise<{ success: boolean; message: string }> {
+  status: 'APPROVED' | 'REJECTED',
+  correlationId: string
+): Promise<ReviewModerationResponse> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    console.info('[bot] moderation request started', { correlationId, reviewId, status });
     const res = await fetchWithTimeout(`${base}/api/admin/reviews/moderation-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
-      body: JSON.stringify({ reviewId, status }),
+      body: JSON.stringify({ reviewId, status, correlationId }),
     });
-    let data:
-      | { success?: boolean; message?: string; reason?: string }
-      | undefined;
+    let data: Partial<ReviewModerationResponse> | undefined;
     try {
-      data = (await res.json()) as { success?: boolean; message?: string; reason?: string };
+      data = (await res.json()) as Partial<ReviewModerationResponse>;
     } catch {
       return {
         success: false,
-        message: res.status === 401 ? 'Доступ только для администраторов.' : 'Сервис недоступен',
+        reason: res.status === 401 ? 'unauthorized' : 'error',
+        message: res.status === 401 ? 'Доступ только для администраторов.' : 'Не удалось обработать модерацию. Попробуйте ещё раз.',
+        syncWarnings: [],
       };
     }
     if (!res.ok) {
@@ -304,15 +314,36 @@ async function setReviewStatus(
         reason: data?.reason,
       });
     }
-    return {
+    const result = {
       success: Boolean(data?.success),
+      reason: data?.reason,
       message: typeof data?.message === 'string' && data.message
         ? data.message
-        : 'Ошибка. Попробуйте позже.',
+        : 'Не удалось обработать модерацию. Попробуйте ещё раз.',
+      syncWarnings: Array.isArray(data?.syncWarnings) ? data.syncWarnings : [],
     };
+    console.info('[bot] moderation response', {
+      correlationId,
+      reviewId,
+      status,
+      success: result.success,
+      reason: result.reason,
+      syncWarnings: result.syncWarnings,
+    });
+    return result;
   } catch (e) {
-    console.error('[bot] moderation action error:', e instanceof Error ? e.message : e);
-    return { success: false, message: 'Сервис недоступен' };
+    console.error('[bot] moderation action error:', {
+      correlationId,
+      reviewId,
+      status,
+      error: e instanceof Error ? e.message : String(e),
+    });
+    return {
+      success: false,
+      reason: 'error',
+      message: 'Не удалось обработать модерацию. Попробуйте ещё раз.',
+      syncWarnings: [],
+    };
   }
 }
 
@@ -372,6 +403,13 @@ async function run(): Promise<void> {
           try {
             const fromId = String(cq.from.id);
             const data = cq.data;
+            const correlationId = randomUUID();
+            console.info('[bot] callback received', {
+              correlationId,
+              callbackQueryId: cq.id,
+              fromId,
+              data,
+            });
             if (data.startsWith(REVIEW_APPROVE_PREFIX)) {
               const reviewId = data.slice(REVIEW_APPROVE_PREFIX.length).trim();
               if (!reviewId) {
@@ -379,14 +417,22 @@ async function run(): Promise<void> {
                 continue;
               }
               await answerCallbackQuery(cq.id, 'Обрабатываю...');
+              console.info('[bot] callback ack sent', { correlationId, callbackQueryId: cq.id });
               const capabilities = await getTelegramCapabilities(fromId);
+              console.info('[bot] capabilities resolved', {
+                correlationId,
+                fromId,
+                isAdmin: capabilities.isAdmin,
+                isLinked: capabilities.isLinked,
+                isPartner: capabilities.isPartner,
+              });
               if (!capabilities.isAdmin) {
                 if (cq.message?.chat?.id != null) {
                   await sendMessage(String(cq.message.chat.id), 'Доступ только для администраторов.').catch(() => {});
                 }
                 continue;
               }
-              const result = await setReviewStatus(reviewId, 'APPROVED');
+              const result = await setReviewStatus(reviewId, 'APPROVED', correlationId);
               if (!result.success && cq.message?.chat?.id != null) {
                 await sendMessage(String(cq.message.chat.id), result.message).catch(() => {});
               }
@@ -397,14 +443,22 @@ async function run(): Promise<void> {
                 continue;
               }
               await answerCallbackQuery(cq.id, 'Обрабатываю...');
+              console.info('[bot] callback ack sent', { correlationId, callbackQueryId: cq.id });
               const capabilities = await getTelegramCapabilities(fromId);
+              console.info('[bot] capabilities resolved', {
+                correlationId,
+                fromId,
+                isAdmin: capabilities.isAdmin,
+                isLinked: capabilities.isLinked,
+                isPartner: capabilities.isPartner,
+              });
               if (!capabilities.isAdmin) {
                 if (cq.message?.chat?.id != null) {
                   await sendMessage(String(cq.message.chat.id), 'Доступ только для администраторов.').catch(() => {});
                 }
                 continue;
               }
-              const result = await setReviewStatus(reviewId, 'REJECTED');
+              const result = await setReviewStatus(reviewId, 'REJECTED', correlationId);
               if (!result.success && cq.message?.chat?.id != null) {
                 await sendMessage(String(cq.message.chat.id), result.message).catch(() => {});
               }

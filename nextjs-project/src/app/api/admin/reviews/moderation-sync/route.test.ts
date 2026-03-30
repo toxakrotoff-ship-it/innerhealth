@@ -32,6 +32,7 @@ describe('POST /api/admin/reviews/moderation-sync', () => {
       success: false,
       reason: 'unauthorized',
       message: 'Доступ только для администраторов.',
+      syncWarnings: [],
     });
     expect(moderateReviewAndSync).not.toHaveBeenCalled();
   });
@@ -42,6 +43,7 @@ describe('POST /api/admin/reviews/moderation-sync', () => {
       status: 'REJECTED',
       reason: 'updated',
       message: 'Отзыв отклонён.',
+      syncWarnings: ['telegram_text:40'],
     });
 
     const request = new Request('http://localhost/api/admin/reviews/moderation-sync', {
@@ -50,7 +52,7 @@ describe('POST /api/admin/reviews/moderation-sync', () => {
         'Content-Type': 'application/json',
         'X-Service-Key': 'test-secret',
       },
-      body: JSON.stringify({ reviewId: 'r1', status: 'REJECTED' }),
+      body: JSON.stringify({ reviewId: 'r1', status: 'REJECTED', correlationId: 'corr-1' }),
     });
 
     const response = await POST(request);
@@ -61,12 +63,14 @@ describe('POST /api/admin/reviews/moderation-sync', () => {
       reviewId: 'r1',
       status: 'REJECTED',
       channel: 'TELEGRAM',
+      correlationId: 'corr-1',
     });
     expect(body).toEqual({
       success: true,
       status: 'REJECTED',
       reason: 'updated',
       message: 'Отзыв отклонён.',
+      syncWarnings: ['telegram_text:40'],
     });
   });
 });

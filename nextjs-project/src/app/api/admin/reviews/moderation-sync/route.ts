@@ -19,6 +19,7 @@ export async function POST(request: Request) {
         success: false,
         reason: 'unauthorized',
         message: 'Доступ только для администраторов.',
+        syncWarnings: [],
       },
       { status: 401 }
     );
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
   const bodySchema = z.object({
     reviewId: z.string().min(1),
     status: z.enum(['APPROVED', 'REJECTED']),
+    correlationId: z.string().min(1).optional(),
   });
 
   let body: z.infer<typeof bodySchema>;
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
         success: false,
         reason: 'invalid',
         message: 'Ошибка: неверные данные кнопки.',
+        syncWarnings: [],
       },
       { status: 400 }
     );
@@ -47,6 +50,7 @@ export async function POST(request: Request) {
     reviewId: body.reviewId,
     status: body.status,
     channel: 'TELEGRAM',
+    correlationId: body.correlationId,
   });
   return NextResponse.json(result, { status: result.reason === 'error' ? 500 : 200 });
 }

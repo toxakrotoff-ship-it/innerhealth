@@ -26,7 +26,7 @@ describe('moderateReviewAndSync', () => {
       text: 'Review',
     } as Awaited<ReturnType<typeof reviewService.findReviewById>>);
     vi.mocked(reviewService.updateReview).mockResolvedValue({ id: 'r1' } as never);
-    vi.mocked(syncReviewModerationMessages).mockResolvedValue(undefined);
+    vi.mocked(syncReviewModerationMessages).mockResolvedValue({ warnings: [] });
 
     const result = await moderateReviewAndSync({
       reviewId: 'r1',
@@ -39,9 +39,14 @@ describe('moderateReviewAndSync', () => {
       status: 'REJECTED',
       reason: 'updated',
       message: 'Отзыв отклонён.',
+      syncWarnings: [],
     });
     expect(reviewService.updateReview).toHaveBeenCalledWith('r1', { status: 'REJECTED' });
-    expect(syncReviewModerationMessages).toHaveBeenCalledWith({ reviewId: 'r1', status: 'REJECTED' });
+    expect(syncReviewModerationMessages).toHaveBeenCalledWith({
+      reviewId: 'r1',
+      status: 'REJECTED',
+      correlationId: undefined,
+    });
   });
 
   it('returns already moderated for non-pending review', async () => {
@@ -63,6 +68,7 @@ describe('moderateReviewAndSync', () => {
       status: 'APPROVED',
       reason: 'already_moderated',
       message: 'Отзыв уже промодерирован.',
+      syncWarnings: [],
     });
     expect(reviewService.updateReview).not.toHaveBeenCalled();
     expect(syncReviewModerationMessages).not.toHaveBeenCalled();
@@ -81,8 +87,40 @@ describe('moderateReviewAndSync', () => {
       success: false,
       reason: 'not_found',
       message: 'Отзыв не найден.',
+      syncWarnings: [],
     });
     expect(reviewService.updateReview).not.toHaveBeenCalled();
     expect(syncReviewModerationMessages).not.toHaveBeenCalled();
+  });
+
+  it('returns success with sync warnings when review status changed but channel updates partially failed', async () => {
+    vi.mocked(reviewService.findReviewById).mockResolvedValue({
+      id: 'r1',
+      status: 'PENDING',
+      authorName: 'Test',
+      text: 'Review',
+    } as Awaited<ReturnType<typeof reviewService.findReviewById>>);
+    vi.mocked(reviewService.updateReview).mockResolvedValue({ id: 'r1' } as never);
+    vi.mocked(syncReviewModerationMessages).mockResolvedValue({ warnings: ['telegram_text:10'] });
+
+    const result = await moderateReviewAndSync({
+      reviewId: 'r1',
+      status: 'APPROVED',
+      channel: 'TELEGRAM',
+      correlationId: 'corr-1',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      status: 'APPROVED',
+      reason: 'updated',
+      message: 'Отзыв размещён на сайте.',
+      syncWarnings: ['telegram_text:10'],
+    });
+    expect(syncReviewModerationMessages).toHaveBeenCalledWith({
+      reviewId: 'r1',
+      status: 'APPROVED',
+      correlationId: 'corr-1',
+    });
   });
 });

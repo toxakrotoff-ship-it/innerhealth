@@ -7,9 +7,20 @@ import { getMaxBotConfig } from '@/lib/max/max-config';
 interface SyncInput {
   reviewId: string;
   status: 'APPROVED' | 'REJECTED';
+  correlationId?: string;
 }
 
 const EXTERNAL_SYNC_TIMEOUT_MS = 5_000;
+
+export interface ReviewModerationSyncResult {
+  warnings: string[];
+}
+
+function isIgnorableTelegramEditError(status: number, body: string): boolean {
+  if (status !== 400) return false;
+  const normalized = body.toLowerCase();
+  return normalized.includes('message is not modified');
+}
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = EXTERNAL_SYNC_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
@@ -39,15 +50,15 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs = EXTERNAL_SYNC_TIM
   }
 }
 
-async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
+async function syncTelegramReviewModeration(input: SyncInput): Promise<string[]> {
   const token = await settingsService.getTelegramBotToken();
-  if (!token) return;
+  if (!token) return [];
   const rows = await reviewModerationMessageService.listReviewModerationMessages(input.reviewId);
   const telegramRows = rows.filter((r) => r.channel === 'TELEGRAM');
-  if (telegramRows.length === 0) return;
+  if (telegramRows.length === 0) return [];
 
   const review = await reviewService.findReviewById(input.reviewId);
-  if (!review) return;
+  if (!review) return [];
 
   const TELEGRAM_API = 'https://api.telegram.org';
   const label = input.status === 'APPROVED' ? '✅ Отзыв размещён' : '❌ Отзыв отклонён';
@@ -61,6 +72,7 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
     '',
     `ID: <code>${review.id}</code>`,
   ].join('\n').slice(0, 4096);
+  const warnings: string[] = [];
 
   await Promise.all(
     telegramRows.map(async (row) => {
@@ -82,8 +94,10 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
 
       const replyMarkupResult = results[0];
       if (replyMarkupResult.status === 'rejected') {
+        warnings.push(`telegram_reply_markup:${row.messageId}`);
         console.error('[review-moderation-sync] telegram reply markup update failed', {
           channel: 'TELEGRAM',
+          correlationId: input.correlationId,
           reviewId: input.reviewId,
           targetStatus: input.status,
           recipientId: chatId,
@@ -92,21 +106,27 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
         });
       } else if (!replyMarkupResult.value.ok) {
         const errorBody = await replyMarkupResult.value.text().catch(() => '');
-        console.error('[review-moderation-sync] telegram reply markup update not ok', {
-          channel: 'TELEGRAM',
-          reviewId: input.reviewId,
-          targetStatus: input.status,
-          recipientId: chatId,
-          messageId: row.messageId,
-          httpStatus: replyMarkupResult.value.status,
-          body: errorBody.slice(0, 300),
-        });
+        if (!isIgnorableTelegramEditError(replyMarkupResult.value.status, errorBody)) {
+          warnings.push(`telegram_reply_markup:${row.messageId}`);
+          console.error('[review-moderation-sync] telegram reply markup update not ok', {
+            channel: 'TELEGRAM',
+            correlationId: input.correlationId,
+            reviewId: input.reviewId,
+            targetStatus: input.status,
+            recipientId: chatId,
+            messageId: row.messageId,
+            httpStatus: replyMarkupResult.value.status,
+            body: errorBody.slice(0, 300),
+          });
+        }
       }
 
       const textResult = results[1];
       if (textResult.status === 'rejected') {
+        warnings.push(`telegram_text:${row.messageId}`);
         console.error('[review-moderation-sync] telegram text update failed', {
           channel: 'TELEGRAM',
+          correlationId: input.correlationId,
           reviewId: input.reviewId,
           targetStatus: input.status,
           recipientId: chatId,
@@ -115,30 +135,36 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
         });
       } else if (!textResult.value.ok) {
         const errorBody = await textResult.value.text().catch(() => '');
-        console.error('[review-moderation-sync] telegram text update not ok', {
-          channel: 'TELEGRAM',
-          reviewId: input.reviewId,
-          targetStatus: input.status,
-          recipientId: chatId,
-          messageId: row.messageId,
-          httpStatus: textResult.value.status,
-          body: errorBody.slice(0, 300),
-        });
+        if (!isIgnorableTelegramEditError(textResult.value.status, errorBody)) {
+          warnings.push(`telegram_text:${row.messageId}`);
+          console.error('[review-moderation-sync] telegram text update not ok', {
+            channel: 'TELEGRAM',
+            correlationId: input.correlationId,
+            reviewId: input.reviewId,
+            targetStatus: input.status,
+            recipientId: chatId,
+            messageId: row.messageId,
+            httpStatus: textResult.value.status,
+            body: errorBody.slice(0, 300),
+          });
+        }
       }
     })
   );
+
+  return warnings;
 }
 
-async function syncMaxReviewModeration(input: SyncInput): Promise<void> {
+async function syncMaxReviewModeration(input: SyncInput): Promise<string[]> {
   const config = await getMaxBotConfig();
-  if (!config.token) return;
+  if (!config.token) return [];
   const bot = new Bot(config.token);
   const rows = await reviewModerationMessageService.listReviewModerationMessages(input.reviewId);
   const maxRows = rows.filter((r) => r.channel === 'MAX');
-  if (maxRows.length === 0) return;
+  if (maxRows.length === 0) return [];
 
   const review = await reviewService.findReviewById(input.reviewId);
-  if (!review) return;
+  if (!review) return [];
 
   const label = input.status === 'APPROVED' ? '✅ Отзыв размещён' : '❌ Отзыв отклонён';
   const textPreview = review.text.length > 300 ? review.text.slice(0, 297) + '…' : review.text;
@@ -151,6 +177,7 @@ async function syncMaxReviewModeration(input: SyncInput): Promise<void> {
     '',
     `ID: \`${review.id}\``,
   ].join('\n');
+  const warnings: string[] = [];
 
   await Promise.all(
     maxRows.map(async (row) => {
@@ -163,8 +190,10 @@ async function syncMaxReviewModeration(input: SyncInput): Promise<void> {
           })
         );
       } catch (error) {
+        warnings.push(`max_message:${row.messageId}`);
         console.error('[review-moderation-sync] max message update failed', {
           channel: 'MAX',
+          correlationId: input.correlationId,
           reviewId: input.reviewId,
           targetStatus: input.status,
           recipientId: row.recipientId,
@@ -174,8 +203,16 @@ async function syncMaxReviewModeration(input: SyncInput): Promise<void> {
       }
     })
   );
+
+  return warnings;
 }
 
-export async function syncReviewModerationMessages(input: SyncInput): Promise<void> {
-  await Promise.all([syncTelegramReviewModeration(input), syncMaxReviewModeration(input)]);
+export async function syncReviewModerationMessages(input: SyncInput): Promise<ReviewModerationSyncResult> {
+  const [telegramWarnings, maxWarnings] = await Promise.all([
+    syncTelegramReviewModeration(input),
+    syncMaxReviewModeration(input),
+  ]);
+  return {
+    warnings: [...telegramWarnings, ...maxWarnings],
+  };
 }
