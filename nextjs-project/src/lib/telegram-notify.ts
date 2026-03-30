@@ -132,6 +132,58 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
 }
 
+export async function notifyTelegramOrderStatusForUser(payload: {
+  userId: string;
+  orderId: string;
+  status: 'paid' | 'canceled';
+}): Promise<void> {
+  const token = await settingsService.getTelegramBotToken();
+  if (!token) return;
+  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId);
+  if (!whitelist?.telegramUserId) return;
+
+  const statusLine = payload.status === 'paid' ? '✅ <b>Заказ оплачен</b>' : '❌ <b>Платёж отменён</b>';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const lines = [
+    statusLine,
+    `ID: <code>${escapeHtml(payload.orderId)}</code>`,
+    orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
+  ].filter(Boolean);
+  await sendMessage(token, whitelist.telegramUserId, lines.join('\n')).catch(() => {});
+}
+
+export async function notifyTelegramCdekTrackForUser(payload: {
+  userId: string;
+  orderId: string;
+  trackNumber: string;
+}): Promise<void> {
+  const token = await settingsService.getTelegramBotToken();
+  if (!token) return;
+  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId);
+  if (!whitelist?.telegramUserId) return;
+
+  const track = payload.trackNumber.trim();
+  if (!track) return;
+  const trackUrl = `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(track)}`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const lines = [
+    '📦 <b>CDEK: трек-номер сформирован</b>',
+    `Заказ: <code>${escapeHtml(payload.orderId)}</code>`,
+    `Трек: <code>${escapeHtml(track)}</code>`,
+    `Отследить: ${escapeHtml(trackUrl)}`,
+    orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
+  ].filter(Boolean);
+  await sendMessage(token, whitelist.telegramUserId, lines.join('\n')).catch(() => {});
+}
+
 export interface FormNotifyPayload {
   formName: string;
   fields: Record<string, string>;

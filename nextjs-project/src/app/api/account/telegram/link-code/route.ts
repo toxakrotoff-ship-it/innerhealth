@@ -12,14 +12,11 @@ function generateCode(): string {
   return randomBytes(CODE_BYTES).toString('hex');
 }
 
-/** POST: создать одноразовый код привязки и вернуть ссылку на бота (PARTNER only). */
+/** POST: создать одноразовый код привязки и вернуть ссылку на бота (auth user). */
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'PARTNER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const token = await settingsService.getTelegramBotToken();

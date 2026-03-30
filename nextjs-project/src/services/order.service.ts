@@ -16,7 +16,7 @@ const orderAdminInclude = {
 export async function findOrderForWebhook(orderId: string) {
   return prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, status: true, yookassaPaymentId: true },
+    select: { id: true, status: true, yookassaPaymentId: true, userId: true },
   });
 }
 

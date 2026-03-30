@@ -3,14 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as telegramService from '@/services/telegram.service';
 
-/** GET: статус привязки Telegram для текущего пользователя (PARTNER only). */
+/** GET: статус привязки Telegram для текущего пользователя (auth user). */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (session.user.role !== 'PARTNER') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {

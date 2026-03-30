@@ -142,6 +142,58 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
   }
 }
 
+export async function notifyMaxOrderStatusForUser(payload: {
+  userId: string;
+  orderId: string;
+  status: 'paid' | 'canceled';
+  brandId?: BrandId;
+}): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const link = await maxService.findMaxWhitelistByUserId(payload.userId);
+  if (!link?.maxUserId) return;
+
+  const statusLine = payload.status === 'paid' ? '✅ **Заказ оплачен**' : '❌ **Платёж отменён**';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const lines = [
+    statusLine,
+    `ID: \`${escapeHtml(payload.orderId)}\``,
+    orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
+  ].filter(Boolean);
+  await sendToUsers([link.maxUserId], lines.join('\n'), scope);
+}
+
+export async function notifyMaxCdekTrackForUser(payload: {
+  userId: string;
+  orderId: string;
+  trackNumber: string;
+  brandId?: BrandId;
+}): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const link = await maxService.findMaxWhitelistByUserId(payload.userId);
+  if (!link?.maxUserId) return;
+
+  const track = payload.trackNumber.trim();
+  if (!track) return;
+  const trackUrl = `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(track)}`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const lines = [
+    '📦 **CDEK: трек-номер сформирован**',
+    `Заказ: \`${escapeHtml(payload.orderId)}\``,
+    `Трек: \`${escapeHtml(track)}\``,
+    `Отследить: ${escapeHtml(trackUrl)}`,
+    orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
+  ].filter(Boolean);
+  await sendToUsers([link.maxUserId], lines.join('\n'), scope);
+}
+
 export async function notifyMaxForm(payload: {
   formName: string;
   fields: Record<string, string>;

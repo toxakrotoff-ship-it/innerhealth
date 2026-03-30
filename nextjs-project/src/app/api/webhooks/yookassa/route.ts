@@ -3,6 +3,8 @@ import { createCdekOrder } from '@/lib/cdek'
 import { getYookassaPayment } from '@/lib/yookassa'
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
+import { notifyTelegramOrderStatusForUser, notifyTelegramCdekTrackForUser } from '@/lib/telegram-notify'
+import { notifyMaxOrderStatusForUser, notifyMaxCdekTrackForUser } from '@/lib/max-notify'
 import { sendCustomerOrderPaidEmail } from '@/lib/email'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
@@ -115,8 +117,13 @@ export async function POST(request: Request) {
     }
 
     await orderService.updateOrderStatus(orderId, 'paid')
+    if (order.userId) {
+      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'paid' })
+      void notifyMaxOrderStatusForUser({ userId: order.userId, orderId, status: 'paid', brandId: orderBrandId })
+    }
 
     const orderWithShipping = await orderService.findOrderWithShipping(orderId)
+    const previousTrackNumber = orderWithShipping?.cdekTrackNumber ?? null
     const isCdek =
       orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_pvz' ||
       orderWithShipping?.shippingInfo?.deliveryMethod === 'cdek_door'
@@ -142,6 +149,16 @@ export async function POST(request: Request) {
       if (lastError) {
         await orderService.updateOrder(orderId, { cdekOrderError: lastError })
         console.error('[webhook/yookassa] CDEK order create failed after retries', orderId, lastError)
+      }
+
+      // If we received track number during CDEK creation, notify user once.
+      if (order.userId) {
+        const updatedOrder = await orderService.findOrderWithShipping(orderId)
+        const newTrackNumber = updatedOrder?.cdekTrackNumber ?? null
+        if (!previousTrackNumber && newTrackNumber) {
+          void notifyTelegramCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber })
+          void notifyMaxCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
+        }
       }
 
       // Customer "paid" email (includes CDEK track number if already known).
@@ -176,6 +193,10 @@ export async function POST(request: Request) {
     }
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
     await orderService.updateOrderStatus(orderId, 'canceled')
+    if (order.userId) {
+      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled' })
+      void notifyMaxOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled', brandId: orderBrandId })
+    }
   }
 
   return NextResponse.json({ ok: true })

@@ -5,6 +5,8 @@ import { getAccountDashboard } from '@/services/account.service'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { headers } from 'next/headers'
 import { resolveBrand } from '@/lib/brand/brand'
+import { AccountTelegramBlock } from './account-telegram-block'
+import { AccountMaxBlock } from './account-max-block'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +33,8 @@ export default async function AccountPage() {
           totalSpent={dashboard.stats.totalSpent}
           userRole={session.user.role}
         />
+        <AccountTelegramBlock />
+        <AccountMaxBlock />
       </div>
     </AdaptiveContainer>
   )

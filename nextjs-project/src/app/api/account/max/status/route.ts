@@ -7,8 +7,6 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (session.user.role !== 'PARTNER')
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
     const whitelist = await maxService.findMaxWhitelistStatusByUserId(session.user.id);
