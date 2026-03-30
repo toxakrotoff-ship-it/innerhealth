@@ -40,11 +40,14 @@ async function sendToUsers(
       return null;
     });
     if (message && typeof message === 'object') {
-      // message.body.mid exists in MAX API types
-      const mid =
-        'body' in message && message.body && typeof message.body === 'object' && 'mid' in message.body
-          ? String((message.body as { mid?: unknown }).mid ?? '')
-          : '';
+      const anyMessage = message as unknown as Record<string, unknown>;
+      const body = anyMessage.body as Record<string, unknown> | undefined;
+      const nestedMessage = anyMessage.message as Record<string, unknown> | undefined;
+      const nestedBody = (nestedMessage?.body as Record<string, unknown> | undefined) ?? undefined;
+      const midCandidate =
+        (body?.mid ?? nestedBody?.mid ?? anyMessage.mid ?? (nestedMessage as unknown as { mid?: unknown } | undefined)?.mid) ??
+        '';
+      const mid = typeof midCandidate === 'string' ? midCandidate : String(midCandidate);
       if (mid) {
         if (options?.reviewId) {
           await reviewModerationMessageService
@@ -54,7 +57,15 @@ async function sendToUsers(
               recipientId: userId,
               messageId: mid,
             })
-            .catch(() => {});
+            .catch((error) => {
+              console.error('[max-notify] failed to store moderation message id', {
+                channel: 'MAX',
+                reviewId: options.reviewId,
+                recipientId: userId,
+                messageId: mid,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
         }
       }
     }

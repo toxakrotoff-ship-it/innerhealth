@@ -195,6 +195,22 @@ async function setReviewStatus(reviewId: string, status: 'approved' | 'rejected'
   }
 }
 
+async function syncModerationAcrossChannels(
+  reviewId: string,
+  status: 'APPROVED' | 'REJECTED'
+): Promise<void> {
+  try {
+    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    await fetchWithTimeout(`${base}/api/admin/reviews/moderation-sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
+      body: JSON.stringify({ reviewId, status }),
+    }).catch(() => {});
+  } catch (e) {
+    console.error('[bot] moderation sync error:', e instanceof Error ? e.message : e);
+  }
+}
+
 async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
   try {
@@ -301,6 +317,7 @@ async function run(): Promise<void> {
               const result = await setReviewStatus(reviewId, 'approved');
               if (result.success) {
                 await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
+                void syncModerationAcrossChannels(reviewId, 'APPROVED');
                 if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
                   const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
                   await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n✅ Размещено на сайте.');
@@ -318,6 +335,7 @@ async function run(): Promise<void> {
               const result = await setReviewStatus(reviewId, 'rejected');
               if (result.success) {
                 await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
+                void syncModerationAcrossChannels(reviewId, 'REJECTED');
                 if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
                   const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
                   await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n❌ Отклонён.');

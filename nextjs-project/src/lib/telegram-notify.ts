@@ -212,7 +212,15 @@ export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
               recipientId: chatId,
               messageId: String(messageId),
             })
-            .catch(() => {});
+            .catch((error) => {
+              console.error('[telegram-notify] failed to store moderation message id', {
+                channel: 'TELEGRAM',
+                reviewId,
+                recipientId: chatId,
+                messageId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
         }
       }
     });
