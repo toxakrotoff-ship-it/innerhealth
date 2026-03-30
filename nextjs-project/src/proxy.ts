@@ -10,7 +10,7 @@ function getAdminSecretPath(): string {
   return process.env.ADMIN_SECRET_PATH || 'admin'
 }
 
-/** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats, reviews PATCH). */
+/** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats, review moderation). */
 function isTelegramServiceRequest(request: Request): boolean {
   const pathname = new URL(request.url).pathname
   const secret = process.env[SERVICE_SECRET_ENV]
@@ -20,6 +20,7 @@ function isTelegramServiceRequest(request: Request): boolean {
   // Разрешаем только известные эндпоинты бота
   if (pathname.startsWith('/api/admin/telegram/')) return true
   if (request.method === 'PATCH' && /^\/api\/admin\/reviews\/[^/]+\/?$/.test(pathname)) return true
+  if (request.method === 'POST' && pathname === '/api/admin/reviews/moderation-sync') return true
   return false
 }
 
@@ -130,7 +131,7 @@ const proxyWithAuth = withAuth(proxyHandler, {
       const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
       const isAdminApi = pathname.startsWith('/api/admin')
       if (!isAdminPath && !isAdminApi) return true
-      return !!token
+      return token?.role === 'ADMIN'
     },
   },
 })
