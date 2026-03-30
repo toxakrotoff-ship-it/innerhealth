@@ -2,6 +2,7 @@ import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
+import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
 
 interface MaxAttachmentRequest {
@@ -22,21 +23,41 @@ async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | 
 async function sendToUsers(
   userIds: string[],
   text: string,
-  options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[] }
+  options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[]; reviewId?: string }
 ): Promise<void> {
   const bot = await getMaxBot(options);
   if (!bot || userIds.length === 0) return;
   for (const userId of userIds) {
     const id = Number.parseInt(userId, 10);
     if (!Number.isFinite(id)) continue;
-    await bot.api
+    const message = await bot.api
       .sendMessageToUser(id, text, {
         format: 'markdown',
         attachments: options?.attachments as unknown as never,
       })
       .catch((error) => {
       console.error('[max-notify] sendMessageToUser failed', userId, error);
+      return null;
     });
+    if (message && typeof message === 'object') {
+      // message.body.mid exists in MAX API types
+      const mid =
+        'body' in message && message.body && typeof message.body === 'object' && 'mid' in message.body
+          ? String((message.body as { mid?: unknown }).mid ?? '')
+          : '';
+      if (mid) {
+        if (options?.reviewId) {
+          await reviewModerationMessageService
+            .upsertReviewModerationMessage({
+              reviewId: options.reviewId,
+              channel: 'MAX',
+              recipientId: userId,
+              messageId: mid,
+            })
+            .catch(() => {});
+        }
+      }
+    }
   }
 }
 
@@ -215,6 +236,6 @@ export async function notifyMaxNewReview(payload: {
   await sendToUsers(
     whitelist.map((row) => row.maxUserId),
     messageText,
-    { attachments: [keyboard] }
+    { attachments: [keyboard], reviewId: payload.reviewId }
   );
 }

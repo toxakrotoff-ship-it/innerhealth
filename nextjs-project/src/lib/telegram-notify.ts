@@ -1,6 +1,7 @@
 import * as telegramService from '@/services/telegram.service';
 import * as userService from '@/services/user.service';
 import * as settingsService from '@/services/settings.service';
+import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
 
 const TELEGRAM_API = 'https://api.telegram.org';
@@ -20,8 +21,8 @@ async function sendMessage(
   chatId: string,
   text: string,
   options?: SendMessageOptions
-): Promise<void> {
-  if (!token) return;
+): Promise<number | null> {
+  if (!token) return null;
   const url = `${TELEGRAM_API}/bot${token}/sendMessage`;
   const body: Record<string, unknown> = {
     chat_id: chatId,
@@ -40,7 +41,13 @@ async function sendMessage(
   if (!res.ok) {
     const err = await res.text();
     console.error('[telegram-notify] sendMessage failed:', res.status, err);
+    return null;
   }
+  const data = (await res.json().catch(() => null)) as
+    | { ok?: boolean; result?: { message_id?: number } }
+    | null;
+  const messageId = data?.result?.message_id;
+  return typeof messageId === 'number' ? messageId : null;
 }
 
 function escapeHtml(s: string): string {
@@ -194,9 +201,19 @@ export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
         ],
       };
       for (const chatId of chatIds) {
-        await sendMessage(token, chatId, messageText, { replyMarkup }).catch((e) =>
+        const messageId = await sendMessage(token, chatId, messageText, { replyMarkup }).catch((e) =>
           console.error('[telegram-notify] review notify error:', e)
         );
+        if (messageId) {
+          await reviewModerationMessageService
+            .upsertReviewModerationMessage({
+              reviewId,
+              channel: 'TELEGRAM',
+              recipientId: chatId,
+              messageId: String(messageId),
+            })
+            .catch(() => {});
+        }
       }
     });
   }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));

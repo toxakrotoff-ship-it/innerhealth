@@ -611,6 +611,19 @@ model Review {
   @@index([status, createdAt])
 }
 
+/// Ссылки на сообщения модерации (Telegram/MAX), чтобы можно было убрать кнопки и обновить текст после модерации.
+model ReviewModerationMessage {
+  id          String   @id @default(cuid())
+  reviewId    String
+  channel     String
+  recipientId String
+  messageId   String
+  createdAt   DateTime @default(now())
+
+  @@index([reviewId])
+  @@unique([reviewId, channel, recipientId])
+}
+
 /// Заявки/лиды, импортированные из Тильды (CSV). Только нужные столбцы: Email, Name, Phone, Date, tranid, Input, Input_2, Комментарии, Адрес_доставки, Отзыв, Доставка, Промокод.
 model TildaLead {
   id              String   @id @default(cuid())
