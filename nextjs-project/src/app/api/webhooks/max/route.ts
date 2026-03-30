@@ -2,12 +2,22 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getMaxBotConfig } from '@/lib/max/max-config';
+import { notifyMaxConnection } from '@/lib/max-notify';
+import * as maxService from '@/services/max.service';
 
 const maxWebhookUpdateSchema = z.object({
   update_type: z.string(),
   chat_id: z.union([z.number(), z.string()]).optional(),
   payload: z.string().nullable().optional(),
+  user: z
+    .object({
+      user_id: z.union([z.number(), z.string()]),
+    })
+    .optional(),
 });
+
+const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
+const MAX_START_CODE_LENGTH = 64;
 
 function isSecureRequest(request: Request): boolean {
   if (process.env.NODE_ENV !== 'production') return true;
@@ -27,7 +37,9 @@ export async function POST(request: Request) {
   const config = await getMaxBotConfig();
   const webhookSecret = config.webhookSecret;
   if (webhookSecret) {
-    const requestSecret = request.headers.get('x-max-webhook-secret')?.trim();
+    // MAX sends this header when `secret` is set on subscription.
+    // Docs name: X-Max-Bot-Api-Secret
+    const requestSecret = request.headers.get('x-max-bot-api-secret')?.trim();
     if (!requestSecret || requestSecret !== webhookSecret)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -36,6 +48,16 @@ export async function POST(request: Request) {
   const parsed = maxWebhookUpdateSchema.safeParse(payload);
   if (!parsed.success)
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+
+  if (parsed.data.update_type === 'bot_started') {
+    const codeRaw = parsed.data.payload ?? '';
+    const safeCode = codeRaw.slice(0, MAX_START_CODE_LENGTH);
+    const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
+    if (safeCode && VALID_CODE_REGEX.test(safeCode) && maxUserId) {
+      const userId = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
+      if (userId) void notifyMaxConnection({ userId, maxUserId });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
