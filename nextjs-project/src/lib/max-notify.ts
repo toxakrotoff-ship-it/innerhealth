@@ -31,7 +31,7 @@ async function sendToUsers(
     if (!Number.isFinite(id)) continue;
     await bot.api
       .sendMessageToUser(id, text, {
-        format: 'html',
+        format: 'markdown',
         attachments: options?.attachments as unknown as never,
       })
       .catch((error) => {
@@ -64,19 +64,19 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
   const whitelist = await maxService.getMaxWhitelist();
   const adminUserIds = whitelist.map((row) => row.maxUserId);
   const lines: string[] = [
-    '<b>Новый заказ</b>',
+    '**Новый заказ**',
     `ID: ${escapeHtml(payload.orderId)}`,
     '',
-    '<b>Состав:</b>',
+    '**Состав:**',
     ...payload.items.map(
       (item) =>
         `• ${escapeHtml(item.title)} — ${item.quantity} × ${item.price.toFixed(0)} ₽ = ${(item.quantity * item.price).toFixed(0)} ₽`
     ),
     '',
-    `Итого: <b>${payload.total.toFixed(0)} ₽</b>`,
+    `Итого: **${payload.total.toFixed(0)} ₽**`,
     payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
     '',
-    '<b>Доставка:</b>',
+    '**Доставка:**',
     `ФИО: ${escapeHtml(payload.shipping.fullName)}`,
     `Телефон: ${escapeHtml(payload.shipping.phone)}`,
     `Email: ${escapeHtml(payload.shipping.email)}`,
@@ -90,10 +90,10 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     if (partnerMaxUserId) {
       const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
       const partnerText =
-        `💰 <b>Заказ по вашему промокоду</b>\n\n` +
+        `💰 **Заказ по вашему промокоду**\n\n` +
         `Промокод: ${promoLabel}\n` +
         `Заказ ID: ${escapeHtml(payload.orderId)}\n` +
-        `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
+        `Сумма: **${payload.total.toFixed(0)} ₽**`;
       await sendToUsers([partnerMaxUserId], partnerText, scope);
     }
   }
@@ -102,9 +102,9 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId);
     if (customerLink) {
       const customerText =
-        `✅ <b>Ваш заказ принят</b>\n\n` +
+        `✅ **Ваш заказ принят**\n\n` +
         `Номер: ${escapeHtml(payload.orderId)}\n` +
-        `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
+        `Сумма: **${payload.total.toFixed(0)} ₽**`;
       await sendToUsers([customerLink.maxUserId], customerText, scope);
     }
   }
@@ -116,7 +116,7 @@ export async function notifyMaxForm(payload: {
 }): Promise<void> {
   const whitelist = await maxService.getMaxWhitelist();
   const lines: string[] = [
-    '<b>Новая заявка с сайта</b>',
+    '**Новая заявка с сайта**',
     `Форма: ${escapeHtml(payload.formName)}`,
     '',
     ...Object.entries(payload.fields).map(
@@ -136,8 +136,8 @@ export async function notifyMaxConnection(payload: {
     ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
     : payload.userId;
   const text =
-    '🔗 <b>Подключение MAX</b>\n\n' +
-    `Пользователь ${escapeHtml(label)} привязал уведомления (MAX user ID: <code>${escapeHtml(payload.maxUserId)}</code>).`;
+    '🔗 **Подключение MAX**\n\n' +
+    `Пользователь ${escapeHtml(label)} привязал уведомления (MAX user ID: \`${escapeHtml(payload.maxUserId)}\`).`;
   await sendToUsers(whitelist.map((row) => row.maxUserId), text);
 }
 
@@ -149,9 +149,9 @@ export async function notifyMaxInfraAlert(payload: {
   const severityLabel =
     payload.severity === 'critical' ? 'CRITICAL' : payload.severity === 'warn' ? 'WARN' : 'INFO';
   const lines: string[] = [
-    '🛠️ <b>Infra alert</b>',
-    `Severity: <b>${escapeHtml(severityLabel)}</b>`,
-    `Kind: <code>${escapeHtml(payload.kind)}</code>`,
+    '🛠️ **Infra alert**',
+    `Severity: **${escapeHtml(severityLabel)}**`,
+    `Kind: \`${escapeHtml(payload.kind)}\``,
     '',
     escapeHtml(payload.message),
   ];
@@ -171,7 +171,7 @@ export async function notifyMaxPaymentError(payload: {
   const totalLine =
     payload.total !== undefined ? `Сумма: ${payload.total.toFixed(0)} ₽. ` : '';
   const text = [
-    '⚠️ <b>Ошибка ЮKassa</b>',
+    '⚠️ **Ошибка ЮKassa**',
     `Не удалось связаться с платёжной системой (${escapeHtml(contextLabel)}).`,
     '',
     `Заказ: ${escapeHtml(payload.orderId)}. ${totalLine}Ошибка: ${escapeHtml(payload.errorMessage.slice(0, 300))}`,
@@ -192,12 +192,12 @@ export async function notifyMaxNewReview(payload: {
   const approvePayload = `${callbackPrefix}approve_${payload.reviewId}`.slice(0, 256);
   const rejectPayload = `${callbackPrefix}reject_${payload.reviewId}`.slice(0, 256);
   const messageText = [
-    '📝 <b>Новый отзыв (на модерации)</b>',
+    '📝 **Новый отзыв (на модерации)**',
     `Автор: ${escapeHtml(payload.authorName)}`,
     '',
     escapeHtml(textPreview),
     '',
-    `ID: <code>${escapeHtml(payload.reviewId)}</code>`,
+    `ID: \`${escapeHtml(payload.reviewId)}\``,
     'Модерация: кнопками ниже или в админке.',
   ].join('\n');
   const baseUrl =
