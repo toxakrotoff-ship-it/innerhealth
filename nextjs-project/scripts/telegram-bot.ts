@@ -269,11 +269,16 @@ async function syncModerationAcrossChannels(
 ): Promise<void> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    await fetchWithTimeout(`${base}/api/admin/reviews/moderation-sync`, {
+    const res = await fetchWithTimeout(`${base}/api/admin/reviews/moderation-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
       body: JSON.stringify({ reviewId, status }),
     }).catch(() => {});
+    if (!res) return;
+    if (!res.ok) {
+      const raw = await res.text().catch(() => '');
+      console.error('[bot] moderation sync not ok:', res.status, raw.slice(0, 200));
+    }
   } catch (e) {
     console.error('[bot] moderation sync error:', e instanceof Error ? e.message : e);
   }
@@ -385,12 +390,7 @@ async function run(): Promise<void> {
               const result = await setReviewStatus(reviewId, 'approved');
               if (result.success) {
                 await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
-                void syncModerationAcrossChannels(reviewId, 'APPROVED');
-                if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
-                  const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
-                  await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n✅ Размещено на сайте.');
-                  await removeMessageReplyMarkup(cq.message.chat.id, cq.message.message_id);
-                }
+                await syncModerationAcrossChannels(reviewId, 'APPROVED');
               } else {
                 await answerCallbackQuery(cq.id, result.error || 'Ошибка');
               }
@@ -403,12 +403,7 @@ async function run(): Promise<void> {
               const result = await setReviewStatus(reviewId, 'rejected');
               if (result.success) {
                 await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
-                void syncModerationAcrossChannels(reviewId, 'REJECTED');
-                if (cq.message?.chat?.id != null && cq.message?.message_id != null) {
-                  const prev = (cq.message.text || '').replace('(на модерации)', '').trim();
-                  await editMessageText(cq.message.chat.id, cq.message.message_id, prev + '\n\n❌ Отклонён.');
-                  await removeMessageReplyMarkup(cq.message.chat.id, cq.message.message_id);
-                }
+                await syncModerationAcrossChannels(reviewId, 'REJECTED');
               } else {
                 await answerCallbackQuery(cq.id, result.error || 'Ошибка');
               }
