@@ -113,6 +113,16 @@ export function GroupedProductCard({ group, priority = false }: GroupedProductCa
                 </span>
               ) : null}
             </div>
+            {activeVariant.sku?.trim() && (
+              <p
+                className={cn(
+                  'desktop-microtext-scale mt-1 line-clamp-1',
+                  isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                )}
+              >
+                SKU: {activeVariant.sku.trim()}
+              </p>
+            )}
             <div className="mt-1.5 flex items-center gap-1.5">
               <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
                 {activeVariant.price.toLocaleString('ru-RU')} ₽

@@ -5,7 +5,7 @@ interface ProductRelatedCategoryLinkItem {
   id: string
   title: string
   slug: string | null
-  brand: string | null
+  sku: string | null
 }
 
 interface ProductRelatedCategoryLinksProps {
@@ -47,9 +47,7 @@ export function ProductRelatedCategoryLinks({
       </p>
       <ul className="flex flex-col gap-2 text-sm">
         {linked.map((item) => {
-          const anchor = item.brand?.trim()
-            ? `${item.title} (${item.brand.trim()})`
-            : item.title
+          const anchor = item.sku?.trim() ? `${item.title} (SKU: ${item.sku.trim()})` : item.title
           return (
             <li key={item.id}>
               <Link

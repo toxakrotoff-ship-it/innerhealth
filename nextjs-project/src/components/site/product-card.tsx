@@ -168,9 +168,14 @@ export function ProductCard({
             >
               {title}
             </h3>
-            {(brand || sku) && (
-              <p className={cn('desktop-microtext-scale mt-1 line-clamp-1', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
-                {brand ? `Бренд: ${brand}` : ''}{brand && sku ? ' • ' : ''}{sku ? `SKU: ${sku}` : ''}
+            {sku?.trim() && (
+              <p
+                className={cn(
+                  'desktop-microtext-scale mt-1 line-clamp-1',
+                  isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                )}
+              >
+                SKU: {sku.trim()}
               </p>
             )}
             <div className="mt-1.5 flex items-center gap-1.5">

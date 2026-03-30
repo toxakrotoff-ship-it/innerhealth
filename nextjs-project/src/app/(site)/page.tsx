@@ -613,6 +613,8 @@ export default async function HomePage() {
                         key={newProducts[0].id}
                         id={newProducts[0].id}
                         title={newProducts[0].title}
+                        brand={newProducts[0].brand}
+                        sku={newProducts[0].sku}
                         price={newProducts[0].price}
                         priceOld={newProducts[0].priceOld}
                         photo={newProducts[0].photo}
@@ -649,6 +651,8 @@ export default async function HomePage() {
                       key={p.id}
                       id={p.id}
                       title={p.title}
+                      brand={p.brand}
+                      sku={p.sku}
                       price={p.price}
                       priceOld={p.priceOld}
                       photo={p.photo}

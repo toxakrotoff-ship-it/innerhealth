@@ -21,17 +21,12 @@ import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
 
-function formatBrandLabel(brand: string): string {
-  if (brand === 'inner') return 'Inner Health'
-  if (brand === 'sprint-power') return 'Sprint Power'
-  return brand
-}
-
 interface ProductPageContentProps {
   product: {
     id: string
     title: string
     brand: string | null
+    sku: string | null
     description: string | null
     text: string | null
     price: number
@@ -190,8 +185,8 @@ export function ProductPageContent({
         <ProductMediaGallery title={product.title} photos={photos} />
         <div>
           <Heading1 className={isSprintTheme ? 'text-slate-100' : undefined}>{product.title}</Heading1>
-          {product.brand && (
-            <p className={`mt-2 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{formatBrandLabel(product.brand)}</p>
+          {product.sku?.trim() && (
+            <p className={`mt-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>SKU: {product.sku.trim()}</p>
           )}
           <div className="mt-3">
             <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${stock.className}`}>

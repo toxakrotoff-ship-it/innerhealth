@@ -9,6 +9,8 @@ import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 interface WishlistProduct {
   id: string
   title: string
+  brand: string | null
+  sku: string | null
   price: number
   priceOld: number | null
   photo: string | null
@@ -68,6 +70,8 @@ export function WishlistPageContent() {
               key={product.id}
               id={product.id}
               title={product.title}
+              brand={product.brand}
+              sku={product.sku}
               price={product.price}
               priceOld={product.priceOld}
               photo={product.photo}

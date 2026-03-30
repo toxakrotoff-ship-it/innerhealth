@@ -415,6 +415,7 @@ export async function getProductsForCart(productIds: string[], brandId?: BrandId
       id: true,
       title: true,
       brand: true,
+      sku: true,
       price: true,
       priceOld: true,
       photo: true,

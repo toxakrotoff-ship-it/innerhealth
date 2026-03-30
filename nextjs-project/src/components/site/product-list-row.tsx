@@ -7,7 +7,6 @@ import { ProductQuickView } from '@/components/site/product-quick-view';
 interface ProductListRowProps {
   id: string;
   title: string;
-  brand?: string | null;
   sku?: string | null;
   price: number;
   priceOld?: number | null;
@@ -22,7 +21,6 @@ interface ProductListRowProps {
 export function ProductListRow({
   id,
   title,
-  brand,
   sku,
   price,
   priceOld,
@@ -62,10 +60,9 @@ export function ProductListRow({
           <Link href={detailHref} className="text-base font-semibold text-text hover:text-action-blue transition-colors">
             {title}
           </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-            {brand && <span>Бренд: {brand}</span>}
-            {sku && <span>SKU: {sku}</span>}
-          </div>
+          {sku?.trim() && (
+            <div className="mt-1 text-xs text-gray-500">SKU: {sku.trim()}</div>
+          )}
           <div className="mt-2 flex items-center gap-2">
             <span className="text-lg font-semibold text-text">{price.toLocaleString('ru-RU')} ₽</span>
             {priceOld != null && priceOld > price && (

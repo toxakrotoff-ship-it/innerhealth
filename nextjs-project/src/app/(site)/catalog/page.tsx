@@ -326,7 +326,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     key={p.id}
                     id={p.id}
                     title={p.title}
-                    brand={p.brand}
                     sku={p.sku}
                     price={p.price}
                     priceOld={p.priceOld}
