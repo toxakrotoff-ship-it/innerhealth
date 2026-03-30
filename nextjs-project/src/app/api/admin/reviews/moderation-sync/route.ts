@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { syncReviewModerationMessages } from '@/lib/review-moderation-sync';
+import { moderateReviewAndSync } from '@/lib/review-moderation-action';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -14,7 +14,14 @@ function isServiceRequest(request: Request): boolean {
 
 export async function POST(request: Request) {
   if (!isServiceRequest(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      {
+        success: false,
+        reason: 'unauthorized',
+        message: 'Доступ только для администраторов.',
+      },
+      { status: 401 }
+    );
   }
 
   const bodySchema = z.object({
@@ -26,10 +33,20 @@ export async function POST(request: Request) {
   try {
     body = bodySchema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return NextResponse.json(
+      {
+        success: false,
+        reason: 'invalid',
+        message: 'Ошибка: неверные данные кнопки.',
+      },
+      { status: 400 }
+    );
   }
 
-  await syncReviewModerationMessages({ reviewId: body.reviewId, status: body.status });
-  return NextResponse.json({ ok: true });
+  const result = await moderateReviewAndSync({
+    reviewId: body.reviewId,
+    status: body.status,
+    channel: 'TELEGRAM',
+  });
+  return NextResponse.json(result, { status: result.reason === 'error' ? 500 : 200 });
 }
-

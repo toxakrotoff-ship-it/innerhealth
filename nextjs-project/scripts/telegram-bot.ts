@@ -58,32 +58,6 @@ function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Respo
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
-async function getWhitelistIds(): Promise<Set<string>> {
-  try {
-    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/telegram/whitelist`, {
-      headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
-    });
-    const raw = await res.text();
-    if (!res.ok) {
-      console.error('[bot] whitelist API not ok:', res.status, raw.slice(0, 200));
-      return new Set();
-    }
-    let data: { telegramUserIds?: string[] };
-    try {
-      data = JSON.parse(raw) as { telegramUserIds?: string[] };
-    } catch {
-      console.error('[bot] whitelist API invalid JSON:', raw.slice(0, 300));
-      return new Set();
-    }
-    const ids = Array.isArray(data.telegramUserIds) ? data.telegramUserIds : [];
-    return new Set(ids.slice(0, 1000).map((id) => String(id)));
-  } catch (e) {
-    console.error('[bot] getWhitelistIds error:', e instanceof Error ? e.name : e);
-    return new Set();
-  }
-}
-
 async function confirmLink(code: string, telegramUserId: string): Promise<{ success?: boolean; error?: string }> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
@@ -125,6 +99,19 @@ interface PartnerStatRow {
   partnerIncome: number;
 }
 
+interface TelegramBotCapabilities {
+  isLinked: boolean;
+  isAdmin: boolean;
+  isPartner: boolean;
+}
+
+interface TelegramReplyMarkup {
+  inline_keyboard?: Array<Array<{ text: string; callback_data: string }>>;
+  keyboard?: Array<Array<{ text: string }>>;
+  resize_keyboard?: boolean;
+  is_persistent?: boolean;
+}
+
 async function getPartnerStatsByTelegramUserId(
   telegramUserId: string
 ): Promise<{ stats: PartnerStatRow[] } | { error: string }> {
@@ -152,14 +139,114 @@ async function getPartnerStatsByTelegramUserId(
   }
 }
 
-async function sendMessage(chatId: string, text: string): Promise<void> {
+async function getTelegramCapabilities(
+  telegramUserId: string
+): Promise<TelegramBotCapabilities> {
+  try {
+    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const res = await fetchWithTimeout(
+      `${base}/api/telegram/bot-capabilities?telegramUserId=${encodeURIComponent(telegramUserId)}`,
+      { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
+    );
+    if (!res.ok) return { isLinked: false, isAdmin: false, isPartner: false };
+    const data = (await res.json()) as Partial<TelegramBotCapabilities>;
+    return {
+      isLinked: Boolean(data.isLinked),
+      isAdmin: Boolean(data.isAdmin),
+      isPartner: Boolean(data.isPartner),
+    };
+  } catch (e) {
+    console.error('[bot] getTelegramCapabilities error:', e instanceof Error ? e.name : e);
+    return { isLinked: false, isAdmin: false, isPartner: false };
+  }
+}
+
+function getTelegramAvailableCommands(capabilities: TelegramBotCapabilities): string[] {
+  const commands = ['/help', '/status'];
+  if (capabilities.isAdmin) commands.push('/promo');
+  if (capabilities.isPartner) commands.push('/stats');
+  return commands;
+}
+
+function buildTelegramReplyMarkup(capabilities: TelegramBotCapabilities): TelegramReplyMarkup {
+  const rows: Array<Array<{ text: string }>> = [[{ text: '/status' }, { text: '/help' }]];
+  const roleRow: Array<{ text: string }> = [];
+  if (capabilities.isAdmin) roleRow.push({ text: '/promo' });
+  if (capabilities.isPartner) roleRow.push({ text: '/stats' });
+  if (roleRow.length > 0) rows.push(roleRow);
+  return {
+    keyboard: rows,
+    resize_keyboard: true,
+    is_persistent: true,
+  };
+}
+
+function buildHelpTextForTelegram(capabilities: TelegramBotCapabilities): string {
+  if (!capabilities.isLinked) {
+    return [
+      '<b>Помощь</b>',
+      '',
+      'Вы пока не подключены к уведомлениям.',
+      '',
+      'Как подключиться:',
+      '1) Откройте сайт → профиль/настройки → «Подключить Telegram»',
+      '2) Перейдите по ссылке в бота и нажмите <b>Start</b>',
+      '',
+      'Команды:',
+      '• /status — проверить, подключены ли вы',
+      '• /help — помощь',
+    ].join('\n');
+  }
+
+  return [
+    '<b>Помощь</b>',
+    '',
+    'Вы подключены к уведомлениям.',
+    '',
+    'Команды:',
+    '• /status — статус подключения',
+    '• /help — помощь',
+    ...(capabilities.isAdmin ? ['• /promo — список промокодов'] : []),
+    ...(capabilities.isPartner ? ['• /stats — статистика по вашим промокодам'] : []),
+  ].join('\n');
+}
+
+function buildWelcomeTextForTelegram(capabilities: TelegramBotCapabilities): string {
+  return [
+    '✅ Вас подключили к уведомлениям.',
+    '',
+    'Доступные команды:',
+    ...getTelegramAvailableCommands(capabilities)
+      .filter((command) => command !== '/help')
+      .map((command) => `• ${command}`),
+  ].join('\n');
+}
+
+function buildUnknownCommandTextForTelegram(capabilities: TelegramBotCapabilities): string {
+  return `Неизвестная команда. Доступны: ${getTelegramAvailableCommands(capabilities).join(', ')}.`;
+}
+
+async function sendMessage(
+  chatId: string,
+  text: string,
+  options?: { replyMarkup?: TelegramReplyMarkup }
+): Promise<void> {
   const safeText = String(text).slice(0, 4096);
   const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
   try {
+    const body: Record<string, unknown> = {
+      chat_id: chatId,
+      text: safeText,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    };
+    if (options?.replyMarkup) {
+      body.reply_markup = options.replyMarkup;
+    }
     const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: safeText, parse_mode: 'HTML', disable_web_page_preview: true }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       console.error('[bot] sendMessage not ok:', res.status);
@@ -173,114 +260,45 @@ async function sendMessage(chatId: string, text: string): Promise<void> {
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
 
-async function buildHelpTextForTelegram(fromId: string): Promise<string> {
-  const whitelist = await getWhitelistIds();
-  if (!whitelist.has(fromId)) {
-    return [
-      '<b>Помощь</b>',
-      '',
-      'Вы пока не подключены к уведомлениям.',
-      '',
-      'Как подключиться:',
-      '1) Откройте сайт → профиль/настройки → «Подключить Telegram»',
-      '2) Перейдите по ссылке в бота и нажмите <b>Start</b>',
-      '',
-      'Команды:',
-      '• /status — проверить, подключены ли вы',
-    ].join('\n');
-  }
-
-  // Для партнёров доступна /stats. Не фейлим /help, если сервис недоступен.
-  let isPartner = false;
-  try {
-    const partnerStats = await getPartnerStatsByTelegramUserId(fromId);
-    isPartner = !('error' in partnerStats);
-  } catch {
-    isPartner = false;
-  }
-
-  const commands = [
-    '• /status — статус подключения',
-    '• /promo — список промокодов (админам)',
-    ...(isPartner ? ['• /stats — статистика по вашим промокодам (партнёрам)'] : ['• /stats — статистика (только партнёрам)']),
-  ];
-
-  return [
-    '<b>Помощь</b>',
-    '',
-    'Вы подключены к уведомлениям.',
-    '',
-    'Команды:',
-    ...commands,
-  ].join('\n');
-}
-
-async function buildWelcomeTextForTelegram(fromId: string): Promise<string> {
-  const partnerRes = await getPartnerStatsByTelegramUserId(fromId);
-  const isPartner = !('error' in partnerRes);
-  if (!isPartner) {
-    return [
-      '✅ Вас подключили к уведомлениям.',
-      '',
-      'Вы можете:',
-      '• /status — проверить подключение',
-      '• /promo — промокоды (для админов/модерации)',
-      '',
-      'Партнёрская статистика доступна командой /stats, если Telegram привязан в личном кабинете партнёра.',
-    ].join('\n');
-  }
-
-  return [
-    '✅ Вас подключили к уведомлениям.',
-    '',
-    'Вы можете:',
-    '• /status — проверить подключение',
-    '• /stats — статистика по вашим промокодам',
-    '',
-    'Админам доступна команда /promo.',
-  ].join('\n');
-}
-
-async function setReviewStatus(reviewId: string, status: 'approved' | 'rejected'): Promise<{ success: boolean; error?: string }> {
-  try {
-    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/reviews/${encodeURIComponent(reviewId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
-      body: JSON.stringify({ status }),
-    });
-    let data: { success?: boolean; error?: string };
-    try {
-      data = (await res.json()) as { success?: boolean; error?: string };
-    } catch {
-      return { success: false, error: res.status === 401 ? 'Неверный сервисный ключ' : 'Сервис недоступен' };
-    }
-    if (!res.ok) return { success: false, error: (data?.error && typeof data.error === 'string' ? data.error : 'Request failed') || 'Request failed' };
-    return { success: !!data.success, error: data.error };
-  } catch (e) {
-    console.error('[bot] setReviewStatus error:', e instanceof Error ? e.message : e);
-    return { success: false, error: 'Сервис недоступен' };
-  }
-}
-
-async function syncModerationAcrossChannels(
+async function setReviewStatus(
   reviewId: string,
   status: 'APPROVED' | 'REJECTED'
-): Promise<void> {
+): Promise<{ success: boolean; message: string }> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
     const res = await fetchWithTimeout(`${base}/api/admin/reviews/moderation-sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
       body: JSON.stringify({ reviewId, status }),
-    }).catch(() => {});
-    if (!res) return;
-    if (!res.ok) {
-      const raw = await res.text().catch(() => '');
-      console.error('[bot] moderation sync not ok:', res.status, raw.slice(0, 200));
+    });
+    let data:
+      | { success?: boolean; message?: string; reason?: string }
+      | undefined;
+    try {
+      data = (await res.json()) as { success?: boolean; message?: string; reason?: string };
+    } catch {
+      return {
+        success: false,
+        message: res.status === 401 ? 'Доступ только для администраторов.' : 'Сервис недоступен',
+      };
     }
+    if (!res.ok) {
+      console.error('[bot] moderation action not ok:', {
+        reviewId,
+        status,
+        httpStatus: res.status,
+        reason: data?.reason,
+      });
+    }
+    return {
+      success: Boolean(data?.success),
+      message: typeof data?.message === 'string' && data.message
+        ? data.message
+        : 'Ошибка. Попробуйте позже.',
+    };
   } catch (e) {
-    console.error('[bot] moderation sync error:', e instanceof Error ? e.message : e);
+    console.error('[bot] moderation action error:', e instanceof Error ? e.message : e);
+    return { success: false, message: 'Сервис недоступен' };
   }
 }
 
@@ -294,42 +312,6 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string): Prom
     });
   } catch (e) {
     console.error('[bot] answerCallbackQuery error:', e instanceof Error ? e.name : e);
-  }
-}
-
-async function editMessageText(chatId: number, messageId: number, text: string): Promise<void> {
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/editMessageText`;
-  try {
-    await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text: text.slice(0, 4096),
-        parse_mode: 'HTML',
-      }),
-    });
-  } catch (e) {
-    console.error('[bot] editMessageText error:', e instanceof Error ? e.name : e);
-  }
-}
-
-/** Убрать inline-кнопки у сообщения (после успешной модерации). */
-async function removeMessageReplyMarkup(chatId: number, messageId: number): Promise<void> {
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/editMessageReplyMarkup`;
-  try {
-    await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: { inline_keyboard: [] },
-      }),
-    });
-  } catch (e) {
-    console.error('[bot] removeMessageReplyMarkup error:', e instanceof Error ? e.name : e);
   }
 }
 
@@ -375,8 +357,8 @@ async function run(): Promise<void> {
         if (cq?.id != null && cq.from?.id != null && typeof cq.data === 'string') {
           try {
             const fromId = String(cq.from.id);
-            const whitelist = await getWhitelistIds();
-            if (!whitelist.has(fromId)) {
+            const capabilities = await getTelegramCapabilities(fromId);
+            if (!capabilities.isAdmin) {
               await answerCallbackQuery(cq.id, 'Доступ только для администраторов.');
               continue;
             }
@@ -387,26 +369,16 @@ async function run(): Promise<void> {
                 await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
                 continue;
               }
-              const result = await setReviewStatus(reviewId, 'approved');
-              if (result.success) {
-                await answerCallbackQuery(cq.id, 'Отзыв размещён на сайте.');
-                await syncModerationAcrossChannels(reviewId, 'APPROVED');
-              } else {
-                await answerCallbackQuery(cq.id, result.error || 'Ошибка');
-              }
+              const result = await setReviewStatus(reviewId, 'APPROVED');
+              await answerCallbackQuery(cq.id, result.message);
             } else if (data.startsWith(REVIEW_REJECT_PREFIX)) {
               const reviewId = data.slice(REVIEW_REJECT_PREFIX.length).trim();
               if (!reviewId) {
                 await answerCallbackQuery(cq.id, 'Ошибка: неверные данные кнопки.');
                 continue;
               }
-              const result = await setReviewStatus(reviewId, 'rejected');
-              if (result.success) {
-                await answerCallbackQuery(cq.id, 'Отзыв отклонён.');
-                await syncModerationAcrossChannels(reviewId, 'REJECTED');
-              } else {
-                await answerCallbackQuery(cq.id, result.error || 'Ошибка');
-              }
+              const result = await setReviewStatus(reviewId, 'REJECTED');
+              await answerCallbackQuery(cq.id, result.message);
             } else {
               await answerCallbackQuery(cq.id, 'Неизвестная кнопка.');
             }
@@ -443,8 +415,10 @@ async function run(): Promise<void> {
             }
             const result = await confirmLink(safeCode, fromId);
             if (result.success) {
-              const welcomeText = await buildWelcomeTextForTelegram(fromId);
-              await sendMessage(chatId, welcomeText).catch(() => {});
+              const capabilities = await getTelegramCapabilities(fromId);
+              await sendMessage(chatId, buildWelcomeTextForTelegram(capabilities), {
+                replyMarkup: buildTelegramReplyMarkup(capabilities),
+              }).catch(() => {});
             } else {
               const errMsg = result.error === 'Code expired' ? 'Код истёк. Создайте новую ссылку в админке (Профиль → Подключить Telegram).' : (result.error || 'Не удалось привязать. Попробуйте снова.');
               await sendMessage(chatId, errMsg).catch(() => {});
@@ -460,7 +434,10 @@ async function run(): Promise<void> {
 
         if (text === '/help') {
           try {
-            await sendMessage(chatId, await buildHelpTextForTelegram(fromId)).catch(() => {});
+            const capabilities = await getTelegramCapabilities(fromId);
+            await sendMessage(chatId, buildHelpTextForTelegram(capabilities), {
+              replyMarkup: buildTelegramReplyMarkup(capabilities),
+            }).catch(() => {});
           } catch (e) {
             console.error('[bot] /help error:', e instanceof Error ? e.message : e);
             await sendMessage(chatId, '⚠️ Не удалось показать справку. Попробуйте позже.').catch(() => {});
@@ -470,16 +447,18 @@ async function run(): Promise<void> {
 
         if (text === '/status' || text.toLowerCase() === 'status') {
           try {
-            const whitelist = await getWhitelistIds();
-            if (whitelist.has(fromId)) {
+            const capabilities = await getTelegramCapabilities(fromId);
+            if (capabilities.isLinked) {
               await sendMessage(
                 chatId,
-                '✅ Вы подключены к уведомлениям.\n\nВы получаете сообщения о новых заказах и заявках с сайта Inner Health.'
+                '✅ Вы подключены к уведомлениям.',
+                { replyMarkup: buildTelegramReplyMarkup(capabilities) }
               ).catch(() => {});
             } else {
               await sendMessage(
                 chatId,
-                '❌ Вы не подключены к уведомлениям.\n\nПодключите через админку: Профиль → Подключить Telegram → перейдите по ссылке и нажмите Start.'
+                '❌ Вы не подключены к уведомлениям.\n\nПодключите через админку: Профиль → Подключить Telegram → перейдите по ссылке и нажмите Start.',
+                { replyMarkup: buildTelegramReplyMarkup(capabilities) }
               ).catch(() => {});
             }
           } catch (e) {
@@ -493,14 +472,18 @@ async function run(): Promise<void> {
         }
 
         if (text === '/promo') {
-          const whitelist = await getWhitelistIds();
-          if (!whitelist.has(fromId)) {
-            await sendMessage(chatId, 'Доступ только для пользователей из списка уведомлений.').catch(() => {});
+          const capabilities = await getTelegramCapabilities(fromId);
+          if (!capabilities.isAdmin) {
+            await sendMessage(chatId, 'Доступ только для администраторов.', {
+              replyMarkup: buildTelegramReplyMarkup(capabilities),
+            }).catch(() => {});
             continue;
           }
           const promos = await getPromoStats();
           if (promos.length === 0) {
-            await sendMessage(chatId, 'Нет промокодов.').catch(() => {});
+            await sendMessage(chatId, 'Нет промокодов.', {
+              replyMarkup: buildTelegramReplyMarkup(capabilities),
+            }).catch(() => {});
             continue;
           }
           const lines = promos.map((p) => {
@@ -509,24 +492,38 @@ async function run(): Promise<void> {
             const code = typeof p.code === 'string' ? escapeHtml(p.code.slice(0, 50)) : '';
             return `${status} <code>${code}</code> — использований: ${Number(p.usedCount) || 0}${limit}`;
           });
-          await sendMessage(chatId, '<b>Промокоды</b>\n\n' + lines.join('\n')).catch(() => {});
+          await sendMessage(chatId, '<b>Промокоды</b>\n\n' + lines.join('\n'), {
+            replyMarkup: buildTelegramReplyMarkup(capabilities),
+          }).catch(() => {});
           continue;
         }
 
         if (text === '/stats' || text === '/mystats') {
+          const capabilities = await getTelegramCapabilities(fromId);
+          if (!capabilities.isPartner) {
+            await sendMessage(
+              chatId,
+              'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.',
+              { replyMarkup: buildTelegramReplyMarkup(capabilities) }
+            ).catch(() => {});
+            continue;
+          }
           const result = await getPartnerStatsByTelegramUserId(fromId);
           if ('error' in result) {
             await sendMessage(
               chatId,
               result.error === 'Not a partner or Telegram not linked'
                 ? 'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.'
-                : result.error
+                : result.error,
+              { replyMarkup: buildTelegramReplyMarkup(capabilities) }
             ).catch(() => {});
             continue;
           }
           const stats = result.stats;
           if (stats.length === 0) {
-            await sendMessage(chatId, 'У вас пока нет привязанных промокодов или статистики.').catch(() => {});
+            await sendMessage(chatId, 'У вас пока нет привязанных промокодов или статистики.', {
+              replyMarkup: buildTelegramReplyMarkup(capabilities),
+            }).catch(() => {});
             continue;
           }
           const totalOrders = stats.reduce((s, x) => s + x.ordersCount, 0);
@@ -540,12 +537,17 @@ async function run(): Promise<void> {
             `Оплачено заказов: <b>${totalOrders}</b>\n` +
             `Ваш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n` +
             lines.join('\n');
-          await sendMessage(chatId, header).catch(() => {});
+          await sendMessage(chatId, header, {
+            replyMarkup: buildTelegramReplyMarkup(capabilities),
+          }).catch(() => {});
           continue;
         }
 
         if (text.startsWith('/')) {
-          await sendMessage(chatId, 'Неизвестная команда. Доступны: /help, /start, /status, /promo, /stats (для партнёров).').catch(() => {});
+          const capabilities = await getTelegramCapabilities(fromId);
+          await sendMessage(chatId, buildUnknownCommandTextForTelegram(capabilities), {
+            replyMarkup: buildTelegramReplyMarkup(capabilities),
+          }).catch(() => {});
         }
       } catch (e) {
         console.error('Bot update error:', e);

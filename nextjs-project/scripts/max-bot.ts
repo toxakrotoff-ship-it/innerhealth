@@ -2,6 +2,15 @@ import 'dotenv/config';
 import { Bot } from '@maxhub/max-bot-api';
 import { decryptSettingValue, isEncryptedSettingValue } from '../src/lib/settings-encryption';
 import { prisma } from '../src/lib/prisma';
+import { getMaxBotUserCapabilities } from '@/lib/bot-user-capabilities';
+import {
+  buildHelpTextForMax,
+  buildMaxMenuAttachments,
+  buildUnknownCommandTextForMax,
+  buildWelcomeTextForMax,
+  resolveMaxMenuCommand,
+  type MaxMenuCommand,
+} from '@/lib/max-bot-menu';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -18,7 +27,8 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 interface MaxBotContextLike {
   user?: { user_id?: string | number };
   message?: { body?: { text?: string | null } | null } | null;
-  reply: (text: string) => Promise<unknown> | unknown;
+  callback?: { payload?: string | null } | null;
+  reply: (text: string, extra?: { format?: 'markdown' | 'html'; attachments?: unknown[] }) => Promise<unknown> | unknown;
 }
 
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -41,21 +51,6 @@ function checkRateLimit(userId: string): boolean {
   }
   entry.count += 1;
   return entry.count <= RATE_LIMIT_MAX_PER_USER;
-}
-
-async function getWhitelistIds(): Promise<Set<string>> {
-  if (!MAX_SERVICE_SECRET) return new Set();
-  try {
-    const base = MAX_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/max/whitelist`, {
-      headers: { 'X-Service-Key': MAX_SERVICE_SECRET },
-    });
-    const data = (await res.json()) as { maxUserIds?: string[] };
-    return new Set(Array.isArray(data.maxUserIds) ? data.maxUserIds.map(String) : []);
-  } catch (error) {
-    console.error('[max-bot] getWhitelistIds error:', error);
-    return new Set();
-  }
 }
 
 async function confirmLink(code: string, maxUserId: string): Promise<{ success?: boolean; error?: string }> {
@@ -115,69 +110,67 @@ async function getPartnerStats(maxUserId: string): Promise<{ stats: Array<{ code
   }
 }
 
-function buildHelpTextForMax(input: { isLinked: boolean; isPartner: boolean }): string {
-  if (!input.isLinked) {
-    return [
-      'Помощь',
-      '',
-      'Вы пока не подключены к уведомлениям.',
-      '',
-      'Как подключиться:',
-      '1) Откройте сайт → профиль/настройки → «Подключить MAX»',
-      '2) Перейдите по ссылке и нажмите Start',
-      '',
-      'Команды:',
-      '• /status — проверить, подключены ли вы',
-    ].join('\n');
+async function executeMaxCommand(
+  ctx: MaxBotContextLike,
+  maxUserId: string,
+  command: MaxMenuCommand
+): Promise<void> {
+  const capabilities = await getMaxBotUserCapabilities(maxUserId);
+  const attachments = buildMaxMenuAttachments(capabilities) as unknown[];
+
+  if (command === 'help') {
+    await ctx.reply(buildHelpTextForMax(capabilities), { format: 'markdown', attachments });
+    return;
   }
-
-  if (input.isPartner) {
-    return [
-      'Помощь',
-      '',
-      'Вы подключены к уведомлениям.',
-      '',
-      'Команды:',
-      '• /status — статус подключения',
-      '• /stats — статистика по вашим промокодам (партнёрам)',
-      '• /promo — промокоды (доступно, если вы в whitelist)',
-    ].join('\n');
+  if (command === 'status') {
+    await ctx.reply(
+      capabilities.isLinked
+        ? '✅ Вы подключены к уведомлениям.'
+        : '❌ Вы не подключены. Получите ссылку в админке/личном кабинете.',
+      { format: 'markdown', attachments }
+    );
+    return;
   }
-
-  return [
-    'Помощь',
-    '',
-    'Вы подключены к уведомлениям.',
-    '',
-    'Команды:',
-    '• /status — статус подключения',
-    '• /promo — промокоды (админам/модерации)',
-    '• /stats — недоступна, пока Telegram не привязан в личном кабинете партнёра',
-  ].join('\n');
-}
-
-function buildWelcomeTextForMax(input: { isPartner: boolean }): string {
-  if (input.isPartner) {
-    return [
-      '✅ Вас подключили к уведомлениям.',
-      '',
-      'Доступные команды:',
-      '• /status — проверить подключение',
-      '• /stats — статистика по вашим промокодам',
-      '',
-      'Админам также доступна команда /promo (список промокодов).',
-    ].join('\n');
+  if (command === 'promo') {
+    if (!capabilities.isAdmin) {
+      await ctx.reply('Доступ только для администраторов.', { format: 'markdown', attachments });
+      return;
+    }
+    const promos = await getPromoStats();
+    if (promos.length === 0) {
+      await ctx.reply('Нет промокодов.', { format: 'markdown', attachments });
+      return;
+    }
+    const lines = promos.map((promo) => {
+      const limit = promo.usageLimit != null ? ` / ${promo.usageLimit}` : '';
+      const status = promo.isActive ? '✅' : '❌';
+      return `${status} ${promo.code} — использований: ${Number(promo.usedCount) || 0}${limit}`;
+    });
+    await ctx.reply(`<b>Промокоды</b>\n\n${lines.join('\n')}`, { format: 'html', attachments });
+    return;
   }
-
-  return [
-    '✅ Вас подключили к уведомлениям.',
-    '',
-    'Доступные команды:',
-    '• /status — проверить подключение',
-    '• /promo — список промокодов (админам/модерации)',
-    '',
-    'Чтобы появилась /stats, привяжите Telegram в личном кабинете партнёра.',
-  ].join('\n');
+  if (!capabilities.isPartner) {
+    await ctx.reply('Доступ только для партнёров.', { format: 'markdown', attachments });
+    return;
+  }
+  const result = await getPartnerStats(maxUserId);
+  if ('error' in result) {
+    await ctx.reply(result.error, { format: 'markdown', attachments });
+    return;
+  }
+  if (result.stats.length === 0) {
+    await ctx.reply('У вас пока нет статистики.', { format: 'markdown', attachments });
+    return;
+  }
+  const totalOrders = result.stats.reduce((sum, row) => sum + row.ordersCount, 0);
+  const totalIncome = result.stats.reduce((sum, row) => sum + row.partnerIncome, 0);
+  const lines = result.stats.map((row) =>
+    `• ${row.code} — применений: ${row.applicationsCount}, оплачено: ${row.ordersCount}, доход: ${row.partnerIncome.toFixed(0)} ₽`
+  );
+  await ctx.reply(
+    `<b>Ваша статистика</b>\n\nОплачено заказов: <b>${totalOrders}</b>\nВаш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n${lines.join('\n')}`,
+    { format: 'html', attachments }
+  );
 }
 
 async function bootstrap(): Promise<void> {
@@ -206,11 +199,12 @@ async function bootstrap(): Promise<void> {
       if (!maxUserId) {
         return botStartedContext.reply('Не удалось определить ваш MAX user id. Попробуйте позже.');
       }
-      return confirmLink(safeCode, maxUserId).then((result) => {
+      return confirmLink(safeCode, maxUserId).then(async (result) => {
         if (result.success) {
-          return getPartnerStats(maxUserId).then((partnerRes) => {
-            const isPartner = !('error' in partnerRes);
-            return botStartedContext.reply(buildWelcomeTextForMax({ isPartner }));
+          const capabilities = await getMaxBotUserCapabilities(maxUserId);
+          return botStartedContext.reply(buildWelcomeTextForMax(capabilities), {
+            format: 'markdown',
+            attachments: buildMaxMenuAttachments(capabilities) as unknown[],
           });
         }
         return botStartedContext.reply(result.error || 'Не удалось привязать. Попробуйте снова.');
@@ -222,51 +216,27 @@ async function bootstrap(): Promise<void> {
   bot.command('ping', (ctx) => (ctx as MaxBotContextLike).reply('pong'));
   bot.command('help', async (ctx) => {
     const commandContext = ctx as MaxBotContextLike;
-    const maxUserId = String(commandContext.user?.user_id ?? '');
-    const whitelist = await getWhitelistIds();
-    const isLinked = whitelist.has(maxUserId);
-    const partnerRes = isLinked ? await getPartnerStats(maxUserId) : { error: 'Not linked' as const };
-    const isPartner = !('error' in partnerRes);
-    return commandContext.reply(buildHelpTextForMax({ isLinked, isPartner }));
+    return executeMaxCommand(commandContext, String(commandContext.user?.user_id ?? ''), 'help');
   });
   bot.command('status', async (ctx) => {
     const commandContext = ctx as MaxBotContextLike;
-    const maxUserId = String(commandContext.user?.user_id ?? '');
-    const whitelist = await getWhitelistIds();
-    if (whitelist.has(maxUserId)) return commandContext.reply('✅ Вы подключены к уведомлениям.');
-    return commandContext.reply('❌ Вы не подключены. Получите ссылку в админке/личном кабинете.');
+    return executeMaxCommand(commandContext, String(commandContext.user?.user_id ?? ''), 'status');
   });
-
   bot.command('promo', async (ctx) => {
     const commandContext = ctx as MaxBotContextLike;
-    const maxUserId = String(commandContext.user?.user_id ?? '');
-    const whitelist = await getWhitelistIds();
-    if (!whitelist.has(maxUserId))
-      return commandContext.reply('Доступ только для пользователей из списка уведомлений.');
-    const promos = await getPromoStats();
-    if (promos.length === 0) return commandContext.reply('Нет промокодов.');
-    const lines = promos.map((promo) => {
-      const limit = promo.usageLimit != null ? ` / ${promo.usageLimit}` : '';
-      const status = promo.isActive ? '✅' : '❌';
-      return `${status} ${promo.code} — использований: ${Number(promo.usedCount) || 0}${limit}`;
-    });
-    return commandContext.reply(`<b>Промокоды</b>\n\n${lines.join('\n')}`);
+    return executeMaxCommand(commandContext, String(commandContext.user?.user_id ?? ''), 'promo');
   });
-
   bot.command('stats', async (ctx) => {
     const commandContext = ctx as MaxBotContextLike;
-    const maxUserId = String(commandContext.user?.user_id ?? '');
-    const result = await getPartnerStats(maxUserId);
-    if ('error' in result) return commandContext.reply(result.error);
-    if (result.stats.length === 0) return commandContext.reply('У вас пока нет статистики.');
-    const totalOrders = result.stats.reduce((sum, row) => sum + row.ordersCount, 0);
-    const totalIncome = result.stats.reduce((sum, row) => sum + row.partnerIncome, 0);
-    const lines = result.stats.map((row) =>
-      `• ${row.code} — применений: ${row.applicationsCount}, оплачено: ${row.ordersCount}, доход: ${row.partnerIncome.toFixed(0)} ₽`
-    );
-    return commandContext.reply(
-      `<b>Ваша статистика</b>\n\nОплачено заказов: <b>${totalOrders}</b>\nВаш доход: <b>${totalIncome.toFixed(0)} ₽</b>\n\n${lines.join('\n')}`
-    );
+    return executeMaxCommand(commandContext, String(commandContext.user?.user_id ?? ''), 'stats');
+  });
+
+  bot.on('message_callback', async (ctx) => {
+    const callbackContext = ctx as MaxBotContextLike;
+    const payload = String(callbackContext.callback?.payload ?? '').trim();
+    const command = resolveMaxMenuCommand(payload);
+    if (!command) return;
+    await executeMaxCommand(callbackContext, String(callbackContext.user?.user_id ?? ''), command);
   });
 
   bot.on('message_created', async (ctx) => {
@@ -279,15 +249,15 @@ async function bootstrap(): Promise<void> {
       return;
     }
     if (text === '/help') {
-      const whitelist = await getWhitelistIds();
-      const isLinked = whitelist.has(userId);
-      const partnerRes = isLinked ? await getPartnerStats(userId) : { error: 'Not linked' as const };
-      const isPartner = !('error' in partnerRes);
-      await messageContext.reply(buildHelpTextForMax({ isLinked, isPartner }));
+      await executeMaxCommand(messageContext, userId, 'help');
       return;
     }
     if (text.startsWith('/')) return;
-    await messageContext.reply('Доступные команды: /help, /status, /promo, /stats');
+    const capabilities = await getMaxBotUserCapabilities(userId);
+    await messageContext.reply(buildUnknownCommandTextForMax(capabilities), {
+      format: 'markdown',
+      attachments: buildMaxMenuAttachments(capabilities) as unknown[],
+    });
   });
 
   bot.catch((error) => {
