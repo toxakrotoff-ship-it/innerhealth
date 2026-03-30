@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Bot } from '@maxhub/max-bot-api';
-import { getMaxBotConfig } from '../src/lib/max/max-config';
+import { PrismaClient } from '@prisma/client';
+import { decryptSettingValue, isEncryptedSettingValue } from '../src/lib/settings-encryption';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -218,3 +219,30 @@ bootstrap().catch((error) => {
   console.error('[max-bot] bootstrap failed', error);
   process.exit(1);
 });
+
+async function getMaxBotConfig(): Promise<{ token?: string; mode: 'polling' | 'webhook' }> {
+  const tokenFromEnv = process.env.MAX_BOT_TOKEN?.trim();
+  const modeFromEnvRaw = process.env.MAX_BOT_MODE?.trim().toLowerCase();
+  const modeFromEnv: 'polling' | 'webhook' = modeFromEnvRaw === 'webhook' ? 'webhook' : 'polling';
+  if (tokenFromEnv) return { token: tokenFromEnv, mode: modeFromEnv };
+
+  const prisma = new PrismaClient();
+  try {
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: ['max_bot_token', 'max_bot_mode'] } },
+      select: { key: true, value: true },
+    });
+    const map = new Map(rows.map((r) => [r.key, r.value] as const));
+
+    const tokenRaw = map.get('max_bot_token')?.trim() ?? '';
+    const token = tokenRaw ? decryptSettingValue(tokenRaw) : '';
+    const safeToken = token && !isEncryptedSettingValue(token) ? token : '';
+
+    const modeRaw = (map.get('max_bot_mode') ?? '').trim().toLowerCase();
+    const mode: 'polling' | 'webhook' = modeRaw === 'webhook' ? 'webhook' : 'polling';
+
+    return { token: safeToken || undefined, mode };
+  } finally {
+    await prisma.$disconnect().catch(() => undefined);
+  }
+}
