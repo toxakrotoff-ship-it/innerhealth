@@ -9,6 +9,36 @@ interface SyncInput {
   status: 'APPROVED' | 'REJECTED';
 }
 
+const EXTERNAL_SYNC_TIMEOUT_MS = 5_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = EXTERNAL_SYNC_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs = EXTERNAL_SYNC_TIMEOUT_MS): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
   const token = await settingsService.getTelegramBotToken();
   if (!token) return;
@@ -37,36 +67,62 @@ async function syncTelegramReviewModeration(input: SyncInput): Promise<void> {
       const chatId = row.recipientId;
       const messageId = Number.parseInt(row.messageId, 10);
       if (!Number.isFinite(messageId)) return;
-      try {
-        await fetch(`${TELEGRAM_API}/bot${token}/editMessageReplyMarkup`, {
+      const results = await Promise.allSettled([
+        fetchWithTimeout(`${TELEGRAM_API}/bot${token}/editMessageReplyMarkup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: [] } }),
-        });
-      } catch (error) {
+        }),
+        fetchWithTimeout(`${TELEGRAM_API}/bot${token}/editMessageText`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: messageText, parse_mode: 'HTML' }),
+        }),
+      ]);
+
+      const replyMarkupResult = results[0];
+      if (replyMarkupResult.status === 'rejected') {
         console.error('[review-moderation-sync] telegram reply markup update failed', {
           channel: 'TELEGRAM',
           reviewId: input.reviewId,
           targetStatus: input.status,
           recipientId: chatId,
           messageId: row.messageId,
-          error: error instanceof Error ? error.message : String(error),
+          error: replyMarkupResult.reason instanceof Error ? replyMarkupResult.reason.message : String(replyMarkupResult.reason),
+        });
+      } else if (!replyMarkupResult.value.ok) {
+        const errorBody = await replyMarkupResult.value.text().catch(() => '');
+        console.error('[review-moderation-sync] telegram reply markup update not ok', {
+          channel: 'TELEGRAM',
+          reviewId: input.reviewId,
+          targetStatus: input.status,
+          recipientId: chatId,
+          messageId: row.messageId,
+          httpStatus: replyMarkupResult.value.status,
+          body: errorBody.slice(0, 300),
         });
       }
-      try {
-        await fetch(`${TELEGRAM_API}/bot${token}/editMessageText`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, message_id: messageId, text: messageText, parse_mode: 'HTML' }),
-        });
-      } catch (error) {
+
+      const textResult = results[1];
+      if (textResult.status === 'rejected') {
         console.error('[review-moderation-sync] telegram text update failed', {
           channel: 'TELEGRAM',
           reviewId: input.reviewId,
           targetStatus: input.status,
           recipientId: chatId,
           messageId: row.messageId,
-          error: error instanceof Error ? error.message : String(error),
+          error: textResult.reason instanceof Error ? textResult.reason.message : String(textResult.reason),
+        });
+      } else if (!textResult.value.ok) {
+        const errorBody = await textResult.value.text().catch(() => '');
+        console.error('[review-moderation-sync] telegram text update not ok', {
+          channel: 'TELEGRAM',
+          reviewId: input.reviewId,
+          targetStatus: input.status,
+          recipientId: chatId,
+          messageId: row.messageId,
+          httpStatus: textResult.value.status,
+          body: errorBody.slice(0, 300),
         });
       }
     })
@@ -99,11 +155,13 @@ async function syncMaxReviewModeration(input: SyncInput): Promise<void> {
   await Promise.all(
     maxRows.map(async (row) => {
       try {
-        await bot.api.editMessage(row.messageId, {
-          text: messageText,
-          format: 'markdown',
-          attachments: [],
-        });
+        await withTimeout(
+          bot.api.editMessage(row.messageId, {
+            text: messageText,
+            format: 'markdown',
+            attachments: [],
+          })
+        );
       } catch (error) {
         console.error('[review-moderation-sync] max message update failed', {
           channel: 'MAX',
