@@ -66,7 +66,10 @@ function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = FE
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const dispatcher = url.includes(TELEGRAM_API_HOST) ? telegramApiDispatcher : undefined;
-  return fetch(url, { ...options, signal: controller.signal, dispatcher }).finally(() => clearTimeout(timeoutId));
+  const requestOptions = { ...options, signal: controller.signal, dispatcher } as RequestInit & {
+    dispatcher?: Agent;
+  };
+  return fetch(url, requestOptions).finally(() => clearTimeout(timeoutId));
 }
 
 async function confirmLink(code: string, telegramUserId: string): Promise<{ success?: boolean; error?: string }> {
