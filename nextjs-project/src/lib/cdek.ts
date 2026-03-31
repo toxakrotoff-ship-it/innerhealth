@@ -53,9 +53,21 @@ export function buildCdekDoorAddress(input: {
     .trim()
   if (structured) return structured
 
-  const fallback = input.address?.trim()
+  const fallback = input.address?.split('\n')[0]?.trim()
   if (!fallback) return null
   if (fallback.split(',').map((part) => part.trim()).filter(Boolean).length < 3) return null
+  return fallback
+}
+
+export function buildCdekPvzAddress(address: string | null | undefined): string | null {
+  const fallback = address?.split('\n')[0]?.trim()
+  if (!fallback) return null
+
+  const exactPvzAddress = fallback.match(
+    /СДЭК\s+ПВЗ\s+[A-Za-zА-Яа-я0-9-]+\s*:\s*(.+)$/i
+  )?.[1]?.trim()
+
+  if (exactPvzAddress) return exactPvzAddress
   return fallback
 }
 
@@ -1312,10 +1324,19 @@ export async function createCdekOrder(
     let to_location: Record<string, unknown>
     if (sh.deliveryMethod === 'cdek_pvz') {
       const pvzCode = sh.cdekPvzCode?.trim() || extractCdekPvzCodeFromAddress(sh.address)
+      const pvzAddress = buildCdekPvzAddress(sh.address)
       if (!pvzCode) {
         return { error: 'Не найден код ПВЗ в заказе' }
       }
-      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, delivery_point: pvzCode }
+      if (!pvzAddress) {
+        return { error: 'Не найден адрес ПВЗ в заказе' }
+      }
+      to_location = {
+        code: sh.cdekCityCode,
+        country_code: 'RU' as const,
+        delivery_point: pvzCode,
+        address: pvzAddress,
+      }
     } else {
       const doorAddress = buildCdekDoorAddress({
         address: sh.address,
