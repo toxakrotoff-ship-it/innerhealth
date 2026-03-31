@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { syncCdekTrackNumbersForOrderIds } from '@/lib/cdek'
 import { accountOrdersQuerySchema } from '@/lib/validations/account'
 import { requireUserSession } from '@/lib/auth/require-user-session'
 import * as accountService from '@/services/account.service'
@@ -31,7 +32,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const orders = await accountService.getUserOrders(session.user.id as string, query)
+    let orders = await accountService.getUserOrders(session.user.id as string, query)
+    await syncCdekTrackNumbersForOrderIds(
+      orders.items
+        .filter((order) => order.cdekTrackNumber == null && order.shippingInfo?.deliveryMethod != null)
+        .map((order) => order.id)
+    )
+    orders = await accountService.getUserOrders(session.user.id as string, query)
     return NextResponse.json(orders, {
       headers: {
         'Cache-Control': 'no-store',

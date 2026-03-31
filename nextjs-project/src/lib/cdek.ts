@@ -13,6 +13,10 @@
 
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+const CDEK_TRACK_SYNC_BATCH_LIMIT = 5
 
 function getCdekApiBase(creds?: { useTest?: boolean } | null): string {
   if (creds?.useTest === true) return CDEK_API_TEST
@@ -21,6 +25,26 @@ function getCdekApiBase(creds?: { useTest?: boolean } | null): string {
 
 function isCdekTestBase(base: string): boolean {
   return base.includes('api.edu.cdek.ru')
+}
+
+function getCdekTrackSyncIntervalMs(createdAt: Date, now = new Date()): number | null {
+  const ageMs = Math.max(0, now.getTime() - createdAt.getTime())
+  if (ageMs <= 6 * HOUR_MS) return 15 * MINUTE_MS
+  if (ageMs <= DAY_MS) return HOUR_MS
+  if (ageMs <= 7 * DAY_MS) return 6 * HOUR_MS
+  if (ageMs <= 30 * DAY_MS) return DAY_MS
+  return null
+}
+
+function parseTrackNumberFromCdekOrderPayload(data: {
+  entity?: { cdek_number?: string; track_number?: string }
+  cdek_number?: string
+  track_number?: string
+}): string | null {
+  const raw =
+    data.entity?.cdek_number ?? data.entity?.track_number ?? data.cdek_number ?? data.track_number
+  const trackNumber = raw?.trim()
+  return trackNumber ? trackNumber : null
 }
 
 export function extractCdekPvzCodeFromAddress(address: string | null | undefined): string | null {
@@ -1406,8 +1430,7 @@ export async function createCdekOrder(
       return { error: `СДЭК: неверный ответ ${text.slice(0, 100)}` }
     }
     const uuid = data.entity?.uuid ?? data.uuid
-    const trackNumber =
-      data.entity?.cdek_number ?? data.entity?.track_number ?? data.cdek_number ?? data.track_number
+    const trackNumber = parseTrackNumberFromCdekOrderPayload(data)
     if (!uuid) {
       return { error: `СДЭК: в ответе нет uuid. ${text.slice(0, 200)}` }
     }
@@ -1416,5 +1439,90 @@ export async function createCdekOrder(
     const message = e instanceof Error ? e.message : String(e)
     console.error('[CDEK createOrder]', orderId, e)
     return { error: message }
+  }
+}
+
+async function getCdekOrderTrackNumberByUuid(
+  uuid: string,
+  creds?: { apiKey?: string; clientSecret?: string; useTest?: boolean } | null
+): Promise<string | null> {
+  const token = await getCdekToken(creds)
+  const base = getCdekApiBase(creds)
+  const response = await fetch(`${base}/orders/${encodeURIComponent(uuid)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  const text = await response.text()
+  if (!response.ok) {
+    throw new Error(`СДЭК: ${response.status} ${text.slice(0, 200)}`)
+  }
+
+  let data: {
+    entity?: { cdek_number?: string; track_number?: string }
+    cdek_number?: string
+    track_number?: string
+  }
+  try {
+    data = JSON.parse(text) as typeof data
+  } catch {
+    throw new Error(`СДЭК: неверный ответ ${text.slice(0, 100)}`)
+  }
+
+  return parseTrackNumberFromCdekOrderPayload(data)
+}
+
+export async function syncCdekTrackNumberIfDue(
+  orderId: string
+): Promise<{ checked: boolean; trackNumber?: string | null }> {
+  const orderService = await import('@/services/order.service')
+  const settingsService = await import('@/services/settings.service')
+  const candidate = await orderService.findOrderForCdekTrackSync(orderId)
+  if (!candidate?.cdekOrderUuid || candidate.cdekTrackNumber) {
+    return { checked: false, trackNumber: candidate?.cdekTrackNumber ?? null }
+  }
+  if (
+    candidate.shippingInfo?.deliveryMethod !== 'cdek_pvz' &&
+    candidate.shippingInfo?.deliveryMethod !== 'cdek_door'
+  ) {
+    return { checked: false, trackNumber: null }
+  }
+
+  const now = new Date()
+  const intervalMs = getCdekTrackSyncIntervalMs(candidate.createdAt, now)
+  if (intervalMs == null) return { checked: false, trackNumber: null }
+  if (
+    candidate.cdekTrackCheckedAt &&
+    now.getTime() - candidate.cdekTrackCheckedAt.getTime() < intervalMs
+  ) {
+    return { checked: false, trackNumber: null }
+  }
+
+  const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
+  const scopedCredentials = await settingsService.getCdekCredentials({
+    brandId: orderBrandId,
+  })
+
+  try {
+    const trackNumber = await getCdekOrderTrackNumberByUuid(candidate.cdekOrderUuid, scopedCredentials)
+    await orderService.updateOrder(orderId, {
+      cdekTrackCheckedAt: now,
+      ...(trackNumber ? { cdekTrackNumber: trackNumber, cdekOrderError: null } : {}),
+    })
+    return { checked: true, trackNumber }
+  } catch (error) {
+    console.error('[CDEK syncTrackNumber]', orderId, error)
+    await orderService.updateOrder(orderId, {
+      cdekTrackCheckedAt: now,
+    })
+    return { checked: true, trackNumber: null }
+  }
+}
+
+export async function syncCdekTrackNumbersForOrderIds(orderIds: string[]): Promise<void> {
+  const uniqueOrderIds = Array.from(new Set(orderIds.filter(Boolean))).slice(0, CDEK_TRACK_SYNC_BATCH_LIMIT)
+  for (const orderId of uniqueOrderIds) {
+    await syncCdekTrackNumberIfDue(orderId)
   }
 }

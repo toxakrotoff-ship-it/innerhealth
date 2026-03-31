@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { syncCdekTrackNumberIfDue } from '@/lib/cdek'
 import { accountOrderParamsSchema } from '@/lib/validations/account'
 import { requireUserSession } from '@/lib/auth/require-user-session'
 import {
@@ -38,6 +39,7 @@ export async function GET(
   }
 
   try {
+    await syncCdekTrackNumberIfDue(parsedParams.id)
     const order = await getUserOrderById(session.user.id as string, parsedParams.id)
     return NextResponse.json(order, {
       headers: {

@@ -43,6 +43,7 @@ interface Order {
   shippingInfo: ShippingInfoSummary | null;
   promoCode: PromoCodeInfo | null;
   cdekOrderUuid?: string | null;
+  cdekTrackNumber?: string | null;
   cdekOrderError?: string | null;
   deletedAt?: string | null;
 }
@@ -177,7 +178,12 @@ export default function AdminOrdersPage() {
         setOrders((prev) =>
           prev.map((o) =>
             o.id === orderId
-              ? { ...o, cdekOrderUuid: data.uuid ?? o.cdekOrderUuid, cdekOrderError: null }
+              ? {
+                  ...o,
+                  cdekOrderUuid: data.uuid ?? o.cdekOrderUuid,
+                  cdekTrackNumber: data.trackNumber ?? o.cdekTrackNumber,
+                  cdekOrderError: null,
+                }
               : o
           )
         );
@@ -230,6 +236,11 @@ export default function AdminOrdersPage() {
     );
   });
 
+  const getCdekTrackingLink = (trackNumber?: string | null) =>
+    trackNumber
+      ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(trackNumber)}`
+      : null;
+
   if (loading) {
     return (
       <div className="admin-container">
@@ -281,8 +292,34 @@ export default function AdminOrdersPage() {
         {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' || order.shippingInfo?.deliveryMethod === 'cdek_door') && (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">СДЭК</h3>
-            {order.cdekOrderUuid ? (
-              <p className="text-gray-600"><span className="font-mono text-xs">{order.cdekOrderUuid}</span></p>
+            {order.cdekTrackNumber ? (
+              <>
+                <p className="text-gray-900">
+                  <span className="font-medium">Трек-номер:</span>{' '}
+                  <span className="font-mono text-xs">{order.cdekTrackNumber}</span>
+                </p>
+                <a
+                  href={getCdekTrackingLink(order.cdekTrackNumber) ?? '#'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block text-sm text-indigo-600 hover:text-indigo-800"
+                >
+                  Открыть трекинг СДЭК
+                </a>
+                {order.cdekOrderUuid ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    UUID: <span className="font-mono">{order.cdekOrderUuid}</span>
+                  </p>
+                ) : null}
+              </>
+            ) : order.cdekOrderUuid ? (
+              <>
+                <p className="text-gray-600">
+                  <span className="font-medium">UUID:</span>{' '}
+                  <span className="font-mono text-xs">{order.cdekOrderUuid}</span>
+                </p>
+                <p className="mt-1 text-xs text-gray-500">Трек-номер ещё не присвоен</p>
+              </>
             ) : order.cdekOrderError ? (
               <p className="text-amber-700 mb-2">{order.cdekOrderError}</p>
             ) : null}

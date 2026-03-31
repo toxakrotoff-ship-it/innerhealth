@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
+import { syncCdekTrackNumbersForOrderIds } from '@/lib/cdek';
 import * as orderService from '@/services/order.service';
 import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
 
@@ -22,7 +23,15 @@ export async function GET(request: Request) {
     const mode: 'active' | 'trash' =
       parsed.success && parsed.data.mode ? parsed.data.mode : 'active';
 
-    const orders = await orderService.getOrdersForAdminWithTrash({ mode, brandId });
+    let orders = await orderService.getOrdersForAdminWithTrash({ mode, brandId });
+    if (mode === 'active') {
+      await syncCdekTrackNumbersForOrderIds(
+        orders
+          .filter((order) => order.cdekTrackNumber == null && order.shippingInfo?.deliveryMethod != null)
+          .map((order) => order.id)
+      );
+      orders = await orderService.getOrdersForAdminWithTrash({ mode, brandId });
+    }
     return NextResponse.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);

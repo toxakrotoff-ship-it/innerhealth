@@ -117,6 +117,7 @@ export interface AdminOrderDto {
   promoCode: {
     code: string;
   } | null;
+  cdekTrackNumber: string | null;
   shippingInfo: {
     fullName: string;
     phoneMasked: string;
@@ -150,6 +151,7 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    cdekTrackNumber: order.cdekTrackNumber ?? null,
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -214,6 +216,7 @@ export async function getOrdersForAdminWithTrash(options: {
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    cdekTrackNumber: order.cdekTrackNumber ?? null,
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -253,6 +256,7 @@ export async function getOrderDetailForAdmin(
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    cdekTrackNumber: order.cdekTrackNumber ?? null,
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -274,8 +278,27 @@ export async function getOrderDetailForAdmin(
       },
     })),
     cdekOrderUuid: order.cdekOrderUuid ?? null,
+    cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
   };
+}
+
+export async function findOrderForCdekTrackSync(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      createdAt: true,
+      cdekOrderUuid: true,
+      cdekTrackNumber: true,
+      cdekTrackCheckedAt: true,
+      shippingInfo: {
+        select: {
+          deliveryMethod: true,
+        },
+      },
+    },
+  });
 }
 
 /** Update order status. */

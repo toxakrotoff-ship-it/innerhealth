@@ -168,6 +168,8 @@ model Order {
   cdekOrderError      String?
   /// Трек-номер СДЭК (если предоставлен)
   cdekTrackNumber     String?
+  /// Последняя попытка синхронизации трек-номера СДЭК по UUID
+  cdekTrackCheckedAt  DateTime?
   /// Дата мягкого удаления заказа (корзина). null = активен
   deletedAt           DateTime?
   promoCode           PromoCode?    @relation(fields: [promoCodeId], references: [id])
