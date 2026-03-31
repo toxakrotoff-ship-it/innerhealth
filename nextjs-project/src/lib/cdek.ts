@@ -1444,7 +1444,7 @@ export async function createCdekOrder(
 
 async function getCdekOrderTrackNumberByUuid(
   uuid: string,
-  creds?: { apiKey?: string; clientSecret?: string; useTest?: boolean } | null
+  creds?: CdekCredentials | null
 ): Promise<string | null> {
   const token = await getCdekToken(creds)
   const base = getCdekApiBase(creds)

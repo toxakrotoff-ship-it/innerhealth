@@ -184,6 +184,17 @@ export interface AdminOrderDetailDto extends AdminOrderDto {
   cdekOrderError: string | null;
 }
 
+export interface CdekTrackSyncOrderCandidate {
+  id: string;
+  createdAt: Date;
+  cdekOrderUuid: string | null;
+  cdekTrackNumber: string | null;
+  cdekTrackCheckedAt: Date | null;
+  shippingInfo: {
+    deliveryMethod: string | null;
+  } | null;
+}
+
 /** Get orders for admin with optional trash filter. */
 export async function getOrdersForAdminWithTrash(options: {
   mode: 'active' | 'trash';
@@ -278,13 +289,14 @@ export async function getOrderDetailForAdmin(
       },
     })),
     cdekOrderUuid: order.cdekOrderUuid ?? null,
-    cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
   };
 }
 
-export async function findOrderForCdekTrackSync(orderId: string) {
-  return prisma.order.findUnique({
+export async function findOrderForCdekTrackSync(
+  orderId: string
+): Promise<CdekTrackSyncOrderCandidate | null> {
+  const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: {
       id: true,
@@ -297,8 +309,9 @@ export async function findOrderForCdekTrackSync(orderId: string) {
           deliveryMethod: true,
         },
       },
-    },
+    } as Prisma.OrderSelect,
   });
+  return order as CdekTrackSyncOrderCandidate | null;
 }
 
 /** Update order status. */
@@ -315,11 +328,15 @@ export async function updateOrderStatus(
 /** Update order with arbitrary data. */
 export async function updateOrder(
   orderId: string,
-  data: Prisma.OrderUpdateInput
+  data: Prisma.OrderUpdateInput & {
+    cdekTrackCheckedAt?: Date | null;
+    cdekTrackNumber?: string | null;
+    cdekOrderError?: string | null;
+  }
 ) {
   return prisma.order.update({
     where: { id: orderId },
-    data,
+    data: data as Prisma.OrderUpdateInput,
   });
 }
 
