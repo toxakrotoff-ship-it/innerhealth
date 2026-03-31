@@ -137,7 +137,7 @@ describe('CartPageContent delivery type switch', () => {
 
   it('submits shipping.fullName from the name field', async () => {
     const user = userEvent.setup({ document })
-    render(<CartPageContent pickupAddress="Тестовый адрес" />)
+    render(<CartPageContent pickupAddress="г. Москва, Тестовый адрес" />)
 
     await user.type(screen.getByLabelText('Имя'), 'Иванов Иван Иванович')
     await user.type(screen.getByLabelText('Телефон'), '+7 (999) 123-45-67')
@@ -160,6 +160,8 @@ describe('CartPageContent delivery type switch', () => {
     const requestInit = orderRequest?.[1] as RequestInit
     const payload = JSON.parse(String(requestInit.body))
     expect(payload.shipping.fullName).toBe('Иванов Иван Иванович')
+    expect(payload.shipping.city).toBe('Москва')
+    expect(payload.shipping.address).toBe('г. Москва, Тестовый адрес')
   })
 
   it('does not submit when required name field is empty', async () => {

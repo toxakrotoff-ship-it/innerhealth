@@ -54,6 +54,14 @@ interface CartPageContentProps {
   pickupAddress?: string
 }
 
+function resolvePickupCity(pickupAddress?: string): string {
+  const trimmed = pickupAddress?.trim()
+  if (!trimmed) return 'Москва'
+  const match = trimmed.match(/^(?:г\.\s*)?([^,]+)/i)
+  const city = match?.[1]?.trim()
+  return city && city.length > 0 ? city : 'Москва'
+}
+
 export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
@@ -493,7 +501,9 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
     )
     if (!fullName || !phoneCheck.valid || !emailCheck.valid) return
-    const city = selectedCity?.city ?? formData.city
+    const city = deliveryMethod === 'pickup'
+      ? formData.city.trim() || resolvePickupCity(pickupAddress)
+      : selectedCity?.city ?? formData.city
     let address: string
     if (deliveryMethod === 'cdek_pvz' && selectedPvz) {
       address = selectedPvz.full_address || selectedPvz.address || selectedPvz.name || 'ПВЗ СДЭК'
@@ -503,7 +513,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       address = parts.length ? parts.join(', ') : formData.address
       if (!address.trim()) address = formData.address
     } else {
-      address = 'Самовывоз'
+      address = pickupAddress?.trim() || 'Самовывоз'
     }
     if (comment.trim()) address = `${address}\nКомментарий: ${comment.trim()}`
     setSubmitting(true)
