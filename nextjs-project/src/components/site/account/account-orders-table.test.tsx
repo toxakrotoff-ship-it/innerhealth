@@ -63,5 +63,24 @@ describe('AccountOrdersTable', () => {
     expect(badge.className).toContain('bg-amber-100')
     expect(badge.className).toContain('text-amber-800')
   })
-})
 
+  it('renders CDEK track number when present', () => {
+    render(
+      <AccountOrdersTable
+        items={[
+          {
+            id: 'order_1',
+            status: 'paid',
+            total: 123.45,
+            createdAt: new Date('2026-03-27T10:00:00.000Z'),
+            cdekTrackNumber: '1234567890123',
+          },
+        ]}
+        page={1}
+        totalPages={1}
+      />,
+    )
+
+    expect(screen.getAllByText(/1234567890123/).length).toBeGreaterThan(0)
+  })
+})

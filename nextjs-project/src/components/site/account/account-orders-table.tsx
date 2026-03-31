@@ -6,6 +6,7 @@ export interface AccountOrdersTableItem {
   status: string
   total: number
   createdAt: Date
+  cdekTrackNumber?: string | null
 }
 
 export interface AccountOrdersTableProps {
@@ -53,6 +54,11 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                     </span>
                     <span className="text-sm text-gray-700">{order.total.toFixed(2)} ₽</span>
                     <span className="text-xs text-gray-500">{order.createdAt.toLocaleString('ru-RU')}</span>
+                    {order.cdekTrackNumber ? (
+                      <span className="text-xs text-gray-600">
+                        Трек-номер СДЭК: <span className="font-medium">{order.cdekTrackNumber}</span>
+                      </span>
+                    ) : null}
                     <span className="mt-1 text-sm text-action-blue font-medium">Открыть →</span>
                   </Link>
                 )
@@ -88,7 +94,14 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                           </span>
                         </td>
                         <td className="py-3 pr-4 text-gray-700">{order.total.toFixed(2)} ₽</td>
-                        <td className="py-3 pr-4 text-gray-700">{order.createdAt.toLocaleString('ru-RU')}</td>
+                        <td className="py-3 pr-4 text-gray-700">
+                          <div>{order.createdAt.toLocaleString('ru-RU')}</div>
+                          {order.cdekTrackNumber ? (
+                            <div className="mt-1 text-xs text-gray-500">
+                              СДЭК: <span className="font-medium text-gray-700">{order.cdekTrackNumber}</span>
+                            </div>
+                          ) : null}
+                        </td>
                         <td className="py-3">
                           <Link
                             href={`/account/orders/${order.id}`}

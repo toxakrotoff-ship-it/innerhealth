@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { syncCdekTrackNumberIfDue } from '@/lib/cdek'
 import {
   ACCOUNT_SERVICE_ERROR_CODES,
   type AccountServiceError,
@@ -25,6 +26,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
 
   let order: Awaited<ReturnType<typeof getUserOrderById>>
   try {
+    await syncCdekTrackNumberIfDue(id)
     order = await getUserOrderById(session.user.id as string, id)
   } catch (error) {
     if (isAccountServiceError(error) && error.code === ACCOUNT_SERVICE_ERROR_CODES.orderNotFound) {
