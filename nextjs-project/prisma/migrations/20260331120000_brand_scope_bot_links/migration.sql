@@ -16,6 +16,8 @@ DROP INDEX IF EXISTS "MaxWhitelist_userId_key";
 DROP INDEX IF EXISTS "MaxWhitelist_maxUserId_key";
 DROP INDEX IF EXISTS "TelegramLinkCode_code_key";
 DROP INDEX IF EXISTS "MaxLinkCode_code_key";
+DROP INDEX IF EXISTS "TelegramLinkCode_code_idx";
+DROP INDEX IF EXISTS "MaxLinkCode_code_idx";
 
 CREATE UNIQUE INDEX "TelegramWhitelist_brand_userId_key"
 ON "TelegramWhitelist"("brand", "userId");
