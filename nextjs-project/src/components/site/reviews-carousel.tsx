@@ -21,6 +21,31 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollIndex, setScrollIndex] = useState(0);
 
+  const getClosestIndex = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || reviews.length === 0) return 0;
+
+    const containerCenter = el.scrollLeft + el.clientWidth / 2;
+    const cards = Array.from(el.querySelectorAll<HTMLElement>('[data-index]'));
+
+    if (cards.length === 0) return 0;
+
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    cards.forEach((card, index) => {
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const distance = Math.abs(cardCenter - containerCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    return closestIndex;
+  }, [reviews.length]);
+
   const scrollTo = useCallback((index: number) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -32,13 +57,8 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
   }, []);
 
   const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el || reviews.length === 0) return;
-    const scrollLeft = el.scrollLeft;
-    const cardWidth = el.offsetWidth;
-    const index = Math.round(scrollLeft / cardWidth);
-    setScrollIndex(Math.min(index, reviews.length - 1));
-  }, [reviews.length]);
+    setScrollIndex(getClosestIndex());
+  }, [getClosestIndex]);
 
   if (reviews.length === 0) {
     return (
