@@ -109,7 +109,8 @@ function parseDoorAddressFromWidget(formattedAddress: string): {
   }
 
   if (!street) {
-    street = normalized.filter((part) => !/(?:^|\s)(?:д\.?|дом)?\s*[0-9]+[0-9A-Za-zА-Яа-я/-]*$/i.test(part)).at(-1) ?? normalized.join(', ')
+    const streetCandidates = normalized.filter((part) => !/(?:^|\s)(?:д\.?|дом)?\s*[0-9]+[0-9A-Za-zА-Яа-я/-]*$/i.test(part))
+    street = streetCandidates[streetCandidates.length - 1] ?? normalized.join(', ')
   }
 
   return { street, house, apartment }
