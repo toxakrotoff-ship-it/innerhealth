@@ -23,6 +23,42 @@ function isCdekTestBase(base: string): boolean {
   return base.includes('api.edu.cdek.ru')
 }
 
+export function extractCdekPvzCodeFromAddress(address: string | null | undefined): string | null {
+  const normalized = address?.trim()
+  if (!normalized) return null
+  const match = normalized.match(/СДЭК\s+ПВЗ\s+([A-Za-zА-Яа-я0-9-]+)\s*:/i)
+  const code = match?.[1]?.trim().toUpperCase()
+  return code ? code : null
+}
+
+export function buildCdekDoorAddress(input: {
+  address?: string | null
+  street?: string | null
+  house?: string | null
+  apartment?: string | null
+  entrance?: string | null
+  floor?: string | null
+  intercom?: string | null
+}): string | null {
+  const structured = [
+    input.street?.trim(),
+    input.house?.trim(),
+    input.apartment?.trim(),
+    input.entrance?.trim(),
+    input.floor?.trim(),
+    input.intercom?.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ')
+    .trim()
+  if (structured) return structured
+
+  const fallback = input.address?.trim()
+  if (!fallback) return null
+  if (fallback.split(',').map((part) => part.trim()).filter(Boolean).length < 3) return null
+  return fallback
+}
+
 /** Локация для расчёта: код города СДЭК или почтовый индекс */
 export interface CdekLocation {
   /** Код населённого пункта СДЭК (приоритет) */
@@ -1274,15 +1310,26 @@ export async function createCdekOrder(
       ...(fromPvzCode ? { delivery_point: fromPvzCode } : {}),
     }
     let to_location: Record<string, unknown>
-    if (sh.deliveryMethod === 'cdek_pvz' && sh.cdekPvzCode) {
-      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, delivery_point: sh.cdekPvzCode }
-    } else {
-      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const }
-      if (sh.deliveryMethod === 'cdek_door' && (sh.street || sh.house)) {
-        to_location.address = [sh.street, sh.house, sh.apartment, sh.entrance, sh.floor, sh.intercom]
-          .filter(Boolean)
-          .join(', ')
+    if (sh.deliveryMethod === 'cdek_pvz') {
+      const pvzCode = sh.cdekPvzCode?.trim() || extractCdekPvzCodeFromAddress(sh.address)
+      if (!pvzCode) {
+        return { error: 'Не найден код ПВЗ в заказе' }
       }
+      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, delivery_point: pvzCode }
+    } else {
+      const doorAddress = buildCdekDoorAddress({
+        address: sh.address,
+        street: sh.street,
+        house: sh.house,
+        apartment: sh.apartment,
+        entrance: sh.entrance,
+        floor: sh.floor,
+        intercom: sh.intercom,
+      })
+      if (!doorAddress) {
+        return { error: 'Не указан адрес доставки' }
+      }
+      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, address: doorAddress }
     }
 
     const body = {

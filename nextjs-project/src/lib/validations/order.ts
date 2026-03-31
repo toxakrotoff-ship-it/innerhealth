@@ -59,6 +59,68 @@ export const shippingSchema = z.object({
         message: emailRes.message,
       })
     }
+
+    if (shipping.deliveryMethod === 'cdek_pvz') {
+      if (shipping.cdekCityCode == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cdekCityCode'],
+          message: 'Укажите код города СДЭК',
+        })
+      }
+      if (shipping.cdekTariffCode == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cdekTariffCode'],
+          message: 'Укажите тариф СДЭК',
+        })
+      }
+      if (!shipping.cdekPvzCode?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cdekPvzCode'],
+          message: 'Выберите пункт выдачи СДЭК',
+        })
+      }
+    }
+
+    if (shipping.deliveryMethod === 'cdek_door') {
+      if (shipping.cdekCityCode == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cdekCityCode'],
+          message: 'Укажите код города СДЭК',
+        })
+      }
+      if (shipping.cdekTariffCode == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cdekTariffCode'],
+          message: 'Укажите тариф СДЭК',
+        })
+      }
+      if (!shipping.address.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['address'],
+          message: 'Укажите адрес доставки',
+        })
+      }
+      if (!shipping.doorAddress?.street?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['doorAddress', 'street'],
+          message: 'Укажите улицу для доставки СДЭК',
+        })
+      }
+      if (!shipping.doorAddress?.house?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['doorAddress', 'house'],
+          message: 'Укажите дом для доставки СДЭК',
+        })
+      }
+    }
   })
 
 export const createOrderBodySchema = z.object({

@@ -3,6 +3,36 @@
 # Использование: из каталога nextjs-project: ./deploy/deploy-quick.sh
 
 set -euo pipefail
+
+log() {
+  echo "[$(date -Is)] $*"
+}
+
+docker_disk_free_mb() {
+  df -Pm / | awk 'NR==2 { print $4 }'
+}
+
+cleanup_docker_cache() {
+  log "Cleaning up Docker cache..."
+  docker image prune -f || true
+  docker builder prune -af || true
+  docker container prune -f || true
+  docker network prune -f || true
+}
+
+require_free_disk_mb() {
+  local min_free_mb="${1}"
+  local free_mb
+  free_mb="$(docker_disk_free_mb)"
+  if [ -z "${free_mb}" ] || [ "${free_mb}" -lt "${min_free_mb}" ]; then
+    log "ERROR: only ${free_mb:-0}MB free on /, need at least ${min_free_mb}MB for Docker build."
+    log "Run docker cleanup or expand VPS disk before retrying deploy."
+    exit 1
+  fi
+  log "Free disk on /: ${free_mb}MB"
+}
+
+MIN_FREE_MB="${MIN_FREE_MB:-3072}"
 # Каталог с docker-compose (nextjs-project) — сюда вернёмся для сборки
 DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DEPLOY_DIR"
@@ -10,7 +40,7 @@ cd "$DEPLOY_DIR"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
 cd "$GIT_ROOT"
 
-echo "==> Pulling latest from repo (code + prisma/migrations)..."
+log "Pulling latest from repo (code + prisma/migrations)..."
 git fetch --prune origin
 CURRENT_BRANCH="$(git branch --show-current)"
 if [ -z "${CURRENT_BRANCH}" ]; then
@@ -25,39 +55,38 @@ git pull --ff-only origin "${CURRENT_BRANCH}"
 
 cd "$DEPLOY_DIR"
 
-echo "==> Building app image (with cache)..."
+cleanup_docker_cache
+require_free_disk_mb "${MIN_FREE_MB}"
+
+log "Building app image (with cache)..."
 docker compose build app
 
-echo "==> Building bot image (with cache)..."
+log "Building bot image (with cache)..."
 docker compose build telegram-bot
 
-echo "==> Migration status (before deploy)..."
+log "Migration status (before deploy)..."
 docker compose run --rm app npx prisma migrate status || true
 
-echo "==> Applying migrations from repo..."
+log "Applying migrations from repo..."
 docker compose run --rm app npx prisma migrate deploy
 
-echo "==> Restarting app..."
+log "Restarting app..."
 docker compose up -d --force-recreate app
 
-echo "==> Restarting telegram-bot (no separate build)..."
+log "Restarting telegram-bot (no separate build)..."
 # Telegram-боты используют отдельный bot image.
 docker compose up -d --force-recreate --no-build telegram-bot telegram-bot-sprint
 
-echo "==> Restarting max-bot (no separate build)..."
+log "Restarting max-bot (no separate build)..."
 docker compose up -d --force-recreate --no-build max-bot max-bot-sprint
 
-echo "==> Recreating nginx (pick up new host/domain config)..."
+log "Recreating nginx (pick up new host/domain config)..."
 docker compose up -d --force-recreate nginx
 
-echo "==> Removing old telegram-bot image (if still present)..."
+log "Removing old telegram-bot image (if still present)..."
 docker image rm nextjs-project-telegram-bot:latest || true
 
-echo "==> Cleaning up Docker cache (safe)..."
-docker image prune -f
-# Builder cache может быть довольно объёмным после сборок.
-# Не трогаем volumes, чтобы не потерять данные БД.
-docker builder prune -af || true
+cleanup_docker_cache
 
-echo "==> Done."
+log "Done."
 docker compose ps

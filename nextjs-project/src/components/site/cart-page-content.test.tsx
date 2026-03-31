@@ -87,6 +87,7 @@ describe('CartPageContent delivery type switch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('alert', vi.fn())
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url.includes('/api/orders')) {
@@ -143,7 +144,7 @@ describe('CartPageContent delivery type switch', () => {
     await user.type(screen.getByLabelText('Телефон'), '+7 (999) 123-45-67')
     await user.type(screen.getByLabelText('Email'), 'ivanov@example.com')
     await user.click(screen.getByRole('checkbox'))
-    await user.click(screen.getByRole('button', { name: 'Оформить заказ' }))
+    await user.click(screen.getByText('Оформить заказ'))
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -172,7 +173,7 @@ describe('CartPageContent delivery type switch', () => {
     await user.type(screen.getByLabelText('Email'), 'ivanov@example.com')
     await user.click(screen.getByRole('checkbox'))
 
-    const submitButton = screen.getByRole('button', { name: 'Оформить заказ' })
+    const submitButton = screen.getByText('Оформить заказ')
     const form = submitButton.closest('form')
     expect(form).not.toBeNull()
     expect(form?.checkValidity()).toBe(false)

@@ -62,6 +62,59 @@ function resolvePickupCity(pickupAddress?: string): string {
   return city && city.length > 0 ? city : 'Москва'
 }
 
+function buildDoorAddressString(address: {
+  street: string
+  house: string
+  apartment: string
+  entrance: string
+  floor: string
+  intercom: string
+}): string {
+  return [
+    address.street.trim(),
+    address.house.trim(),
+    address.apartment.trim(),
+    address.entrance.trim(),
+    address.floor.trim(),
+    address.intercom.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ')
+}
+
+function parseDoorAddressFromWidget(formattedAddress: string): {
+  street: string
+  house: string
+  apartment: string
+} {
+  const normalized = formattedAddress
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  let street = ''
+  let house = ''
+  let apartment = ''
+
+  for (let index = normalized.length - 1; index >= 0; index -= 1) {
+    const part = normalized[index]
+    const houseMatch = part.match(/^(?:д\.?|дом)?\s*([0-9]+[0-9A-Za-zА-Яа-я/-]*)$/i)
+    if (!houseMatch?.[1]) continue
+
+    house = houseMatch[1].trim()
+    street = normalized[index - 1]?.trim() ?? ''
+    const apartmentMatch = normalized.slice(index + 1).join(', ').match(/(?:кв\.?|квартира|офис|оф\.)\s*([A-Za-zА-Яа-я0-9-/]+)/i)
+    apartment = apartmentMatch?.[1]?.trim() ?? ''
+    break
+  }
+
+  if (!street) {
+    street = normalized.filter((part) => !/(?:^|\s)(?:д\.?|дом)?\s*[0-9]+[0-9A-Za-zА-Яа-я/-]*$/i.test(part)).at(-1) ?? normalized.join(', ')
+  }
+
+  return { street, house, apartment }
+}
+
 export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
@@ -501,6 +554,23 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
     )
     if (!fullName || !phoneCheck.valid || !emailCheck.valid) return
+    if ((deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && cityCode == null) {
+      setDeliveryError('Не указан код города СДЭК')
+      return
+    }
+    if (deliveryMethod === 'cdek_pvz' && (!selectedPvz?.code || !pvzTariff?.tariffCode)) {
+      setDeliveryError('Выберите пункт выдачи СДЭК и дождитесь расчёта тарифа')
+      return
+    }
+    if (deliveryMethod === 'cdek_door' && !doorTariff?.tariffCode) {
+      setDeliveryError('Не удалось определить тариф СДЭК до двери')
+      return
+    }
+    if (deliveryMethod === 'cdek_door' && (!doorAddress.street.trim() || !doorAddress.house.trim())) {
+      setDeliveryError('Укажите улицу и дом для доставки СДЭК')
+      return
+    }
+    setDeliveryError(null)
     const city = deliveryMethod === 'pickup'
       ? formData.city.trim() || resolvePickupCity(pickupAddress)
       : selectedCity?.city ?? formData.city
@@ -509,8 +579,8 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       address = selectedPvz.full_address || selectedPvz.address || selectedPvz.name || 'ПВЗ СДЭК'
       if (selectedPvz.code) address = `СДЭК ПВЗ ${selectedPvz.code}: ${address}`
     } else if (deliveryMethod === 'cdek_door') {
-      const parts = [doorAddress.street, doorAddress.house, doorAddress.apartment, doorAddress.entrance, doorAddress.floor, doorAddress.intercom].filter(Boolean)
-      address = parts.length ? parts.join(', ') : formData.address
+      const structuredAddress = buildDoorAddressString(doorAddress)
+      address = structuredAddress || formData.address
       if (!address.trim()) address = formData.address
     } else {
       address = pickupAddress?.trim() || 'Самовывоз'
@@ -829,9 +899,9 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
                     country: prev?.country,
                   }))
                 }
-                if (method === 'cdek_pvz') {
-                  setPvzTariff(tariff)
-                  setSelectedPvz(
+                  if (method === 'cdek_pvz') {
+                    setPvzTariff(tariff)
+                    setSelectedPvz(
                     pvzCode
                       ? {
                           code: pvzCode,
@@ -840,13 +910,28 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
                         }
                       : null
                   )
+                  if (pvzCode) {
+                    const formattedPvzAddress = pvzAddress ?? ''
+                    setFormData((prev) => ({
+                      ...prev,
+                      city: cdekCity ?? prev.city,
+                      address: `СДЭК ПВЗ ${pvzCode}: ${formattedPvzAddress}`.trim(),
+                    }))
+                  }
                 } else {
                   setDoorTariff(tariff)
                   if (doorAddr) {
+                    const parsedAddress = parseDoorAddressFromWidget(doorAddr)
                     setDoorAddress((prev) => ({
                       ...prev,
-                      street: doorAddr,
-                      house: prev.house,
+                      street: parsedAddress.street || prev.street,
+                      house: parsedAddress.house || prev.house,
+                      apartment: parsedAddress.apartment || prev.apartment,
+                    }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      city: cdekCity ?? prev.city,
+                      address: doorAddr,
                     }))
                   }
                 }
@@ -871,7 +956,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
               Адрес доставки
             </Heading2>
             <p className={cn('mb-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
-              Виджет выбирает улицу и дом. Пожалуйста, добавьте детали для курьера.
+              Виджет СДЭК заполняет улицу и дом. Проверьте их и добавьте детали для курьера.
             </p>
 
             <div className="grid gap-3 xl:gap-4 sm:grid-cols-2">
@@ -927,14 +1012,13 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
                 <input
                   id="cdek-door-apartment"
                   type="text"
-                  required
                   value={doorAddress.apartment}
                   onChange={(e) => setDoorAddress((prev) => ({ ...prev, apartment: e.target.value }))}
                   className={cn(
                     'form-input min-h-[44px] w-full rounded-lg text-base',
                     isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
                   )}
-                  placeholder="Например: 42"
+                  placeholder="Необязательно"
                 />
               </div>
 

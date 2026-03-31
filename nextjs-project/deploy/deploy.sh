@@ -5,7 +5,37 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "==> Pulling latest code..."
+log() {
+  echo "[$(date -Is)] $*"
+}
+
+docker_disk_free_mb() {
+  df -Pm / | awk 'NR==2 { print $4 }'
+}
+
+cleanup_docker_cache() {
+  log "Cleaning up Docker cache before build..."
+  docker image prune -f || true
+  docker builder prune -af || true
+  docker container prune -f || true
+  docker network prune -f || true
+}
+
+require_free_disk_mb() {
+  local min_free_mb="${1}"
+  local free_mb
+  free_mb="$(docker_disk_free_mb)"
+  if [ -z "${free_mb}" ] || [ "${free_mb}" -lt "${min_free_mb}" ]; then
+    log "ERROR: only ${free_mb:-0}MB free on /, need at least ${min_free_mb}MB for Docker build."
+    log "Run docker cleanup or expand VPS disk before retrying deploy."
+    exit 1
+  fi
+  log "Free disk on /: ${free_mb}MB"
+}
+
+MIN_FREE_MB="${MIN_FREE_MB:-4096}"
+
+log "Pulling latest code..."
 git fetch --prune origin
 CURRENT_BRANCH="$(git branch --show-current)"
 if [ -z "${CURRENT_BRANCH}" ]; then
@@ -17,6 +47,9 @@ if ! git merge-base --is-ancestor "HEAD" "origin/${CURRENT_BRANCH}"; then
   exit 1
 fi
 git pull --ff-only origin "${CURRENT_BRANCH}"
+
+cleanup_docker_cache
+require_free_disk_mb "${MIN_FREE_MB}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):
@@ -32,7 +65,7 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
     CERTBOT_DOMAIN_ARGS="${CERTBOT_DOMAIN_ARGS} -d ${d}"
   done
 
-  echo "==> Issuing/renewing TLS certificate for: ${DOMAINS_NORMALIZED}"
+  log "Issuing/renewing TLS certificate for: ${DOMAINS_NORMALIZED}"
   if command -v certbot >/dev/null 2>&1; then
     # Standalone mode: certbot binds to :80, so make sure nginx is stopped beforehand.
     # shellcheck disable=SC2086
@@ -40,7 +73,7 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
       ${CERTBOT_DOMAIN_ARGS} -m "${CERT_EMAIL}" || echo "WARN: certbot failed, continuing without updating certificate."
 
     if [ -d "/etc/letsencrypt/live/${FIRST_DOMAIN}" ]; then
-      echo "==> Copying certificate to deploy/nginx/ssl/ ..."
+      log "Copying certificate to deploy/nginx/ssl/ ..."
       mkdir -p deploy/nginx/ssl
       sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/fullchain.pem" "deploy/nginx/ssl/fullchain.pem"
       sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/privkey.pem" "deploy/nginx/ssl/privkey.pem"
@@ -53,25 +86,29 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
   fi
 fi
 
-echo "==> Building and starting containers..."
+log "Building and starting containers..."
 docker compose build --no-cache
 docker compose up -d db
 
-echo "==> Waiting for database to be healthy..."
+log "Waiting for database to be healthy..."
 sleep 5
 
-echo "==> Applying migrations (one-off container)..."
+log "Applying migrations (one-off container)..."
 docker compose run --rm app npx prisma migrate deploy
 
-echo "==> Starting app and remaining services..."
+log "Starting app and remaining services..."
 docker compose up -d
 
-echo "==> Reloading nginx with current config..."
+log "Reloading nginx with current config..."
 docker compose up -d --force-recreate nginx
 
-echo "==> Waiting for app to be up..."
+log "Cleaning up Docker cache after deploy..."
+docker image prune -f || true
+docker builder prune -af || true
+
+log "Waiting for app to be up..."
 sleep 5
 docker compose ps
 
-echo "==> Done. App: http://$(hostname -I 2>/dev/null | awk '{print $1}'):80 (or your domain)"
-echo "    Set RUN_MIGRATE=1 in .env if you want migrations to run on every container start (optional)."
+log "Done. App: http://$(hostname -I 2>/dev/null | awk '{print $1}'):80 (or your domain)"
+log "Set RUN_MIGRATE=1 in .env if you want migrations to run on every container start (optional)."
