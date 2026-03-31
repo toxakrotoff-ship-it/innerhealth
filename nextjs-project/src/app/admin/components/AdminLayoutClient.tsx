@@ -9,6 +9,7 @@ import { AdminBasePathProvider } from '@/app/admin/context/admin-base-path';
 import type { Session } from 'next-auth';
 import { AdminBrandSwitcher } from '@/app/admin/components/AdminBrandSwitcher';
 import { getBrandDefinitions, type BrandId } from '@/lib/brand/brand';
+import { getBrandSiteUrl } from '@/lib/brand/site-branding';
 
 const ACTIVE_BRAND_COOKIE_NAME = 'ih_active_brand';
 
@@ -28,6 +29,7 @@ export default function AdminLayoutClient({
   const brandDefinition = getBrandDefinitions().find((brand) => brand.id === activeBrand);
   const brandLabel = brandDefinition?.label ?? 'Inner Health';
   const brandShortLabel = activeBrand === 'sprint-power' ? 'SP' : 'IH';
+  const siteHref = getBrandSiteUrl(activeBrand);
 
   useEffect(() => {
     // Keep API brand scope in sync with active admin brand.
@@ -125,7 +127,7 @@ export default function AdminLayoutClient({
             <div className="flex items-center gap-3">
               <AdminBrandSwitcher adminBasePath={adminBasePath} activeBrand={activeBrand} />
               <Link
-                href="/"
+                href={siteHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-action-blue hover:text-action-blue"
