@@ -9,17 +9,18 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { Agent } from 'undici';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
+import { getTelegramBotToken } from '@/services/settings.service';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_SERVICE_SECRET = process.env.TELEGRAM_SERVICE_SECRET;
 const TELEGRAM_BOT_BRAND_ID: BrandId =
   normalizeBrandId(process.env.TELEGRAM_BOT_BRAND_ID) ?? 'inner';
 const TELEGRAM_SITE_URL =
   process.env.TELEGRAM_SITE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+let telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 const TELEGRAM_API_HOST = 'api.telegram.org';
@@ -32,10 +33,6 @@ const MAX_MESSAGE_LENGTH = 500;
 const MAX_START_CODE_LENGTH = 64;
 const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 
-if (!TELEGRAM_BOT_TOKEN) {
-  console.error('Missing TELEGRAM_BOT_TOKEN');
-  process.exit(1);
-}
 if (!TELEGRAM_SERVICE_SECRET) {
   console.error('Missing TELEGRAM_SERVICE_SECRET');
   process.exit(1);
@@ -79,7 +76,8 @@ function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = FE
 async function confirmLink(code: string, telegramUserId: string): Promise<{ success?: boolean; error?: string }> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/telegram/confirm`, {
+    const brandQuery = `?brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
+    const res = await fetchWithTimeout(`${base}/api/admin/telegram/confirm${brandQuery}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
       body: JSON.stringify({ code: String(code).slice(0, MAX_START_CODE_LENGTH), telegramUserId: String(telegramUserId) }),
@@ -253,7 +251,7 @@ async function sendMessage(
   options?: { replyMarkup?: TelegramReplyMarkup }
 ): Promise<void> {
   const safeText = String(text).slice(0, 4096);
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const url = `${TELEGRAM_API}/bot${telegramBotToken}/sendMessage`;
   try {
     const body: Record<string, unknown> = {
       chat_id: chatId,
@@ -354,7 +352,7 @@ async function setReviewStatus(
 }
 
 async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`;
+  const url = `${TELEGRAM_API}/bot${telegramBotToken}/answerCallbackQuery`;
   try {
     await fetchWithTimeout(url, {
       method: 'POST',
@@ -379,7 +377,7 @@ type TelegramUpdate = {
 };
 
 async function getUpdates(offset: number): Promise<{ result?: TelegramUpdate[] }> {
-  const url = `${TELEGRAM_API}/bot${TELEGRAM_BOT_TOKEN}/getUpdates?offset=${offset}&timeout=30&limit=50`;
+  const url = `${TELEGRAM_API}/bot${telegramBotToken}/getUpdates?offset=${offset}&timeout=30&limit=50`;
   const res = await fetchWithTimeout(url, {}, TELEGRAM_LONG_POLL_TIMEOUT_MS);
   const data = (await res.json()) as { result?: TelegramUpdate[] };
   const result = Array.isArray(data.result) ? data.result.slice(0, 50) : [];
@@ -387,8 +385,15 @@ async function getUpdates(offset: number): Promise<{ result?: TelegramUpdate[] }
 }
 
 async function run(): Promise<void> {
+  telegramBotToken = (await getTelegramBotToken({ brandId: TELEGRAM_BOT_BRAND_ID }))?.trim() ?? '';
+  if (!telegramBotToken) {
+    throw new Error(`Telegram bot token is not configured for brand "${TELEGRAM_BOT_BRAND_ID}".`);
+  }
   let offset = 0;
-  console.log('Telegram bot: long polling started. Site URL:', TELEGRAM_SITE_URL);
+  console.log('Telegram bot: long polling started.', {
+    siteUrl: TELEGRAM_SITE_URL,
+    brandId: TELEGRAM_BOT_BRAND_ID,
+  });
 
   while (true) {
     let updates: TelegramUpdate[] = [];

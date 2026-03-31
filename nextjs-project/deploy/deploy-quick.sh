@@ -38,11 +38,11 @@ echo "==> Restarting app..."
 docker compose up -d --force-recreate app
 
 echo "==> Restarting telegram-bot (no separate build)..."
-# В текущей конфигурации `telegram-bot` использует тот же image, что и `app`.
-docker compose up -d --no-build telegram-bot
+# В текущей конфигурации telegram-боты используют тот же image, что и `app`.
+docker compose up -d --force-recreate --no-build telegram-bot telegram-bot-sprint
 
 echo "==> Restarting max-bot (no separate build)..."
-docker compose up -d --force-recreate --no-build max-bot
+docker compose up -d --force-recreate --no-build max-bot max-bot-sprint
 
 echo "==> Recreating nginx (pick up new host/domain config)..."
 docker compose up -d --force-recreate nginx

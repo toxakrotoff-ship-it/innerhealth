@@ -61,7 +61,8 @@ async function confirmLink(code: string, maxUserId: string): Promise<{ success?:
   if (!MAX_SERVICE_SECRET) return { error: 'MAX_SERVICE_SECRET is missing' };
   try {
     const base = MAX_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/max/confirm`, {
+    const brandQuery = `?brand=${encodeURIComponent(MAX_BOT_BRAND_ID)}`;
+    const res = await fetchWithTimeout(`${base}/api/admin/max/confirm${brandQuery}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

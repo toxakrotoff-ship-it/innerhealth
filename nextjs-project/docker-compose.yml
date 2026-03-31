@@ -77,6 +77,28 @@ services:
           cpus: "0.2"
           memory: 256M
 
+  telegram-bot-sprint:
+    image: nextjs-project-app:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+      TELEGRAM_SITE_URL: http://app:3000
+      TELEGRAM_BOT_BRAND_ID: sprint-power
+      RUN_MIGRATE: "0"
+    command: ["npm", "run", "telegram-bot"]
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
   max-bot:
     # MAX боту нужен отдельный раннер (polling), иначе привязка через /api/admin/max/confirm
     # не выполняется и whitelist остаётся пустым.
@@ -86,6 +108,28 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
       MAX_SITE_URL: http://app:3000
+      RUN_MIGRATE: "0"
+    command: ["npm", "run", "max-bot:dev"]
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 256M
+
+  max-bot-sprint:
+    image: nextjs-project-app:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+      MAX_SITE_URL: http://app:3000
+      MAX_BOT_BRAND_ID: sprint-power
       RUN_MIGRATE: "0"
     command: ["npm", "run", "max-bot:dev"]
     depends_on:
