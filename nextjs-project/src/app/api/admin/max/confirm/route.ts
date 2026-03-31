@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { confirmMaxLinkAndReturnUserId } from '@/bot/runtime/max-links';
 import { notifyMaxConnection } from '@/lib/max-notify';
-import * as maxService from '@/services/max.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'MAX_SERVICE_SECRET';
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await maxService.confirmMaxLinkAndReturnUserId(body.code, body.maxUserId);
+    const result = await confirmMaxLinkAndReturnUserId(body.code, body.maxUserId);
     if (!result)
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
 

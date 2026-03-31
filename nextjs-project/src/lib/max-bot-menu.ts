@@ -1,5 +1,5 @@
 import { Keyboard } from '@maxhub/max-bot-api';
-import type { BotUserCapabilities } from '@/lib/bot-user-capabilities';
+import type { BotUserCapabilities } from '@/bot/runtime/capabilities';
 
 export const MAX_MENU_HELP_PAYLOAD = 'menu_help';
 export const MAX_MENU_STATUS_PAYLOAD = 'menu_status';

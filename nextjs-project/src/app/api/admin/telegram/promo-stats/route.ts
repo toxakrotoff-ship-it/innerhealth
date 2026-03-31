@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import * as promoService from '@/services/promo.service';
+import { getPromoStatsForAdmin } from '@/bot/runtime/promo-stats';
 import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
@@ -20,14 +20,9 @@ export async function GET(request: Request) {
 
   try {
     const brandId = normalizeBrandId(new URL(request.url).searchParams.get('brand'));
-    const promos = await promoService.getPromoCodesForAdmin(brandId);
+    const promos = await getPromoStatsForAdmin(brandId);
     return NextResponse.json({
-      promos: promos.map((p) => ({
-        code: p.code,
-        usedCount: p.usedCount,
-        usageLimit: p.usageLimit,
-        isActive: p.isActive,
-      })),
+      promos,
     });
   } catch (e) {
     console.error('Telegram promo-stats error:', e);

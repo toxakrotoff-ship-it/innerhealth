@@ -1,8 +1,8 @@
 import { Bot } from '@maxhub/max-bot-api';
-import * as settingsService from '@/services/settings.service';
+import { getTelegramBotToken } from '@/bot/runtime/settings';
 import * as reviewService from '@/services/review.service';
-import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
-import { getMaxBotConfig } from '@/lib/max/max-config';
+import * as reviewModerationMessageService from '@/bot/runtime/review-moderation-messages';
+import { getMaxBotConfig } from '@/bot/runtime/max-config';
 import type { BrandId } from '@/lib/brand/brand';
 
 interface SyncInput {
@@ -63,7 +63,7 @@ function resolveReviewBrandId(reviewBrand: string | null | undefined): BrandId {
 }
 
 async function syncTelegramReviewModeration(input: SyncInput, review: ReviewSyncContext): Promise<string[]> {
-  const token = await settingsService.getTelegramBotToken({
+  const token = await getTelegramBotToken({
     brandId: resolveReviewBrandId(review.brand),
   });
   if (!token) return [];

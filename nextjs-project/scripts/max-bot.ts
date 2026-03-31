@@ -1,9 +1,12 @@
 import 'dotenv/config';
 import { Bot } from '@maxhub/max-bot-api';
-import { decryptSettingValue, isEncryptedSettingValue } from '../src/lib/settings-encryption';
-import { prisma } from '../src/lib/prisma';
-import { getMaxBotUserCapabilities } from '@/lib/bot-user-capabilities';
-import { makeScopedSettingKey } from '@/lib/brand/brand-settings';
+import {
+  getMaxBotUserCapabilities,
+  type BotUserCapabilities,
+} from '@/bot/runtime/capabilities';
+import { getMaxBotConfig } from '@/bot/runtime/max-config';
+import { getPromoStatsForAdmin } from '@/bot/runtime/promo-stats';
+import { getPartnerStatsByMaxUserId } from '@/bot/runtime/partner-stats';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 import {
   buildHelpTextForMax,
@@ -21,8 +24,7 @@ const MAX_MESSAGE_LENGTH = 500;
 const MAX_START_CODE_LENGTH = 64;
 const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 const MAX_SERVICE_SECRET = process.env.MAX_SERVICE_SECRET;
-const MAX_BOT_BRAND_ID: BrandId =
-  normalizeBrandId(process.env.MAX_BOT_BRAND_ID) ?? 'inner';
+const MAX_BOT_BRAND_ID: BrandId = normalizeBrandId(process.env.MAX_BOT_BRAND_ID) ?? 'inner';
 const MAX_SITE_URL =
   process.env.MAX_SITE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
@@ -32,7 +34,10 @@ interface MaxBotContextLike {
   user?: { user_id?: string | number };
   message?: { body?: { text?: string | null } | null } | null;
   callback?: { payload?: string | null } | null;
-  reply: (text: string, extra?: { format?: 'markdown' | 'html'; attachments?: unknown[] }) => Promise<unknown> | unknown;
+  reply: (
+    text: string,
+    extra?: { format?: 'markdown' | 'html'; attachments?: unknown[] }
+  ) => Promise<unknown> | unknown;
 }
 
 function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -82,41 +87,6 @@ async function confirmLink(code: string, maxUserId: string): Promise<{ success?:
   }
 }
 
-async function getPromoStats(): Promise<Array<{ code: string; usedCount: number; usageLimit: number | null; isActive: boolean }>> {
-  if (!MAX_SERVICE_SECRET) return [];
-  try {
-    const base = MAX_SITE_URL.replace(/\/$/, '');
-    const brandQuery = `?brand=${encodeURIComponent(MAX_BOT_BRAND_ID)}`;
-    const res = await fetchWithTimeout(`${base}/api/admin/telegram/promo-stats${brandQuery}`, {
-      headers: { 'X-Service-Key': MAX_SERVICE_SECRET },
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { promos?: Array<{ code: string; usedCount: number; usageLimit: number | null; isActive: boolean }> };
-    return Array.isArray(data.promos) ? data.promos.slice(0, 100) : [];
-  } catch (error) {
-    console.error('[max-bot] getPromoStats error:', error);
-    return [];
-  }
-}
-
-async function getPartnerStats(maxUserId: string): Promise<{ stats: Array<{ code: string; ordersCount: number; applicationsCount: number; partnerIncome: number }> } | { error: string }> {
-  if (!MAX_SERVICE_SECRET) return { error: 'MAX_SERVICE_SECRET is missing' };
-  try {
-    const base = MAX_SITE_URL.replace(/\/$/, '');
-    const brandQuery = `&brand=${encodeURIComponent(MAX_BOT_BRAND_ID)}`;
-    const res = await fetchWithTimeout(
-      `${base}/api/max/partner-stats?maxUserId=${encodeURIComponent(maxUserId)}${brandQuery}`,
-      { headers: { 'X-Service-Key': MAX_SERVICE_SECRET } }
-    );
-    const data = (await res.json()) as { stats?: Array<{ code: string; ordersCount: number; applicationsCount: number; partnerIncome: number }>; error?: string };
-    if (!res.ok) return { error: data.error || 'Не удалось загрузить статистику' };
-    return { stats: Array.isArray(data.stats) ? data.stats : [] };
-  } catch (error) {
-    console.error('[max-bot] getPartnerStats error:', error);
-    return { error: 'Сервис временно недоступен' };
-  }
-}
-
 async function executeMaxCommand(
   ctx: MaxBotContextLike,
   maxUserId: string,
@@ -143,7 +113,7 @@ async function executeMaxCommand(
       await ctx.reply('Доступ только для администраторов.', { format: 'markdown', attachments });
       return;
     }
-    const promos = await getPromoStats();
+    const promos = await getPromoStatsForAdmin(MAX_BOT_BRAND_ID);
     if (promos.length === 0) {
       await ctx.reply('Нет промокодов.', { format: 'markdown', attachments });
       return;
@@ -160,27 +130,25 @@ async function executeMaxCommand(
     await ctx.reply('Доступ только для партнёров.', { format: 'markdown', attachments });
     return;
   }
-  const result = await getPartnerStats(maxUserId);
-  if ('error' in result) {
-    await ctx.reply(result.error, { format: 'markdown', attachments });
+  const stats = await getPartnerStatsByMaxUserId(maxUserId, MAX_BOT_BRAND_ID);
+  if (stats === null) {
+    await ctx.reply('Доступ только для партнёров.', { format: 'markdown', attachments });
     return;
   }
-  if (result.stats.length === 0) {
+  if (stats.length === 0) {
     await ctx.reply('У вас пока нет статистики.', { format: 'markdown', attachments });
     return;
   }
-  const totalOrders = result.stats.reduce((sum, row) => sum + row.ordersCount, 0);
-  const lines = result.stats.map((row) =>
-    `• ${row.code} — заказов: ${row.ordersCount}`
-  );
-  await ctx.reply(
-    `<b>Ваша статистика</b>\n\nВсего заказов: <b>${totalOrders}</b>\n\n${lines.join('\n')}`,
-    { format: 'html', attachments }
-  );
+  const totalOrders = stats.reduce((sum, row) => sum + row.ordersCount, 0);
+  const lines = stats.map((row) => `• ${row.code} — заказов: ${row.ordersCount}`);
+  await ctx.reply(`<b>Ваша статистика</b>\n\nВсего заказов: <b>${totalOrders}</b>\n\n${lines.join('\n')}`, {
+    format: 'html',
+    attachments,
+  });
 }
 
 async function bootstrap(): Promise<void> {
-  const config = await getMaxBotConfig();
+  const config = await getMaxBotConfig({ brandId: MAX_BOT_BRAND_ID });
   if (!config.token) {
     throw new Error('MAX bot token is not configured. Set max_bot_token in admin settings or MAX_BOT_TOKEN.');
   }
@@ -259,7 +227,9 @@ async function bootstrap(): Promise<void> {
       return;
     }
     if (text.startsWith('/')) return;
-    const capabilities = await getMaxBotUserCapabilities(userId, { brandId: MAX_BOT_BRAND_ID });
+    const capabilities: BotUserCapabilities = await getMaxBotUserCapabilities(userId, {
+      brandId: MAX_BOT_BRAND_ID,
+    });
     await messageContext.reply(buildUnknownCommandTextForMax(capabilities), {
       format: 'markdown',
       attachments: buildMaxMenuAttachments(capabilities) as unknown[],
@@ -278,41 +248,3 @@ bootstrap().catch((error) => {
   console.error('[max-bot] bootstrap failed', error);
   process.exit(1);
 });
-
-async function getMaxBotConfig(): Promise<{ token?: string; mode: 'polling' | 'webhook' }> {
-  const tokenFromEnv = process.env.MAX_BOT_TOKEN?.trim();
-  const modeFromEnvRaw = process.env.MAX_BOT_MODE?.trim().toLowerCase();
-  const modeFromEnv: 'polling' | 'webhook' = modeFromEnvRaw === 'webhook' ? 'webhook' : 'polling';
-  if (tokenFromEnv) return { token: tokenFromEnv, mode: modeFromEnv };
-
-  const rows = await prisma.siteSetting.findMany({
-    where: {
-      key: {
-        in: [
-          makeScopedSettingKey(MAX_BOT_BRAND_ID, 'max_bot_token'),
-          makeScopedSettingKey(MAX_BOT_BRAND_ID, 'max_bot_mode'),
-          'max_bot_token',
-          'max_bot_mode',
-        ],
-      },
-    },
-    select: { key: true, value: true },
-  });
-  const map = new Map(rows.map((r) => [r.key, r.value] as const));
-
-  const tokenRaw =
-    map.get(makeScopedSettingKey(MAX_BOT_BRAND_ID, 'max_bot_token'))?.trim() ??
-    map.get('max_bot_token')?.trim() ??
-    '';
-  const token = tokenRaw ? decryptSettingValue(tokenRaw) : '';
-  const safeToken = token && !isEncryptedSettingValue(token) ? token : '';
-
-  const modeRaw = (
-    map.get(makeScopedSettingKey(MAX_BOT_BRAND_ID, 'max_bot_mode')) ??
-    map.get('max_bot_mode') ??
-    ''
-  ).trim().toLowerCase();
-  const mode: 'polling' | 'webhook' = modeRaw === 'webhook' ? 'webhook' : 'polling';
-
-  return { token: safeToken || undefined, mode };
-}

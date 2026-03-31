@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Role } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
-import * as partnerService from '@/services/partner.service';
+import { getPartnerStatsByMaxUserId } from '@/bot/runtime/partner-stats';
 import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
@@ -25,19 +23,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing maxUserId' }, { status: 400 });
 
   try {
-    const whitelist = await prisma.maxWhitelist.findUnique({
-      where: {
-        brand_maxUserId: {
-          brand: brandId ?? 'inner',
-          maxUserId,
-        },
-      },
-      include: { user: { select: { id: true, role: true } } },
-    });
-    if (!whitelist || whitelist.user.role !== Role.PARTNER)
+    const stats = await getPartnerStatsByMaxUserId(maxUserId, brandId);
+    if (stats === null)
       return NextResponse.json({ error: 'Not a partner or MAX not linked' }, { status: 403 });
-
-    const stats = await partnerService.getPartnerStatsForPartner(whitelist.user.id, brandId);
     return NextResponse.json({ stats });
   } catch (error) {
     console.error('MAX partner-stats error:', error);

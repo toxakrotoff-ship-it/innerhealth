@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { confirmTelegramLinkAndReturnUserId } from '@/bot/runtime/telegram-links';
 import { notifyTelegramConnection } from '@/lib/telegram-notify';
-import * as telegramService from '@/services/telegram.service';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const { code, telegramUserId } = body;
 
   try {
-    const result = await telegramService.confirmTelegramLinkAndReturnUserId(code, telegramUserId);
+    const result = await confirmTelegramLinkAndReturnUserId(code, telegramUserId);
     if (!result) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
     }

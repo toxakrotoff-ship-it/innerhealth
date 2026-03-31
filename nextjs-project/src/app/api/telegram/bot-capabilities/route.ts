@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTelegramBotUserCapabilities } from '@/lib/bot-user-capabilities';
+import { getTelegramBotUserCapabilities } from '@/bot/runtime/capabilities';
 import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';

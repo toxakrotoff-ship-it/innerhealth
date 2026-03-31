@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { Bot } from '@maxhub/max-bot-api';
+import {
+  getMaxBotUserCapabilities,
+  type BotUserCapabilities,
+} from '@/bot/runtime/capabilities';
+import { getMaxBotConfig } from '@/bot/runtime/max-config';
+import { getPromoStatsForAdmin } from '@/bot/runtime/promo-stats';
+import { getPartnerStatsByMaxUserId } from '@/bot/runtime/partner-stats';
+import { confirmMaxLinkAndReturnUserId } from '@/bot/runtime/max-links';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
-import { getMaxBotConfig } from '@/lib/max/max-config';
 import { notifyMaxConnection } from '@/lib/max-notify';
 import { moderateReviewAndSync } from '@/lib/review-moderation-action';
-import { getMaxBotUserCapabilities } from '@/lib/bot-user-capabilities';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 import {
   buildHelpTextForMax,
@@ -15,10 +21,6 @@ import {
   resolveMaxMenuCommand,
   type MaxMenuCommand,
 } from '@/lib/max-bot-menu';
-import * as maxService from '@/services/max.service';
-import * as promoService from '@/services/promo.service';
-import * as partnerService from '@/services/partner.service';
-
 const maxWebhookUpdateSchema = z.object({
   update_type: z.string(),
   chat_id: z.union([z.number(), z.string()]).optional(),
@@ -98,7 +100,7 @@ async function buildMaxCommandResponse(
     if (!capabilities.isAdmin) {
       return { text: 'Доступ только для администраторов.', format: 'markdown' };
     }
-    const promos = await promoService.getPromoCodesForAdmin(brandId);
+    const promos = await getPromoStatsForAdmin(brandId);
     if (promos.length === 0) return { text: 'Нет промокодов.', format: 'markdown' };
     const lines = promos.map((promo) => {
       const limit = promo.usageLimit != null ? ` / ${promo.usageLimit}` : '';
@@ -112,14 +114,13 @@ async function buildMaxCommandResponse(
     return { text: 'Доступ только для партнёров.', format: 'markdown' };
   }
 
-  const whitelistRow = await maxService.findMaxWhitelistByMaxUserId(maxUserId, { brandId });
-  if (!whitelistRow) {
+  const stats = await getPartnerStatsByMaxUserId(maxUserId, brandId);
+  if (stats === null) {
     return {
       text: '❌ Вы не подключены. Получите ссылку в админке/личном кабинете.',
       format: 'markdown',
     };
   }
-  const stats = await partnerService.getPartnerStatsForPartner(whitelistRow.userId, brandId);
   if (stats.length === 0) {
     return { text: 'У вас пока нет статистики.', format: 'markdown' };
   }
@@ -165,7 +166,7 @@ export async function POST(request: Request) {
     const safeCode = codeRaw.slice(0, MAX_START_CODE_LENGTH);
     const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
     if (safeCode && VALID_CODE_REGEX.test(safeCode) && maxUserId) {
-      const result = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
+      const result = await confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
       if (result) {
         void notifyMaxConnection({ userId: result.userId, maxUserId, brandId: result.brandId });
         const bot = config.token ? new Bot(config.token) : null;
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
     }
 
     if (!text.startsWith('/')) {
-      const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
+      const capabilities: BotUserCapabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
       await sendMaxMessageWithMenu(bot, maxUserId, buildUnknownCommandTextForMax(capabilities), 'markdown', brandId);
       return NextResponse.json({ ok: true });
     }

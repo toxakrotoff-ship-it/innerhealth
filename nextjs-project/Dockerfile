@@ -53,14 +53,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/standalone/.
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/public ./.next/standalone/public
 
-# Скрипты для telegram-bot (ts-node запускает scripts/telegram-bot.ts)
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-# src/ нужен раннерам ботов (MAX читает настройки через DAL)
-COPY --from=builder --chown=nextjs:nodejs /app/src ./src
-COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
-# typescript нужен ts-node в рантайме (в production иначе только --omit=dev)
-RUN npm install typescript --no-save
-
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
@@ -90,16 +82,22 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/package.json /app/package-lock.json* ./
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN npm ci --omit=dev --ignore-scripts \
   && npm install ts-node tsconfig-paths typescript --no-save \
   && npx prisma generate
 
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-COPY --from=builder --chown=nextjs:nodejs /app/src ./src
-COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --chown=nextjs:nodejs scripts ./scripts
+COPY --chown=nextjs:nodejs tsconfig.json ./tsconfig.json
+COPY --chown=nextjs:nodejs src/bot ./src/bot
+COPY --chown=nextjs:nodejs src/lib/brand ./src/lib/brand
+COPY --chown=nextjs:nodejs src/lib/max ./src/lib/max
+COPY --chown=nextjs:nodejs src/lib/max-bot-menu.ts ./src/lib/max-bot-menu.ts
+COPY --chown=nextjs:nodejs src/lib/prisma.ts ./src/lib/prisma.ts
+COPY --chown=nextjs:nodejs src/lib/project-root.ts ./src/lib/project-root.ts
+COPY --chown=nextjs:nodejs src/lib/settings-encryption.ts ./src/lib/settings-encryption.ts
 
 RUN chown -R nextjs:nodejs /app
 

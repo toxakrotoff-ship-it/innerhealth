@@ -9,7 +9,13 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { Agent } from 'undici';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
-import { getTelegramBotToken } from '@/services/settings.service';
+import {
+  getTelegramBotUserCapabilities,
+  type BotUserCapabilities,
+} from '@/bot/runtime/capabilities';
+import { getTelegramBotToken } from '@/bot/runtime/settings';
+import { getPromoStatsForAdmin } from '@/bot/runtime/promo-stats';
+import { getPartnerStatsByTelegramUserId as getPartnerStatsByTelegramUserIdRuntime } from '@/bot/runtime/partner-stats';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -116,12 +122,6 @@ interface PartnerStatRow {
   partnerIncome: number;
 }
 
-interface TelegramBotCapabilities {
-  isLinked: boolean;
-  isAdmin: boolean;
-  isPartner: boolean;
-}
-
 interface TelegramReplyMarkup {
   inline_keyboard?: Array<Array<{ text: string; callback_data: string }>>;
   keyboard?: Array<Array<{ text: string }>>;
@@ -133,24 +133,9 @@ async function getPartnerStatsByTelegramUserId(
   telegramUserId: string
 ): Promise<{ stats: PartnerStatRow[] } | { error: string }> {
   try {
-    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const brandQuery = `&brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
-    const res = await fetchWithTimeout(
-      `${base}/api/telegram/partner-stats?telegramUserId=${encodeURIComponent(telegramUserId)}${brandQuery}`,
-      { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
-    );
-    const raw = await res.text();
-    if (!res.ok) {
-      let err: { error?: string } = {};
-      try {
-        err = JSON.parse(raw) as { error?: string };
-      } catch {
-        err = { error: raw.slice(0, 100) };
-      }
-      return { error: err.error || 'Не удалось загрузить статистику' };
-    }
-    const data = JSON.parse(raw) as { stats?: PartnerStatRow[] };
-    return { stats: Array.isArray(data.stats) ? data.stats : [] };
+    const stats = await getPartnerStatsByTelegramUserIdRuntime(telegramUserId, TELEGRAM_BOT_BRAND_ID);
+    if (stats === null) return { error: 'Доступ только для партнёров.' };
+    return { stats };
   } catch (e) {
     console.error('[bot] getPartnerStatsByTelegramUserId error:', e instanceof Error ? e.name : e);
     return { error: 'Сервис временно недоступен' };
@@ -159,35 +144,23 @@ async function getPartnerStatsByTelegramUserId(
 
 async function getTelegramCapabilities(
   telegramUserId: string
-): Promise<TelegramBotCapabilities> {
+): Promise<BotUserCapabilities> {
   try {
-    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const brandQuery = `&brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
-    const res = await fetchWithTimeout(
-      `${base}/api/telegram/bot-capabilities?telegramUserId=${encodeURIComponent(telegramUserId)}${brandQuery}`,
-      { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
-    );
-    if (!res.ok) return { isLinked: false, isAdmin: false, isPartner: false };
-    const data = (await res.json()) as Partial<TelegramBotCapabilities>;
-    return {
-      isLinked: Boolean(data.isLinked),
-      isAdmin: Boolean(data.isAdmin),
-      isPartner: Boolean(data.isPartner),
-    };
+    return await getTelegramBotUserCapabilities(telegramUserId, { brandId: TELEGRAM_BOT_BRAND_ID });
   } catch (e) {
     console.error('[bot] getTelegramCapabilities error:', e instanceof Error ? e.name : e);
     return { isLinked: false, isAdmin: false, isPartner: false };
   }
 }
 
-function getTelegramAvailableCommands(capabilities: TelegramBotCapabilities): string[] {
+function getTelegramAvailableCommands(capabilities: BotUserCapabilities): string[] {
   const commands = ['/help', '/status'];
   if (capabilities.isAdmin) commands.push('/promo');
   if (capabilities.isPartner) commands.push('/stats');
   return commands;
 }
 
-function buildTelegramReplyMarkup(capabilities: TelegramBotCapabilities): TelegramReplyMarkup {
+function buildTelegramReplyMarkup(capabilities: BotUserCapabilities): TelegramReplyMarkup {
   const rows: Array<Array<{ text: string }>> = [[{ text: '/status' }, { text: '/help' }]];
   const roleRow: Array<{ text: string }> = [];
   if (capabilities.isAdmin) roleRow.push({ text: '/promo' });
@@ -200,7 +173,7 @@ function buildTelegramReplyMarkup(capabilities: TelegramBotCapabilities): Telegr
   };
 }
 
-function buildHelpTextForTelegram(capabilities: TelegramBotCapabilities): string {
+function buildHelpTextForTelegram(capabilities: BotUserCapabilities): string {
   if (!capabilities.isLinked) {
     return [
       '<b>Помощь</b>',
@@ -230,7 +203,7 @@ function buildHelpTextForTelegram(capabilities: TelegramBotCapabilities): string
   ].join('\n');
 }
 
-function buildWelcomeTextForTelegram(capabilities: TelegramBotCapabilities): string {
+function buildWelcomeTextForTelegram(capabilities: BotUserCapabilities): string {
   return [
     '✅ Вас подключили к уведомлениям.',
     '',
@@ -241,7 +214,7 @@ function buildWelcomeTextForTelegram(capabilities: TelegramBotCapabilities): str
   ].join('\n');
 }
 
-function buildUnknownCommandTextForTelegram(capabilities: TelegramBotCapabilities): string {
+function buildUnknownCommandTextForTelegram(capabilities: BotUserCapabilities): string {
   return `Неизвестная команда. Доступны: ${getTelegramAvailableCommands(capabilities).join(', ')}.`;
 }
 
@@ -578,7 +551,7 @@ async function run(): Promise<void> {
             }).catch(() => {});
             continue;
           }
-          const promos = await getPromoStats();
+          const promos = await getPromoStatsForAdmin(TELEGRAM_BOT_BRAND_ID);
           if (promos.length === 0) {
             await sendMessage(chatId, 'Нет промокодов.', {
               replyMarkup: buildTelegramReplyMarkup(capabilities),
