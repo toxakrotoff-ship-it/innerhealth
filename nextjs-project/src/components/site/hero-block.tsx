@@ -87,7 +87,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
   /* min-h breakpoints mirror `main` pt in `app/(site)/layout.tsx` (sticky header offset). */
   return (
     <section
-      className="relative min-h-[clamp(560px,calc(100dvh-4rem-env(safe-area-inset-top)),980px)] 2xl:min-h-[clamp(620px,calc(100dvh-4.5rem-env(safe-area-inset-top)),1080px)] 3xl:min-h-[clamp(680px,calc(100dvh-5rem-env(safe-area-inset-top)),1160px)] 4xl:min-h-[clamp(720px,calc(100dvh-6rem-env(safe-area-inset-top)),1220px)] 5xl:min-h-[clamp(760px,calc(100dvh-7rem-env(safe-area-inset-top)),1280px)] 6xl:min-h-[clamp(800px,calc(100dvh-8rem-env(safe-area-inset-top)),1360px)] flex items-center overflow-hidden pb-6 sm:pb-8 text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
+      className="relative box-border min-h-[clamp(560px,calc(100dvh-4rem-env(safe-area-inset-top)),980px)] 2xl:min-h-[clamp(620px,calc(100dvh-4.5rem-env(safe-area-inset-top)),1080px)] 3xl:min-h-[clamp(680px,calc(100dvh-5rem-env(safe-area-inset-top)),1160px)] 4xl:min-h-[clamp(720px,calc(100dvh-6rem-env(safe-area-inset-top)),1220px)] 5xl:min-h-[clamp(760px,calc(100dvh-7rem-env(safe-area-inset-top)),1280px)] 6xl:min-h-[clamp(800px,calc(100dvh-8rem-env(safe-area-inset-top)),1360px)] flex items-center overflow-hidden pb-6 sm:pb-8 text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
       aria-label="Главный блок"
     >
       <AdaptiveContainer
@@ -167,4 +167,3 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
     </section>
   )
 }
-
