@@ -117,7 +117,9 @@ export interface AdminOrderDto {
   promoCode: {
     code: string;
   } | null;
+  cdekOrderUuid: string | null;
   cdekTrackNumber: string | null;
+  cdekOrderError: string | null;
   shippingInfo: {
     fullName: string;
     phoneMasked: string;
@@ -151,7 +153,9 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
+    cdekOrderError: order.cdekOrderError ?? null,
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -227,7 +231,9 @@ export async function getOrdersForAdminWithTrash(options: {
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
+    cdekOrderError: order.cdekOrderError ?? null,
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
