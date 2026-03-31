@@ -19,7 +19,7 @@ ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 RUN npm run build
 
-# --- Production stage (образ для app и telegram-bot) ---
+# --- Production stage (образ для web app) ---
 FROM node:20-alpine AS runner
 
 RUN apk add --no-cache libc6-compat python3 make g++
@@ -75,3 +75,34 @@ ENV HOSTNAME="0.0.0.0"
 ENTRYPOINT ["/docker-entrypoint.sh"]
 # Запуск standalone-сервера вместо `next start`, чтобы не требовать весь `.next`.
 CMD ["node", ".next/standalone/server.js"]
+
+# --- Production stage (lightweight image for bot runners only) ---
+FROM node:20-alpine AS bot-runner
+
+RUN apk add --no-cache libc6-compat python3 make g++
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/package.json /app/package-lock.json* ./
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+RUN npm ci --omit=dev --ignore-scripts \
+  && npm install ts-node tsconfig-paths typescript --no-save \
+  && npx prisma generate
+
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+
+CMD ["npm", "run", "telegram-bot"]

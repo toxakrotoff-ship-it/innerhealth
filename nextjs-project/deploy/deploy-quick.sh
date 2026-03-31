@@ -28,6 +28,9 @@ cd "$DEPLOY_DIR"
 echo "==> Building app image (with cache)..."
 docker compose build app
 
+echo "==> Building bot image (with cache)..."
+docker compose build telegram-bot
+
 echo "==> Migration status (before deploy)..."
 docker compose run --rm app npx prisma migrate status || true
 
@@ -38,7 +41,7 @@ echo "==> Restarting app..."
 docker compose up -d --force-recreate app
 
 echo "==> Restarting telegram-bot (no separate build)..."
-# В текущей конфигурации telegram-боты используют тот же image, что и `app`.
+# Telegram-боты используют отдельный bot image.
 docker compose up -d --force-recreate --no-build telegram-bot telegram-bot-sprint
 
 echo "==> Restarting max-bot (no separate build)..."
