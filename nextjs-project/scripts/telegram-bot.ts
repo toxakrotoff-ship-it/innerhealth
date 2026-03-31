@@ -8,12 +8,15 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { Agent } from 'undici';
+import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_SERVICE_SECRET = process.env.TELEGRAM_SERVICE_SECRET;
+const TELEGRAM_BOT_BRAND_ID: BrandId =
+  normalizeBrandId(process.env.TELEGRAM_BOT_BRAND_ID) ?? 'inner';
 const TELEGRAM_SITE_URL =
   process.env.TELEGRAM_SITE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
@@ -93,7 +96,8 @@ async function confirmLink(code: string, telegramUserId: string): Promise<{ succ
 async function getPromoStats(): Promise<Array<{ code: string; usedCount: number; usageLimit: number | null; isActive: boolean }>> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const res = await fetchWithTimeout(`${base}/api/admin/telegram/promo-stats`, {
+    const brandQuery = `?brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
+    const res = await fetchWithTimeout(`${base}/api/admin/telegram/promo-stats${brandQuery}`, {
       headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
     });
     if (!res.ok) return [];
@@ -132,8 +136,9 @@ async function getPartnerStatsByTelegramUserId(
 ): Promise<{ stats: PartnerStatRow[] } | { error: string }> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const brandQuery = `&brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
     const res = await fetchWithTimeout(
-      `${base}/api/telegram/partner-stats?telegramUserId=${encodeURIComponent(telegramUserId)}`,
+      `${base}/api/telegram/partner-stats?telegramUserId=${encodeURIComponent(telegramUserId)}${brandQuery}`,
       { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
     );
     const raw = await res.text();
@@ -159,8 +164,9 @@ async function getTelegramCapabilities(
 ): Promise<TelegramBotCapabilities> {
   try {
     const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const brandQuery = `&brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
     const res = await fetchWithTimeout(
-      `${base}/api/telegram/bot-capabilities?telegramUserId=${encodeURIComponent(telegramUserId)}`,
+      `${base}/api/telegram/bot-capabilities?telegramUserId=${encodeURIComponent(telegramUserId)}${brandQuery}`,
       { headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET } }
     );
     if (!res.ok) return { isLinked: false, isAdmin: false, isPartner: false };

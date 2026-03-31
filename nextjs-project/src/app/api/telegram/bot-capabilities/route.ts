@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getTelegramBotUserCapabilities } from '@/lib/bot-user-capabilities';
+import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -18,12 +19,13 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const telegramUserId = url.searchParams.get('telegramUserId')?.trim();
+  const brandId = normalizeBrandId(url.searchParams.get('brand')) ?? 'inner';
   if (!telegramUserId) {
     return NextResponse.json({ error: 'Missing telegramUserId' }, { status: 400 });
   }
 
   try {
-    return NextResponse.json(await getTelegramBotUserCapabilities(telegramUserId));
+    return NextResponse.json(await getTelegramBotUserCapabilities(telegramUserId, { brandId }));
   } catch (error) {
     console.error('[telegram/bot-capabilities] failed:', error);
     return NextResponse.json({ error: 'Failed to get bot capabilities' }, { status: 500 });

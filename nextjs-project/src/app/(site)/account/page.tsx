@@ -14,7 +14,7 @@ export default async function AccountPage() {
   const session = await requireUserPageSession()
   const dashboard = await getAccountDashboard(session.user.id as string)
   const headersStore = await headers()
-  resolveBrand({
+  const activeBrand = resolveBrand({
     forwardedBrand: headersStore.get('x-brand'),
     host: headersStore.get('x-forwarded-host') || headersStore.get('host'),
   })
@@ -33,8 +33,8 @@ export default async function AccountPage() {
           totalSpent={dashboard.stats.totalSpent}
           userRole={session.user.role}
         />
-        <AccountTelegramBlock />
-        <AccountMaxBlock />
+        <AccountTelegramBlock brandId={activeBrand} />
+        <AccountMaxBlock brandId={activeBrand} />
       </div>
     </AdaptiveContainer>
   )

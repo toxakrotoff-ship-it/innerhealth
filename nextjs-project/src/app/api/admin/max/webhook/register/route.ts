@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as settingsService from '@/services/settings.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 const MAX_PLATFORM_API = 'https://platform-api.max.ru/subscriptions';
 
-export async function POST() {
+function buildWebhookUrl(rawUrl: string, brandId: string): string {
+  if (!rawUrl.trim()) return rawUrl;
+  const parsed = new URL(rawUrl);
+  if (!parsed.searchParams.get('brand')) {
+    parsed.searchParams.set('brand', brandId);
+  }
+  return parsed.toString();
+}
+
+export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
-  const settings = await settingsService.getMaxBotSettings();
+  const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+  const settings = await settingsService.getMaxBotSettings({ brandId });
   if (!settings.token) {
     return NextResponse.json(
       { ok: false, error: 'MAX token не задан. Сохраните токен в настройках MAX.' },
@@ -23,8 +34,9 @@ export async function POST() {
   }
 
   try {
+    const webhookUrl = buildWebhookUrl(settings.webhookUrl, brandId);
     const body: Record<string, unknown> = {
-      url: settings.webhookUrl,
+      url: webhookUrl,
       update_types: ['bot_started', 'message_created', 'message_callback'],
     };
     if (settings.webhookSecret) {

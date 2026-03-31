@@ -2,6 +2,8 @@ import 'server-only';
 
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 export interface BotUserCapabilities {
   isLinked: boolean;
@@ -18,20 +20,32 @@ function buildCapabilities(role: Role | null | undefined, isLinked: boolean): Bo
 }
 
 export async function getTelegramBotUserCapabilities(
-  telegramUserId: string
+  telegramUserId: string,
+  options?: { brandId?: BrandId | null }
 ): Promise<BotUserCapabilities> {
   const row = await prisma.telegramWhitelist.findUnique({
-    where: { telegramUserId },
+    where: {
+      brand_telegramUserId: {
+        brand: resolveDbBrand(options?.brandId),
+        telegramUserId,
+      },
+    },
     select: { user: { select: { role: true } } },
   });
   return buildCapabilities(row?.user.role, Boolean(row));
 }
 
 export async function getMaxBotUserCapabilities(
-  maxUserId: string
+  maxUserId: string,
+  options?: { brandId?: BrandId | null }
 ): Promise<BotUserCapabilities> {
   const row = await prisma.maxWhitelist.findUnique({
-    where: { maxUserId },
+    where: {
+      brand_maxUserId: {
+        brand: resolveDbBrand(options?.brandId),
+        maxUserId,
+      },
+    },
     select: { user: { select: { role: true } } },
   });
   return buildCapabilities(row?.user.role, Boolean(row));

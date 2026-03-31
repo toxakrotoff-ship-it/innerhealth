@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/button';
+import type { BrandId } from '@/lib/brand/brand';
 
-export function PartnerMaxBlock() {
+export function PartnerMaxBlock({ brandId }: { brandId: BrandId }) {
+  const brandQuery = `?brand=${encodeURIComponent(brandId)}`;
   const [status, setStatus] = useState<{ linked: boolean; linkedAt: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -12,7 +14,7 @@ export function PartnerMaxBlock() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadStatus() {
-    const response = await fetch('/api/account/max/status');
+    const response = await fetch(`/api/account/max/status${brandQuery}`);
     if (!response.ok) return;
     const data = await response.json();
     setStatus({ linked: data.linked, linkedAt: data.linkedAt });
@@ -23,14 +25,14 @@ export function PartnerMaxBlock() {
     loadStatus()
       .catch(() => setStatus({ linked: false, linkedAt: null }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [brandQuery]);
 
   async function handleConnect() {
     setCreating(true);
     setError(null);
     setLinkResult(null);
     try {
-      const response = await fetch('/api/account/max/link-code', { method: 'POST' });
+      const response = await fetch(`/api/account/max/link-code${brandQuery}`, { method: 'POST' });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Не удалось создать ссылку');

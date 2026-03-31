@@ -93,7 +93,7 @@ export interface MaxOrderNotifyPayload {
 
 export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const whitelist = await maxService.getMaxWhitelist();
+  const whitelist = await maxService.getMaxWhitelist(scope);
   const adminUserIds = whitelist.map((row) => row.maxUserId);
   const lines: string[] = [
     '**Новый заказ**',
@@ -118,7 +118,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
   await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'), scope);
 
   if (payload.promoCodeId) {
-    const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId);
+    const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId, scope);
     if (partnerMaxUserId) {
       const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
       const partnerText =
@@ -131,7 +131,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
   }
 
   if (payload.customerUserId) {
-    const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId);
+    const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId, scope);
     if (customerLink) {
       const customerText =
         `✅ **Ваш заказ принят**\n\n` +
@@ -149,7 +149,7 @@ export async function notifyMaxOrderStatusForUser(payload: {
   brandId?: BrandId;
 }): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const link = await maxService.findMaxWhitelistByUserId(payload.userId);
+  const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
   if (!link?.maxUserId) return;
 
   const statusLine = payload.status === 'paid' ? '✅ **Заказ оплачен**' : '❌ **Платёж отменён**';
@@ -173,7 +173,7 @@ export async function notifyMaxCdekTrackForUser(payload: {
   brandId?: BrandId;
 }): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const link = await maxService.findMaxWhitelistByUserId(payload.userId);
+  const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
   if (!link?.maxUserId) return;
 
   const track = payload.trackNumber.trim();
@@ -197,8 +197,10 @@ export async function notifyMaxCdekTrackForUser(payload: {
 export async function notifyMaxForm(payload: {
   formName: string;
   fields: Record<string, string>;
+  brandId?: BrandId;
 }): Promise<void> {
-  const whitelist = await maxService.getMaxWhitelist();
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const whitelist = await maxService.getMaxWhitelist(scope);
   const lines: string[] = [
     '**Новая заявка с сайта**',
     `Форма: ${escapeHtml(payload.formName)}`,
@@ -207,14 +209,16 @@ export async function notifyMaxForm(payload: {
       ([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value || '—')}`
     ),
   ];
-  await sendToUsers(whitelist.map((row) => row.maxUserId), lines.join('\n'));
+  await sendToUsers(whitelist.map((row) => row.maxUserId), lines.join('\n'), scope);
 }
 
 export async function notifyMaxConnection(payload: {
   userId: string;
   maxUserId: string;
+  brandId?: BrandId;
 }): Promise<void> {
-  const whitelist = await maxService.getMaxWhitelist();
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const whitelist = await maxService.getMaxWhitelist(scope);
   const user = await userService.findUserProfile(payload.userId);
   const label = user
     ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
@@ -222,7 +226,7 @@ export async function notifyMaxConnection(payload: {
   const text =
     '🔗 **Подключение MAX**\n\n' +
     `Пользователь ${escapeHtml(label)} привязал уведомления (MAX user ID: \`${escapeHtml(payload.maxUserId)}\`).`;
-  await sendToUsers(whitelist.map((row) => row.maxUserId), text);
+  await sendToUsers(whitelist.map((row) => row.maxUserId), text, scope);
 }
 
 export async function notifyMaxInfraAlert(payload: {
@@ -260,7 +264,7 @@ export async function notifyMaxPaymentError(payload: {
     '',
     `Заказ: ${escapeHtml(payload.orderId)}. ${totalLine}Ошибка: ${escapeHtml(payload.errorMessage.slice(0, 300))}`,
   ].join('\n');
-  const whitelist = await maxService.getMaxWhitelist();
+  const whitelist = await maxService.getMaxWhitelist(scope);
   await sendToUsers(whitelist.map((row) => row.maxUserId), text, scope);
 }
 
@@ -271,7 +275,7 @@ export async function notifyMaxNewReview(payload: {
   brandId?: BrandId;
 }): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const whitelist = await maxService.getMaxWhitelist();
+  const whitelist = await maxService.getMaxWhitelist(scope);
   if (whitelist.length === 0) return;
   const textPreview = payload.text.length > 300 ? `${payload.text.slice(0, 297)}...` : payload.text;
   const callbackPrefix = 'review_';

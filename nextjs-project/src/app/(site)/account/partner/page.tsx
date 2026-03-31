@@ -52,8 +52,8 @@ export default async function AccountPartnerPage() {
         <p className="text-sm text-gray-600">
           Статистика по вашим промокодам: количество оплаченных заказов по каждому промокоду.
         </p>
-        <PartnerTelegramBlock />
-        <PartnerMaxBlock />
+        <PartnerTelegramBlock brandId={activeBrand} />
+        <PartnerMaxBlock brandId={activeBrand} />
         <PartnerStatsContent
           stats={stats}
           totalOrders={totalOrders}

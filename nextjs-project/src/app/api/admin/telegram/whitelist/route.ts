@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as telegramService from '@/services/telegram.service';
+import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const list = await telegramService.getTelegramWhitelist();
+    const brandId = normalizeBrandId(new URL(request.url).searchParams.get('brand'));
+    const list = await telegramService.getTelegramWhitelist({ brandId });
     return NextResponse.json({
       telegramUserIds: list.map((r) => r.telegramUserId),
     });

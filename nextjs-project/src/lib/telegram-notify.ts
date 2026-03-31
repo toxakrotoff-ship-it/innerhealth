@@ -6,9 +6,12 @@ import type { BrandId } from '@/lib/brand/brand';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
-async function getWhitelistChatIds(token: string | undefined): Promise<string[]> {
+async function getWhitelistChatIds(
+  token: string | undefined,
+  options?: { brandId?: BrandId | null }
+): Promise<string[]> {
   if (!token) return [];
-  const list = await telegramService.getTelegramWhitelist();
+  const list = await telegramService.getTelegramWhitelist(options);
   return list.map((r) => r.telegramUserId);
 }
 
@@ -81,7 +84,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   const settingsScope = payload.brandId ? { brandId: payload.brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return null;
-    return getWhitelistChatIds(token).then((chatIds) => ({ token, chatIds }));
+    return getWhitelistChatIds(token, settingsScope).then((chatIds) => ({ token, chatIds }));
   }).then(async (result) => {
     if (!result || result.chatIds.length === 0) return;
     const { token, chatIds } = result;
@@ -114,7 +117,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
     // Notify partner whose promo was used (if linked to Telegram)
     if (payload.promoCodeId) {
       telegramService
-        .getPartnerTelegramUserIdByPromoCodeId(payload.promoCodeId)
+        .getPartnerTelegramUserIdByPromoCodeId(payload.promoCodeId, settingsScope)
         .then((partnerChatId) => {
           if (!partnerChatId || !token) return;
           const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
@@ -136,10 +139,12 @@ export async function notifyTelegramOrderStatusForUser(payload: {
   userId: string;
   orderId: string;
   status: 'paid' | 'canceled';
+  brandId?: BrandId;
 }): Promise<void> {
-  const token = await settingsService.getTelegramBotToken();
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const token = await settingsService.getTelegramBotToken(scope);
   if (!token) return;
-  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId);
+  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId, scope);
   if (!whitelist?.telegramUserId) return;
 
   const statusLine = payload.status === 'paid' ? '✅ <b>Заказ оплачен</b>' : '❌ <b>Платёж отменён</b>';
@@ -160,10 +165,12 @@ export async function notifyTelegramCdekTrackForUser(payload: {
   userId: string;
   orderId: string;
   trackNumber: string;
+  brandId?: BrandId;
 }): Promise<void> {
-  const token = await settingsService.getTelegramBotToken();
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const token = await settingsService.getTelegramBotToken(scope);
   if (!token) return;
-  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId);
+  const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId, scope);
   if (!whitelist?.telegramUserId) return;
 
   const track = payload.trackNumber.trim();
@@ -187,12 +194,14 @@ export async function notifyTelegramCdekTrackForUser(payload: {
 export interface FormNotifyPayload {
   formName: string;
   fields: Record<string, string>;
+  brandId?: BrandId;
 }
 
 export function notifyTelegramForm(payload: FormNotifyPayload): void {
-  settingsService.getTelegramBotToken().then((token) => {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  settingsService.getTelegramBotToken(scope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token).then(async (chatIds) => {
+    return getWhitelistChatIds(token, scope).then(async (chatIds) => {
       if (chatIds.length === 0) return;
       const lines: string[] = [
         '<b>Новая заявка с сайта</b>',
@@ -215,6 +224,7 @@ export function notifyTelegramForm(payload: FormNotifyPayload): void {
 export interface ConnectionNotifyPayload {
   userId: string;
   telegramUserId: string;
+  brandId?: BrandId;
 }
 
 export interface ReviewNotifyPayload {
@@ -230,7 +240,7 @@ export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
   const settingsScope = brandId ? { brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token).then(async (chatIds) => {
+    return getWhitelistChatIds(token, settingsScope).then(async (chatIds) => {
       if (chatIds.length === 0) return;
       const textPreview = text.length > 300 ? text.slice(0, 297) + '…' : text;
       const lines: string[] = [
@@ -297,7 +307,7 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
   const settingsScope = brandId ? { brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token);
+    return getWhitelistChatIds(token, settingsScope);
   }).then(async (chatIds) => {
     if (!chatIds || chatIds.length === 0) return;
     const contextLabel = context === 'create' ? 'создание платежа' : 'верификация в webhook';
@@ -357,10 +367,11 @@ export async function notifyTelegramInfraAlert(payload: InfraAlertNotifyPayload)
 
 /** Уведомление в Telegram о том, что пользователь привязал аккаунт (подключился к уведомлениям). */
 export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void {
-  const { userId, telegramUserId } = payload;
-  settingsService.getTelegramBotToken().then((token) => {
+  const { userId, telegramUserId, brandId } = payload;
+  const scope = brandId ? { brandId } : {};
+  settingsService.getTelegramBotToken(scope).then((token) => {
     if (!token) return null;
-    return getWhitelistChatIds(token).then((chatIds) =>
+    return getWhitelistChatIds(token, scope).then((chatIds) =>
       userService.findUserProfile(userId).then((user) => ({ token, chatIds, user }))
     );
   }).then(async (result) => {

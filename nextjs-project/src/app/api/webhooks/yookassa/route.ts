@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
     await orderService.updateOrderStatus(orderId, 'paid')
     if (order.userId) {
-      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'paid' })
+      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'paid', brandId: orderBrandId })
       void notifyMaxOrderStatusForUser({ userId: order.userId, orderId, status: 'paid', brandId: orderBrandId })
     }
 
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         const updatedOrder = await orderService.findOrderWithShipping(orderId)
         const newTrackNumber = updatedOrder?.cdekTrackNumber ?? null
         if (!previousTrackNumber && newTrackNumber) {
-          void notifyTelegramCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber })
+          void notifyTelegramCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
           void notifyMaxCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
         }
       }
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
     await orderService.updateOrderStatus(orderId, 'canceled')
     if (order.userId) {
-      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled' })
+      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled', brandId: orderBrandId })
       void notifyMaxOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled', brandId: orderBrandId })
     }
   }

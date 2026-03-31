@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 const CODE_BYTES = 12;
 const EXPIRES_MINUTES = 10;
@@ -13,11 +14,12 @@ function generateCode(): string {
   return randomBytes(CODE_BYTES).toString('hex');
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
-  const settings = await settingsService.getMaxBotSettings();
+  const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+  const settings = await settingsService.getMaxBotSettings({ brandId });
   if (!settings.token) {
     return NextResponse.json(
       { error: 'MAX bot not configured. Укажите токен в настройках.' },
@@ -28,7 +30,7 @@ export async function POST() {
   try {
     const code = generateCode();
     const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
-    await maxService.createMaxLinkCode({ code, userId: session.user.id, expiresAt });
+    await maxService.createMaxLinkCode({ code, userId: session.user.id, expiresAt, brandId });
     let botName = '';
     try {
       const bot = new Bot(settings.token);

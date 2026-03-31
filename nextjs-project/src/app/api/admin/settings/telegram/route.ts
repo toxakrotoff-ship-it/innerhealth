@@ -3,20 +3,22 @@ import { requireAdminSession } from '@/lib/require-admin';
 import * as userService from '@/services/user.service';
 import * as telegramService from '@/services/telegram.service';
 import { z } from 'zod';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 /** GET: список привязок Telegram по администраторам (роль ADMIN). Только для ADMIN. */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
   try {
-    const admins = await userService.getAdminsWithTelegramWhitelist();
+    const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+    const admins = await userService.getAdminsWithTelegramWhitelist(brandId);
     const list = admins.map((u) => ({
       id: u.id,
       email: u.email,
       name: [u.name, u.lastName].filter(Boolean).join(' ') || u.email,
-      telegramUserId: u.telegramWhitelist?.telegramUserId ?? null,
-      linkedAt: u.telegramWhitelist?.linkedAt?.toISOString() ?? null,
+      telegramUserId: u.telegramWhitelist[0]?.telegramUserId ?? null,
+      linkedAt: u.telegramWhitelist[0]?.linkedAt?.toISOString() ?? null,
       infraAlertsEnabled: u.infraAlertsEnabled ?? false,
     }));
     return NextResponse.json(list);
@@ -66,6 +68,7 @@ export async function DELETE(request: Request) {
   if (session instanceof NextResponse) return session;
 
   const { searchParams } = new URL(request.url);
+  const brandId = parseBrandFromSearchParams(searchParams) ?? 'inner';
   const userId = searchParams.get('userId')?.trim();
   if (!userId) {
     return NextResponse.json({ error: 'userId обязателен' }, { status: 400 });
@@ -76,7 +79,7 @@ export async function DELETE(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден или не администратор' }, { status: 404 });
     }
-    await telegramService.deleteTelegramWhitelistByUserId(userId);
+    await telegramService.deleteTelegramWhitelistByUserId(userId, { brandId });
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error('Settings telegram DELETE error:', e);

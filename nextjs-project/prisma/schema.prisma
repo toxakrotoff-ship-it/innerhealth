@@ -218,9 +218,9 @@ model User {
   passwordResetTokens      PasswordResetToken[]
   setInitialPasswordTokens SetInitialPasswordToken[]
   telegramLinkCodes        TelegramLinkCode[]
-  telegramWhitelist        TelegramWhitelist?
+  telegramWhitelist        TelegramWhitelist[]
   maxLinkCodes             MaxLinkCode[]
-  maxWhitelist             MaxWhitelist?
+  maxWhitelist             MaxWhitelist[]
   twoFactorGrants          TwoFactorGrant[]
   twoFactorPending         TwoFactorPending?
   addresses                UserAddress[]
@@ -266,50 +266,62 @@ model EmailVerificationToken {
 /// Вайтлист Telegram: какой админ привязал какой Telegram ID для уведомлений
 model TelegramWhitelist {
   id             String   @id @default(cuid())
-  userId         String   @unique
-  telegramUserId String   @unique
+  brand          String   @default("inner")
+  userId         String
+  telegramUserId String
   linkedAt       DateTime @default(now())
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([telegramUserId])
+  @@unique([brand, userId])
+  @@unique([brand, telegramUserId])
+  @@index([brand, userId])
+  @@index([brand, telegramUserId])
 }
 
 /// Одноразовые коды привязки Telegram (срок жизни 5–10 мин)
 model TelegramLinkCode {
   id        String   @id @default(cuid())
-  code      String   @unique
+  brand     String   @default("inner")
+  code      String
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([brand, code])
   @@index([code])
-  @@index([userId])
+  @@index([brand, userId])
   @@index([expiresAt])
 }
 
 /// Вайтлист MAX: какой пользователь привязал какой MAX user ID для уведомлений.
 model MaxWhitelist {
   id        String   @id @default(cuid())
-  userId    String   @unique
-  maxUserId String   @unique
+  brand     String   @default("inner")
+  userId    String
+  maxUserId String
   linkedAt  DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([maxUserId])
+  @@unique([brand, userId])
+  @@unique([brand, maxUserId])
+  @@index([brand, userId])
+  @@index([brand, maxUserId])
 }
 
 /// Одноразовые коды привязки MAX (срок жизни 5–10 мин).
 model MaxLinkCode {
   id        String   @id @default(cuid())
-  code      String   @unique
+  brand     String   @default("inner")
+  code      String
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([brand, code])
   @@index([code])
-  @@index([userId])
+  @@index([brand, userId])
   @@index([expiresAt])
 }
 

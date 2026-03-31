@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const CODE_BYTES = 12;
 const EXPIRES_MINUTES = 10;
@@ -14,12 +15,13 @@ function generateCode(): string {
   return randomBytes(CODE_BYTES).toString('hex');
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const settings = await settingsService.getMaxBotSettings();
+  const brandId = resolveBrandOrDefaultFromRequest(request);
+  const settings = await settingsService.getMaxBotSettings({ brandId });
   if (!settings.token) {
     return NextResponse.json(
       { error: 'MAX bot not configured. Обратитесь к администратору.' },
@@ -30,7 +32,7 @@ export async function POST() {
   try {
     const code = generateCode();
     const expiresAt = new Date(Date.now() + EXPIRES_MINUTES * 60 * 1000);
-    await maxService.createMaxLinkCode({ code, userId: session.user.id, expiresAt });
+    await maxService.createMaxLinkCode({ code, userId: session.user.id, expiresAt, brandId });
     let botName = '';
     try {
       const bot = new Bot(settings.token);

@@ -169,7 +169,7 @@ export async function POST(request: Request) {
     })
 
     const promoCodeStr = promoCodeId
-      ? await promoService.getPromoCodeStringById(promoCodeId)
+      ? await promoService.getPromoCodeStringById(promoCodeId, brandId)
       : null
     notifyTelegramOrder({
       orderId: order.id,

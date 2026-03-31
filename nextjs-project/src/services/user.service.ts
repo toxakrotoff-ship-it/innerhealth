@@ -1,6 +1,8 @@
 import 'server-only';
 import type { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 /** Find user by id (for session callback). */
 export async function findUserById(
@@ -236,7 +238,7 @@ export async function findAdminById(userId: string) {
 }
 
 /** Get admins with telegram whitelist (for settings/telegram GET). */
-export async function getAdminsWithTelegramWhitelist() {
+export async function getAdminsWithTelegramWhitelist(brandId?: BrandId | null) {
   return prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: {
@@ -246,6 +248,7 @@ export async function getAdminsWithTelegramWhitelist() {
       lastName: true,
       infraAlertsEnabled: true,
       telegramWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
         select: { telegramUserId: true, linkedAt: true },
       },
     },
@@ -253,7 +256,7 @@ export async function getAdminsWithTelegramWhitelist() {
   });
 }
 
-export async function getAdminsWithMaxWhitelist() {
+export async function getAdminsWithMaxWhitelist(brandId?: BrandId | null) {
   return prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: {
@@ -263,6 +266,7 @@ export async function getAdminsWithMaxWhitelist() {
       lastName: true,
       infraAlertsEnabled: true,
       maxWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
         select: { maxUserId: true, linkedAt: true },
       },
     },
@@ -285,22 +289,40 @@ export async function getAdminsForSettingsList() {
   });
 }
 
-export async function getInfraAlertTelegramChatIds(): Promise<string[]> {
+export async function getInfraAlertTelegramChatIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
   const rows = await prisma.user.findMany({
     where: { role: 'ADMIN', infraAlertsEnabled: true },
-    select: { telegramWhitelist: { select: { telegramUserId: true } } },
+    select: {
+      telegramWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { telegramUserId: true },
+      },
+    },
     orderBy: { email: 'asc' },
   })
-  return rows.map((r) => r.telegramWhitelist?.telegramUserId).filter((v): v is string => Boolean(v))
+  return rows
+    .map((r) => r.telegramWhitelist[0]?.telegramUserId)
+    .filter((v): v is string => Boolean(v))
 }
 
-export async function getInfraAlertMaxUserIds(): Promise<string[]> {
+export async function getInfraAlertMaxUserIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
   const rows = await prisma.user.findMany({
     where: { role: 'ADMIN', infraAlertsEnabled: true },
-    select: { maxWhitelist: { select: { maxUserId: true } } },
+    select: {
+      maxWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { maxUserId: true },
+      },
+    },
     orderBy: { email: 'asc' },
   })
-  return rows.map((r) => r.maxWhitelist?.maxUserId).filter((v): v is string => Boolean(v))
+  return rows
+    .map((r) => r.maxWhitelist[0]?.maxUserId)
+    .filter((v): v is string => Boolean(v))
 }
 
 export async function updateAdminInfraAlertsEnabled(params: {

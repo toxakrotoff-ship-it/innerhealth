@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server';
 import { normalizeMaxSubscriptionsPayload } from '@/lib/max/normalize-max-subscriptions-payload';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as settingsService from '@/services/settings.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 const MAX_PLATFORM_API = 'https://platform-api.max.ru/subscriptions';
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
-  const settings = await settingsService.getMaxBotSettings();
+  const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+  const settings = await settingsService.getMaxBotSettings({ brandId });
   if (!settings.token) {
     return NextResponse.json(
       { ok: false, error: 'MAX token не задан. Сохраните токен в настройках MAX.' },

@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as telegramService from '@/services/telegram.service';
 import * as settingsService from '@/services/settings.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 const CODE_BYTES = 12; // 24 hex chars
 const EXPIRES_MINUTES = 10;
@@ -12,11 +13,12 @@ function generateCode(): string {
 }
 
 /** POST: создать одноразовый код привязки и вернуть ссылку на бота (ADMIN only). */
-export async function POST() {
+export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
-  const token = await settingsService.getTelegramBotToken();
+  const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+  const token = await settingsService.getTelegramBotToken({ brandId });
   if (!token) {
     return NextResponse.json(
       { error: 'Telegram bot not configured. Задайте токен в настройках или TELEGRAM_BOT_TOKEN.' },
@@ -32,6 +34,7 @@ export async function POST() {
       code,
       userId: session.user.id,
       expiresAt,
+      brandId,
     });
 
     let botUsername: string;

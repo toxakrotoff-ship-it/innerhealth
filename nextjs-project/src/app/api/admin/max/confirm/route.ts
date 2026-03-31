@@ -31,11 +31,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const userId = await maxService.confirmMaxLinkAndReturnUserId(body.code, body.maxUserId);
-    if (!userId)
+    const result = await maxService.confirmMaxLinkAndReturnUserId(body.code, body.maxUserId);
+    if (!result)
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
 
-    void notifyMaxConnection({ userId, maxUserId: body.maxUserId });
+    void notifyMaxConnection({
+      userId: result.userId,
+      maxUserId: body.maxUserId,
+      brandId: result.brandId,
+    });
     return NextResponse.json({ success: true, message: 'Вы добавлены в список уведомлений' });
   } catch (error) {
     console.error('MAX confirm error:', error);

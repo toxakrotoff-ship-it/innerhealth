@@ -19,12 +19,11 @@ describe('getInfraAlertTelegramChatIds', () => {
 
   it('returns only telegramUserIds for opted-in admins with linked Telegram', async () => {
     findManyMock.mockResolvedValue([
-      { telegramWhitelist: { telegramUserId: 't1' } },
-      { telegramWhitelist: { telegramUserId: 't2' } },
+      { telegramWhitelist: [{ telegramUserId: 't1' }] },
+      { telegramWhitelist: [{ telegramUserId: 't2' }] },
     ])
 
     const userService = await import('@/services/user.service')
-    // @ts-expect-error - function added by feature work
     const chatIds = await userService.getInfraAlertTelegramChatIds()
     expect(chatIds).toEqual(['t1', 't2'])
 
@@ -37,9 +36,7 @@ describe('getInfraAlertTelegramChatIds', () => {
   it('returns empty array when no recipients found', async () => {
     findManyMock.mockResolvedValue([])
     const userService = await import('@/services/user.service')
-    // @ts-expect-error - function added by feature work
     const chatIds = await userService.getInfraAlertTelegramChatIds()
     expect(chatIds).toEqual([])
   })
 })
-

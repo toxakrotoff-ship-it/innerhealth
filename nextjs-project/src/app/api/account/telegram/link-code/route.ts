@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import * as telegramService from '@/services/telegram.service';
 import * as settingsService from '@/services/settings.service';
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 
 const CODE_BYTES = 12;
 const EXPIRES_MINUTES = 10;
@@ -13,13 +14,14 @@ function generateCode(): string {
 }
 
 /** POST: создать одноразовый код привязки и вернуть ссылку на бота (auth user). */
-export async function POST() {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const token = await settingsService.getTelegramBotToken();
+  const brandId = resolveBrandOrDefaultFromRequest(request);
+  const token = await settingsService.getTelegramBotToken({ brandId });
   if (!token) {
     return NextResponse.json(
       { error: 'Telegram bot not configured. Обратитесь к администратору.' },
@@ -35,6 +37,7 @@ export async function POST() {
       code,
       userId: session.user.id,
       expiresAt,
+      brandId,
     });
 
     let botUsername: string;

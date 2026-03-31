@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import * as partnerService from '@/services/partner.service';
+import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET';
@@ -24,13 +25,19 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const telegramUserId = url.searchParams.get('telegramUserId')?.trim();
+  const brandId = normalizeBrandId(url.searchParams.get('brand'));
   if (!telegramUserId) {
     return NextResponse.json({ error: 'Missing telegramUserId' }, { status: 400 });
   }
 
   try {
     const whitelist = await prisma.telegramWhitelist.findUnique({
-      where: { telegramUserId },
+      where: {
+        brand_telegramUserId: {
+          brand: brandId ?? 'inner',
+          telegramUserId,
+        },
+      },
       include: { user: { select: { id: true, role: true } } },
     });
     if (!whitelist || whitelist.user.role !== Role.PARTNER) {
@@ -40,7 +47,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const stats = await partnerService.getPartnerStatsForPartner(whitelist.user.id);
+    const stats = await partnerService.getPartnerStatsForPartner(whitelist.user.id, brandId);
     return NextResponse.json({ stats });
   } catch (e) {
     console.error('Telegram partner-stats error:', e);

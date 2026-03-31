@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as promoService from '@/services/promo.service';
+import { normalizeBrandId } from '@/lib/brand/brand';
 
 const SERVICE_HEADER = 'x-service-key';
 function isServiceRequest(request: Request): boolean {
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const promos = await promoService.getPromoCodesForAdmin();
+    const brandId = normalizeBrandId(new URL(request.url).searchParams.get('brand'));
+    const promos = await promoService.getPromoCodesForAdmin(brandId);
     return NextResponse.json({
       promos: promos.map((p) => ({
         code: p.code,

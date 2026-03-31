@@ -26,7 +26,12 @@ export async function GET(request: Request) {
 
   try {
     const whitelist = await prisma.maxWhitelist.findUnique({
-      where: { maxUserId },
+      where: {
+        brand_maxUserId: {
+          brand: brandId ?? 'inner',
+          maxUserId,
+        },
+      },
       include: { user: { select: { id: true, role: true } } },
     });
     if (!whitelist || whitelist.user.role !== Role.PARTNER)

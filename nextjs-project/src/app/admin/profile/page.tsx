@@ -1,9 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Button from '@/components/ui/button';
 
+function resolveBrandQuery(pathname: string, searchParams: URLSearchParams): string {
+  const explicitBrand = searchParams.get('brand')?.trim();
+  if (explicitBrand) return `?brand=${encodeURIComponent(explicitBrand)}`;
+
+  const pathnameBrand = pathname.match(/\/admin(?:-panel)?\/(inner|sprint-power)(?:\/|$)/)?.[1];
+  return pathnameBrand ? `?brand=${encodeURIComponent(pathnameBrand)}` : '';
+}
+
 function TelegramBlock() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const brandQuery = resolveBrandQuery(pathname, searchParams);
   const [status, setStatus] = useState<{ linked: boolean; linkedAt: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -16,7 +28,7 @@ function TelegramBlock() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadStatus() {
-    const res = await fetch('/api/admin/telegram/status');
+    const res = await fetch(`/api/admin/telegram/status${brandQuery}`);
     if (!res.ok) return;
     const data = await res.json();
     setStatus({ linked: data.linked, linkedAt: data.linkedAt });
@@ -27,14 +39,14 @@ function TelegramBlock() {
     loadStatus()
       .catch(() => setStatus({ linked: false, linkedAt: null }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [brandQuery]);
 
   async function handleConnect() {
     setCreating(true);
     setError(null);
     setLinkResult(null);
     try {
-      const res = await fetch('/api/admin/telegram/link-code', { method: 'POST' });
+      const res = await fetch(`/api/admin/telegram/link-code${brandQuery}`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Не удалось создать ссылку');
@@ -145,6 +157,9 @@ function TelegramBlock() {
 }
 
 function MaxBlock() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const brandQuery = resolveBrandQuery(pathname, searchParams);
   const [status, setStatus] = useState<{ linked: boolean; linkedAt: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -153,7 +168,7 @@ function MaxBlock() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadStatus() {
-    const res = await fetch('/api/admin/max/status');
+    const res = await fetch(`/api/admin/max/status${brandQuery}`);
     if (!res.ok) return;
     const data = await res.json();
     setStatus({ linked: data.linked, linkedAt: data.linkedAt });
@@ -164,14 +179,14 @@ function MaxBlock() {
     loadStatus()
       .catch(() => setStatus({ linked: false, linkedAt: null }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [brandQuery]);
 
   async function handleConnect() {
     setCreating(true);
     setError(null);
     setLinkResult(null);
     try {
-      const res = await fetch('/api/admin/max/link-code', { method: 'POST' });
+      const res = await fetch(`/api/admin/max/link-code${brandQuery}`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Не удалось создать ссылку');

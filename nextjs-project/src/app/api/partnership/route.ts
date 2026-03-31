@@ -107,6 +107,7 @@ export async function POST(request: Request) {
         'Ссылки на соцсети': socialLinks ?? '—',
         Сообщение: message ?? '—',
       },
+      brandId,
     })
     void notifyMaxForm({
       formName: 'Партнёрская заявка',
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
         'Ссылки на соцсети': socialLinks ?? '—',
         Сообщение: message ?? '—',
       },
+      brandId,
     })
 
     return NextResponse.json({ success: true })

@@ -35,14 +35,15 @@ export async function POST(request: Request) {
   const { code, telegramUserId } = body;
 
   try {
-    const userId = await telegramService.confirmTelegramLinkAndReturnUserId(code, telegramUserId);
-    if (!userId) {
+    const result = await telegramService.confirmTelegramLinkAndReturnUserId(code, telegramUserId);
+    if (!result) {
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
     }
 
     void notifyTelegramConnection({
-      userId,
+      userId: result.userId,
       telegramUserId,
+      brandId: result.brandId,
     });
 
     return NextResponse.json({ success: true, message: 'Вы добавлены в список уведомлений' });

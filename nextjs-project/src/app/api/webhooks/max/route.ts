@@ -6,6 +6,7 @@ import { getMaxBotConfig } from '@/lib/max/max-config';
 import { notifyMaxConnection } from '@/lib/max-notify';
 import { moderateReviewAndSync } from '@/lib/review-moderation-action';
 import { getMaxBotUserCapabilities } from '@/lib/bot-user-capabilities';
+import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 import {
   buildHelpTextForMax,
   buildMaxMenuAttachments,
@@ -63,9 +64,10 @@ async function sendMaxMessageWithMenu(
   bot: Bot,
   maxUserId: string,
   text: string,
-  format: 'markdown' | 'html' = 'markdown'
+  format: 'markdown' | 'html' = 'markdown',
+  brandId: BrandId = 'inner'
 ): Promise<void> {
-  const capabilities = await getMaxBotUserCapabilities(maxUserId);
+  const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
   await bot.api
     .sendMessageToUser(Number.parseInt(maxUserId, 10), text, {
       format,
@@ -76,9 +78,10 @@ async function sendMaxMessageWithMenu(
 
 async function buildMaxCommandResponse(
   maxUserId: string,
-  command: MaxMenuCommand
+  command: MaxMenuCommand,
+  brandId: BrandId
 ): Promise<{ text: string; format: 'markdown' | 'html' }> {
-  const capabilities = await getMaxBotUserCapabilities(maxUserId);
+  const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
 
   if (command === 'help') {
     return { text: buildHelpTextForMax(capabilities), format: 'markdown' };
@@ -95,7 +98,7 @@ async function buildMaxCommandResponse(
     if (!capabilities.isAdmin) {
       return { text: 'Доступ только для администраторов.', format: 'markdown' };
     }
-    const promos = await promoService.getPromoCodesForAdmin();
+    const promos = await promoService.getPromoCodesForAdmin(brandId);
     if (promos.length === 0) return { text: 'Нет промокодов.', format: 'markdown' };
     const lines = promos.map((promo) => {
       const limit = promo.usageLimit != null ? ` / ${promo.usageLimit}` : '';
@@ -109,14 +112,14 @@ async function buildMaxCommandResponse(
     return { text: 'Доступ только для партнёров.', format: 'markdown' };
   }
 
-  const whitelistRow = await maxService.findMaxWhitelistByMaxUserId(maxUserId);
+  const whitelistRow = await maxService.findMaxWhitelistByMaxUserId(maxUserId, { brandId });
   if (!whitelistRow) {
     return {
       text: '❌ Вы не подключены. Получите ссылку в админке/личном кабинете.',
       format: 'markdown',
     };
   }
-  const stats = await partnerService.getPartnerStatsForPartner(whitelistRow.userId);
+  const stats = await partnerService.getPartnerStatsForPartner(whitelistRow.userId, brandId);
   if (stats.length === 0) {
     return { text: 'У вас пока нет статистики.', format: 'markdown' };
   }
@@ -141,7 +144,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
 
-  const config = await getMaxBotConfig();
+  const brandId = normalizeBrandId(new URL(request.url).searchParams.get('brand')) ?? 'inner';
+  const config = await getMaxBotConfig({ brandId });
   const webhookSecret = config.webhookSecret;
   if (webhookSecret) {
     const requestSecret = request.headers.get('x-max-bot-api-secret')?.trim();
@@ -161,12 +165,12 @@ export async function POST(request: Request) {
     const safeCode = codeRaw.slice(0, MAX_START_CODE_LENGTH);
     const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
     if (safeCode && VALID_CODE_REGEX.test(safeCode) && maxUserId) {
-      const userId = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
-      if (userId) {
-        void notifyMaxConnection({ userId, maxUserId });
+      const result = await maxService.confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
+      if (result) {
+        void notifyMaxConnection({ userId: result.userId, maxUserId, brandId: result.brandId });
         const bot = config.token ? new Bot(config.token) : null;
         if (bot) {
-          const capabilities = await getMaxBotUserCapabilities(maxUserId);
+          const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId: result.brandId });
           await bot.api
             .sendMessageToUser(Number.parseInt(maxUserId, 10), buildWelcomeTextForMax(capabilities), {
               format: 'markdown',
@@ -190,14 +194,14 @@ export async function POST(request: Request) {
 
     if (text === '/help' || text === '/status' || text === '/promo' || text === '/stats') {
       const command = text.slice(1) as MaxMenuCommand;
-      const response = await buildMaxCommandResponse(maxUserId, command);
-      await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format);
+      const response = await buildMaxCommandResponse(maxUserId, command, brandId);
+      await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format, brandId);
       return NextResponse.json({ ok: true });
     }
 
     if (!text.startsWith('/')) {
-      const capabilities = await getMaxBotUserCapabilities(maxUserId);
-      await sendMaxMessageWithMenu(bot, maxUserId, buildUnknownCommandTextForMax(capabilities));
+      const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
+      await sendMaxMessageWithMenu(bot, maxUserId, buildUnknownCommandTextForMax(capabilities), 'markdown', brandId);
       return NextResponse.json({ ok: true });
     }
 
@@ -217,16 +221,16 @@ export async function POST(request: Request) {
 
     const menuCommand = resolveMaxMenuCommand(payloadValue);
     if (menuCommand) {
-      const response = await buildMaxCommandResponse(maxUserId, menuCommand);
+      const response = await buildMaxCommandResponse(maxUserId, menuCommand, brandId);
       await makeNotification(response.text.replace(/<[^>]+>/g, ''));
       if (bot) {
-        await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format);
+        await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format, brandId);
       }
       return NextResponse.json({ ok: true });
     }
 
     if (payloadValue.startsWith(REVIEW_APPROVE_PREFIX) || payloadValue.startsWith(REVIEW_REJECT_PREFIX)) {
-      const capabilities = await getMaxBotUserCapabilities(maxUserId);
+      const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
       if (!capabilities.isAdmin) {
         await makeNotification('Доступ только для администраторов.');
         return NextResponse.json({ ok: true });

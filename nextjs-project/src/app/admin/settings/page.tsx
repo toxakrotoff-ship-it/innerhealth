@@ -240,9 +240,13 @@ export default function AdminSettingsPage() {
     return `/api/admin/settings?brand=${encodeURIComponent(settingsScope)}`;
   }
 
-  function buildScopedCheckEndpoint(basePath: '/api/admin/check-cdek' | '/api/admin/check-yookassa'): string {
+  function buildScopedAdminEndpoint(basePath: string): string {
     if (settingsScope === 'global') return basePath;
     return `${basePath}?brand=${encodeURIComponent(settingsScope)}`;
+  }
+
+  function buildScopedCheckEndpoint(basePath: '/api/admin/check-cdek' | '/api/admin/check-yookassa'): string {
+    return buildScopedAdminEndpoint(basePath);
   }
 
   useEffect(() => {
@@ -343,7 +347,7 @@ export default function AdminSettingsPage() {
 
   async function loadTelegram() {
     try {
-      const res = await fetch('/api/admin/settings/telegram');
+      const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/telegram'));
       if (res.ok) {
         const data = await res.json();
         setTelegramList(data);
@@ -585,7 +589,7 @@ export default function AdminSettingsPage() {
                             setRegisteringMaxWebhook(true);
                             setMaxWebhookRegisterResult(null);
                             try {
-                              const res = await fetch('/api/admin/max/webhook/register', {
+                              const res = await fetch(buildScopedAdminEndpoint('/api/admin/max/webhook/register'), {
                                 method: 'POST',
                               });
                               const data = await res.json().catch(() => ({}));
@@ -617,7 +621,7 @@ export default function AdminSettingsPage() {
                             setCheckingMaxWebhookStatus(true);
                             setMaxWebhookStatusResult(null);
                             try {
-                              const res = await fetch('/api/admin/max/webhook/status');
+                              const res = await fetch(buildScopedAdminEndpoint('/api/admin/max/webhook/status'));
                               const data = await res.json().catch(() => ({}));
                               if (!res.ok || !data.ok) {
                                 setMaxWebhookStatusResult({
@@ -928,7 +932,7 @@ export default function AdminSettingsPage() {
                                   setUpdatingInfraAlertsUserId(t.id);
                                   setError(null);
                                   try {
-                                    const res = await fetch('/api/admin/settings/telegram', {
+                                    const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/telegram'), {
                                       method: 'PATCH',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
@@ -965,10 +969,8 @@ export default function AdminSettingsPage() {
                                 if (!confirm('Отвязать Telegram у этого пользователя?')) return;
                                 setUnlinkingUserId(t.id);
                                 try {
-                                  const res = await fetch(
-                                    `/api/admin/settings/telegram?userId=${encodeURIComponent(t.id)}`,
-                                    { method: 'DELETE' }
-                                  );
+                                  const deleteUrl = `${buildScopedAdminEndpoint('/api/admin/settings/telegram')}${settingsScope === 'global' ? '?' : '&'}userId=${encodeURIComponent(t.id)}`;
+                                  const res = await fetch(deleteUrl, { method: 'DELETE' });
                                   if (!res.ok) {
                                     const data = await res.json().catch(() => ({}));
                                     throw new Error(data.error || 'Ошибка');

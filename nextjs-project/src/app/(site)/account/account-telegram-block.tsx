@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Button from '@/components/ui/button';
+import type { BrandId } from '@/lib/brand/brand';
 
-export function AccountTelegramBlock() {
+export function AccountTelegramBlock({ brandId }: { brandId: BrandId }) {
+  const brandQuery = `?brand=${encodeURIComponent(brandId)}`;
   const [status, setStatus] = useState<{ linked: boolean; linkedAt: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -16,7 +18,7 @@ export function AccountTelegramBlock() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadStatus() {
-    const res = await fetch('/api/account/telegram/status');
+    const res = await fetch(`/api/account/telegram/status${brandQuery}`);
     if (!res.ok) return;
     const data = await res.json();
     setStatus({ linked: data.linked, linkedAt: data.linkedAt });
@@ -27,14 +29,14 @@ export function AccountTelegramBlock() {
     loadStatus()
       .catch(() => setStatus({ linked: false, linkedAt: null }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [brandQuery]);
 
   async function handleConnect() {
     setCreating(true);
     setError(null);
     setLinkResult(null);
     try {
-      const res = await fetch('/api/account/telegram/link-code', { method: 'POST' });
+      const res = await fetch(`/api/account/telegram/link-code${brandQuery}`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Не удалось создать ссылку');
@@ -151,4 +153,3 @@ export function AccountTelegramBlock() {
     </div>
   );
 }
-

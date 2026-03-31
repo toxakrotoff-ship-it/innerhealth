@@ -1,39 +1,73 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import type { BrandId } from '@/lib/brand/brand';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
+
+interface ScopeOptions {
+  brandId?: BrandId | null;
+}
 
 /** Get all Telegram whitelist entries. */
-export async function getTelegramWhitelist() {
+export async function getTelegramWhitelist(options: ScopeOptions = {}) {
   return prisma.telegramWhitelist.findMany({
+    where: { brand: resolveDbBrand(options.brandId) },
     include: { user: { select: { id: true, email: true, name: true } } },
   });
 }
 
 /** Find whitelist by telegramUserId. */
-export async function findTelegramWhitelistByTelegramUserId(telegramUserId: string) {
+export async function findTelegramWhitelistByTelegramUserId(
+  telegramUserId: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramWhitelist.findUnique({
-    where: { telegramUserId },
+    where: {
+      brand_telegramUserId: {
+        brand: resolveDbBrand(options.brandId),
+        telegramUserId,
+      },
+    },
   });
 }
 
 /** Find whitelist by userId. */
-export async function findTelegramWhitelistByUserId(userId: string) {
+export async function findTelegramWhitelistByUserId(
+  userId: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramWhitelist.findUnique({
-    where: { userId },
+    where: {
+      brand_userId: {
+        brand: resolveDbBrand(options.brandId),
+        userId,
+      },
+    },
   });
 }
 
 /** Find whitelist by userId (select telegramUserId, linkedAt) for status. */
-export async function findTelegramWhitelistStatusByUserId(userId: string) {
+export async function findTelegramWhitelistStatusByUserId(
+  userId: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramWhitelist.findUnique({
-    where: { userId },
+    where: {
+      brand_userId: {
+        brand: resolveDbBrand(options.brandId),
+        userId,
+      },
+    },
     select: { telegramUserId: true, linkedAt: true },
   });
 }
 
 /** Delete all whitelist entries for a user (before re-linking). */
-export async function deleteTelegramWhitelistByUserId(userId: string) {
+export async function deleteTelegramWhitelistByUserId(
+  userId: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramWhitelist.deleteMany({
-    where: { userId },
+    where: { brand: resolveDbBrand(options.brandId), userId },
   });
 }
 
@@ -42,9 +76,11 @@ export async function createTelegramLinkCode(params: {
   code: string;
   userId: string;
   expiresAt: Date;
+  brandId?: BrandId | null;
 }) {
   return prisma.telegramLinkCode.create({
     data: {
+      brand: resolveDbBrand(params.brandId),
       code: params.code,
       userId: params.userId,
       expiresAt: params.expiresAt,
@@ -53,41 +89,84 @@ export async function createTelegramLinkCode(params: {
 }
 
 /** Find TelegramLinkCode by code. */
-export async function findTelegramLinkCodeByCode(code: string) {
+export async function findTelegramLinkCodeByCode(
+  code: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramLinkCode.findUnique({
-    where: { code },
+    where: {
+      brand_code: {
+        brand: resolveDbBrand(options.brandId),
+        code,
+      },
+    },
   });
 }
 
 /** Delete TelegramLinkCode by code. */
-export async function deleteTelegramLinkCodeByCode(code: string) {
-  return prisma.telegramLinkCode.delete({ where: { code } }).catch(() => {});
+export async function deleteTelegramLinkCodeByCode(
+  code: string,
+  options: ScopeOptions = {}
+) {
+  return prisma.telegramLinkCode
+    .delete({
+      where: {
+        brand_code: {
+          brand: resolveDbBrand(options.brandId),
+          code,
+        },
+      },
+    })
+    .catch(() => {});
 }
 
 /** Find link code by code (select userId, expiresAt). */
-export async function findTelegramLinkCodeForConfirm(code: string) {
+export async function findTelegramLinkCodeForConfirm(
+  code: string,
+  options: ScopeOptions = {}
+) {
   return prisma.telegramLinkCode.findUnique({
-    where: { code },
-    select: { userId: true, expiresAt: true },
+    where: {
+      brand_code: {
+        brand: resolveDbBrand(options.brandId),
+        code,
+      },
+    },
+    select: { brand: true, userId: true, expiresAt: true },
   });
 }
 
-/** Confirm link: delete code and upsert whitelist in transaction. Returns userId or null. */
+/** Confirm link: delete code and upsert whitelist in transaction. Returns userId and brand or null. */
 export async function confirmTelegramLinkAndReturnUserId(
   code: string,
   telegramUserId: string
-): Promise<string | null> {
-  const linkRecord = await findTelegramLinkCodeForConfirm(code);
+): Promise<{ userId: string; brandId: BrandId } | null> {
+  const linkRecord = await prisma.telegramLinkCode.findFirst({
+    where: { code },
+    select: { brand: true, userId: true, expiresAt: true },
+  });
   if (!linkRecord || new Date() > linkRecord.expiresAt) return null;
+  const brandId = resolveDbBrand(linkRecord.brand as BrandId | null | undefined);
   await prisma.$transaction(async (tx) => {
-    await tx.telegramLinkCode.delete({ where: { code } });
+    await tx.telegramLinkCode.delete({
+      where: { brand_code: { brand: linkRecord.brand, code } },
+    });
     await tx.telegramWhitelist.upsert({
-      where: { userId: linkRecord.userId },
-      create: { userId: linkRecord.userId, telegramUserId },
+      where: {
+        brand_userId: {
+          brand: linkRecord.brand,
+          userId: linkRecord.userId,
+        },
+      },
+      create: {
+        brand: linkRecord.brand,
+        userId: linkRecord.userId,
+        telegramUserId,
+      },
       update: { telegramUserId, linkedAt: new Date() },
     });
   });
-  return linkRecord.userId;
+  return { userId: linkRecord.userId, brandId };
 }
 
 /**
@@ -95,7 +174,8 @@ export async function confirmTelegramLinkAndReturnUserId(
  * Returns null if promo is not assigned to a partner or partner has no Telegram linked.
  */
 export async function getPartnerTelegramUserIdByPromoCodeId(
-  promoCodeId: string
+  promoCodeId: string,
+  options: ScopeOptions = {}
 ): Promise<string | null> {
   const binding = await prisma.partnerPromoCode.findUnique({
     where: { promoCodeId },
@@ -103,7 +183,12 @@ export async function getPartnerTelegramUserIdByPromoCodeId(
   });
   if (!binding) return null;
   const whitelist = await prisma.telegramWhitelist.findUnique({
-    where: { userId: binding.userId },
+    where: {
+      brand_userId: {
+        brand: resolveDbBrand(options.brandId),
+        userId: binding.userId,
+      },
+    },
     select: { telegramUserId: true },
   });
   return whitelist?.telegramUserId ?? null;
