@@ -4,6 +4,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteTitle } = await getServerBrandContext()
@@ -32,6 +33,7 @@ function getText(
 
 export default async function SotrudnichestvoPage() {
   const { siteTitle, brandId } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
   const blocks = await getResolvedBlocksForPage('sotrudnichestvo', brandId)
   const pageTitle = getText(blocks, 'cooperation.title', 'Сотрудничество')
   const pageSubtitle = getText(
@@ -105,50 +107,62 @@ export default async function SotrudnichestvoPage() {
   ]
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className={isSprintTheme ? 'min-h-screen bg-[#060A14] text-slate-100' : 'min-h-screen bg-white'}>
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
-        <Breadcrumbs items={breadcrumbItems} />
+        <Breadcrumbs items={breadcrumbItems} isInverted={isSprintTheme} />
       </AdaptiveContainer>
 
       <AdaptiveContainer maxWidth="default" className="py-8 pb-16">
         <header className="mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-text mb-4">
+          <h1 className={`mb-4 text-3xl font-bold sm:text-4xl ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
             {pageTitle}
           </h1>
-          <p className="text-xl text-gray-600 font-medium">
+          <p className={`text-xl font-medium ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>
             {pageSubtitle}
           </p>
         </header>
 
-        <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
+        <div
+          className={`max-w-none space-y-10 leading-relaxed ${
+            isSprintTheme ? 'text-slate-300' : 'prose prose-gray text-gray-700'
+          }`}
+        >
           <section>
-            <h2 className="text-xl font-semibold text-text mb-3">
+            <h2 className={`mb-3 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {introTitle}
             </h2>
             <p>{introP1}</p>
             <p>{introP2}</p>
-            <p className="font-medium text-text">
+            <p className={`font-medium ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {introP3}
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-text mb-3">{audienceTitle}</h2>
+            <h2 className={`mb-3 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{audienceTitle}</h2>
             <p>{audienceText}</p>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
-            <h2 className="text-xl font-semibold text-text mb-4">{benefitsTitle}</h2>
-            <ol className="list-decimal list-inside space-y-3 text-gray-700">
+          <section
+            className={`rounded-2xl border p-6 sm:p-8 ${
+              isSprintTheme ? 'border-slate-800 bg-slate-950/50' : 'border-gray-200 bg-soft-background/50'
+            }`}
+          >
+            <h2 className={`mb-4 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{benefitsTitle}</h2>
+            <ol className={`list-inside list-decimal space-y-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               {benefitsItems.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ol>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
-            <h2 className="text-xl font-semibold text-text mb-4">{extraTitle}</h2>
-            <ol className="list-decimal list-inside space-y-3 text-gray-700">
+          <section
+            className={`rounded-2xl border p-6 sm:p-8 ${
+              isSprintTheme ? 'border-slate-800 bg-slate-950/50' : 'border-gray-200 bg-soft-background/50'
+            }`}
+          >
+            <h2 className={`mb-4 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{extraTitle}</h2>
+            <ol className={`list-inside list-decimal space-y-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               {extraItems.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
@@ -156,13 +170,19 @@ export default async function SotrudnichestvoPage() {
           </section>
         </div>
 
-        <section className="mt-14 pt-10 border-t border-gray-200">
-          <h2 className="text-2xl font-semibold text-text mb-2">{formTitle}</h2>
-          <p className="text-gray-600 mb-8">
+        <section className={`mt-14 border-t pt-10 ${isSprintTheme ? 'border-slate-800' : 'border-gray-200'}`}>
+          <h2 className={`mb-2 text-2xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{formTitle}</h2>
+          <p className={`mb-8 ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
             {formSubtitle}
           </p>
-          <div className="max-w-xl rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
-            <PartnershipForm />
+          <div
+            className={`max-w-xl rounded-2xl border p-6 shadow-sm sm:p-8 ${
+              isSprintTheme
+                ? 'border-slate-800 bg-[#101828] shadow-[0_24px_80px_rgba(0,0,0,0.35)]'
+                : 'border-gray-200 bg-white'
+            }`}
+          >
+            <PartnershipForm isSprintTheme={isSprintTheme} />
           </div>
         </section>
       </AdaptiveContainer>

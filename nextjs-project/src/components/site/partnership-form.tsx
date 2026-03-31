@@ -16,7 +16,11 @@ const ROLE_OPTIONS = [
   { value: 'other', label: 'Другое' },
 ] as const
 
-export function PartnershipForm() {
+interface PartnershipFormProps {
+  isSprintTheme?: boolean
+}
+
+export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -64,18 +68,33 @@ export function PartnershipForm() {
 
   if (status === 'success') {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-green-50/80 p-8 text-center">
-        <p className="text-lg font-medium text-green-800">
+      <div
+        className={`rounded-2xl border p-8 text-center ${
+          isSprintTheme
+            ? 'border-emerald-500/30 bg-emerald-500/10'
+            : 'border-gray-200 bg-green-50/80'
+        }`}
+      >
+        <p className={`text-lg font-medium ${isSprintTheme ? 'text-emerald-200' : 'text-green-800'}`}>
           Заявка отправлена. Мы свяжемся с вами в ближайшее время.
         </p>
       </div>
     )
   }
 
+  const labelClassName = isSprintTheme ? 'text-slate-300' : 'text-gray-700'
+  const fieldClassName = isSprintTheme
+    ? 'border-slate-700 bg-slate-950/70 text-slate-100 placeholder:text-slate-500 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-[#101828]'
+    : ''
+  const selectClassName = isSprintTheme
+    ? 'border-slate-700 bg-slate-950/70 text-slate-100 ring-offset-[#101828] focus-visible:ring-[#7AA2FF]'
+    : 'border-input bg-background'
+  const buttonClassName = isSprintTheme ? 'bg-[#7AA2FF] text-[#06101f] hover:bg-[#8fb0ff]' : ''
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6 2xl:space-y-7 3xl:space-y-8">
       <div>
-        <label htmlFor="partnership-name" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-name" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Имя <span className="text-red-500">*</span>
         </label>
         <Input
@@ -87,11 +106,11 @@ export function PartnershipForm() {
           onChange={(e) => setName(e.target.value)}
           disabled={status === 'loading'}
           maxLength={120}
-          className="w-full"
+          className={`w-full ${fieldClassName}`}
         />
       </div>
       <div>
-        <label htmlFor="partnership-email" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-email" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Email <span className="text-red-500">*</span>
         </label>
         <Input
@@ -102,11 +121,11 @@ export function PartnershipForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={status === 'loading'}
-          className="w-full"
+          className={`w-full ${fieldClassName}`}
         />
       </div>
       <div>
-        <label htmlFor="partnership-phone" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-phone" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Телефон <span className="text-red-500">*</span>
         </label>
         <Input
@@ -117,11 +136,11 @@ export function PartnershipForm() {
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           disabled={status === 'loading'}
-          className="w-full"
+          className={`w-full ${fieldClassName}`}
         />
       </div>
       <div>
-        <label htmlFor="partnership-role" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-role" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Направление деятельности
         </label>
         <select
@@ -129,7 +148,7 @@ export function PartnershipForm() {
           value={role}
           onChange={(e) => setRole(e.target.value)}
           disabled={status === 'loading'}
-          className="flex h-10 w-full rounded-[16px] border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+          className={`flex h-10 w-full rounded-[16px] border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 ${selectClassName}`}
         >
           {ROLE_OPTIONS.map((opt) => (
             <option key={opt.value || 'empty'} value={opt.value}>
@@ -139,7 +158,7 @@ export function PartnershipForm() {
         </select>
       </div>
       <div>
-        <label htmlFor="partnership-social" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-social" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Ссылки на ваши социальные сети
         </label>
         <Textarea
@@ -150,11 +169,11 @@ export function PartnershipForm() {
           disabled={status === 'loading'}
           rows={3}
           maxLength={2000}
-          className="w-full resize-y"
+          className={`w-full resize-y ${fieldClassName}`}
         />
       </div>
       <div>
-        <label htmlFor="partnership-message" className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label htmlFor="partnership-message" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Сообщение
         </label>
         <Textarea
@@ -165,15 +184,15 @@ export function PartnershipForm() {
           disabled={status === 'loading'}
           rows={4}
           maxLength={2000}
-          className="w-full resize-y"
+          className={`w-full resize-y ${fieldClassName}`}
         />
       </div>
       {errorMessage && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className={`text-sm ${isSprintTheme ? 'text-rose-300' : 'text-red-600'}`} role="alert">
           {errorMessage}
         </p>
       )}
-      <Button type="submit" disabled={status === 'loading'} className="w-full sm:w-auto">
+      <Button type="submit" disabled={status === 'loading'} className={`w-full sm:w-auto ${buttonClassName}`}>
         {status === 'loading' ? 'Отправка…' : 'Отправить заявку'}
       </Button>
     </form>

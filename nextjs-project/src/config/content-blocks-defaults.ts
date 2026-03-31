@@ -65,7 +65,9 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const ABOUT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'about', key: 'about.block1' },
   { page: 'about', key: 'about.block2.title' },
+  { page: 'about', key: 'about.block2.text' },
   { page: 'about', key: 'about.image1.src' },
   { page: 'about', key: 'about.image1.alt' },
   { page: 'about', key: 'about.image2.src' },
@@ -582,6 +584,94 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     type: 'short',
     text: 'Посмотреть ответы на все частозадаваемые вопросы',
     colorToken: 'text-white',
+  },
+
+  // About page — Sprint Power
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.block1',
+    label: 'О нас — блок 1 (формула красоты)',
+    type: 'rich',
+    richJson: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Формула красоты и молодости существует. Главное в ней не дорогие крема, сыворотки, кондиционеры и шампуни. Красота рождается изнутри. Здоровые люди обворожительны по-особому.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Sprint Power – это инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Они расширяют границы вашего потенциала. С ними ваш белковый статус в норме. А ухоженная, упругая кожа, густые, блестящие волосы, легкая походка, стройное тело вне времени, вне возраста.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Все от разработки формул и производства основного сырья делаем в России. Стоимость продукции не обременена затратами на логистику и колебаниями курса доллара.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Чистые составы без дополнительных объемных реагентов, консервантов, красителей, подсластителей. Высокая биодоступность и эффективная синергия компонентов. Результативность пролонгирована. Ее чувствуют, видят, ценят.',
+            },
+          ],
+        },
+      ],
+    } as JSONContent,
+  },
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.block2.title',
+    label: 'О нас — блок 2 заголовок',
+    type: 'short',
+    text: 'Sprint Power',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.block2.text',
+    label: 'О нас — блок 2 текст',
+    type: 'rich',
+    richJson: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Sprint Power на рынке с 2022 года, но уже сыскала доверие покупателей. Более 5000 человек каждый день становятся с нами здоровее и возвращаются вновь и вновь. Особая гордость – более 2000 положительных отзывов, которые вдохновляют нас идти дальше. Бесценно доверие врачей конвенциальной и превентивной медицины, нутрициологов, диетологов, косметологов.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Сотрудничаем с Международным институтом PreventAge, Университетом образовательной медицины (UOM), Международным институтом интегративной нутрициологии (МИИН), Первым Московским государственным медицинским университетом им. И.М. Сеченова.',
+            },
+          ],
+        },
+      ],
+    } as JSONContent,
   },
 
   // About page

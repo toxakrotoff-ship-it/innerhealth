@@ -211,12 +211,13 @@ const tiptapListStyles = `
 
 interface TipTapDocRendererProps {
   raw: unknown
+  className?: string
 }
 
 /**
  * Renders stored TipTap `doc` JSON (or JSON string / plain string fallback).
  */
-export function TipTapDocRenderer({ raw }: TipTapDocRendererProps) {
+export function TipTapDocRenderer({ raw, className = '' }: TipTapDocRendererProps) {
   let normalized: TipTapNode | string | null = raw as TipTapNode | string | null
   if (typeof raw === 'string') {
     try {
@@ -242,7 +243,7 @@ export function TipTapDocRenderer({ raw }: TipTapDocRendererProps) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: tiptapListStyles }} />
-      <div className="prose prose-gray max-w-none">{tipTapContent ?? fallback}</div>
+      <div className={`prose prose-gray max-w-none ${className}`.trim()}>{tipTapContent ?? fallback}</div>
     </>
   )
 }

@@ -71,6 +71,19 @@ const FONT_WEIGHT_OPTIONS: Array<{ value: string; label: string }> = [
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [] }
 
+async function readApiError(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = (await response.json()) as { error?: unknown }
+    if (typeof data.error === 'string' && data.error.trim().length > 0) {
+      return data.error
+    }
+  } catch {
+    // Ignore parse errors and fall back to HTTP status below.
+  }
+
+  return `${fallback} (${response.status})`
+}
+
 function mapApiBlock(
   block: Record<string, unknown>,
   currentPage: string
@@ -137,7 +150,7 @@ export default function AdminContentPage() {
 
       const res = await fetch(`/api/admin/content-blocks?page=${encodeURIComponent(currentPage)}`)
       if (!res.ok) {
-        throw new Error('Не удалось загрузить блоки')
+        throw new Error(await readApiError(res, 'Не удалось загрузить блоки'))
       }
       const data = (await res.json()) as Array<Record<string, unknown>>
 
@@ -212,7 +225,11 @@ export default function AdminContentPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error((data && data.error) || 'Не удалось сохранить')
+        throw new Error(
+          typeof data?.error === 'string' && data.error.trim().length > 0
+            ? data.error
+            : `Не удалось сохранить (${res.status})`
+        )
       }
 
       setSuccess(true)
@@ -251,7 +268,11 @@ export default function AdminContentPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        throw new Error((data && data.error) || 'Не удалось сбросить override')
+        throw new Error(
+          typeof data?.error === 'string' && data.error.trim().length > 0
+            ? data.error
+            : `Не удалось сбросить override (${res.status})`
+        )
       }
 
       setSuccess(true)
