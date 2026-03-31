@@ -67,9 +67,6 @@ interface DeliverySectionProps {
   /** Выбранный ПВЗ */
   selectedPvz: CdekPvzOption | null
   onPvzSelect: (pvz: CdekPvzOption | null) => void
-  /** Получатель (ФИО) */
-  recipientName: string
-  onRecipientNameChange: (value: string) => void
   /** Адрес для «До двери» */
   doorAddress: {
     street: string
@@ -109,8 +106,6 @@ export function DeliverySection({
   deliveryPointsError,
   selectedPvz,
   onPvzSelect,
-  recipientName,
-  onRecipientNameChange,
   doorAddress,
   onDoorAddressChange,
   comment,
@@ -509,20 +504,6 @@ export function DeliverySection({
           </div>
         </div>
       )}
-
-      {/* Получатель */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Получатель (ФИО полностью)
-        </label>
-        <input
-          type="text"
-          value={recipientName}
-          onChange={(e) => onRecipientNameChange(e.target.value)}
-          placeholder="Иванов Иван Иванович"
-          className="form-input w-full rounded-lg text-base min-h-[44px]"
-        />
-      </div>
 
       {/* Комментарий */}
       <div>

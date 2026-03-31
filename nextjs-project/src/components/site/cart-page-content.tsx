@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { useCartStore, type CartLine } from '@/store/cart-store'
 import { useMounted } from '@/hooks/use-mounted'
 import {
-  DeliverySection,
   type CdekCityOption,
   type CdekTariffSummary,
   type CdekPvzOption,
@@ -112,7 +111,6 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
   const [deliveryPointsLoading, setDeliveryPointsLoading] = useState(false)
   const [deliveryPointsError, setDeliveryPointsError] = useState<string | null>(null)
   const [selectedPvz, setSelectedPvz] = useState<CdekPvzOption | null>(null)
-  const [recipientName, setRecipientName] = useState('')
   const [doorAddress, setDoorAddress] = useState({
     street: '',
     house: '',
@@ -485,6 +483,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    const fullName = formData.fullName.trim()
     const phoneCheck = validatePhoneRu(formData.phone)
     const emailCheck = validateEmail(formData.email)
     setPhoneError(
@@ -493,8 +492,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
     setEmailError(
       emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
     )
-    if (!phoneCheck.valid || !emailCheck.valid) return
-    const fullName = recipientName.trim() || formData.fullName
+    if (!fullName || !phoneCheck.valid || !emailCheck.valid) return
     const city = selectedCity?.city ?? formData.city
     let address: string
     if (deliveryMethod === 'cdek_pvz' && selectedPvz) {
@@ -523,7 +521,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
           promoCodeId: promoResult?.valid ? promoResult.id : null,
           shipping: {
             ...formData,
-            fullName: fullName || formData.fullName,
+            fullName,
             city: city || formData.city,
             address: address || formData.address,
             ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
@@ -998,6 +996,24 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
               Контактные данные
             </Heading2>
             <div className="space-y-3 xl:space-y-4 2xl:space-y-5 3xl:space-y-6 4xl:space-y-7 5xl:space-y-8 6xl:space-y-10">
+              <div>
+                <label htmlFor="cart-full-name" className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>Имя</label>
+                <input
+                  id="cart-full-name"
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={formData.fullName}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, fullName: e.target.value }))
+                  }}
+                  className={cn(
+                    'form-input min-h-[44px] w-full rounded-lg text-base',
+                    isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
+                  )}
+                  placeholder="Иванов Иван Иванович"
+                />
+              </div>
               <div>
                 <label htmlFor="cart-phone" className={cn('mb-1 block text-sm font-medium', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>Телефон</label>
                 <input

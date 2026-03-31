@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CartPageContent } from './cart-page-content'
 
@@ -83,15 +83,24 @@ vi.mock('@/components/ui/scalable-spacing', () => ({
 }))
 
 describe('CartPageContent delivery type switch', () => {
+  const fetchMock = vi.fn()
+
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/api/orders')) {
+        return {
+          ok: true,
+          json: async () => ({ confirmationUrl: null }),
+        }
+      }
+      return {
         ok: true,
         json: async () => [],
-      }))
-    )
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
   })
 
   it('uses pickup by default and keeps CDEK widget preloaded but hidden', async () => {
@@ -115,5 +124,62 @@ describe('CartPageContent delivery type switch', () => {
     expect(cdekRadio.checked).toBe(true)
     expect(pickupRadio.checked).toBe(false)
     expect(cdekWidget).toBeVisible()
+  })
+
+  it('renders required name field and keeps it empty by default', () => {
+    render(<CartPageContent pickupAddress="Тестовый адрес" />)
+
+    const nameInput = screen.getByLabelText('Имя') as HTMLInputElement
+    expect(nameInput).toBeInTheDocument()
+    expect(nameInput.value).toBe('')
+    expect(nameInput.required).toBe(true)
+  })
+
+  it('submits shipping.fullName from the name field', async () => {
+    const user = userEvent.setup({ document })
+    render(<CartPageContent pickupAddress="Тестовый адрес" />)
+
+    await user.type(screen.getByLabelText('Имя'), 'Иванов Иван Иванович')
+    await user.type(screen.getByLabelText('Телефон'), '+7 (999) 123-45-67')
+    await user.type(screen.getByLabelText('Email'), 'ivanov@example.com')
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Оформить заказ' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/orders',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(String),
+        })
+      )
+    })
+
+    const orderRequest = fetchMock.mock.calls.find(([url]) => String(url) === '/api/orders')
+    expect(orderRequest).toBeTruthy()
+    const requestInit = orderRequest?.[1] as RequestInit
+    const payload = JSON.parse(String(requestInit.body))
+    expect(payload.shipping.fullName).toBe('Иванов Иван Иванович')
+  })
+
+  it('does not submit when required name field is empty', async () => {
+    const user = userEvent.setup({ document })
+    render(<CartPageContent pickupAddress="Тестовый адрес" />)
+
+    await user.type(screen.getByLabelText('Телефон'), '+7 (999) 123-45-67')
+    await user.type(screen.getByLabelText('Email'), 'ivanov@example.com')
+    await user.click(screen.getByRole('checkbox'))
+
+    const submitButton = screen.getByRole('button', { name: 'Оформить заказ' })
+    const form = submitButton.closest('form')
+    expect(form).not.toBeNull()
+    expect(form?.checkValidity()).toBe(false)
+
+    await user.click(submitButton)
+
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/orders',
+      expect.objectContaining({ method: 'POST' })
+    )
   })
 })
