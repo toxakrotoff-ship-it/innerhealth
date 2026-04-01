@@ -1407,6 +1407,24 @@ export async function createCdekOrder(
 
     const token = await getCdekToken(scopedCredentials)
     const base = getCdekApiBase(scopedCredentials)
+    console.warn('[CDEK createOrder][payload]', {
+      orderId,
+      base,
+      type: body.type,
+      tariff_code: body.tariff_code,
+      number: body.number,
+      shipment_point: 'shipment_point' in body ? body.shipment_point : null,
+      delivery_point: 'delivery_point' in body ? body.delivery_point : null,
+      from_location: body.from_location,
+      to_location: body.to_location,
+      recipient: {
+        name: body.recipient.name,
+        email: body.recipient.email ?? null,
+        phones: body.recipient.phones,
+      },
+      sender: body.sender,
+      packages: body.packages,
+    })
     const response = await fetch(`${base}/orders`, {
       method: 'POST',
       headers: {
