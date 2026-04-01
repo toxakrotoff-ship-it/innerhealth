@@ -1,9 +1,12 @@
-# --- Build stage ---
-FROM node:20-alpine AS builder
+# --- Shared base ---
+FROM node:20-alpine AS base
 
 RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
+
+# --- Build stage (web app only) ---
+FROM base AS builder
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
@@ -20,9 +23,7 @@ ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 RUN npm run build
 
 # --- Production stage (образ для web app) ---
-FROM node:20-alpine AS runner
-
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM base AS runner
 
 WORKDIR /app
 
@@ -69,9 +70,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", ".next/standalone/server.js"]
 
 # --- Production stage (lightweight image for bot runners only) ---
-FROM node:20-alpine AS bot-runner
-
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM base AS bot-runner
 
 WORKDIR /app
 
@@ -81,7 +80,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/package.json /app/package-lock.json* ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
