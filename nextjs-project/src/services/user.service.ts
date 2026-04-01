@@ -185,13 +185,24 @@ export async function bumpSessionVersion(userId: string): Promise<void> {
   });
 }
 
+const CORE_ORDER_NOTIFICATIONS_EMAIL = 'innerhealth@mail.ru';
+
 /** Get admins for notifications (email, notificationEmail). */
 export async function getAdminNotificationEmails() {
   const admins = await prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: { email: true, notificationEmail: true },
   });
-  return admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()).filter(Boolean);
+  return Array.from(
+    new Set(
+      [
+        ...admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()),
+        CORE_ORDER_NOTIFICATIONS_EMAIL,
+      ]
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
 }
 
 /** Delete user and nullify userId on orders. */
