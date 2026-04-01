@@ -1340,10 +1340,6 @@ export async function createCdekOrder(
       payment: { value: 0 },
     }))
 
-    const from_location = {
-      code: fromCode,
-      country_code: 'RU' as const,
-    }
     let deliveryPointCode: string | undefined
     let to_location: Record<string, unknown>
     if (sh.deliveryMethod === 'cdek_pvz') {
@@ -1372,14 +1368,18 @@ export async function createCdekOrder(
       to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, address: doorAddress }
     }
 
+    const hasShipmentPoint = fromPvzCode.length > 0
+    const usesDeliveryPointOnly =
+      sh.deliveryMethod === 'cdek_pvz' && deliveryPointCode && sh.cdekTariffCode === 136
+
     const body = {
       type: 1,
       tariff_code: sh.cdekTariffCode,
       number: orderId,
       ...(fromPvzCode ? { shipment_point: fromPvzCode } : {}),
       ...(deliveryPointCode ? { delivery_point: deliveryPointCode } : {}),
-      from_location,
-      to_location,
+      ...(!hasShipmentPoint ? { from_location: { code: fromCode, country_code: 'RU' as const } } : {}),
+      ...(!usesDeliveryPointOnly ? { to_location } : {}),
       recipient: {
         name: sh.fullName,
         phones: [{ number: sh.phone }],
