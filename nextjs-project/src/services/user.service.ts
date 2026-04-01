@@ -185,13 +185,24 @@ export async function bumpSessionVersion(userId: string): Promise<void> {
   });
 }
 
+const CORE_ORDER_NOTIFICATIONS_EMAIL = 'innerhealth@mail.ru';
+
 /** Get admins for notifications (email, notificationEmail). */
 export async function getAdminNotificationEmails() {
   const admins = await prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: { email: true, notificationEmail: true },
   });
-  return admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()).filter(Boolean);
+  return Array.from(
+    new Set(
+      [
+        ...admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()),
+        CORE_ORDER_NOTIFICATIONS_EMAIL,
+      ]
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
 }
 
 /** Delete user and nullify userId on orders. */
@@ -307,11 +318,47 @@ export async function getInfraAlertTelegramChatIds(
     .filter((v): v is string => Boolean(v))
 }
 
+export async function getAdminTelegramChatIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: {
+      telegramWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { telegramUserId: true },
+      },
+    },
+    orderBy: { email: 'asc' },
+  })
+  return rows
+    .map((r) => r.telegramWhitelist[0]?.telegramUserId)
+    .filter((v): v is string => Boolean(v))
+}
+
 export async function getInfraAlertMaxUserIds(
   brandId?: BrandId | null
 ): Promise<string[]> {
   const rows = await prisma.user.findMany({
     where: { role: 'ADMIN', infraAlertsEnabled: true },
+    select: {
+      maxWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { maxUserId: true },
+      },
+    },
+    orderBy: { email: 'asc' },
+  })
+  return rows
+    .map((r) => r.maxWhitelist[0]?.maxUserId)
+    .filter((v): v is string => Boolean(v))
+}
+
+export async function getAdminMaxUserIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
     select: {
       maxWhitelist: {
         where: { brand: resolveDbBrand(brandId) },

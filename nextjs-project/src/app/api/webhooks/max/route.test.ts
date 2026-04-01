@@ -30,8 +30,12 @@ vi.mock('@/lib/review-moderation-action', () => ({
 vi.mock('@/lib/max-notify', () => ({
   notifyMaxConnection: vi.fn(),
 }));
+vi.mock('@/lib/cdek-shipment-action', () => ({
+  createCdekShipmentForOrder: vi.fn(),
+}));
 
 import { moderateReviewAndSync } from '@/lib/review-moderation-action';
+import { createCdekShipmentForOrder } from '@/lib/cdek-shipment-action';
 import { POST } from '@/app/api/webhooks/max/route';
 
 const originalNodeEnv = process.env.NODE_ENV;
@@ -68,6 +72,36 @@ describe('POST /api/webhooks/max moderation callback', () => {
       status: 'APPROVED',
       channel: 'MAX',
     });
+  });
+
+  it('creates cdek shipment from callback payload and returns ok', async () => {
+    vi.mocked(createCdekShipmentForOrder).mockResolvedValue({
+      success: true,
+      uuid: 'uuid-1',
+      trackNumber: null,
+    });
+
+    const request = new Request('https://localhost/api/webhooks/max?brand=inner', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-proto': 'https',
+        'x-max-bot-api-secret': 'webhook-secret',
+      },
+      body: JSON.stringify({
+        update_type: 'message_callback',
+        callback: {
+          callback_id: 'cb-2',
+          payload: 'cdek_create_order-1',
+          user: { user_id: '42' },
+        },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(createCdekShipmentForOrder).toHaveBeenCalledWith('order-1');
   });
 });
 

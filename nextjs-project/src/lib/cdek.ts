@@ -95,6 +95,19 @@ export function buildCdekPvzAddress(address: string | null | undefined): string 
   return fallback
 }
 
+function buildCdekWareKey(input: {
+  sku?: string | null
+  title?: string | null
+}): string {
+  const sku = input.sku?.trim()
+  if (sku) return sku
+
+  const title = input.title?.trim()
+  if (title) return title
+
+  return 'Товар'
+}
+
 /** Локация для расчёта: код города СДЭК или почтовый индекс */
 export interface CdekLocation {
   /** Код населённого пункта СДЭК (приоритет) */
@@ -1165,96 +1178,38 @@ export async function createCdekOrder(
       settingsMap.cdek_sender_name?.trim() || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
     let senderPhone =
       settingsMap.cdek_sender_phone?.trim() || process.env.CDEK_SENDER_PHONE?.trim() || ''
-    let senderAddress =
-      settingsMap.cdek_sender_address?.trim() || process.env.CDEK_SENDER_ADDRESS?.trim() || ''
     const fromPvzCode = settingsMap.cdek_from_pvz_code?.trim().toUpperCase() || ''
-    let fromCityCodeRaw =
-      settingsMap.cdek_from_city_code?.trim() || process.env.CDEK_FROM_CITY_CODE?.trim() || ''
 
     // Global fallback (если в brand-scope пусто).
-    if (!settingsMap.cdek_from_city_code || !settingsMap.cdek_sender_address) {
+    if (!settingsMap.cdek_sender_name || !settingsMap.cdek_sender_phone || !settingsMap.cdek_from_pvz_code) {
       const globalSettings = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {})
-      if (!senderAddress) senderAddress = globalSettings.cdek_sender_address?.trim() || senderAddress
-      if (!fromCityCodeRaw) {
-        fromCityCodeRaw =
-          globalSettings.cdek_from_city_code?.trim() || process.env.CDEK_FROM_CITY_CODE?.trim() || ''
-      }
       if (!senderName) senderName = globalSettings.cdek_sender_name?.trim() || senderName
       if (!senderPhone) senderPhone = globalSettings.cdek_sender_phone?.trim() || senderPhone
     }
-
-    let fromCode: number | undefined
-    if (fromPvzCode) {
-      const points =
-        (await (async () => {
-          const first = await searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode }, size: 1 },
-            scopedCredentials
-          )
-          if (first.length > 0) return first
-          const second = await searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode, type: 'PVZ' }, size: 1 },
-            scopedCredentials
-          )
-          if (second.length > 0) return second
-          return searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode, type: 'ALL' }, size: 1 },
-            scopedCredentials
-          )
-        })())
-      const cityCodeFromPvz = points[0]?.city_code
-      if (cityCodeFromPvz != null && !Number.isNaN(cityCodeFromPvz) && cityCodeFromPvz > 0) {
-        fromCode = cityCodeFromPvz
-      } else if (fromCityCodeRaw) {
-        const fallbackFromCode = Number(fromCityCodeRaw)
-        if (!Number.isNaN(fallbackFromCode) && fallbackFromCode > 0) {
-          console.warn(
-            '[CDEK createOrder] from_pvz_code is set but city_code was not resolved, fallback to from_city_code:',
-            fromPvzCode,
-            fallbackFromCode
-          )
-          fromCode = fallbackFromCode
-        } else {
-          return { error: 'Не удалось определить город отправления по коду ПВЗ СДЭК' }
-        }
-      } else {
-        // Пытаемся резолвить город через /location/cities по city/postal_code из ПВЗ.
-        const point = points[0]
-        const cityName = point?.city?.trim()
-        if (cityName) {
-          const cities = await getCdekCities(
-            { country_codes: ['RU'], city: cityName, size: 1 },
-            scopedCredentials
-          )
-          const code = cities[0]?.code
-          if (typeof code === 'number' && code > 0) {
-            fromCode = code
-          }
-        }
-        if (fromCode == null) {
-          const postalCode = point?.postal_code?.trim()
-          if (postalCode) {
-            const cities = await getCdekCities(
-              { country_codes: ['RU'], postal_code: postalCode, size: 1 },
-              scopedCredentials
-            )
-            const code = cities[0]?.code
-            if (typeof code === 'number' && code > 0) fromCode = code
-          }
-        }
-        if (fromCode == null || Number.isNaN(fromCode)) {
-          return { error: 'Не удалось определить город отправления по коду ПВЗ СДЭК' }
-        }
-      }
-    } else if (fromCityCodeRaw) {
-      fromCode = Number(fromCityCodeRaw)
+    if (!fromPvzCode) {
+      return { error: 'Не задан код ПВЗ отправки СДЭК (cdek_from_pvz_code)' }
     }
 
-    if (fromCode == null || Number.isNaN(fromCode)) {
-      return {
-        error:
-          'Не задан ПВЗ/код города отправления СДЭК (укажите cdek_from_pvz_code или cdek_from_city_code)',
-      }
+    const senderPoints =
+      await (async () => {
+        const first = await searchCdekDeliveryPoints(
+          { filter: { code: fromPvzCode }, size: 1 },
+          scopedCredentials
+        )
+        if (first.length > 0) return first
+        const second = await searchCdekDeliveryPoints(
+          { filter: { code: fromPvzCode, type: 'PVZ' }, size: 1 },
+          scopedCredentials
+        )
+        if (second.length > 0) return second
+        return searchCdekDeliveryPoints(
+          { filter: { code: fromPvzCode, type: 'ALL' }, size: 1 },
+          scopedCredentials
+        )
+      })()
+
+    if (senderPoints.length === 0) {
+      return { error: `Не найден ПВЗ отправки СДЭК: ${fromPvzCode}` }
     }
 
     const parsePositiveIntOrNull = (raw: string | undefined): number | null => {
@@ -1326,7 +1281,10 @@ export async function createCdekOrder(
 
     const packageItems = order.items.map((item) => ({
       name: item.product.title?.slice(0, 255) || 'Товар',
-      ware_key: item.productId,
+      ware_key: buildCdekWareKey({
+        sku: item.product.sku,
+        title: item.product.title,
+      }).slice(0, 255),
       cost: item.price,
       amount: item.quantity,
       weight: Math.max(
@@ -1368,7 +1326,6 @@ export async function createCdekOrder(
       to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, address: doorAddress }
     }
 
-    const hasShipmentPoint = fromPvzCode.length > 0
     const usesDeliveryPointOnly =
       sh.deliveryMethod === 'cdek_pvz' && deliveryPointCode && sh.cdekTariffCode === 136
 
@@ -1376,9 +1333,8 @@ export async function createCdekOrder(
       type: 1,
       tariff_code: sh.cdekTariffCode,
       number: orderId,
-      ...(fromPvzCode ? { shipment_point: fromPvzCode } : {}),
+      shipment_point: fromPvzCode,
       ...(deliveryPointCode ? { delivery_point: deliveryPointCode } : {}),
-      ...(!hasShipmentPoint ? { from_location: { code: fromCode, country_code: 'RU' as const } } : {}),
       ...(!usesDeliveryPointOnly ? { to_location } : {}),
       recipient: {
         name: sh.fullName,
@@ -1388,7 +1344,6 @@ export async function createCdekOrder(
       sender: {
         name: senderName,
         ...(senderPhone ? { phones: [{ number: senderPhone }] } : {}),
-        ...(!fromPvzCode && senderAddress ? { address: senderAddress } : {}),
       },
       packages: packages.map((pkg, idx) => ({
         number: String(idx + 1),
