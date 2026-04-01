@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCdekToken } from '@/lib/cdek'
+import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
@@ -88,40 +89,6 @@ async function parseIncoming(request: Request): Promise<Record<string, unknown>>
   }
 }
 
-function normalizeWidgetPayload(payload: Record<string, unknown>): Record<string, unknown> {
-  const action = payload.action
-  if (action !== 'calculate') return payload
-
-  const normalized: Record<string, unknown> = { ...payload }
-
-  // Widget v3 often operates with `from` / `to` / `goods` in config.
-  // Its service payload may contain `from`/`to` and/or `goods` instead of CDEK API's `*_location` and `packages`.
-  if (normalized.from_location == null && normalized.from != null && typeof normalized.from === 'object') {
-    normalized.from_location = normalized.from
-  }
-  if (normalized.to_location == null && normalized.to != null && typeof normalized.to === 'object') {
-    normalized.to_location = normalized.to
-  }
-
-  if (normalized.packages == null && Array.isArray(normalized.goods)) {
-    const goods = normalized.goods as Array<Record<string, unknown>>
-    const packages = goods
-      .map((g) => {
-        const weight = typeof g.weight === 'number' ? g.weight : Number.parseInt(String(g.weight ?? ''), 10)
-        const length = typeof g.length === 'number' ? g.length : Number.parseInt(String(g.length ?? ''), 10)
-        const width = typeof g.width === 'number' ? g.width : Number.parseInt(String(g.width ?? ''), 10)
-        const height = typeof g.height === 'number' ? g.height : Number.parseInt(String(g.height ?? ''), 10)
-        if (![weight, length, width, height].every((v) => Number.isFinite(v) && v > 0)) return null
-        return { weight, length, width, height }
-      })
-      .filter((p): p is { weight: number; length: number; width: number; height: number } => p !== null)
-
-    if (packages.length > 0) normalized.packages = packages
-  }
-
-  return normalized
-}
-
 export async function GET(request: Request) {
   return handle(request)
 }
@@ -166,4 +133,3 @@ async function handle(request: Request) {
     return json({ message }, { status: 500 })
   }
 }
-

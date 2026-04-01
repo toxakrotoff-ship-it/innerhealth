@@ -69,7 +69,27 @@ vi.mock('@/components/site/cdek-widget', () => ({
 }))
 
 vi.mock('@/components/site/saved-address-selector', () => ({
-  SavedAddressSelector: () => null,
+  SavedAddressSelector: ({
+    usingSavedAddress,
+    onUseSavedAddress,
+    onUseAnotherAddress,
+  }: {
+    usingSavedAddress: boolean
+    onUseSavedAddress: () => void
+    onUseAnotherAddress: () => void
+  }) => (
+    <div>
+      {!usingSavedAddress ? (
+        <button type="button" onClick={onUseSavedAddress}>
+          Использовать сохранённый адрес
+        </button>
+      ) : (
+        <button type="button" onClick={onUseAnotherAddress}>
+          Использовать другой адрес
+        </button>
+      )}
+    </div>
+  ),
 }))
 
 vi.mock('@/components/ui/responsive-text', () => ({
@@ -94,6 +114,18 @@ describe('CartPageContent delivery type switch', () => {
         return {
           ok: true,
           json: async () => ({ confirmationUrl: null }),
+        }
+      }
+      if (url.includes('/api/account/addresses')) {
+        return {
+          ok: true,
+          json: async () => [],
+        }
+      }
+      if (url.includes('/api/cdek/calculator')) {
+        return {
+          ok: true,
+          json: async () => ({ tariffs: [] }),
         }
       }
       return {
@@ -163,6 +195,7 @@ describe('CartPageContent delivery type switch', () => {
     expect(payload.shipping.fullName).toBe('Иванов Иван Иванович')
     expect(payload.shipping.city).toBe('Москва')
     expect(payload.shipping.address).toBe('г. Москва, Тестовый адрес')
+    expect(payload.shipping.deliveryMethod).toBe('pickup')
   })
 
   it('does not submit when required name field is empty', async () => {
@@ -184,5 +217,124 @@ describe('CartPageContent delivery type switch', () => {
       '/api/orders',
       expect.objectContaining({ method: 'POST' })
     )
+  })
+
+  it('uses calculator tariffs for saved cdek_door addresses without widget service recalculation', async () => {
+    const user = userEvent.setup({ document })
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+
+      if (url.includes('/api/account/addresses')) {
+        return {
+          ok: true,
+          json: async () => ([
+            {
+              id: 'addr-1',
+              label: 'Дом',
+              city: 'Москва',
+              postalCode: '101000',
+              addressLine: 'ул. Тверская, д. 1',
+              deliveryMethod: 'cdek_door',
+              cdekCityCode: 44,
+              cdekPvzCode: null,
+              street: 'ул. Тверская',
+              house: '1',
+              apartment: '12',
+              entrance: '',
+              floor: '',
+              intercom: '',
+            },
+          ]),
+        }
+      }
+
+      if (url.includes('/api/cdek/calculator')) {
+        const body = JSON.parse(String(init?.body ?? '{}')) as { deliveryKind?: string }
+        return {
+          ok: true,
+          json: async () => ({
+            tariffs:
+              body.deliveryKind === 'address'
+                ? [{ tariffCode: 137, deliverySum: 450, periodMin: 2, periodMax: 4 }]
+                : [],
+          }),
+        }
+      }
+
+      if (url.includes('/api/orders')) {
+        return {
+          ok: true,
+          json: async () => ({ confirmationUrl: null }),
+        }
+      }
+
+      if (url.includes('/api/cdek-widget/service')) {
+        throw new Error('saved cdek_door flow should not call widget service')
+      }
+
+      return {
+        ok: true,
+        json: async () => [],
+      }
+    })
+
+    render(<CartPageContent pickupAddress="г. Москва, Тестовый адрес" />)
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/account/addresses',
+        expect.objectContaining({
+          credentials: 'include',
+          cache: 'no-store',
+        })
+      )
+    })
+
+    await user.click(screen.getByText('Использовать сохранённый адрес'))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/cdek/calculator',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('"deliveryKind":"address"'),
+        })
+      )
+    })
+
+    await user.type(screen.getByLabelText('Имя'), 'Иванов Иван Иванович')
+    await user.type(screen.getByLabelText('Телефон'), '+7 (999) 123-45-67')
+    await user.type(screen.getByLabelText('Email'), 'ivanov@example.com')
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByText('Оформить заказ'))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/orders',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(String),
+        })
+      )
+    })
+
+    const orderRequest = fetchMock.mock.calls.find(([url]) => String(url) === '/api/orders')
+    expect(orderRequest).toBeTruthy()
+    const requestInit = orderRequest?.[1] as RequestInit
+    const payload = JSON.parse(String(requestInit.body))
+
+    expect(payload.shipping.deliveryMethod).toBe('cdek_door')
+    expect(payload.shipping.cdekCityCode).toBe(44)
+    expect(payload.shipping.cdekTariffCode).toBe(137)
+    expect(payload.shipping.doorAddress).toEqual({
+      street: 'ул. Тверская',
+      house: '1',
+      apartment: '12',
+      entrance: undefined,
+      floor: undefined,
+      intercom: undefined,
+    })
+    expect(screen.queryByText('Не удалось определить тариф СДЭК до двери')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/cdek-widget/service'))).toBe(false)
   })
 })

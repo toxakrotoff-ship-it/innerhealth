@@ -190,7 +190,6 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
   const [usingSavedAddress, setUsingSavedAddress] = useState(false)
   const selectedSavedAddressIdRef = useRef<string | null>(null)
-  const savedAddressCalcAbortRef = useRef<AbortController | null>(null)
 
   const selectedSavedAddress = selectedSavedAddressId
     ? savedAddresses.find((address) => address.id === selectedSavedAddressId) ?? null
@@ -436,88 +435,6 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
 
-  useEffect(() => {
-    if (!usingSavedAddress) return
-    if (!selectedSavedAddress) return
-    if (selectedSavedAddress.deliveryMethod !== 'cdek_door') return
-    if (!selectedSavedAddress.city || !selectedSavedAddress.addressLine) return
-
-    savedAddressCalcAbortRef.current?.abort()
-    const controller = new AbortController()
-    savedAddressCalcAbortRef.current = controller
-
-    async function run() {
-      setCalculationLoading(true)
-      setDeliveryError(null)
-      try {
-        const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
-        const configRes = await fetch(`/api/cdek-widget/config${brandQuery}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-          }),
-          signal: controller.signal,
-        })
-        const configJson = (await configRes.json()) as
-          | { from?: unknown; goods?: unknown; tariffs?: unknown; error?: string }
-          | null
-        if (!configRes.ok) throw new Error(configJson?.error ?? 'Не удалось загрузить конфиг виджета СДЭК')
-
-        const goods = Array.isArray(configJson?.goods) ? (configJson.goods as unknown[]) : []
-        if (goods.length === 0) throw new Error('Не удалось определить габариты посылки для расчёта СДЭК')
-
-        const serviceRes = await fetch(`/api/cdek-widget/service?action=calculate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'calculate',
-            from: configJson?.from ?? null,
-            to: {
-              code: selectedSavedAddress.cdekCityCode,
-              city: selectedSavedAddress.city,
-              postal_code: selectedSavedAddress.postalCode ?? undefined,
-              address: selectedSavedAddress.addressLine,
-              country_code: 'RU',
-            },
-            goods,
-          }),
-          signal: controller.signal,
-        })
-
-        const serviceJson = (await serviceRes.json().catch(() => null)) as
-          | { tariff_codes?: unknown[]; message?: string }
-          | null
-        if (!serviceRes.ok) throw new Error(serviceJson?.message ?? 'Ошибка расчёта СДЭК до двери')
-
-        const tariffCodes = Array.isArray(serviceJson?.tariff_codes) ? serviceJson?.tariff_codes : []
-        const mapped = tariffCodes
-          .map((t) => {
-            const x = t as Record<string, unknown>
-            const tariffCode = typeof x.tariff_code === 'number' ? x.tariff_code : Number.parseInt(String(x.tariff_code ?? ''), 10)
-            const deliverySum = typeof x.delivery_sum === 'number' ? x.delivery_sum : Number.parseInt(String(x.delivery_sum ?? ''), 10)
-            const periodMin = typeof x.period_min === 'number' ? x.period_min : Number.parseInt(String(x.period_min ?? ''), 10)
-            const periodMax = typeof x.period_max === 'number' ? x.period_max : Number.parseInt(String(x.period_max ?? ''), 10)
-            if (![tariffCode, deliverySum, periodMin, periodMax].every((n) => Number.isFinite(n) && n >= 0)) return null
-            return { tariffCode, deliverySum, periodMin, periodMax }
-          })
-          .filter((t): t is { tariffCode: number; deliverySum: number; periodMin: number; periodMax: number } => t !== null)
-
-        const door = mapped.find((t) => t.tariffCode === 137) ?? mapped[0] ?? null
-        setDoorTariff(door)
-      } catch (e) {
-        if (e instanceof DOMException && e.name === 'AbortError') return
-        setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта СДЭК до двери')
-        setDoorTariff(null)
-      } finally {
-        setCalculationLoading(false)
-      }
-    }
-
-    void run()
-    return () => controller.abort()
-  }, [usingSavedAddress, selectedSavedAddress, items, brandId])
-
   /** Расчёт СДЭК при выборе города и при изменении корзины (не только для сохранённого адреса). */
   useEffect(() => {
     if (cityCode == null) return
@@ -637,9 +554,9 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
             fullName,
             city: city || formData.city,
             address: address || formData.address,
+            deliveryMethod,
             ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
               ? {
-                  deliveryMethod,
                   cdekCityCode: effectiveCityCode ?? undefined,
                   cdekTariffCode:
                     deliveryMethod === 'cdek_pvz'

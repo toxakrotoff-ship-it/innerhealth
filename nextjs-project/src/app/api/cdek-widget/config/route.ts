@@ -41,18 +41,27 @@ export async function POST(request: Request) {
       { brandId }
     )
 
-    const senderAddress = cdekSettings.cdek_sender_address?.trim() ?? ''
+    let senderAddress = cdekSettings.cdek_sender_address?.trim() ?? ''
+    let fromCodeRaw = cdekSettings.cdek_from_city_code?.trim() ?? ''
+    if (!senderAddress || !fromCodeRaw) {
+      const globalSettings = await settingsService.getSettingsMap(
+        ['cdek_from_city_code', 'cdek_sender_address'],
+        {}
+      )
+      senderAddress = senderAddress || globalSettings.cdek_sender_address?.trim() || ''
+      fromCodeRaw = fromCodeRaw || globalSettings.cdek_from_city_code?.trim() || ''
+    }
+
     const fromPostalCode = senderAddress.match(/\b\d{6}\b/)?.[0]
-    const fromCodeRaw = cdekSettings.cdek_from_city_code?.trim()
-    const fromCodeParsed = fromCodeRaw ? Number.parseInt(fromCodeRaw, 10) : NaN
+    const fromCodeParsed = fromCodeRaw ? Number.parseInt(fromCodeRaw, 10) : Number.NaN
     const fromCode = Number.isFinite(fromCodeParsed) && fromCodeParsed > 0 ? fromCodeParsed : undefined
 
-    const from: CdekLocation = {
-      ...(fromCode != null ? { code: fromCode } : undefined),
-      ...(fromPostalCode ? { postal_code: fromPostalCode } : undefined),
-      ...(senderAddress ? { address: senderAddress } : undefined),
-      country_code: 'RU',
-    }
+    const from: CdekLocation =
+      fromCode != null
+        ? { code: fromCode, country_code: 'RU' }
+        : fromPostalCode
+          ? { postal_code: fromPostalCode, country_code: 'RU' }
+          : { country_code: 'RU' }
 
     const productIds = Array.from(new Set(parsed.data.items.map((i) => i.productId)))
     const products = await productService.getProductsForCdek(productIds)
@@ -104,4 +113,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
-

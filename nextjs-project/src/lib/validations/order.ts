@@ -33,7 +33,7 @@ export const shippingSchema = z.object({
   city: z.string().min(1, 'Укажите город').max(100).trim(),
   zipCode: z.string().max(20).trim(),
   country: z.string().max(100).trim().optional(),
-  deliveryMethod: z.enum(['cdek_pvz', 'cdek_door']).nullable().optional(),
+  deliveryMethod: z.enum(['pickup', 'cdek_pvz', 'cdek_door']).nullable().optional(),
   cdekCityCode: z.number().int().positive().nullable().optional(),
   cdekPvzCode: z.string().max(50).nullable().optional(),
   cdekTariffCode: z.number().int().positive().nullable().optional(),
