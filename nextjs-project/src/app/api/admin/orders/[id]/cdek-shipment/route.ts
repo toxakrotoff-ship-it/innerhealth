@@ -9,11 +9,19 @@ import * as orderService from '@/services/order.service'
  * Используется для повтора при ошибке автоматического создания после оплаты.
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
+
+  let force = false
+  try {
+    const body = (await request.json()) as { force?: unknown }
+    force = body.force === true
+  } catch {
+    force = false
+  }
 
   const { id: orderId } = await context.params
   const order = await orderService.findOrderForCdekShipment(orderId)
@@ -36,7 +44,7 @@ export async function POST(
       { status: 400 }
     )
   }
-  if (order.cdekOrderUuid) {
+  if (order.cdekOrderUuid && !force) {
     return NextResponse.json(
       { success: true, uuid: order.cdekOrderUuid, message: 'Заказ СДЭК уже создан' },
       { status: 200 }

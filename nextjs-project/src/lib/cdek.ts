@@ -1348,18 +1348,16 @@ export async function createCdekOrder(
     let to_location: Record<string, unknown>
     if (sh.deliveryMethod === 'cdek_pvz') {
       const pvzCode = sh.cdekPvzCode?.trim() || extractCdekPvzCodeFromAddress(sh.address)
-      const pvzAddress = buildCdekPvzAddress(sh.address)
       if (!pvzCode) {
         return { error: 'Не найден код ПВЗ в заказе' }
       }
-      if (!pvzAddress) {
-        return { error: 'Не найден адрес ПВЗ в заказе' }
-      }
+      // Для заказа в ПВЗ CDEK ожидает именно код офиса получателя.
+      // Поле address в to_location приводит к тому, что офис игнорируется
+      // и заказ уходит в INVALID с "Не задан офис получателя".
       to_location = {
         code: sh.cdekCityCode,
         country_code: 'RU' as const,
         delivery_point: pvzCode,
-        address: pvzAddress,
       }
     } else {
       const doorAddress = buildCdekDoorAddress({
@@ -1434,6 +1432,10 @@ export async function createCdekOrder(
     if (!uuid) {
       return { error: `СДЭК: в ответе нет uuid. ${text.slice(0, 200)}` }
     }
+    const snapshot = await getCdekOrderSnapshotByUuid(uuid, scopedCredentials)
+    if (snapshot.validationError) {
+      return { error: snapshot.validationError }
+    }
     return { uuid, trackNumber }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
@@ -1442,10 +1444,45 @@ export async function createCdekOrder(
   }
 }
 
-async function getCdekOrderTrackNumberByUuid(
+interface CdekOrderRequestError {
+  code?: string
+  message?: string
+}
+
+interface CdekOrderRequestState {
+  state?: string
+  errors?: CdekOrderRequestError[]
+}
+
+interface CdekOrderLookupResponse {
+  entity?: { cdek_number?: string; track_number?: string }
+  cdek_number?: string
+  track_number?: string
+  requests?: CdekOrderRequestState[]
+}
+
+function extractCdekOrderValidationError(data: CdekOrderLookupResponse): string | null {
+  const invalidRequests = (data.requests ?? []).filter(
+    (request) => request.state?.toUpperCase() === 'INVALID'
+  )
+  if (invalidRequests.length === 0) return null
+
+  const parts = invalidRequests
+    .flatMap((request) => request.errors ?? [])
+    .map((error) => [error.code?.trim(), error.message?.trim()].filter(Boolean).join(': '))
+    .filter((part) => part.length > 0)
+
+  if (parts.length === 0) {
+    return 'СДЭК: заказ создан, но отклонён при валидации'
+  }
+
+  return `СДЭК: ${parts.join('; ')}`
+}
+
+async function getCdekOrderSnapshotByUuid(
   uuid: string,
   creds?: CdekCredentials | null
-): Promise<string | null> {
+): Promise<{ trackNumber: string | null; validationError: string | null }> {
   const token = await getCdekToken(creds)
   const base = getCdekApiBase(creds)
   const response = await fetch(`${base}/orders/${encodeURIComponent(uuid)}`, {
@@ -1459,18 +1496,17 @@ async function getCdekOrderTrackNumberByUuid(
     throw new Error(`СДЭК: ${response.status} ${text.slice(0, 200)}`)
   }
 
-  let data: {
-    entity?: { cdek_number?: string; track_number?: string }
-    cdek_number?: string
-    track_number?: string
-  }
+  let data: CdekOrderLookupResponse
   try {
-    data = JSON.parse(text) as typeof data
+    data = JSON.parse(text) as CdekOrderLookupResponse
   } catch {
     throw new Error(`СДЭК: неверный ответ ${text.slice(0, 100)}`)
   }
 
-  return parseTrackNumberFromCdekOrderPayload(data)
+  return {
+    trackNumber: parseTrackNumberFromCdekOrderPayload(data),
+    validationError: extractCdekOrderValidationError(data),
+  }
 }
 
 export async function syncCdekTrackNumberIfDue(
@@ -1505,10 +1541,12 @@ export async function syncCdekTrackNumberIfDue(
   })
 
   try {
-    const trackNumber = await getCdekOrderTrackNumberByUuid(candidate.cdekOrderUuid, scopedCredentials)
+    const snapshot = await getCdekOrderSnapshotByUuid(candidate.cdekOrderUuid, scopedCredentials)
+    const trackNumber = snapshot.trackNumber
     await orderService.updateOrder(orderId, {
       cdekTrackCheckedAt: now,
       ...(trackNumber ? { cdekTrackNumber: trackNumber, cdekOrderError: null } : {}),
+      ...(snapshot.validationError ? { cdekOrderError: snapshot.validationError } : {}),
     })
     return { checked: true, trackNumber }
   } catch (error) {
