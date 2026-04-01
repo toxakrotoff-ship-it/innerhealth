@@ -94,11 +94,11 @@ export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
     ],
   },
   aktsii: {
-    heroImage: '/images/categories/aktsii.png',
+    heroImage: '/images/categories/aktsii-abstraktnyy-fon.png',
     heroTitle: 'АКЦИИ',
   },
   'podarkovye-nabory': {
-    heroImage: '/images/categories/podarkovye-nabory.jpg',
+    heroImage: '/images/categories/podarkovye-nabory.png',
     heroTitle: 'ПОДАРОЧНЫЕ НАБОРЫ',
   },
 }
