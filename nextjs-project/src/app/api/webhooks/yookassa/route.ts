@@ -3,8 +3,16 @@ import { createCdekOrder } from '@/lib/cdek'
 import { getYookassaPayment } from '@/lib/yookassa'
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
-import { notifyTelegramOrderStatusForUser, notifyTelegramCdekTrackForUser } from '@/lib/telegram-notify'
-import { notifyMaxOrderStatusForUser, notifyMaxCdekTrackForUser } from '@/lib/max-notify'
+import {
+  notifyTelegramOrderStatusForUser,
+  notifyTelegramCdekTrackForUser,
+  notifyTelegramPaidOrderForAdmins,
+} from '@/lib/telegram-notify'
+import {
+  notifyMaxOrderStatusForUser,
+  notifyMaxCdekTrackForUser,
+  notifyMaxPaidOrderForAdmins,
+} from '@/lib/max-notify'
 import { sendCustomerOrderPaidEmail } from '@/lib/email'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
@@ -190,6 +198,25 @@ export async function POST(request: Request) {
       } catch (e) {
         console.warn('[webhook/yookassa] paid email failed', orderId, e instanceof Error ? e.message : String(e))
       }
+    }
+
+    const paidOrderForAdmins = await orderService.findOrderForCdekShipment(orderId)
+    const paidDeliveryMethod = paidOrderForAdmins?.shippingInfo?.deliveryMethod ?? null
+    if (paidDeliveryMethod === 'cdek_pvz' || paidDeliveryMethod === 'cdek_door') {
+      void notifyTelegramPaidOrderForAdmins({
+        orderId,
+        deliveryMethod: paidDeliveryMethod,
+        cdekOrderUuid: paidOrderForAdmins?.cdekOrderUuid ?? null,
+        cdekOrderError: paidOrderForAdmins?.cdekOrderError ?? null,
+        brandId: orderBrandId,
+      })
+      void notifyMaxPaidOrderForAdmins({
+        orderId,
+        deliveryMethod: paidDeliveryMethod,
+        cdekOrderUuid: paidOrderForAdmins?.cdekOrderUuid ?? null,
+        cdekOrderError: paidOrderForAdmins?.cdekOrderError ?? null,
+        brandId: orderBrandId,
+      })
     }
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
     await orderService.updateOrderStatus(orderId, 'canceled')

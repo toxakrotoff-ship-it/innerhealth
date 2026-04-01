@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
-import { createCdekOrder } from '@/lib/cdek'
-import * as orderService from '@/services/order.service'
+import { createCdekShipmentForOrder } from '@/lib/cdek-shipment-action'
 
 /**
  * POST /api/admin/orders/[id]/cdek-shipment
@@ -24,50 +23,15 @@ export async function POST(
   }
 
   const { id: orderId } = await context.params
-  const order = await orderService.findOrderForCdekShipment(orderId)
-
-  if (!order) {
-    return NextResponse.json({ error: 'Заказ не найден' }, { status: 404 })
-  }
-  if (order.status !== 'paid') {
-    return NextResponse.json(
-      { error: 'Создание отгрузки СДЭК доступно только для оплаченных заказов' },
-      { status: 400 }
-    )
-  }
-  const isCdek =
-    order.shippingInfo?.deliveryMethod === 'cdek_pvz' ||
-    order.shippingInfo?.deliveryMethod === 'cdek_door'
-  if (!isCdek) {
-    return NextResponse.json(
-      { error: 'У заказа не выбрана доставка СДЭК' },
-      { status: 400 }
-    )
-  }
-  if (order.cdekOrderUuid && !force) {
-    return NextResponse.json(
-      { success: true, uuid: order.cdekOrderUuid, message: 'Заказ СДЭК уже создан' },
-      { status: 200 }
-    )
-  }
-
-  const result = await createCdekOrder(orderId)
+  const result = await createCdekShipmentForOrder(orderId, { force })
   if ('error' in result) {
-    await orderService.updateOrder(orderId, { cdekOrderError: result.error })
-    return NextResponse.json(
-      { success: false, error: result.error },
-      { status: 502 }
-    )
+    return NextResponse.json({ success: false, error: result.error }, { status: result.status })
   }
 
-  await orderService.updateOrder(orderId, {
-    cdekOrderUuid: result.uuid,
-    cdekTrackNumber: result.trackNumber ?? null,
-    cdekOrderError: null,
-  })
   return NextResponse.json({
     success: true,
     uuid: result.uuid,
-    trackNumber: result.trackNumber ?? null,
+    trackNumber: result.trackNumber,
+    ...(result.message ? { message: result.message } : {}),
   })
 }

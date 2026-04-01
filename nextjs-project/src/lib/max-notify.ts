@@ -166,6 +166,56 @@ export async function notifyMaxOrderStatusForUser(payload: {
   await sendToUsers([link.maxUserId], lines.join('\n'), scope);
 }
 
+export async function notifyMaxPaidOrderForAdmins(payload: {
+  orderId: string;
+  deliveryMethod?: string | null;
+  cdekOrderUuid?: string | null;
+  cdekOrderError?: string | null;
+  brandId?: BrandId;
+}): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
+  if (adminUserIds.length === 0) return;
+
+  const isCdek =
+    payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const adminOrdersUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/orders` : '/admin/orders';
+  const lines = [
+    '✅ **Заказ оплачен**',
+    `ID: \`${escapeHtml(payload.orderId)}\``,
+    isCdek
+      ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
+      : 'Доставка: не СДЭК',
+    payload.cdekOrderUuid
+      ? `СДЭК UUID: \`${escapeHtml(payload.cdekOrderUuid)}\``
+      : payload.cdekOrderError
+        ? `СДЭК ошибка: ${escapeHtml(payload.cdekOrderError)}`
+        : isCdek
+          ? 'СДЭК: отгрузка ещё не создана'
+          : '',
+    `Открыть заказы: ${escapeHtml(adminOrdersUrl)}`,
+  ].filter(Boolean)
+
+  const attachments = isCdek && !payload.cdekOrderUuid
+    ? [
+        Keyboard.inlineKeyboard([
+          [Keyboard.button.callback('Создать отгрузку в СДЭК', `cdek_create_${payload.orderId}`.slice(0, 256))],
+          [Keyboard.button.link('Открыть в админке', adminOrdersUrl)],
+        ]),
+      ]
+    : undefined
+
+  await sendToUsers(
+    adminUserIds,
+    lines.join('\n'),
+    { ...scope, ...(attachments ? { attachments } : {}) }
+  )
+}
+
 export async function notifyMaxCdekTrackForUser(payload: {
   userId: string;
   orderId: string;

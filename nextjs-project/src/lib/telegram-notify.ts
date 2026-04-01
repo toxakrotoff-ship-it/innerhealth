@@ -16,7 +16,9 @@ async function getWhitelistChatIds(
 }
 
 interface SendMessageOptions {
-  replyMarkup?: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
+  replyMarkup?: {
+    inline_keyboard: Array<Array<{ text: string; callback_data: string } | { text: string; url: string }>>;
+  };
 }
 
 async function sendMessage(
@@ -159,6 +161,66 @@ export async function notifyTelegramOrderStatusForUser(payload: {
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
   ].filter(Boolean);
   await sendMessage(token, whitelist.telegramUserId, lines.join('\n')).catch(() => {});
+}
+
+export async function notifyTelegramPaidOrderForAdmins(payload: {
+  orderId: string;
+  deliveryMethod?: string | null;
+  cdekOrderUuid?: string | null;
+  cdekOrderError?: string | null;
+  brandId?: BrandId;
+}): Promise<void> {
+  const scope = payload.brandId ? { brandId: payload.brandId } : {};
+  const token = await settingsService.getTelegramBotToken(scope);
+  if (!token) return;
+
+  const chatIds = await userService.getAdminTelegramChatIds(payload.brandId);
+  if (chatIds.length === 0) return;
+
+  const isCdek =
+    payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const adminOrderUrl = baseUrl
+    ? `${baseUrl.replace(/\/$/, '')}/admin/orders`
+    : '';
+  const lines = [
+    '✅ <b>Заказ оплачен</b>',
+    `ID: <code>${escapeHtml(payload.orderId)}</code>`,
+    isCdek
+      ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
+      : 'Доставка: не СДЭК',
+    payload.cdekOrderUuid
+      ? `СДЭК UUID: <code>${escapeHtml(payload.cdekOrderUuid)}</code>`
+      : payload.cdekOrderError
+        ? `СДЭК ошибка: ${escapeHtml(payload.cdekOrderError)}`
+        : isCdek
+          ? 'СДЭК: отгрузка ещё не создана'
+          : '',
+    adminOrderUrl ? `Открыть заказы: ${escapeHtml(adminOrderUrl)}` : '',
+  ].filter(Boolean)
+
+  const replyMarkup =
+    isCdek && !payload.cdekOrderUuid
+      ? {
+          inline_keyboard: [
+            [
+              {
+                text: 'Создать отгрузку в СДЭК',
+                callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
+              },
+            ],
+          ],
+        }
+      : undefined
+
+  for (const chatId of chatIds) {
+    await sendMessage(token, chatId, lines.join('\n'), { replyMarkup }).catch((error) =>
+      console.error('[telegram-notify] paid admin notify error:', error)
+    )
+  }
 }
 
 export async function notifyTelegramCdekTrackForUser(payload: {

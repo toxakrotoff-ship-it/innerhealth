@@ -102,6 +102,7 @@ export async function findOrderForCdekShipment(orderId: string) {
       status: true,
       cdekOrderUuid: true,
       cdekTrackNumber: true,
+      cdekOrderError: true,
       shippingInfo: { select: { deliveryMethod: true } },
     },
   });

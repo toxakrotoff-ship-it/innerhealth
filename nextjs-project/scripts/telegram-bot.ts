@@ -97,23 +97,6 @@ async function confirmLink(code: string, telegramUserId: string): Promise<{ succ
   }
 }
 
-async function getPromoStats(): Promise<Array<{ code: string; usedCount: number; usageLimit: number | null; isActive: boolean }>> {
-  try {
-    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
-    const brandQuery = `?brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
-    const res = await fetchWithTimeout(`${base}/api/admin/telegram/promo-stats${brandQuery}`, {
-      headers: { 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { promos?: Array<{ code: string; usedCount: number; usageLimit: number | null; isActive: boolean }> };
-    const promos = Array.isArray(data.promos) ? data.promos : [];
-    return promos.slice(0, 100);
-  } catch (e) {
-    console.error('[bot] getPromoStats error:', e instanceof Error ? e.name : e);
-    return [];
-  }
-}
-
 interface PartnerStatRow {
   promoCodeId: string;
   code: string;
@@ -127,6 +110,9 @@ interface TelegramReplyMarkup {
   keyboard?: Array<Array<{ text: string }>>;
   resize_keyboard?: boolean;
   is_persistent?: boolean;
+  one_time_keyboard?: boolean;
+  input_field_placeholder?: string;
+  remove_keyboard?: boolean;
 }
 
 async function getPartnerStatsByTelegramUserId(
@@ -154,7 +140,7 @@ async function getTelegramCapabilities(
 }
 
 function getTelegramAvailableCommands(capabilities: BotUserCapabilities): string[] {
-  const commands = ['/help', '/status'];
+  const commands = ['/help', '/status', '/menu'];
   if (capabilities.isAdmin) commands.push('/promo');
   if (capabilities.isPartner) commands.push('/stats');
   return commands;
@@ -166,10 +152,18 @@ function buildTelegramReplyMarkup(capabilities: BotUserCapabilities): TelegramRe
   if (capabilities.isAdmin) roleRow.push({ text: '/promo' });
   if (capabilities.isPartner) roleRow.push({ text: '/stats' });
   if (roleRow.length > 0) rows.push(roleRow);
+  rows.push([{ text: 'Скрыть меню' }]);
   return {
     keyboard: rows,
     resize_keyboard: true,
-    is_persistent: true,
+    one_time_keyboard: true,
+    input_field_placeholder: 'Выберите команду или введите /help',
+  };
+}
+
+function buildTelegramRemoveKeyboard(): TelegramReplyMarkup {
+  return {
+    remove_keyboard: true,
   };
 }
 
@@ -187,6 +181,7 @@ function buildHelpTextForTelegram(capabilities: BotUserCapabilities): string {
       'Команды:',
       '• /status — проверить, подключены ли вы',
       '• /help — помощь',
+      '• /menu — открыть меню команд',
     ].join('\n');
   }
 
@@ -198,6 +193,7 @@ function buildHelpTextForTelegram(capabilities: BotUserCapabilities): string {
     'Команды:',
     '• /status — статус подключения',
     '• /help — помощь',
+    '• /menu — показать меню команд',
     ...(capabilities.isAdmin ? ['• /promo — список промокодов'] : []),
     ...(capabilities.isPartner ? ['• /stats — статистика по вашим промокодам'] : []),
   ].join('\n');
@@ -211,6 +207,8 @@ function buildWelcomeTextForTelegram(capabilities: BotUserCapabilities): string 
     ...getTelegramAvailableCommands(capabilities)
       .filter((command) => command !== '/help')
       .map((command) => `• ${command}`),
+    '',
+    'Меню можно открыть командой /menu и скрыть кнопкой «Скрыть меню».',
   ].join('\n');
 }
 
@@ -251,6 +249,7 @@ async function sendMessage(
 
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
+const CDEK_CREATE_PREFIX = 'cdek_create_';
 
 type ReviewModerationResponse = {
   success: boolean;
@@ -320,6 +319,51 @@ async function setReviewStatus(
       reason: 'error',
       message: 'Не удалось обработать модерацию. Попробуйте ещё раз.',
       syncWarnings: [],
+    };
+  }
+}
+
+type CdekShipmentResponse = {
+  success: boolean;
+  uuid?: string;
+  trackNumber?: string | null;
+  message?: string;
+  error?: string;
+};
+
+async function createCdekShipment(
+  orderId: string,
+  telegramUserId: string
+): Promise<CdekShipmentResponse> {
+  try {
+    const base = TELEGRAM_SITE_URL.replace(/\/$/, '');
+    const brandQuery = `?brand=${encodeURIComponent(TELEGRAM_BOT_BRAND_ID)}`;
+    const res = await fetchWithTimeout(`${base}/api/admin/telegram/orders/${encodeURIComponent(orderId)}/cdek-shipment${brandQuery}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Service-Key': TELEGRAM_SERVICE_SECRET },
+      body: JSON.stringify({ telegramUserId }),
+    });
+    const data = (await res.json().catch(() => null)) as CdekShipmentResponse | null;
+    if (!res.ok) {
+      return {
+        success: false,
+        error:
+          (data && typeof data.error === 'string' && data.error) ||
+          'Не удалось создать отгрузку СДЭК.',
+      };
+    }
+    return {
+      success: Boolean(data?.success),
+      uuid: typeof data?.uuid === 'string' ? data.uuid : undefined,
+      trackNumber: typeof data?.trackNumber === 'string' ? data.trackNumber : null,
+      message: typeof data?.message === 'string' ? data.message : undefined,
+      error: typeof data?.error === 'string' ? data.error : undefined,
+    };
+  } catch (e) {
+    console.error('[bot] createCdekShipment error:', e instanceof Error ? e.message : String(e));
+    return {
+      success: false,
+      error: 'Сервис временно недоступен',
     };
   }
 }
@@ -446,6 +490,29 @@ async function run(): Promise<void> {
               if (!result.success && cq.message?.chat?.id != null) {
                 await sendMessage(String(cq.message.chat.id), result.message).catch(() => {});
               }
+            } else if (data.startsWith(CDEK_CREATE_PREFIX)) {
+              const orderId = data.slice(CDEK_CREATE_PREFIX.length).trim();
+              if (!orderId) {
+                await answerCallbackQuery(cq.id, 'Ошибка: неверный ID заказа.');
+                continue;
+              }
+              await answerCallbackQuery(cq.id, 'Создаю отгрузку...');
+              const capabilities = await getTelegramCapabilities(fromId);
+              if (!capabilities.isAdmin) {
+                if (cq.message?.chat?.id != null) {
+                  await sendMessage(String(cq.message.chat.id), 'Доступ только для администраторов.').catch(() => {});
+                }
+                continue;
+              }
+              const result = await createCdekShipment(orderId, fromId);
+              const feedback = result.success
+                ? result.message ?? `Отгрузка СДЭК создана: ${result.uuid ?? 'без UUID'}`
+                : result.error ?? 'Не удалось создать отгрузку СДЭК.'
+              if (cq.message?.chat?.id != null) {
+                await sendMessage(String(cq.message.chat.id), feedback).catch(() => {});
+              } else {
+                await answerCallbackQuery(cq.id, feedback);
+              }
             } else {
               const capabilities = await getTelegramCapabilities(fromId);
               if (!capabilities.isAdmin) {
@@ -507,13 +574,31 @@ async function run(): Promise<void> {
         if (text === '/help') {
           try {
             const capabilities = await getTelegramCapabilities(fromId);
-            await sendMessage(chatId, buildHelpTextForTelegram(capabilities), {
-              replyMarkup: buildTelegramReplyMarkup(capabilities),
-            }).catch(() => {});
+            await sendMessage(chatId, buildHelpTextForTelegram(capabilities)).catch(() => {});
           } catch (e) {
             console.error('[bot] /help error:', e instanceof Error ? e.message : e);
             await sendMessage(chatId, '⚠️ Не удалось показать справку. Попробуйте позже.').catch(() => {});
           }
+          continue;
+        }
+
+        if (text === '/menu') {
+          try {
+            const capabilities = await getTelegramCapabilities(fromId);
+            await sendMessage(chatId, 'Меню команд:', {
+              replyMarkup: buildTelegramReplyMarkup(capabilities),
+            }).catch(() => {});
+          } catch (e) {
+            console.error('[bot] /menu error:', e instanceof Error ? e.message : e);
+            await sendMessage(chatId, '⚠️ Не удалось открыть меню. Попробуйте позже.').catch(() => {});
+          }
+          continue;
+        }
+
+        if (text.toLowerCase() === 'скрыть меню' || text === '/hide') {
+          await sendMessage(chatId, 'Меню скрыто. Открыть снова: /menu', {
+            replyMarkup: buildTelegramRemoveKeyboard(),
+          }).catch(() => {});
           continue;
         }
 
@@ -523,14 +608,12 @@ async function run(): Promise<void> {
             if (capabilities.isLinked) {
               await sendMessage(
                 chatId,
-                '✅ Вы подключены к уведомлениям.',
-                { replyMarkup: buildTelegramReplyMarkup(capabilities) }
+                '✅ Вы подключены к уведомлениям.'
               ).catch(() => {});
             } else {
               await sendMessage(
                 chatId,
-                '❌ Вы не подключены к уведомлениям.\n\nПодключите через админку: Профиль → Подключить Telegram → перейдите по ссылке и нажмите Start.',
-                { replyMarkup: buildTelegramReplyMarkup(capabilities) }
+                '❌ Вы не подключены к уведомлениям.\n\nПодключите через админку: Профиль → Подключить Telegram → перейдите по ссылке и нажмите Start.'
               ).catch(() => {});
             }
           } catch (e) {
@@ -546,16 +629,12 @@ async function run(): Promise<void> {
         if (text === '/promo') {
           const capabilities = await getTelegramCapabilities(fromId);
           if (!capabilities.isAdmin) {
-            await sendMessage(chatId, 'Доступ только для администраторов.', {
-              replyMarkup: buildTelegramReplyMarkup(capabilities),
-            }).catch(() => {});
+            await sendMessage(chatId, 'Доступ только для администраторов.').catch(() => {});
             continue;
           }
           const promos = await getPromoStatsForAdmin(TELEGRAM_BOT_BRAND_ID);
           if (promos.length === 0) {
-            await sendMessage(chatId, 'Нет промокодов.', {
-              replyMarkup: buildTelegramReplyMarkup(capabilities),
-            }).catch(() => {});
+            await sendMessage(chatId, 'Нет промокодов.').catch(() => {});
             continue;
           }
           const lines = promos.map((p) => {
@@ -564,9 +643,7 @@ async function run(): Promise<void> {
             const code = typeof p.code === 'string' ? escapeHtml(p.code.slice(0, 50)) : '';
             return `${status} <code>${code}</code> — использований: ${Number(p.usedCount) || 0}${limit}`;
           });
-          await sendMessage(chatId, '<b>Промокоды</b>\n\n' + lines.join('\n'), {
-            replyMarkup: buildTelegramReplyMarkup(capabilities),
-          }).catch(() => {});
+          await sendMessage(chatId, '<b>Промокоды</b>\n\n' + lines.join('\n')).catch(() => {});
           continue;
         }
 
@@ -575,8 +652,7 @@ async function run(): Promise<void> {
           if (!capabilities.isPartner) {
             await sendMessage(
               chatId,
-              'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.',
-              { replyMarkup: buildTelegramReplyMarkup(capabilities) }
+              'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.'
             ).catch(() => {});
             continue;
           }
@@ -586,16 +662,13 @@ async function run(): Promise<void> {
               chatId,
               result.error === 'Not a partner or Telegram not linked'
                 ? 'Доступ только для партнёров. Подключите Telegram в личном кабинете партнёра на сайте.'
-                : result.error,
-              { replyMarkup: buildTelegramReplyMarkup(capabilities) }
+                : result.error
             ).catch(() => {});
             continue;
           }
           const stats = result.stats;
           if (stats.length === 0) {
-            await sendMessage(chatId, 'У вас пока нет привязанных промокодов или статистики.', {
-              replyMarkup: buildTelegramReplyMarkup(capabilities),
-            }).catch(() => {});
+            await sendMessage(chatId, 'У вас пока нет привязанных промокодов или статистики.').catch(() => {});
             continue;
           }
           const totalOrders = stats.reduce((s, x) => s + x.ordersCount, 0);
@@ -607,17 +680,13 @@ async function run(): Promise<void> {
             '<b>Ваша статистика</b>\n\n' +
             `Всего заказов: <b>${totalOrders}</b>\n\n` +
             lines.join('\n');
-          await sendMessage(chatId, header, {
-            replyMarkup: buildTelegramReplyMarkup(capabilities),
-          }).catch(() => {});
+          await sendMessage(chatId, header).catch(() => {});
           continue;
         }
 
         if (text.startsWith('/')) {
           const capabilities = await getTelegramCapabilities(fromId);
-          await sendMessage(chatId, buildUnknownCommandTextForTelegram(capabilities), {
-            replyMarkup: buildTelegramReplyMarkup(capabilities),
-          }).catch(() => {});
+          await sendMessage(chatId, buildUnknownCommandTextForTelegram(capabilities)).catch(() => {});
         }
       } catch (e) {
         console.error('Bot update error:', e);

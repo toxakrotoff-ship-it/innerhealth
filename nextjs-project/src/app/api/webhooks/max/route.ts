@@ -13,6 +13,7 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { notifyMaxConnection } from '@/lib/max-notify';
 import { moderateReviewAndSync } from '@/lib/review-moderation-action';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
+import { createCdekShipmentForOrder } from '@/lib/cdek-shipment-action';
 import {
   buildHelpTextForMax,
   buildMaxMenuAttachments,
@@ -54,6 +55,7 @@ const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 const MAX_START_CODE_LENGTH = 64;
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
+const CDEK_CREATE_PREFIX = 'cdek_create_';
 const MAX_MESSAGE_LENGTH = 500;
 
 function isSecureRequest(request: Request): boolean {
@@ -250,6 +252,26 @@ export async function POST(request: Request) {
       }
       const result = await moderateReviewAndSync({ reviewId, status, channel: 'MAX' });
       await makeNotification(result.message);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (payloadValue.startsWith(CDEK_CREATE_PREFIX)) {
+      const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
+      if (!capabilities.isAdmin) {
+        await makeNotification('Доступ только для администраторов.');
+        return NextResponse.json({ ok: true });
+      }
+      const orderId = payloadValue.slice(CDEK_CREATE_PREFIX.length).trim();
+      if (!orderId) {
+        await makeNotification('Ошибка: неверный ID заказа.');
+        return NextResponse.json({ ok: true });
+      }
+      const result = await createCdekShipmentForOrder(orderId);
+      await makeNotification(
+        'error' in result
+          ? result.error
+          : result.message ?? `Отгрузка СДЭК создана: ${result.uuid}`
+      );
       return NextResponse.json({ ok: true });
     }
 

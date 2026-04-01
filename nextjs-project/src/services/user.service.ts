@@ -318,11 +318,47 @@ export async function getInfraAlertTelegramChatIds(
     .filter((v): v is string => Boolean(v))
 }
 
+export async function getAdminTelegramChatIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: {
+      telegramWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { telegramUserId: true },
+      },
+    },
+    orderBy: { email: 'asc' },
+  })
+  return rows
+    .map((r) => r.telegramWhitelist[0]?.telegramUserId)
+    .filter((v): v is string => Boolean(v))
+}
+
 export async function getInfraAlertMaxUserIds(
   brandId?: BrandId | null
 ): Promise<string[]> {
   const rows = await prisma.user.findMany({
     where: { role: 'ADMIN', infraAlertsEnabled: true },
+    select: {
+      maxWhitelist: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { maxUserId: true },
+      },
+    },
+    orderBy: { email: 'asc' },
+  })
+  return rows
+    .map((r) => r.maxWhitelist[0]?.maxUserId)
+    .filter((v): v is string => Boolean(v))
+}
+
+export async function getAdminMaxUserIds(
+  brandId?: BrandId | null
+): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
     select: {
       maxWhitelist: {
         where: { brand: resolveDbBrand(brandId) },
