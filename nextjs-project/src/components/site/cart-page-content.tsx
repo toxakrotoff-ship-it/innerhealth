@@ -545,6 +545,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (submitting || !isPrivacyAccepted) return
     const fullName = formData.fullName.trim()
     const phoneCheck = validatePhoneRu(formData.phone)
     const emailCheck = validateEmail(formData.email)
@@ -711,7 +712,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
   }
 
   return (
-    <form onSubmit={handleSubmitOrder} className="space-y-8">
+    <form onSubmit={handleSubmitOrder} noValidate className="space-y-8">
       {/* Список товаров на всю ширину */}
       <div className="space-y-4 xl:space-y-6 2xl:space-y-8 3xl:space-y-10 4xl:space-y-12 5xl:space-y-14 6xl:space-y-16">
         {items.map((line) => {
