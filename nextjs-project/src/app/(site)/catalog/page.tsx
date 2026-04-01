@@ -302,6 +302,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       title={item.product.title}
                       brand={item.product.brand}
                       sku={item.product.sku}
+                      showSku={false}
                       price={item.product.price}
                       priceOld={item.product.priceOld}
                       photo={item.product.photo}
@@ -315,7 +316,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       blurDataURL={'photos' in item.product ? getFirstPhotoBlurDataURL(item.product.photos) : undefined}
                     />
                   ) : (
-                    <GroupedProductCard key={item.parentUid} group={item} priority={index < 2} />
+                    <GroupedProductCard key={item.parentUid} group={item} priority={index < 2} showSku={false} />
                   )
                 )}
               </FluidGrid>
@@ -327,6 +328,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     id={p.id}
                     title={p.title}
                     sku={p.sku}
+                    showSku={false}
                     price={p.price}
                     priceOld={p.priceOld}
                     photo={p.photo}

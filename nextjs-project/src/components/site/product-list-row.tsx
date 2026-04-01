@@ -8,6 +8,7 @@ interface ProductListRowProps {
   id: string;
   title: string;
   sku?: string | null;
+  showSku?: boolean;
   price: number;
   priceOld?: number | null;
   photo?: string | null;
@@ -22,6 +23,7 @@ export function ProductListRow({
   id,
   title,
   sku,
+  showSku = true,
   price,
   priceOld,
   photo,
@@ -60,7 +62,7 @@ export function ProductListRow({
           <Link href={detailHref} className="text-base font-semibold text-text hover:text-action-blue transition-colors">
             {title}
           </Link>
-          {sku?.trim() && (
+          {showSku && sku?.trim() && (
             <div className="mt-1 text-xs text-gray-500">SKU: {sku.trim()}</div>
           )}
           <div className="mt-2 flex items-center gap-2">

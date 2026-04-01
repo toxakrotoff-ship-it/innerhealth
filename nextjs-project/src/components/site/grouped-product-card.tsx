@@ -15,9 +15,10 @@ import type { ProductListingGroup } from '@/lib/product-grouping'
 interface GroupedProductCardProps {
   group: ProductListingGroup
   priority?: boolean
+  showSku?: boolean
 }
 
-export function GroupedProductCard({ group, priority = false }: GroupedProductCardProps) {
+export function GroupedProductCard({ group, priority = false, showSku = true }: GroupedProductCardProps) {
   const [selectedId, setSelectedId] = useState<string>(group.defaultVariantId)
 
   const activeVariant = useMemo(
@@ -113,7 +114,7 @@ export function GroupedProductCard({ group, priority = false }: GroupedProductCa
                 </span>
               ) : null}
             </div>
-            {activeVariant.sku?.trim() && (
+            {showSku && activeVariant.sku?.trim() && (
               <p
                 className={cn(
                   'desktop-microtext-scale mt-1 line-clamp-1',

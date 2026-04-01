@@ -16,6 +16,7 @@ interface ProductCardProps {
   title: string
   brand?: string | null
   sku?: string | null
+  showSku?: boolean
   price: number
   priceOld?: number | null
   photo?: string | null
@@ -37,6 +38,7 @@ export function ProductCard({
   title,
   brand,
   sku,
+  showSku = true,
   price,
   priceOld,
   photo,
@@ -168,7 +170,7 @@ export function ProductCard({
             >
               {title}
             </h3>
-            {sku?.trim() && (
+            {showSku && sku?.trim() && (
               <p
                 className={cn(
                   'desktop-microtext-scale mt-1 line-clamp-1',
