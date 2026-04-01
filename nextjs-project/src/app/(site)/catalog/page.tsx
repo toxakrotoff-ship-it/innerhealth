@@ -12,8 +12,8 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import {
   filterCatalogBlockCategories,
-  getCategoryBackgroundImage,
   getCategoryImageObjectPosition,
+  resolveCategoryImage,
 } from '@/lib/catalog-categories'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
@@ -217,7 +217,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <ScalableSpacing size="lg">
           <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
             {catalogBlockCategories.map((cat) => {
-              const bgImage = getCategoryBackgroundImage(cat.slug)
+              const bgImage = resolveCategoryImage(cat.slug, cat.image)
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
               return (
                 <Link

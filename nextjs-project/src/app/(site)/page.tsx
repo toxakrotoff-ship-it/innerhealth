@@ -16,8 +16,8 @@ import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { PostCard } from '@/components/site/post-card'
 import {
   filterCatalogBlockCategories,
-  getCategoryBackgroundImage,
   getCategoryImageObjectPosition,
+  resolveCategoryImage,
 } from '@/lib/catalog-categories'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { CheckCircle, NavArrowRight } from 'iconoir-react'
@@ -1071,7 +1071,7 @@ export default async function HomePage() {
               adaptiveGap
             >
             {filterCatalogBlockCategories(categories).map((cat) => {
-                const bgImage = cat.image ?? getCategoryBackgroundImage(cat.slug)
+                const bgImage = resolveCategoryImage(cat.slug, cat.image)
                 const imagePosition = getCategoryImageObjectPosition(cat.slug)
                 return (
                   <Link

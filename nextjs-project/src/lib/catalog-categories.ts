@@ -12,6 +12,13 @@ export function getCategoryBackgroundImage(slug: string): string | undefined {
   return CATEGORY_BACKGROUND_IMAGES[slug]
 }
 
+export function resolveCategoryImage(
+  slug: string,
+  uploadedImage?: string | null
+): string | undefined {
+  return uploadedImage || getCategoryBackgroundImage(slug)
+}
+
 /** Object position for category card background (so key elements like dropper tip are visible). */
 export function getCategoryImageObjectPosition(slug: string): string {
   if (slug === 'nutrienty') return 'object-cover object-[50%_28%]'

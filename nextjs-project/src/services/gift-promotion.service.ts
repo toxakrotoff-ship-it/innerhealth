@@ -227,5 +227,3 @@ export async function deleteGiftPromotionForAdmin(
   if (!existing) return null
   return prisma.giftPromotion.delete({ where: { id } })
 }
-
-
