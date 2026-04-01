@@ -290,7 +290,9 @@ export default function AdminOrdersPage() {
         </p>
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Доставка</h3>
+        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+          {order.shippingInfo?.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}
+        </h3>
         {order.shippingInfo ? (
           <div className="text-gray-600 space-y-1">
             <p><strong>{order.shippingInfo.fullName}</strong></p>
@@ -299,7 +301,11 @@ export default function AdminOrdersPage() {
             <p>{order.shippingInfo.addressShort}</p>
           </div>
         ) : (
-          <p className="text-gray-400">Адрес доставки не указан</p>
+          <p className="text-gray-400">
+            {order.shippingInfo?.deliveryMethod === 'pickup'
+              ? 'Информация о самовывозе не указана'
+              : 'Адрес доставки не указан'}
+          </p>
         )}
         {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' || order.shippingInfo?.deliveryMethod === 'cdek_door') && (
           <div className="mt-4 pt-3 border-t border-gray-200">
@@ -628,7 +634,9 @@ export default function AdminOrdersPage() {
                 )}
               </div>
               <div>
-                <h3 className="mb-2 text-sm font-semibold text-gray-700">Доставка</h3>
+                <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  {popupOrder.shippingInfo?.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}
+                </h3>
                 {popupOrder.shippingInfo ? (
                   <div className="space-y-1 text-sm text-gray-700">
                     <p><strong>{popupOrder.shippingInfo.fullName}</strong></p>
@@ -637,7 +645,11 @@ export default function AdminOrdersPage() {
                     <p>{popupOrder.shippingInfo.addressShort}</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Адрес доставки не указан.</p>
+                  <p className="text-sm text-gray-500">
+                    {popupOrder.shippingInfo?.deliveryMethod === 'pickup'
+                      ? 'Информация о самовывозе не указана.'
+                      : 'Адрес доставки не указан.'}
+                  </p>
                 )}
               </div>
             </div>

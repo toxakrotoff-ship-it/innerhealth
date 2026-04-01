@@ -39,6 +39,11 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
   const statusPresentation = getOrderStatusPresentation(order.status)
   const shouldShowCdekTrackingBlock =
     shipping?.deliveryMethod === 'cdek_pvz' || shipping?.deliveryMethod === 'cdek_door'
+  const shippingTitle = shipping?.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'
+  const emptyShippingText =
+    shipping?.deliveryMethod === 'pickup'
+      ? 'Информация о самовывозе недоступна.'
+      : 'Информация о доставке недоступна.'
   const cdekTrackingLink = order.cdekTrackNumber
     ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(order.cdekTrackNumber)}`
     : null
@@ -96,7 +101,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
         </div>
 
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-text">Доставка</h2>
+          <h2 className="text-lg font-semibold text-text">{shippingTitle}</h2>
           {shipping ? (
             <div className="mt-3 space-y-1 text-sm text-gray-700">
               <p>{shipping.fullName}</p>
@@ -105,7 +110,7 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
               <p>{shipping.address}</p>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-gray-600">Информация о доставке недоступна.</p>
+            <p className="mt-3 text-sm text-gray-600">{emptyShippingText}</p>
           )}
         </div>
 
