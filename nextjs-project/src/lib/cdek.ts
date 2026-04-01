@@ -1402,6 +1402,7 @@ export async function createCdekOrder(
 
     const token = await getCdekToken(scopedCredentials)
     const base = getCdekApiBase(scopedCredentials)
+    console.warn('[CDEK createOrder][payload-json]', JSON.stringify(body))
     const response = await fetch(`${base}/orders`, {
       method: 'POST',
       headers: {
