@@ -52,18 +52,22 @@ export async function POST(
   }
 
   const result = await createCdekOrder(orderId)
-  if ('uuid' in result) {
-    await orderService.updateOrder(orderId, {
-      cdekOrderUuid: result.uuid,
-      cdekTrackNumber: result.trackNumber ?? null,
-      cdekOrderError: null,
-    })
-    return NextResponse.json({ success: true, uuid: result.uuid, trackNumber: result.trackNumber ?? null })
+  if ('error' in result) {
+    await orderService.updateOrder(orderId, { cdekOrderError: result.error })
+    return NextResponse.json(
+      { success: false, error: result.error },
+      { status: 502 }
+    )
   }
 
-  await orderService.updateOrder(orderId, { cdekOrderError: result.error })
-  return NextResponse.json(
-    { success: false, error: result.error },
-    { status: 502 }
-  )
+  await orderService.updateOrder(orderId, {
+    cdekOrderUuid: result.uuid,
+    cdekTrackNumber: result.trackNumber ?? null,
+    cdekOrderError: null,
+  })
+  return NextResponse.json({
+    success: true,
+    uuid: result.uuid,
+    trackNumber: result.trackNumber ?? null,
+  })
 }
