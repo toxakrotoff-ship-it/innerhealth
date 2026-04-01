@@ -336,6 +336,33 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
     setDeliveryMethod((prev) => (prev === 'pickup' ? 'cdek_pvz' : prev))
   }
 
+  const resolveCdekCityCodeByName = useCallback(
+    async (cityName: string): Promise<number | null> => {
+      const query = cityName.trim()
+      if (!query) return null
+      const brandQuery = brandId ? `&brand=${encodeURIComponent(brandId)}` : ''
+      try {
+        const response = await fetch(`/api/cdek/cities?q=${encodeURIComponent(query)}&size=1${brandQuery}`)
+        if (!response.ok) return null
+        const data = (await response.json().catch(() => null)) as
+          | { cities?: Array<{ code?: number; city?: string; region?: string; country?: string }> }
+          | null
+        const code = data?.cities?.[0]?.code
+        if (typeof code !== 'number' || !Number.isFinite(code) || code <= 0) return null
+        setSelectedCity((prev) => ({
+          code,
+          city: data?.cities?.[0]?.city ?? prev?.city ?? query,
+          region: data?.cities?.[0]?.region ?? prev?.region,
+          country: data?.cities?.[0]?.country ?? prev?.country,
+        }))
+        return code
+      } catch {
+        return null
+      }
+    },
+    [brandId]
+  )
+
   const handleCalculateDelivery = useCallback(async () => {
     if (cityCode == null) return
     setCalculationLoading(true)
@@ -556,7 +583,11 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
     )
     if (!fullName || !phoneCheck.valid || !emailCheck.valid) return
-    if ((deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && cityCode == null) {
+    let effectiveCityCode = cityCode
+    if (effectiveCityCode == null && (deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door')) {
+      effectiveCityCode = await resolveCdekCityCodeByName(selectedCity?.city ?? formData.city)
+    }
+    if ((deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && effectiveCityCode == null) {
       setDeliveryError('Не указан код города СДЭК')
       return
     }
@@ -609,7 +640,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
             ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
               ? {
                   deliveryMethod,
-                  cdekCityCode: cityCode ?? undefined,
+                  cdekCityCode: effectiveCityCode ?? undefined,
                   cdekTariffCode:
                     deliveryMethod === 'cdek_pvz'
                       ? pvzTariff?.tariffCode
@@ -1234,6 +1265,18 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
               </div>
             </dl>
           </div>
+
+        {deliveryError ? (
+          <p
+            className={cn(
+              'text-sm text-center',
+              isSprintTheme ? 'text-red-300' : 'text-red-600'
+            )}
+            role="alert"
+          >
+            {deliveryError}
+          </p>
+        ) : null}
 
         <label className={cn('mb-3 flex items-center justify-center gap-2 text-sm xl:mb-4 xl:gap-3 2xl:mb-5 2xl:gap-4 3xl:mb-6 3xl:gap-5 4xl:mb-8 4xl:gap-6 5xl:mb-10 5xl:gap-8 6xl:mb-12 6xl:gap-10', isSprintTheme ? 'text-slate-200' : 'text-gray-700')}>
           <input
