@@ -91,12 +91,14 @@ export function AddToCartButton({
       onClick={handleClick}
       disabled={disabled}
       className={cn(
-        'inline-flex items-center justify-center rounded-full font-medium transition-colors whitespace-nowrap',
+        'inline-flex items-center justify-center rounded-full text-center font-medium transition-colors',
         disabled
           ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
           : 'bg-action-blue text-gray-800 hover:bg-action-blue/90',
         size === 'default' && 'w-full sm:w-auto px-8 py-3 min-h-[44px] 2xl:min-h-[50px] 2xl:text-base 3xl:min-h-[56px] 3xl:px-10',
-        size === 'sm' && 'w-full sm:w-auto px-4 py-2 text-sm min-h-[36px] 2xl:min-h-[42px] 2xl:text-base 3xl:min-h-[48px] 3xl:px-5',
+        size === 'default' && 'whitespace-nowrap',
+        size === 'sm' &&
+          'w-full px-3 py-2 text-sm leading-tight whitespace-normal [overflow-wrap:anywhere] min-h-[40px] sm:min-h-[36px] sm:w-auto sm:px-4 2xl:min-h-[42px] 2xl:text-base 3xl:min-h-[48px] 3xl:px-5',
         className
       )}
     >

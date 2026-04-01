@@ -60,4 +60,23 @@ describe('AddToCartButton analytics', () => {
       })
     )
   })
+
+  it('allows wrapped text for disabled compact buttons', () => {
+    render(
+      <AddToCartButton
+        productId="p-2"
+        title="Broth"
+        price={1400}
+        photo={null}
+        slug="broth"
+        size="sm"
+        disabled
+      />
+    )
+
+    const button = screen.getByText('Товар закончился')
+    expect(button.className).toContain('whitespace-normal')
+    expect(button.className).toContain('leading-tight')
+    expect(button.className).toContain('min-h-[40px]')
+  })
 })

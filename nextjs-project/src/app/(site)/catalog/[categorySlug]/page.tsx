@@ -359,7 +359,7 @@ export default async function CategoryPage({ params }: PageProps) {
               cols4xl={6}
               gap="6"
               adaptiveGap={false}
-              className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+              className="max-[389px]:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
             >
               {listingItems.map((item, index) =>
                 item.kind === 'single' ? (

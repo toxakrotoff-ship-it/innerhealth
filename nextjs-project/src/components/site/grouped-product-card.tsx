@@ -96,7 +96,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
           <div className="flex-1 min-h-0 min-w-0">
             <h3
               className={cn(
-                'line-clamp-2 text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
+                'min-w-0 max-w-full line-clamp-2 break-words text-sm font-medium transition-colors [overflow-wrap:anywhere] 2xl:text-[0.95rem] 3xl:text-base',
                 isSprintTheme ? 'text-slate-100' : 'text-text'
               )}
             >
@@ -106,7 +106,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
               {group.flavorOptions.find((option) => option.id === activeVariant.id)?.label ? (
                 <span
                   className={cn(
-                    'inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs line-clamp-1',
+                    'inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs line-clamp-1 [overflow-wrap:anywhere]',
                     isSprintTheme ? 'bg-slate-700 text-slate-200' : 'bg-highlight-blue text-gray-700'
                   )}
                 >
@@ -117,7 +117,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
             {showSku && activeVariant.sku?.trim() && (
               <p
                 className={cn(
-                  'desktop-microtext-scale mt-1 line-clamp-1',
+                  'desktop-microtext-scale mt-1 min-w-0 max-w-full line-clamp-1 overflow-hidden text-ellipsis',
                   isSprintTheme ? 'text-slate-400' : 'text-gray-500'
                 )}
               >
@@ -181,7 +181,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
             <Link
               href={detailHref}
               className={cn(
-                'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
+                'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm leading-tight font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
                 isSprintTheme
                   ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
                   : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
