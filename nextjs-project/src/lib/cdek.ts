@@ -1343,21 +1343,23 @@ export async function createCdekOrder(
     const from_location = {
       code: fromCode,
       country_code: 'RU' as const,
-      ...(fromPvzCode ? { delivery_point: fromPvzCode } : {}),
     }
+    let deliveryPointCode: string | undefined
     let to_location: Record<string, unknown>
     if (sh.deliveryMethod === 'cdek_pvz') {
       const pvzCode = sh.cdekPvzCode?.trim() || extractCdekPvzCodeFromAddress(sh.address)
+      const pvzAddress = buildCdekPvzAddress(sh.address)
       if (!pvzCode) {
         return { error: 'Не найден код ПВЗ в заказе' }
       }
-      // Для заказа в ПВЗ CDEK ожидает именно код офиса получателя.
-      // Поле address в to_location приводит к тому, что офис игнорируется
-      // и заказ уходит в INVALID с "Не задан офис получателя".
+      if (!pvzAddress) {
+        return { error: 'Не найден адрес ПВЗ в заказе' }
+      }
+      deliveryPointCode = pvzCode
       to_location = {
         code: sh.cdekCityCode,
         country_code: 'RU' as const,
-        delivery_point: pvzCode,
+        address: pvzAddress,
       }
     } else {
       const doorAddress = buildCdekDoorAddress({
@@ -1379,6 +1381,8 @@ export async function createCdekOrder(
       type: 1,
       tariff_code: sh.cdekTariffCode,
       number: orderId,
+      ...(fromPvzCode ? { shipment_point: fromPvzCode } : {}),
+      ...(deliveryPointCode ? { delivery_point: deliveryPointCode } : {}),
       from_location,
       to_location,
       recipient: {
