@@ -46,14 +46,14 @@ export async function POST(
 
   const { id: orderId } = await context.params
   const result = await createCdekShipmentForOrder(orderId, { force })
-  if (result.success) {
-    return NextResponse.json({
-      success: true,
-      uuid: result.uuid,
-      trackNumber: result.trackNumber,
-      ...(result.message ? { message: result.message } : {}),
-    })
+  if ('error' in result) {
+    return NextResponse.json({ success: false, error: result.error }, { status: result.status })
   }
 
-  return NextResponse.json({ success: false, error: result.error }, { status: result.status })
+  return NextResponse.json({
+    success: true,
+    uuid: result.uuid,
+    trackNumber: result.trackNumber,
+    ...(result.message ? { message: result.message } : {}),
+  })
 }

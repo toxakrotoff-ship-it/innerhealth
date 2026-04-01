@@ -45,15 +45,15 @@ export async function createCdekShipmentForOrder(
   }
 
   const result = await createCdekOrder(orderId)
-  if ('uuid' in result) {
-    await orderService.updateOrder(orderId, {
-      cdekOrderUuid: result.uuid,
-      cdekTrackNumber: result.trackNumber ?? null,
-      cdekOrderError: null,
-    })
-    return { success: true, uuid: result.uuid, trackNumber: result.trackNumber ?? null }
+  if ('error' in result) {
+    await orderService.updateOrder(orderId, { cdekOrderError: result.error })
+    return { success: false, error: result.error, status: 502 }
   }
 
-  await orderService.updateOrder(orderId, { cdekOrderError: result.error })
-  return { success: false, error: result.error, status: 502 }
+  await orderService.updateOrder(orderId, {
+    cdekOrderUuid: result.uuid,
+    cdekTrackNumber: result.trackNumber ?? null,
+    cdekOrderError: null,
+  })
+  return { success: true, uuid: result.uuid, trackNumber: result.trackNumber ?? null }
 }

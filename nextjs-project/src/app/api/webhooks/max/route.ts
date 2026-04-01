@@ -268,9 +268,9 @@ export async function POST(request: Request) {
       }
       const result = await createCdekShipmentForOrder(orderId);
       await makeNotification(
-        result.success
-          ? result.message ?? `Отгрузка СДЭК создана: ${result.uuid}`
-          : result.error
+        'error' in result
+          ? result.error
+          : result.message ?? `Отгрузка СДЭК создана: ${result.uuid}`
       );
       return NextResponse.json({ ok: true });
     }
