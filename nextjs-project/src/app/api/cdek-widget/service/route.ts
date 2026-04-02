@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import {
   calculateCdekTariffList,
+  getCdekCities,
   getCdekToken,
   resolveCdekSenderSettings,
   type CdekLocation,
+  type CdekCalculatorTariffListRequest,
+  type ResolvedCdekSenderSettings,
 } from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import * as settingsService from '@/services/settings.service'
@@ -57,8 +60,241 @@ const calculatorPayloadSchema = z.object({
   currency: z.number().int().positive().optional(),
   lang: z.enum(['rus', 'eng']).optional(),
   services: z.array(z.record(z.string(), z.unknown())).optional(),
+  additional_order_types: z.array(z.number().int().positive()).optional(),
   date: z.union([z.string(), z.number()]).optional(),
 })
+
+type WidgetTariffAttempt = {
+  name: string
+  request: CdekCalculatorTariffListRequest
+}
+
+function buildCdekAttemptDate(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, '+0000')
+}
+
+function summarizeLocation(location: CdekLocation | undefined): Record<string, unknown> | null {
+  if (!location) return null
+  return {
+    code: location.code ?? null,
+    postal_code: location.postal_code ?? null,
+    city_uuid: location.city_uuid ?? null,
+    address: location.address ?? null,
+    country_code: location.country_code ?? null,
+  }
+}
+
+function logWidgetAttempt(params: {
+  brandId: string | null
+  name: string
+  request: CdekCalculatorTariffListRequest
+}) {
+  const { brandId, name, request } = params
+  console.warn('[cdek/widget][calculate] attempt', {
+    brandId,
+    name,
+    tariff_codes: request.tariff_codes,
+    type: request.type ?? 1,
+    currency: request.currency ?? 1,
+    lang: request.lang ?? 'rus',
+    date: request.date ?? null,
+    additional_order_types: request.additional_order_types ?? [],
+    from_location: summarizeLocation(request.from_location),
+    to_location: summarizeLocation(request.to_location),
+    packages: request.packages,
+  })
+}
+
+async function buildWidgetTariffAttempts(params: {
+  request: z.infer<typeof calculatorPayloadSchema>
+  credentials: NonNullable<Awaited<ReturnType<typeof settingsService.getCdekCredentials>>>
+  senderSettings: ResolvedCdekSenderSettings
+}): Promise<WidgetTariffAttempt[]> {
+  const { request, credentials, senderSettings } = params
+  const explicitDate = request.date ?? buildCdekAttemptDate()
+
+  const baseRequest: CdekCalculatorTariffListRequest = {
+    from_location: senderSettings.calculatorFromLocation,
+    to_location: request.to_location as CdekLocation,
+    packages: request.packages,
+    type: request.type,
+    currency: request.currency,
+    lang: request.lang,
+    services: request.services,
+    additional_order_types: request.additional_order_types,
+    date: request.date,
+    tariff_codes: [...WIDGET_TARIFF_CODES],
+  }
+
+  const attempts: WidgetTariffAttempt[] = [
+    { name: 'base', request: baseRequest },
+    {
+      name: 'type=1',
+      request: {
+        ...baseRequest,
+        type: 1,
+      },
+    },
+    {
+      name: 'type=2',
+      request: {
+        ...baseRequest,
+        type: 2,
+      },
+    },
+    {
+      name: 'type=1+date',
+      request: {
+        ...baseRequest,
+        type: 1,
+        date: explicitDate,
+      },
+    },
+    {
+      name: 'type=2+date',
+      request: {
+        ...baseRequest,
+        type: 2,
+        date: explicitDate,
+      },
+    },
+    {
+      name: 'type=1+ltl',
+      request: {
+        ...baseRequest,
+        type: 1,
+        additional_order_types: [2],
+      },
+    },
+    {
+      name: 'type=2+ltl',
+      request: {
+        ...baseRequest,
+        type: 2,
+        additional_order_types: [2],
+      },
+    },
+  ]
+
+  if (senderSettings.fromPostalCode) {
+    attempts.push({
+      name: 'from.postal_code+type=1',
+      request: {
+        ...baseRequest,
+        from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
+        type: 1,
+      },
+    })
+    attempts.push({
+      name: 'from.postal_code+type=2',
+      request: {
+        ...baseRequest,
+        from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
+        type: 2,
+      },
+    })
+    attempts.push({
+      name: 'from.postal_code+type=2+date',
+      request: {
+        ...baseRequest,
+        from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
+        type: 2,
+        date: explicitDate,
+      },
+    })
+  }
+
+  const toCode = request.to_location.code
+  if (typeof toCode === 'number' && Number.isFinite(toCode) && toCode > 0) {
+    try {
+      const cities = await getCdekCities(
+        { country_codes: ['RU'], code: toCode, size: 20, page: 0 },
+        credentials
+      )
+      const resolvedPostalCode = cities
+        .flatMap((city) => {
+          const rawPostalCodeField = city as unknown as {
+            postal_code?: unknown
+            postalCode?: unknown
+            postal_codes?: unknown
+          }
+          return [
+            ...(Array.isArray(rawPostalCodeField.postal_codes) ? rawPostalCodeField.postal_codes : []),
+            rawPostalCodeField.postal_code,
+            rawPostalCodeField.postalCode,
+          ]
+        })
+        .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+
+      if (resolvedPostalCode) {
+        attempts.push({
+          name: 'to.postal_code+type=1',
+          request: {
+            ...baseRequest,
+            to_location: {
+              postal_code: resolvedPostalCode,
+              country_code: 'RU',
+              address: baseRequest.to_location.address,
+            },
+            type: 1,
+          },
+        })
+        attempts.push({
+          name: 'to.postal_code+type=2',
+          request: {
+            ...baseRequest,
+            to_location: {
+              postal_code: resolvedPostalCode,
+              country_code: 'RU',
+              address: baseRequest.to_location.address,
+            },
+            type: 2,
+          },
+        })
+        attempts.push({
+          name: 'to.postal_code+type=2+date',
+          request: {
+            ...baseRequest,
+            to_location: {
+              postal_code: resolvedPostalCode,
+              country_code: 'RU',
+              address: baseRequest.to_location.address,
+            },
+            type: 2,
+            date: explicitDate,
+          },
+        })
+        attempts.push({
+          name: 'to.postal_code+type=1+ltl',
+          request: {
+            ...baseRequest,
+            to_location: {
+              postal_code: resolvedPostalCode,
+              country_code: 'RU',
+              address: baseRequest.to_location.address,
+            },
+            type: 1,
+            additional_order_types: [2],
+          },
+        })
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      console.warn('[cdek/widget][calculate] failed to resolve to_location postal code', {
+        code: toCode,
+        message,
+      })
+    }
+  }
+
+  const uniqueAttempts = new Map<string, WidgetTariffAttempt>()
+  for (const attempt of attempts) {
+    const key = JSON.stringify(attempt.request)
+    if (!uniqueAttempts.has(key)) uniqueAttempts.set(key, attempt)
+  }
+
+  return Array.from(uniqueAttempts.values())
+}
 
 async function proxyToCdek(params: {
   baseUrl: string
@@ -103,41 +339,69 @@ async function proxyToCdek(params: {
 }
 
 async function calculateForWidgetTariffs(params: {
+  brandId: string | null
   data: Record<string, unknown>
   credentials: NonNullable<Awaited<ReturnType<typeof settingsService.getCdekCredentials>>>
-  senderFromLocation: CdekLocation
+  senderSettings: ResolvedCdekSenderSettings
 }) {
   const parsed = calculatorPayloadSchema.safeParse(params.data)
   if (!parsed.success) {
     return json({ message: 'Widget calculate payload is invalid' }, { status: 400 })
   }
 
-  try {
-    const tariffs = await calculateCdekTariffList(
-      {
-        from_location: params.senderFromLocation,
-        to_location: parsed.data.to_location,
-        packages: parsed.data.packages,
-        type: parsed.data.type,
-        currency: parsed.data.currency,
-        lang: parsed.data.lang,
-        services: parsed.data.services,
-        date: parsed.data.date,
-        tariff_codes: [...WIDGET_TARIFF_CODES],
-      },
-      params.credentials
-    )
+  const attempts = await buildWidgetTariffAttempts({
+    request: parsed.data,
+    credentials: params.credentials,
+    senderSettings: params.senderSettings,
+  })
 
-    return json(
-      {
-        tariff_codes: tariffs,
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store',
-        },
+  try {
+    let lastError: unknown = null
+
+    for (const attempt of attempts) {
+      try {
+        logWidgetAttempt({
+          brandId: params.brandId,
+          name: attempt.name,
+          request: attempt.request,
+        })
+
+        const tariffs = await calculateCdekTariffList(attempt.request, params.credentials)
+        if (tariffs.length > 0) {
+          console.warn('[cdek/widget][calculate] success', {
+            brandId: params.brandId,
+            name: attempt.name,
+            tariff_codes: tariffs.map((t) => t.tariff_code),
+          })
+
+          return json(
+            {
+              tariff_codes: tariffs,
+            },
+            {
+              headers: {
+                'Cache-Control': 'no-store',
+              },
+            }
+          )
+        }
+
+        console.warn('[cdek/widget][calculate] empty result', {
+          brandId: params.brandId,
+          name: attempt.name,
+        })
+      } catch (e) {
+        lastError = e
+        const message = e instanceof Error ? e.message : 'CDEK widget calculate error'
+        console.warn('[cdek/widget][calculate] failed', {
+          brandId: params.brandId,
+          name: attempt.name,
+          message,
+        })
       }
-    )
+    }
+
+    throw lastError ?? new Error('All widget tariff attempts returned empty results')
   } catch (e) {
     const message = e instanceof Error ? e.message : 'CDEK widget calculate error'
     return json({ message }, { status: 500 })
@@ -205,9 +469,10 @@ async function handle(request: Request) {
       data.from_location = senderSettingsResult.settings.calculatorFromLocation
 
       return calculateForWidgetTariffs({
+        brandId,
         data,
         credentials: cdekCredentials,
-        senderFromLocation: senderSettingsResult.settings.calculatorFromLocation,
+        senderSettings: senderSettingsResult.settings,
       })
     }
 

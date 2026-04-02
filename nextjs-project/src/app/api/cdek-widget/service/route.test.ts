@@ -8,6 +8,7 @@ vi.mock('@/services/settings.service', () => ({
 
 vi.mock('@/lib/cdek', () => ({
   calculateCdekTariffList: vi.fn(),
+  getCdekCities: vi.fn(),
   getCdekToken: vi.fn(),
   resolveCdekSenderSettings: vi.fn(),
 }))

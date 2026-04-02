@@ -116,8 +116,12 @@ export interface CdekLocation {
   code?: number
   /** Код населённого пункта СДЭК (альтернативное имя поля в некоторых endpoint'ах) */
   city_code?: number
+  /** UUID города/населённого пункта СДЭК, когда он известен. */
+  city_uuid?: string
   /** Почтовый индекс (если нет code) */
   postal_code?: string
+  /** Адрес получателя/отправителя внутри выбранного населённого пункта. */
+  address?: string
   /** Код страны ISO 3166-1 alpha-2 */
   country_code?: string
   /** Код ПВЗ (если нужно считать от конкретного ПВЗ) */
@@ -162,6 +166,8 @@ export interface CdekCalculatorTariffListRequest {
   tariff_codes?: number[]
   /** Дополнительные услуги (часто требуется как массив, даже если пустой). */
   services?: Array<Record<string, unknown>>
+  /** Дополнительные типы заказа для проб/совместимости с интеграциями. */
+  additional_order_types?: number[]
   /**
    * Дата/время передачи заказа.
    * В разных контурах CDEK ожидает либо строку, либо timestamp числом.
