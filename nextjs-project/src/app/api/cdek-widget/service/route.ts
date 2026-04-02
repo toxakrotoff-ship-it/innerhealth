@@ -69,6 +69,12 @@ type WidgetTariffAttempt = {
   request: CdekCalculatorTariffListRequest
 }
 
+type WidgetDestinationLike = {
+  code?: unknown
+  postal_code?: unknown
+  address?: unknown
+}
+
 function summarizeLocation(location: CdekLocation | undefined): Record<string, unknown> | null {
   if (!location) return null
   return {
@@ -78,6 +84,22 @@ function summarizeLocation(location: CdekLocation | undefined): Record<string, u
     address: location.address ?? null,
     country_code: location.country_code ?? null,
   }
+}
+
+function hasDestination(toLocation: WidgetDestinationLike | undefined): boolean {
+  if (!toLocation) return false
+  const hasCode =
+    typeof toLocation.code === 'number'
+      ? Number.isFinite(toLocation.code) && toLocation.code > 0
+      : typeof toLocation.code === 'string' && toLocation.code.trim().length > 0
+
+  const hasPostalCode =
+    typeof toLocation.postal_code === 'string' && toLocation.postal_code.trim().length > 0
+
+  const hasAddress =
+    typeof toLocation.address === 'string' && toLocation.address.trim().length > 0
+
+  return hasCode || hasPostalCode || hasAddress
 }
 
 function logWidgetAttempt(params: {
@@ -387,6 +409,34 @@ async function handle(request: Request) {
         brandId,
         payload: summarizeIncomingPayload(incoming),
       })
+
+      const toLocation =
+        data.to_location && typeof data.to_location === 'object'
+          ? (data.to_location as WidgetDestinationLike)
+          : undefined
+
+      if (!hasDestination(toLocation)) {
+        console.warn('[cdek/widget][calculate][skip]', {
+          brandId,
+          reason: 'empty destination',
+          to_location: summarizeIncomingPayload({ to_location: data.to_location }).to_location,
+        })
+
+        return json(
+          {
+            tariff_codes: [],
+            ok: false,
+            code: 'EMPTY_DESTINATION',
+            message: 'Недостаточно данных для расчета доставки',
+          },
+          {
+            headers: {
+              'Cache-Control': 'no-store',
+            },
+          }
+        )
+      }
+
       const senderSettingsResult = await resolveCdekSenderSettings({
         brandId,
         overrideCredentials: cdekCredentials,

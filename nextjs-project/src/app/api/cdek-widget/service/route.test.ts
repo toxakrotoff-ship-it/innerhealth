@@ -151,4 +151,38 @@ describe('normalizeWidgetPayload', () => {
       }
     )
   })
+
+  it('skips calculate when destination is empty', async () => {
+    vi.mocked(settingsService.getCdekCredentials).mockResolvedValue({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      useTest: false,
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/cdek-widget/service?brand=inner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'calculate',
+          from: {
+            code: 44,
+            country_code: 'RU',
+          },
+          to: {},
+          goods: [{ weight: 100, length: 10, width: 20, height: 30 }],
+        }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      tariff_codes: [],
+      ok: false,
+      code: 'EMPTY_DESTINATION',
+      message: 'Недостаточно данных для расчета доставки',
+    })
+    expect(cdek.resolveCdekSenderSettings).not.toHaveBeenCalled()
+    expect(cdek.calculateCdekTariffList).not.toHaveBeenCalled()
+  })
 })
