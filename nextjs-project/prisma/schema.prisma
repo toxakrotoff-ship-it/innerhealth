@@ -238,6 +238,7 @@ model UserAddress {
   /// 'cdek_pvz' | 'cdek_door'
   deliveryMethod String
   cdekCityCode   Int
+  cdekCityUuid   String?
   cdekPvzCode    String?
   street         String?
   house          String?
@@ -401,6 +402,8 @@ model ShippingInfo {
   deliveryMethod String?
   /// Код города СДЭК получателя
   cdekCityCode   Int?
+  /// UUID города СДЭК получателя (предпочтителен для door-тарифов)
+  cdekCityUuid   String?
   /// Код ПВЗ (для cdek_pvz)
   cdekPvzCode    String?
   /// Код тарифа СДЭК (136, 139, 234 и т.д.)

@@ -7,10 +7,10 @@ import {
   productToCdekPackage,
   mergeCdekPackages,
   filterTariffsByDeliveryKind,
-  searchCdekDeliveryPoints,
   getCdekCities,
   CDEK_TARIFF_CODES_ADDRESS,
   CDEK_TARIFF_CODES_PVZ,
+  resolveCdekSenderSettings,
   type CdekLocation,
 } from '@/lib/cdek'
 import { cdekCalculatorBodySchema } from '@/lib/validations/cdek'
@@ -138,9 +138,6 @@ export async function POST(request: Request) {
 
     const cdekSettings = await settingsService.getSettingsMap(
       [
-        'cdek_from_pvz_code',
-        'cdek_from_city_code',
-        'cdek_sender_address',
         'cdek_preferred_tariff_code_pvz',
         'cdek_preferred_tariff_code_address',
       ],
@@ -166,209 +163,16 @@ export async function POST(request: Request) {
         return [preferredTariffParsed, ...baseCodes.filter((c) => c !== preferredTariffParsed)]
       })()
 
-    const fromPvzCode = cdekSettings.cdek_from_pvz_code?.trim().toUpperCase()
-    let fromAdmin = cdekSettings.cdek_from_city_code?.trim()
-    let senderAddress = cdekSettings.cdek_sender_address?.trim()
-    const fromEnv = process.env.CDEK_FROM_CITY_CODE?.trim()
-    if (!fromAdmin || !senderAddress) {
-      // Fallback на global scope, если в текущем brand не заполнено.
-      // Это особенно важно, когда PVZ-код не резолвится в city_code.
-      const globalSettings = await settingsService.getSettingsMap(
-        ['cdek_from_city_code', 'cdek_sender_address'],
-        {}
-      )
-      if (!fromAdmin) fromAdmin = globalSettings.cdek_from_city_code?.trim()
-      if (!senderAddress) senderAddress = globalSettings.cdek_sender_address?.trim()
-    }
-    const fromPostalCode = senderAddress?.match(/\b\d{6}\b/)?.[0]
-    let fromCode: number | undefined
-    if (fromPvzCode && !fromAdmin && !fromEnv) {
-      const points =
-        (await (async () => {
-          const first = await searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode }, size: 1 },
-            cdekCredentials
-          )
-          if (first.length > 0) return first
-          const second = await searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode, type: 'PVZ' }, size: 1 },
-            cdekCredentials
-          )
-          if (second.length > 0) return second
-          return searchCdekDeliveryPoints(
-            { filter: { code: fromPvzCode, type: 'ALL' }, size: 1 },
-            cdekCredentials
-          )
-        })())
-      const cityCode = points[0]?.city_code
-      if (cityCode != null && !Number.isNaN(cityCode) && cityCode > 0) {
-        fromCode = cityCode
-      } else {
-        // CDEK не всегда возвращает `city_code` при поиске по коду ПВЗ.
-        // Тогда пробуем резолвить город через API /location/cities по city/postal_code из найденного ПВЗ.
-        const point = points[0]
-        const resolvedFromPoint = await (async (): Promise<number | null> => {
-          const cityName = point?.city?.trim()
-          if (cityName) {
-            const cities = await getCdekCities(
-              {
-                country_codes: ['RU'],
-                city: cityName,
-                size: 1,
-              },
-              cdekCredentials
-            )
-            const code = cities[0]?.code
-            return typeof code === 'number' && code > 0 ? code : null
-          }
-          const postalCode = point?.postal_code?.trim()
-          if (postalCode) {
-            const cities = await getCdekCities(
-              {
-                country_codes: ['RU'],
-                postal_code: postalCode,
-                size: 1,
-              },
-              cdekCredentials
-            )
-            const code = cities[0]?.code
-            return typeof code === 'number' && code > 0 ? code : null
-          }
-          return null
-        })()
-
-        if (resolvedFromPoint != null) {
-          fromCode = resolvedFromPoint
-          // Продолжаем расчет с выведенным city_code из ПВЗ.
-          console.warn(
-            '[cdek/calculator] resolved from_pvz_code via point.city/postal_code:',
-            fromPvzCode,
-            '->',
-            resolvedFromPoint
-          )
-        } else {
-        const fallbackFromCodeRaw = fromAdmin || fromEnv
-        if (!fallbackFromCodeRaw) {
-            console.warn('[cdek/calculator] cannot resolve from_pvz_code city_code (no fallback)', {
-              brandId,
-              fromPvzCode,
-              fromAdmin,
-              fromEnv,
-              cityCode,
-              pointsCount: points.length,
-              pvzSearchInput: { code: fromPvzCode },
-              point: {
-                city: point?.city,
-                postal_code: point?.postal_code,
-                city_code: point?.city_code,
-                code: point?.code,
-                keys: point ? Object.keys(point) : [],
-              },
-            })
-          fromCode = undefined
-        }
-        const fallbackFromCode = parseInt(fallbackFromCodeRaw, 10)
-        if (Number.isNaN(fallbackFromCode) || fallbackFromCode <= 0) {
-            console.warn('[cdek/calculator] cannot resolve from_pvz_code city_code (invalid fallbackFromCode)', {
-              brandId,
-              fromPvzCode,
-              fromAdmin,
-              fromEnv,
-              cityCode,
-              fallbackFromCodeRaw,
-              fallbackFromCode,
-            })
-          fromCode = undefined
-        }
-        console.warn(
-          '[cdek/calculator] from_pvz_code is set but city_code was not resolved, fallback to from_city_code:',
-          fromPvzCode,
-          fallbackFromCode
-        )
-        fromCode = fallbackFromCode
-        }
-      }
-    } else {
-      const fromCodeRaw = fromAdmin || fromEnv
-      if (!fromCodeRaw) {
-        fromCode = undefined
-      }
-      const parsedFromCode = parseInt(fromCodeRaw, 10)
-      if (Number.isNaN(parsedFromCode) || parsedFromCode <= 0) {
-        fromCode = undefined
-      }
-      fromCode = parsedFromCode
-    }
-
-    // Если city_code не удалось получить (например PVZ code не резолвится),
-    // попробуем получить city_code через postal_code отправителя.
-    if (fromCode == null && fromPostalCode) {
-      try {
-        const cities = await getCdekCities(
-          {
-            country_codes: ['RU'],
-            postal_code: fromPostalCode,
-            size: 1,
-          },
-          cdekCredentials
-        )
-        const resolved = cities[0]?.code
-        if (resolved != null && Number.isFinite(resolved) && resolved > 0) {
-          fromCode = resolved
-          console.warn(
-            '[cdek/calculator] resolved from city_code via postal_code:',
-            fromPostalCode,
-            '->',
-            resolved
-          )
-        }
-      } catch (err) {
-        console.warn('[cdek/calculator] failed to resolve city_code via postal_code:', fromPostalCode)
-      }
-    }
-
-    const fromLocationBase: CdekLocation =
-      fromCode != null && Number.isFinite(fromCode) && fromCode > 0
-        ? { code: fromCode }
-        : fromPostalCode
-          ? { postal_code: fromPostalCode }
-          : {}
-
-    // ВАЖНО: для калькулятора НЕ передаём sender delivery_point.
-    // На практике это делает расчёт слишком специфичным (привязывает отправление к конкретному ПВЗ)
-    // и часто приводит к пустому списку тарифов или internal errors. Для создания отгрузки
-    // delivery_point передаётся отдельно в createCdekOrder.
-    const fromLocation: CdekLocation = fromLocationBase
-
-    console.warn('[cdek/calculator] sender location resolved for calculation', {
+    const senderSettingsResult = await resolveCdekSenderSettings({
       brandId,
-      fromPvzCode,
-      fromAdmin,
-      fromEnv,
-      senderAddress,
-      fromPostalCode,
-      fromCode,
-      fromLocation,
+      overrideCredentials: cdekCredentials,
+      validatePvzCity: true,
     })
-
-    const toBase: CdekLocation =
-      toLocation.cityCode != null
-        ? { code: toLocation.cityCode }
-        : { postal_code: String(toLocation.postalCode ?? '').trim() }
-
-    // Важно для расчёта "до ПВЗ": передаём код выбранного ПВЗ получателя.
-    // Это ближе к тому, как работает Тильда (pickupPointId) и часто критично для наличия тарифов.
-    const to: CdekLocation =
-      deliveryKind === 'pvz' && toLocation.pvzCode
-        ? { ...toBase, delivery_point: toLocation.pvzCode.trim().toUpperCase() }
-        : toBase
-
-    if (fromLocation.code == null && fromLocation.postal_code == null) {
+    if (!senderSettingsResult.ok) {
+      const errorMessage =
+        'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
       return NextResponse.json(
-        {
-          error:
-            'Не удалось определить город отправки СДЭК. Заполните "Код города отправления СДЭК" или "Адрес отправителя" с почтовым индексом.',
-        },
+        { error: errorMessage },
         {
           status: 400,
           headers: {
@@ -377,6 +181,27 @@ export async function POST(request: Request) {
         }
       )
     }
+
+    const senderSettings = senderSettingsResult.settings
+    const fromPostalCode = senderSettings.fromPostalCode
+    const fromLocationBase: CdekLocation = senderSettings.calculatorFromLocation
+    const fromLocation: CdekLocation = fromLocationBase
+
+    console.warn('[cdek/calculator] sender location resolved for calculation', {
+      brandId,
+      scopeUsed: senderSettings.scopeUsed,
+      fromPvzCode: senderSettings.fromPvzCode,
+      fromCityCode: senderSettings.fromCityCode,
+      senderAddress: senderSettings.senderAddress,
+      fromPostalCode,
+      fromLocation,
+    })
+
+    const toBase: CdekLocation =
+      toLocation.cityCode != null
+        ? { code: toLocation.cityCode }
+        : { postal_code: String(toLocation.postalCode ?? '').trim() }
+    const to: CdekLocation = toBase
 
     let allTariffs: Awaited<ReturnType<typeof calculateCdekTariffList>>
     try {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getCdekToken } from '@/lib/cdek'
+import { getCdekToken, resolveCdekSenderSettings } from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
@@ -111,13 +111,31 @@ async function handle(request: Request) {
     const parsed = requestSchema.safeParse(incoming)
     if (!parsed.success) return json({ message: 'Action is required' }, { status: 400 })
 
+    const data: Record<string, unknown> = { ...parsed.data }
+    if (parsed.data.action === 'calculate') {
+      const senderSettingsResult = await resolveCdekSenderSettings({
+        brandId,
+        overrideCredentials: cdekCredentials,
+        validatePvzCity: true,
+      })
+      if (!senderSettingsResult.ok) {
+        const message =
+          'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
+        return json({ message }, { status: 400 })
+      }
+
+      delete data.from
+      delete data.from_location
+      data.from_location = senderSettingsResult.settings.calculatorFromLocation
+    }
+
     const token = await getCdekToken(cdekCredentials)
     const baseUrl = buildCdekBaseUrl(cdekCredentials.useTest)
     const { status, text } = await proxyToCdek({
       baseUrl,
       token,
       action: parsed.data.action,
-      data: parsed.data,
+      data,
     })
 
     return new NextResponse(text, {

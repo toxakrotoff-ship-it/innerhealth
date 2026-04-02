@@ -8,6 +8,7 @@ export interface UserAddressForCheckout {
   addressLine: string
   deliveryMethod: 'cdek_pvz' | 'cdek_door'
   cdekCityCode: number
+  cdekCityUuid: string | null
   cdekPvzCode: string | null
   street: string | null
   house: string | null
@@ -51,6 +52,7 @@ export function mapUserAddressToShipping(address: UserAddressForCheckout): Mappe
     selectedCity: {
       code: address.cdekCityCode,
       city: address.city,
+      ...(address.cdekCityUuid ? { city_uuid: address.cdekCityUuid } : {}),
     },
     deliveryMethod: address.deliveryMethod,
     selectedPvz,

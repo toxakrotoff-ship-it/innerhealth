@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import * as productService from '@/services/product.service'
-import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
-import { mergeCdekPackages, productToCdekPackage, type CdekLocation } from '@/lib/cdek'
+import {
+  mergeCdekPackages,
+  productToCdekPackage,
+  resolveCdekSenderSettings,
+  type CdekLocation,
+} from '@/lib/cdek'
 
 const bodySchema = z.object({
   items: z
@@ -36,32 +40,24 @@ export async function POST(request: Request) {
       )
     }
 
-    const cdekSettings = await settingsService.getSettingsMap(
-      ['cdek_from_city_code', 'cdek_sender_address'],
-      { brandId }
-    )
-
-    let senderAddress = cdekSettings.cdek_sender_address?.trim() ?? ''
-    let fromCodeRaw = cdekSettings.cdek_from_city_code?.trim() ?? ''
-    if (!senderAddress || !fromCodeRaw) {
-      const globalSettings = await settingsService.getSettingsMap(
-        ['cdek_from_city_code', 'cdek_sender_address'],
-        {}
+    const senderSettingsResult = await resolveCdekSenderSettings({
+      brandId,
+      validatePvzCity: false,
+    })
+    if (!senderSettingsResult.ok) {
+      const errorMessage =
+        'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
       )
-      senderAddress = senderAddress || globalSettings.cdek_sender_address?.trim() || ''
-      fromCodeRaw = fromCodeRaw || globalSettings.cdek_from_city_code?.trim() || ''
     }
 
-    const fromPostalCode = senderAddress.match(/\b\d{6}\b/)?.[0]
-    const fromCodeParsed = fromCodeRaw ? Number.parseInt(fromCodeRaw, 10) : Number.NaN
-    const fromCode = Number.isFinite(fromCodeParsed) && fromCodeParsed > 0 ? fromCodeParsed : undefined
-
+    const fromCode = senderSettingsResult.settings.fromCityCode
     const from: CdekLocation =
       fromCode != null
         ? { code: fromCode, country_code: 'RU' }
-        : fromPostalCode
-          ? { postal_code: fromPostalCode, country_code: 'RU' }
-          : { country_code: 'RU' }
+        : { country_code: 'RU' }
 
     const productIds = Array.from(new Set(parsed.data.items.map((i) => i.productId)))
     const products = await productService.getProductsForCdek(productIds)

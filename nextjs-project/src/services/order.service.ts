@@ -357,6 +357,7 @@ export interface CreateOrderShippingParams {
   country: string;
   deliveryMethod?: string;
   cdekCityCode?: number;
+  cdekCityUuid?: string;
   cdekPvzCode?: string;
   cdekTariffCode?: number;
   doorAddress?: {
@@ -442,6 +443,7 @@ export async function createOrderWithItemsAndShipping(params: {
         country: params.shipping.country.trim(),
         deliveryMethod: params.shipping.deliveryMethod ?? undefined,
         cdekCityCode: params.shipping.cdekCityCode ?? undefined,
+        cdekCityUuid: params.shipping.cdekCityUuid?.trim() || undefined,
         cdekPvzCode: params.shipping.cdekPvzCode ?? undefined,
         cdekTariffCode: params.shipping.cdekTariffCode ?? undefined,
         street: door?.street?.trim(),

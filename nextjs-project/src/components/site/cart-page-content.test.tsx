@@ -236,6 +236,7 @@ describe('CartPageContent delivery type switch', () => {
               addressLine: 'ул. Тверская, д. 1',
               deliveryMethod: 'cdek_door',
               cdekCityCode: 44,
+              cdekCityUuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
               cdekPvzCode: null,
               street: 'ул. Тверская',
               house: '1',
@@ -325,6 +326,7 @@ describe('CartPageContent delivery type switch', () => {
 
     expect(payload.shipping.deliveryMethod).toBe('cdek_door')
     expect(payload.shipping.cdekCityCode).toBe(44)
+    expect(payload.shipping.cdekCityUuid).toBe('b308dcad-dbf0-4b22-bf2b-efca9f72ae38')
     expect(payload.shipping.cdekTariffCode).toBe(137)
     expect(payload.shipping.doorAddress).toEqual({
       street: 'ул. Тверская',

@@ -10,6 +10,7 @@ const baseAddressSchema = z.object({
   addressLine: z.string().min(1, 'Address line is required').max(300).trim(),
   deliveryMethod: DELIVERY_METHOD_SCHEMA,
   cdekCityCode: z.number().int().positive('CDEK city code is required'),
+  cdekCityUuid: z.string().uuid().optional(),
   cdekPvzCode: z.string().max(60).trim().optional(),
   street: z.string().max(120).trim().optional(),
   house: z.string().max(40).trim().optional(),

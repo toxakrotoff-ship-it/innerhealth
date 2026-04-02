@@ -34,6 +34,7 @@ interface CdekWidgetProps {
     deliveryMethod: 'cdek_pvz' | 'cdek_door'
     tariff: { tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }
     cityCode?: number
+    cityUuid?: string
     city?: string
     pvzCode?: string
     pvzAddress?: string
@@ -250,6 +251,10 @@ export function CdekWidget({
               periodMax: parseWidgetInt(t.period_max ?? t.periodMax ?? t.max),
             },
             cityCode: Number.isFinite(cityCode) && (cityCode as number) > 0 ? (cityCode as number) : undefined,
+            cityUuid:
+              typeof a.city_uuid === 'string' && a.city_uuid.trim().length > 0
+                ? a.city_uuid.trim()
+                : undefined,
             city: typeof a.city === 'string' ? a.city : undefined,
             pvzCode: typeof a.code === 'string' ? a.code : undefined,
             pvzAddress: typeof a.address === 'string' ? a.address : undefined,
@@ -317,4 +322,3 @@ export function CdekWidget({
     </div>
   )
 }
-

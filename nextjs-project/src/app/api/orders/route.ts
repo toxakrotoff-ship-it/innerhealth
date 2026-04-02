@@ -162,6 +162,7 @@ export async function POST(request: Request) {
         country: (shipping.country ?? 'Россия').trim(),
         deliveryMethod: shipping.deliveryMethod ?? undefined,
         cdekCityCode: shipping.cdekCityCode ?? undefined,
+        cdekCityUuid: shipping.cdekCityUuid?.trim() || undefined,
         cdekPvzCode: shipping.cdekPvzCode ?? undefined,
         cdekTariffCode: shipping.cdekTariffCode ?? undefined,
         doorAddress: shipping.doorAddress,

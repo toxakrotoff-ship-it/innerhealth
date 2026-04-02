@@ -19,6 +19,7 @@ export interface CdekCityOption {
   city?: string
   region?: string
   country?: string
+  city_uuid?: string
   /** На случай, если API вернёт city_code вместо code */
   city_code?: number
 }

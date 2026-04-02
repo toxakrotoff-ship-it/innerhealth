@@ -13,6 +13,7 @@ export interface AccountAddress {
   addressLine: string
   deliveryMethod: 'cdek_pvz' | 'cdek_door'
   cdekCityCode: number
+  cdekCityUuid: string | null
   cdekPvzCode: string | null
   street: string | null
   house: string | null
@@ -29,6 +30,7 @@ interface AddressFormState {
   addressLine: string
   deliveryMethod: 'cdek_pvz' | 'cdek_door'
   cdekCityCode: string
+  cdekCityUuid: string
   cdekPvzCode: string
   street: string
   house: string
@@ -42,6 +44,7 @@ interface CdekCityOption {
   code: number
   city?: string
   region?: string
+  city_uuid?: string
 }
 
 interface CdekPvzOption {
@@ -68,6 +71,7 @@ const initialFormState: AddressFormState = {
   addressLine: '',
   deliveryMethod: 'cdek_pvz',
   cdekCityCode: '',
+  cdekCityUuid: '',
   cdekPvzCode: '',
   street: '',
   house: '',
@@ -85,6 +89,7 @@ function mapAddressToForm(address: AccountAddress): AddressFormState {
     addressLine: address.addressLine,
     deliveryMethod: address.deliveryMethod,
     cdekCityCode: String(address.cdekCityCode),
+    cdekCityUuid: address.cdekCityUuid ?? '',
     cdekPvzCode: address.cdekPvzCode ?? '',
     street: address.street ?? '',
     house: address.house ?? '',
@@ -112,6 +117,7 @@ function mapFormToPayload(form: AddressFormState) {
     addressLine,
     deliveryMethod: form.deliveryMethod,
     cdekCityCode: Number(form.cdekCityCode),
+    cdekCityUuid: form.cdekCityUuid.trim() || undefined,
     cdekPvzCode: form.cdekPvzCode.trim() || undefined,
     street: form.street.trim() || undefined,
     house: form.house.trim() || undefined,
@@ -203,6 +209,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
       ...prev,
       city: city.city ?? prev.city,
       cdekCityCode: String(city.code),
+      cdekCityUuid: city.city_uuid ?? '',
       cdekPvzCode: '',
       addressLine: '',
     }))

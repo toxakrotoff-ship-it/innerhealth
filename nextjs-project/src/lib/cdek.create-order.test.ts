@@ -29,7 +29,125 @@ describe('createCdekOrder', () => {
     vi.unstubAllGlobals()
   })
 
-  it('always sends shipment_point from settings and uses SKU/title for ware_key', async () => {
+  it('uses complete global sender scope when brand scope is incomplete', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'token',
+          token_type: 'bearer',
+          expires_in: 3600,
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            code: 'GLOBAL123',
+            city_code: 137,
+            city: 'Санкт-Петербург',
+          },
+        ])
+      )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const settingsService = await import('@/services/settings.service')
+    const { resolveCdekSenderSettings } = await import('./cdek')
+
+    vi.mocked(settingsService.getSettingsMap).mockImplementation(async (_keys, options) => {
+      if (options?.brandId) {
+        return {
+          cdek_sender_name: 'Inner Health Brand',
+          cdek_sender_phone: '+74950000000',
+          cdek_from_pvz_code: 'BRAND123',
+          cdek_sender_address: '',
+          cdek_from_city_code: '',
+        } as never
+      }
+
+      return {
+        cdek_sender_name: 'Inner Health Global',
+        cdek_sender_phone: '+78120000000',
+        cdek_from_pvz_code: 'GLOBAL123',
+        cdek_sender_address: 'Санкт-Петербург, Невский проспект, 1',
+        cdek_from_city_code: '137',
+      } as never
+    })
+
+    const result = await resolveCdekSenderSettings({
+      brandId: 'inner',
+      overrideCredentials: {
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        useTest: false,
+      },
+      validatePvzCity: true,
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      settings: expect.objectContaining({
+        scopeUsed: 'global',
+        fromPvzCode: 'GLOBAL123',
+        fromCityCode: 137,
+        senderAddress: 'Санкт-Петербург, Невский проспект, 1',
+        senderName: 'Inner Health Global',
+        senderPhone: '+78120000000',
+      }),
+    })
+  })
+
+  it('returns a business error when sender pvz city does not match sender city code', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'token',
+          token_type: 'bearer',
+          expires_in: 3600,
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            code: 'MSK123',
+            city_code: 137,
+            city: 'Санкт-Петербург',
+          },
+        ])
+      )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const settingsService = await import('@/services/settings.service')
+    const { resolveCdekSenderSettings } = await import('./cdek')
+
+    vi.mocked(settingsService.getSettingsMap).mockResolvedValue({
+      cdek_sender_name: 'Inner Health',
+      cdek_sender_phone: '+74950000000',
+      cdek_from_pvz_code: 'MSK123',
+      cdek_sender_address: 'Москва, склад',
+      cdek_from_city_code: '44',
+    } as never)
+
+    const result = await resolveCdekSenderSettings({
+      brandId: 'inner',
+      overrideCredentials: {
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        useTest: false,
+      },
+      validatePvzCity: true,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'Код города отправления СДЭК (44) не соответствует ПВЗ отправки MSK123 (город 137)',
+    })
+  })
+
+  it('sends only shipment_point and delivery_point for warehouse-to-warehouse order registration', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -124,8 +242,8 @@ describe('createCdekOrder', () => {
         cdek_sender_name: 'Inner Health',
         cdek_sender_phone: '+74950000000',
         cdek_from_pvz_code: 'MSK123',
-        cdek_sender_address: '',
-        cdek_from_city_code: '',
+        cdek_sender_address: 'Москва, склад',
+        cdek_from_city_code: '44',
         cdek_default_package_weight_g: '',
         cdek_default_package_length_mm: '',
         cdek_default_package_width_mm: '',
@@ -146,6 +264,7 @@ describe('createCdekOrder', () => {
     expect(payload.shipment_point).toBe('MSK123')
     expect(payload.delivery_point).toBe('SPB222')
     expect(payload).not.toHaveProperty('from_location')
+    expect(payload).not.toHaveProperty('to_location')
     expect(payload.packages[0].items.map((item: { ware_key: string }) => item.ware_key)).toEqual([
       'SKU-001',
       'Товар без SKU',
@@ -154,7 +273,7 @@ describe('createCdekOrder', () => {
     expect(JSON.stringify(payload)).not.toContain('internal-id-2')
   })
 
-  it('keeps door delivery recipient address while still sending shipment_point', async () => {
+  it('sends shipment_point and to_location for warehouse-to-door order registration', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -198,6 +317,7 @@ describe('createCdekOrder', () => {
       shippingInfo: {
         deliveryMethod: 'cdek_door',
         cdekCityCode: 44,
+        cdekCityUuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
         cdekTariffCode: 137,
         address: 'Москва, улица Пушкина, дом 10',
         street: 'улица Пушкина',
@@ -258,8 +378,7 @@ describe('createCdekOrder', () => {
     expect(payload.shipment_point).toBe('MSK123')
     expect(payload).not.toHaveProperty('delivery_point')
     expect(payload.to_location).toEqual({
-      code: 44,
-      country_code: 'RU',
+      city_uuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
       address: 'улица Пушкина, 10, 12, 3, 4, 45',
     })
     expect(payload).not.toHaveProperty('from_location')

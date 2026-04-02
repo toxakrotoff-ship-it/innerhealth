@@ -11,6 +11,8 @@
  * Тестовое окружение: CDEK_USE_TEST=true или CDEK_API_BASE=https://api.edu.cdek.ru/v2
  */
 
+import type { BrandId } from '@/lib/brand/brand'
+
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
 const MINUTE_MS = 60 * 1000
@@ -1144,6 +1146,168 @@ const CDEK_SENDER_KEYS = [
   'cdek_default_package_height_mm',
 ] as const
 
+type CdekSenderScope = 'brand' | 'global'
+
+type CdekSenderSettingsMap = Record<(typeof CDEK_SENDER_KEYS)[number], string>
+
+type NormalizedCdekSenderSettings = {
+  senderName: string
+  senderPhone: string
+  senderAddress: string
+  fromPvzCode: string
+  fromCityCodeRaw: string
+}
+
+export interface ResolvedCdekSenderSettings {
+  fromPvzCode: string
+  fromCityCode: number
+  senderAddress: string
+  senderName: string
+  senderPhone: string
+  scopeUsed: CdekSenderScope
+  fromPostalCode: string | null
+  calculatorFromLocation: CdekLocation
+}
+
+export type ResolveCdekSenderSettingsResult =
+  | { ok: true; settings: ResolvedCdekSenderSettings }
+  | { ok: false; error: string }
+
+function normalizeCdekSenderSettingsMap(
+  settings: Partial<CdekSenderSettingsMap>
+): NormalizedCdekSenderSettings {
+  return {
+    senderName: settings.cdek_sender_name?.trim() ?? '',
+    senderPhone: settings.cdek_sender_phone?.trim() ?? '',
+    senderAddress: settings.cdek_sender_address?.trim() ?? '',
+    fromPvzCode: settings.cdek_from_pvz_code?.trim().toUpperCase() ?? '',
+    fromCityCodeRaw: settings.cdek_from_city_code?.trim() ?? '',
+  }
+}
+
+function hasRequiredCdekSenderSettings(settings: NormalizedCdekSenderSettings): boolean {
+  return Boolean(settings.senderAddress && settings.fromPvzCode && settings.fromCityCodeRaw)
+}
+
+function parseCdekSenderCityCode(raw: string): number | null {
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+async function findCdekDeliveryPointByCode(
+  code: string,
+  creds?: CdekCredentials | null
+): Promise<CdekDeliveryPoint | null> {
+  const first = await searchCdekDeliveryPoints({ filter: { code }, size: 1 }, creds)
+  if (first.length > 0) return first[0] ?? null
+
+  const second = await searchCdekDeliveryPoints(
+    { filter: { code, type: 'PVZ' }, size: 1 },
+    creds
+  )
+  if (second.length > 0) return second[0] ?? null
+
+  const third = await searchCdekDeliveryPoints(
+    { filter: { code, type: 'ALL' }, size: 1 },
+    creds
+  )
+  return third[0] ?? null
+}
+
+export async function resolveCdekSenderSettings(params: {
+  brandId?: BrandId | null
+  overrideCredentials?: CdekCredentials | null
+  validatePvzCity?: boolean
+} = {}): Promise<ResolveCdekSenderSettingsResult> {
+  const { brandId = null, overrideCredentials = null, validatePvzCity = true } = params
+  const settingsService = await import('@/services/settings.service')
+
+  const brandSettings = brandId
+    ? normalizeCdekSenderSettingsMap(
+        (await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {
+          brandId,
+        })) as Partial<CdekSenderSettingsMap>
+      )
+    : null
+
+  const globalSettings = normalizeCdekSenderSettingsMap(
+    (await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {})) as Partial<CdekSenderSettingsMap>
+  )
+
+  const selectedScope: CdekSenderScope =
+    brandSettings && hasRequiredCdekSenderSettings(brandSettings) ? 'brand' : 'global'
+  const selectedSettings = selectedScope === 'brand' && brandSettings ? brandSettings : globalSettings
+
+  if (!selectedSettings.fromPvzCode) {
+    return { ok: false, error: 'Не задан код ПВЗ отправки СДЭК (cdek_from_pvz_code)' }
+  }
+
+  if (!selectedSettings.fromCityCodeRaw) {
+    return { ok: false, error: 'Не задан код города отправления СДЭК (cdek_from_city_code)' }
+  }
+
+  const fromCityCode = parseCdekSenderCityCode(selectedSettings.fromCityCodeRaw)
+  if (fromCityCode == null) {
+    return {
+      ok: false,
+      error: `Некорректный код города отправления СДЭК: ${selectedSettings.fromCityCodeRaw}`,
+    }
+  }
+
+  if (!selectedSettings.senderAddress) {
+    return { ok: false, error: 'Не задан адрес отправителя СДЭК (cdek_sender_address)' }
+  }
+
+  if (validatePvzCity) {
+    const senderPoint = await findCdekDeliveryPointByCode(selectedSettings.fromPvzCode, overrideCredentials)
+    if (!senderPoint) {
+      return { ok: false, error: `Не найден ПВЗ отправки СДЭК: ${selectedSettings.fromPvzCode}` }
+    }
+
+    const pointCityCode = senderPoint.city_code
+    if (
+      pointCityCode != null &&
+      Number.isFinite(pointCityCode) &&
+      pointCityCode > 0 &&
+      pointCityCode !== fromCityCode
+    ) {
+      console.error('[cdek/sender] from_pvz_code city mismatch', {
+        brandId,
+        scopeUsed: selectedScope,
+        fromPvzCode: selectedSettings.fromPvzCode,
+        fromCityCode,
+        pointCityCode,
+      })
+      return {
+        ok: false,
+        error: `Код города отправления СДЭК (${fromCityCode}) не соответствует ПВЗ отправки ${selectedSettings.fromPvzCode} (город ${pointCityCode})`,
+      }
+    }
+  }
+
+  const senderName =
+    selectedSettings.senderName || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
+  const senderPhone = selectedSettings.senderPhone || process.env.CDEK_SENDER_PHONE?.trim() || ''
+  const fromPostalCode = selectedSettings.senderAddress.match(/\b\d{6}\b/)?.[0] ?? null
+
+  return {
+    ok: true,
+    settings: {
+      fromPvzCode: selectedSettings.fromPvzCode,
+      fromCityCode,
+      senderAddress: selectedSettings.senderAddress,
+      senderName,
+      senderPhone,
+      scopeUsed: selectedScope,
+      fromPostalCode,
+      calculatorFromLocation: {
+        code: fromCityCode,
+        country_code: 'RU',
+      },
+    },
+  }
+}
+
 /**
  * Создаёт заказ на отгрузку в СДЭК (POST /v2/orders).
  * Используется после оплаты заказа и при повторе из админки.
@@ -1171,46 +1335,21 @@ export async function createCdekOrder(
       return { error: 'Не указаны код города или тариф СДЭК' }
     }
 
+    const senderSettingsResult = await resolveCdekSenderSettings({
+      brandId: orderBrandId,
+      overrideCredentials: scopedCredentials,
+      validatePvzCity: true,
+    })
+    if (!senderSettingsResult.ok) {
+      const errorMessage =
+        'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
+      return { error: errorMessage }
+    }
+    const senderSettings = senderSettingsResult.settings
+
     const settingsMap = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {
       brandId: orderBrandId,
     })
-    let senderName =
-      settingsMap.cdek_sender_name?.trim() || process.env.CDEK_SENDER_NAME?.trim() || 'Отправитель'
-    let senderPhone =
-      settingsMap.cdek_sender_phone?.trim() || process.env.CDEK_SENDER_PHONE?.trim() || ''
-    const fromPvzCode = settingsMap.cdek_from_pvz_code?.trim().toUpperCase() || ''
-
-    // Global fallback (если в brand-scope пусто).
-    if (!settingsMap.cdek_sender_name || !settingsMap.cdek_sender_phone || !settingsMap.cdek_from_pvz_code) {
-      const globalSettings = await settingsService.getSettingsMap([...CDEK_SENDER_KEYS], {})
-      if (!senderName) senderName = globalSettings.cdek_sender_name?.trim() || senderName
-      if (!senderPhone) senderPhone = globalSettings.cdek_sender_phone?.trim() || senderPhone
-    }
-    if (!fromPvzCode) {
-      return { error: 'Не задан код ПВЗ отправки СДЭК (cdek_from_pvz_code)' }
-    }
-
-    const senderPoints =
-      await (async () => {
-        const first = await searchCdekDeliveryPoints(
-          { filter: { code: fromPvzCode }, size: 1 },
-          scopedCredentials
-        )
-        if (first.length > 0) return first
-        const second = await searchCdekDeliveryPoints(
-          { filter: { code: fromPvzCode, type: 'PVZ' }, size: 1 },
-          scopedCredentials
-        )
-        if (second.length > 0) return second
-        return searchCdekDeliveryPoints(
-          { filter: { code: fromPvzCode, type: 'ALL' }, size: 1 },
-          scopedCredentials
-        )
-      })()
-
-    if (senderPoints.length === 0) {
-      return { error: `Не найден ПВЗ отправки СДЭК: ${fromPvzCode}` }
-    }
 
     const parsePositiveIntOrNull = (raw: string | undefined): number | null => {
       const trimmed = raw?.trim()
@@ -1299,17 +1438,13 @@ export async function createCdekOrder(
     }))
 
     let deliveryPointCode: string | undefined
-    let to_location: Record<string, unknown>
+    let toLocation: Record<string, unknown> | undefined
     if (sh.deliveryMethod === 'cdek_pvz') {
       const pvzCode = sh.cdekPvzCode?.trim() || extractCdekPvzCodeFromAddress(sh.address)
       if (!pvzCode) {
         return { error: 'Не найден код ПВЗ в заказе' }
       }
       deliveryPointCode = pvzCode
-      to_location = {
-        code: sh.cdekCityCode,
-        country_code: 'RU' as const,
-      }
     } else {
       const doorAddress = buildCdekDoorAddress({
         address: sh.address,
@@ -1323,27 +1458,35 @@ export async function createCdekOrder(
       if (!doorAddress) {
         return { error: 'Не указан адрес доставки' }
       }
-      to_location = { code: sh.cdekCityCode, country_code: 'RU' as const, address: doorAddress }
+      toLocation = {
+        ...(sh.cdekCityUuid?.trim()
+          ? {
+              city_uuid: sh.cdekCityUuid.trim(),
+              address: doorAddress,
+            }
+          : {
+              code: sh.cdekCityCode,
+              country_code: 'RU' as const,
+              address: doorAddress,
+            }),
+      }
     }
-
-    const usesDeliveryPointOnly =
-      sh.deliveryMethod === 'cdek_pvz' && deliveryPointCode && sh.cdekTariffCode === 136
 
     const body = {
       type: 1,
       tariff_code: sh.cdekTariffCode,
       number: orderId,
-      shipment_point: fromPvzCode,
+      shipment_point: senderSettings.fromPvzCode,
       ...(deliveryPointCode ? { delivery_point: deliveryPointCode } : {}),
-      ...(!usesDeliveryPointOnly ? { to_location } : {}),
+      ...(toLocation ? { to_location: toLocation } : {}),
       recipient: {
         name: sh.fullName,
         phones: [{ number: sh.phone }],
         ...(sh.email ? { email: sh.email } : {}),
       },
       sender: {
-        name: senderName,
-        ...(senderPhone ? { phones: [{ number: senderPhone }] } : {}),
+        name: senderSettings.senderName,
+        ...(senderSettings.senderPhone ? { phones: [{ number: senderSettings.senderPhone }] } : {}),
       },
       packages: packages.map((pkg, idx) => ({
         number: String(idx + 1),

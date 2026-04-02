@@ -558,6 +558,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
             ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
               ? {
                   cdekCityCode: effectiveCityCode ?? undefined,
+                  cdekCityUuid: selectedCity?.city_uuid ?? undefined,
                   cdekTariffCode:
                     deliveryMethod === 'cdek_pvz'
                       ? pvzTariff?.tariffCode
@@ -835,18 +836,20 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
               onModeChange={(method) => {
                 setDeliveryMethod(method)
               }}
-              onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+              onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, cityUuid, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
                 setHasWidgetTariffSelection(true)
                 setDeliveryMethod(method)
                 if (
                   (typeof cdekCityCode === 'number' && Number.isFinite(cdekCityCode) && cdekCityCode > 0) ||
-                  cdekCity
+                  cdekCity ||
+                  cityUuid
                 ) {
                   setSelectedCity((prev) => ({
                     code: cdekCityCode ?? prev?.code ?? Number.NaN,
                     city: cdekCity ?? prev?.city,
                     region: prev?.region,
                     country: prev?.country,
+                    city_uuid: cityUuid ?? prev?.city_uuid,
                   }))
                 }
                   if (method === 'cdek_pvz') {

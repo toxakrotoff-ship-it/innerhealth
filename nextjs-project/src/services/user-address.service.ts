@@ -19,6 +19,7 @@ export interface CreateUserAddressInput {
   addressLine: string
   deliveryMethod: 'cdek_pvz' | 'cdek_door'
   cdekCityCode: number
+  cdekCityUuid?: string
   cdekPvzCode?: string
   street?: string
   house?: string
@@ -35,6 +36,7 @@ export interface UpdateUserAddressInput {
   addressLine?: string
   deliveryMethod?: 'cdek_pvz' | 'cdek_door'
   cdekCityCode?: number
+  cdekCityUuid?: string
   cdekPvzCode?: string
   street?: string
   house?: string
@@ -76,6 +78,7 @@ export async function createUserAddress(userId: string, input: CreateUserAddress
       addressLine: input.addressLine,
       deliveryMethod: input.deliveryMethod,
       cdekCityCode: input.cdekCityCode,
+      cdekCityUuid: input.cdekCityUuid,
       cdekPvzCode: input.cdekPvzCode,
       street: input.street,
       house: input.house,
@@ -109,6 +112,7 @@ export async function updateUserAddress(userId: string, addressId: string, input
       addressLine: input.addressLine,
       deliveryMethod: input.deliveryMethod,
       cdekCityCode: input.cdekCityCode,
+      cdekCityUuid: input.cdekCityUuid,
       cdekPvzCode: input.cdekPvzCode,
       street: input.street,
       house: input.house,
