@@ -7,6 +7,7 @@ vi.mock('@/services/settings.service', () => ({
 }))
 
 vi.mock('@/lib/cdek', () => ({
+  calculateCdekTariffList: vi.fn(),
   getCdekToken: vi.fn(),
   resolveCdekSenderSettings: vi.fn(),
 }))
@@ -48,21 +49,12 @@ describe('normalizeWidgetPayload', () => {
     expect(payload.packages).toEqual([{ weight: 100, length: 10, width: 20, height: 30 }])
   })
 
-  it('overrides stale sender location with the resolved server-side sender config', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
+  it('overrides stale sender location and calculates only widget tariffs', async () => {
     vi.mocked(settingsService.getCdekCredentials).mockResolvedValue({
       clientId: 'client-id',
       clientSecret: 'client-secret',
       useTest: false,
     })
-    vi.mocked(cdek.getCdekToken).mockResolvedValue('token')
     vi.mocked(cdek.resolveCdekSenderSettings).mockResolvedValue({
       ok: true,
       settings: {
@@ -79,6 +71,22 @@ describe('normalizeWidgetPayload', () => {
         },
       },
     })
+    vi.mocked(cdek.calculateCdekTariffList).mockResolvedValue([
+      {
+        tariff_code: 136,
+        tariff_name: 'Посылка склад-склад',
+        delivery_sum: 490,
+        period_min: 2,
+        period_max: 3,
+      },
+      {
+        tariff_code: 137,
+        tariff_name: 'Посылка склад-дверь',
+        delivery_sum: 690,
+        period_min: 2,
+        period_max: 3,
+      },
+    ])
 
     const response = await POST(
       new Request('http://localhost/api/cdek-widget/service?brand=inner', {
@@ -102,15 +110,44 @@ describe('normalizeWidgetPayload', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ tariff_codes: [] })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const fetchCall = fetchMock.mock.calls[0]
-    const requestBody = JSON.parse(String((fetchCall?.[1] as RequestInit | undefined)?.body ?? '{}'))
-
-    expect(requestBody.from_location).toEqual({
-      code: 137,
-      country_code: 'RU',
+    expect(await response.json()).toEqual({
+      tariff_codes: [
+        {
+          tariff_code: 136,
+          tariff_name: 'Посылка склад-склад',
+          delivery_sum: 490,
+          period_min: 2,
+          period_max: 3,
+        },
+        {
+          tariff_code: 137,
+          tariff_name: 'Посылка склад-дверь',
+          delivery_sum: 690,
+          period_min: 2,
+          period_max: 3,
+        },
+      ],
     })
-    expect(requestBody).not.toHaveProperty('from')
+    expect(cdek.calculateCdekTariffList).toHaveBeenCalledTimes(1)
+    expect(cdek.calculateCdekTariffList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from_location: {
+          code: 137,
+          country_code: 'RU',
+        },
+        to_location: {
+          city_uuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
+          address: 'Кудрово, Центральная ул. 50к1',
+          country_code: 'RU',
+        },
+        packages: [{ weight: 100, length: 10, width: 20, height: 30 }],
+        tariff_codes: [136, 137],
+      }),
+      {
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        useTest: false,
+      }
+    )
   })
 })

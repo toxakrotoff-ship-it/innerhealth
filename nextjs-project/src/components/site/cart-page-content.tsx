@@ -52,6 +52,7 @@ interface CartPageContentProps {
   isSprintTheme?: boolean
   brandId?: BrandId
   pickupAddress?: string
+  canUseSavedAddresses?: boolean
 }
 
 function resolvePickupCity(pickupAddress?: string): string {
@@ -116,7 +117,12 @@ function parseDoorAddressFromWidget(formattedAddress: string): {
   return { street, house, apartment }
 }
 
-export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress }: CartPageContentProps) {
+export function CartPageContent({
+  isSprintTheme = false,
+  brandId,
+  pickupAddress,
+  canUseSavedAddresses = false,
+}: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
   const removeItem = useCartStore((s) => s.removeItem)
@@ -207,6 +213,12 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
   }, [selectedSavedAddressId])
 
   const loadSavedAddresses = useCallback(async () => {
+    if (!canUseSavedAddresses) {
+      setSavedAddresses([])
+      setSelectedSavedAddressId(null)
+      setUsingSavedAddress(false)
+      return
+    }
     try {
       const response = await fetch('/api/account/addresses', {
         credentials: 'include',
@@ -242,7 +254,7 @@ export function CartPageContent({ isSprintTheme = false, brandId, pickupAddress 
       setSelectedSavedAddressId(null)
       setUsingSavedAddress(false)
     }
-  }, [])
+  }, [canUseSavedAddresses])
 
   useEffect(() => {
     void loadSavedAddresses()

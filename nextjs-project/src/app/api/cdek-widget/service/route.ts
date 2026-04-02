@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getCdekToken, resolveCdekSenderSettings } from '@/lib/cdek'
+import {
+  calculateCdekTariffList,
+  getCdekToken,
+  resolveCdekSenderSettings,
+} from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+
+const WIDGET_TARIFF_CODES = [136, 137] as const
 
 const requestSchema = z
   .object({
@@ -37,6 +43,21 @@ function normalizeCalculateResponse(text: string): string {
     return text
   }
 }
+
+const calculatorPayloadSchema = z.object({
+  to_location: z.record(z.string(), z.unknown()),
+  packages: z.array(z.object({
+    weight: z.number().positive(),
+    length: z.number().positive(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+  })).min(1),
+  type: z.union([z.literal(1), z.literal(2)]).optional(),
+  currency: z.number().int().positive().optional(),
+  lang: z.enum(['rus', 'eng']).optional(),
+  services: z.array(z.record(z.string(), z.unknown())).optional(),
+  date: z.union([z.string(), z.number()]).optional(),
+})
 
 async function proxyToCdek(params: {
   baseUrl: string
@@ -78,6 +99,48 @@ async function proxyToCdek(params: {
   })
   const text = await res.text()
   return { status: res.status, text }
+}
+
+async function calculateForWidgetTariffs(params: {
+  data: Record<string, unknown>
+  credentials: NonNullable<Awaited<ReturnType<typeof settingsService.getCdekCredentials>>>
+  senderFromLocation: Record<string, unknown>
+}) {
+  const parsed = calculatorPayloadSchema.safeParse(params.data)
+  if (!parsed.success) {
+    return json({ message: 'Widget calculate payload is invalid' }, { status: 400 })
+  }
+
+  try {
+    const tariffs = await calculateCdekTariffList(
+      {
+        from_location: params.senderFromLocation,
+        to_location: parsed.data.to_location,
+        packages: parsed.data.packages,
+        type: parsed.data.type,
+        currency: parsed.data.currency,
+        lang: parsed.data.lang,
+        services: parsed.data.services,
+        date: parsed.data.date,
+        tariff_codes: [...WIDGET_TARIFF_CODES],
+      },
+      params.credentials
+    )
+
+    return json(
+      {
+        tariff_codes: tariffs,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'CDEK widget calculate error'
+    return json({ message }, { status: 500 })
+  }
 }
 
 async function parseIncoming(request: Request): Promise<Record<string, unknown>> {
@@ -139,6 +202,12 @@ async function handle(request: Request) {
       delete data.from
       delete data.from_location
       data.from_location = senderSettingsResult.settings.calculatorFromLocation
+
+      return calculateForWidgetTariffs({
+        data,
+        credentials: cdekCredentials,
+        senderFromLocation: senderSettingsResult.settings.calculatorFromLocation,
+      })
     }
 
     const token = await getCdekToken(cdekCredentials)
