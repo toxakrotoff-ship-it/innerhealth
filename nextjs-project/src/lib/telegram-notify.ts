@@ -6,15 +6,6 @@ import type { BrandId } from '@/lib/brand/brand';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
-async function getWhitelistChatIds(
-  token: string | undefined,
-  options?: { brandId?: BrandId | null }
-): Promise<string[]> {
-  if (!token) return [];
-  const list = await telegramService.getTelegramWhitelist(options);
-  return list.map((r) => r.telegramUserId);
-}
-
 interface SendMessageOptions {
   replyMarkup?: {
     inline_keyboard: Array<Array<{ text: string; callback_data: string } | { text: string; url: string }>>;
@@ -86,7 +77,9 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   const settingsScope = payload.brandId ? { brandId: payload.brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return null;
-    return getWhitelistChatIds(token, settingsScope).then((chatIds) => ({ token, chatIds }));
+    return userService
+      .getAdminTelegramChatIds(payload.brandId)
+      .then((chatIds) => ({ token, chatIds }));
   }).then(async (result) => {
     if (!result || result.chatIds.length === 0) return;
     const { token, chatIds } = result;
@@ -134,7 +127,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
         })
         .catch((e) => console.error('[telegram-notify] getPartnerTelegramUserIdByPromoCodeId:', e));
     }
-  }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
+  }).catch((e) => console.error('[telegram-notify] getAdminTelegramChatIds:', e));
 }
 
 export async function notifyTelegramOrderStatusForUser(payload: {
@@ -263,7 +256,7 @@ export function notifyTelegramForm(payload: FormNotifyPayload): void {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
   settingsService.getTelegramBotToken(scope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token, scope).then(async (chatIds) => {
+    return userService.getAdminTelegramChatIds(payload.brandId).then(async (chatIds) => {
       if (chatIds.length === 0) return;
       const lines: string[] = [
         '<b>Новая заявка с сайта</b>',
@@ -280,7 +273,7 @@ export function notifyTelegramForm(payload: FormNotifyPayload): void {
         );
       }
     });
-  }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
+  }).catch((e) => console.error('[telegram-notify] getAdminTelegramChatIds:', e));
 }
 
 export interface ConnectionNotifyPayload {
@@ -302,7 +295,7 @@ export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
   const settingsScope = brandId ? { brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token, settingsScope).then(async (chatIds) => {
+    return userService.getAdminTelegramChatIds(brandId).then(async (chatIds) => {
       if (chatIds.length === 0) return;
       const textPreview = text.length > 300 ? text.slice(0, 297) + '…' : text;
       const lines: string[] = [
@@ -350,7 +343,7 @@ export function notifyTelegramNewReview(payload: ReviewNotifyPayload): void {
         }
       }
     });
-  }).catch((e) => console.error('[telegram-notify] getWhitelistChatIds:', e));
+  }).catch((e) => console.error('[telegram-notify] getAdminTelegramChatIds:', e));
 }
 
 export interface PaymentErrorNotifyPayload {
@@ -369,7 +362,7 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
   const settingsScope = brandId ? { brandId } : {};
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return;
-    return getWhitelistChatIds(token, settingsScope);
+    return userService.getAdminTelegramChatIds(brandId);
   }).then(async (chatIds) => {
     if (!chatIds || chatIds.length === 0) return;
     const contextLabel = context === 'create' ? 'создание платежа' : 'верификация в webhook';
@@ -392,7 +385,7 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
         );
       }
     });
-  }).catch((e) => console.error('[telegram-notify] payment error getWhitelistChatIds:', e));
+  }).catch((e) => console.error('[telegram-notify] payment error getAdminTelegramChatIds:', e));
 }
 
 export interface InfraAlertNotifyPayload {
@@ -433,7 +426,7 @@ export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void
   const scope = brandId ? { brandId } : {};
   settingsService.getTelegramBotToken(scope).then((token) => {
     if (!token) return null;
-    return getWhitelistChatIds(token, scope).then((chatIds) =>
+    return userService.getAdminTelegramChatIds(brandId).then((chatIds) =>
       userService.findUserProfile(userId).then((user) => ({ token, chatIds, user }))
     );
   }).then(async (result) => {

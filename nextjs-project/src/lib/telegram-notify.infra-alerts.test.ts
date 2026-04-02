@@ -17,7 +17,11 @@ describe('notifyTelegramInfraAlert', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     // @ts-expect-error - test env
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve('') })
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(''),
+      json: () => Promise.resolve({ result: { message_id: 1 } }),
+    })
   })
 
   it('does not call Telegram API when token is missing', async () => {
@@ -67,4 +71,3 @@ describe('notifyTelegramInfraAlert', () => {
     expect(String(firstCallUrl)).toContain('https://api.telegram.org/bottoken/sendMessage')
   })
 })
-
