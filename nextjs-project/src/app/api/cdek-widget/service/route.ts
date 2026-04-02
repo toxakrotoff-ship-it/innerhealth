@@ -26,6 +26,18 @@ function json(data: unknown, init?: ResponseInit) {
   })
 }
 
+function normalizeCalculateResponse(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as unknown
+    if (Array.isArray(parsed)) {
+      return JSON.stringify({ tariff_codes: parsed })
+    }
+    return text
+  } catch {
+    return text
+  }
+}
+
 async function proxyToCdek(params: {
   baseUrl: string
   token: string
@@ -137,8 +149,10 @@ async function handle(request: Request) {
       action: parsed.data.action,
       data,
     })
+    const responseText =
+      parsed.data.action === 'calculate' ? normalizeCalculateResponse(text) : text
 
-    return new NextResponse(text, {
+    return new NextResponse(responseText, {
       status,
       headers: {
         'Content-Type': 'application/json',

@@ -50,7 +50,7 @@ describe('normalizeWidgetPayload', () => {
 
   it('overrides stale sender location with the resolved server-side sender config', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ tariffs: [] }), {
+      new Response(JSON.stringify([]), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -102,6 +102,7 @@ describe('normalizeWidgetPayload', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ tariff_codes: [] })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const fetchCall = fetchMock.mock.calls[0]
     const requestBody = JSON.parse(String((fetchCall?.[1] as RequestInit | undefined)?.body ?? '{}'))
