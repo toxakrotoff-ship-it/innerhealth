@@ -130,7 +130,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
 
   if (payload.promoCodeId) {
     const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId, scope);
-    if (partnerMaxUserId) {
+    if (partnerMaxUserId && !adminUserIds.includes(partnerMaxUserId)) {
       const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
       const partnerText =
         `💰 **Заказ по вашему промокоду**\n\n` +
@@ -143,7 +143,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
 
   if (payload.customerUserId) {
     const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId, scope);
-    if (customerLink) {
+    if (customerLink && !adminUserIds.includes(customerLink.maxUserId)) {
       const customerText =
         `✅ **Ваш заказ принят**\n\n` +
         `Номер: ${escapeHtml(payload.orderId)}\n` +
@@ -162,6 +162,8 @@ export async function notifyMaxOrderStatusForUser(payload: {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
   if (!link?.maxUserId) return;
+  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
+  if (adminUserIds.includes(link.maxUserId)) return;
 
   const statusLine = payload.status === 'paid' ? '✅ **Заказ оплачен**' : '❌ **Платёж отменён**';
   const baseUrl =
@@ -236,6 +238,8 @@ export async function notifyMaxCdekTrackForUser(payload: {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
   if (!link?.maxUserId) return;
+  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
+  if (adminUserIds.includes(link.maxUserId)) return;
 
   const track = payload.trackNumber.trim();
   if (!track) return;

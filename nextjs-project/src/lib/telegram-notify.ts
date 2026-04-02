@@ -75,11 +75,15 @@ export interface OrderNotifyPayload {
 
 export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   const settingsScope = payload.brandId ? { brandId: payload.brandId } : {};
+  let adminChatIds: string[] = [];
   settingsService.getTelegramBotToken(settingsScope).then((token) => {
     if (!token) return null;
     return userService
       .getAdminTelegramChatIds(payload.brandId)
-      .then((chatIds) => ({ token, chatIds }));
+      .then((chatIds) => {
+        adminChatIds = chatIds;
+        return { token, chatIds };
+      });
   }).then(async (result) => {
     if (!result || result.chatIds.length === 0) return;
     const { token, chatIds } = result;
@@ -115,6 +119,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
         .getPartnerTelegramUserIdByPromoCodeId(payload.promoCodeId, settingsScope)
         .then((partnerChatId) => {
           if (!partnerChatId || !token) return;
+          if (adminChatIds.includes(partnerChatId)) return;
           const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
           const partnerText =
             `💰 <b>Заказ по вашему промокоду</b>\n\n` +
@@ -141,6 +146,8 @@ export async function notifyTelegramOrderStatusForUser(payload: {
   if (!token) return;
   const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId, scope);
   if (!whitelist?.telegramUserId) return;
+  const adminChatIds = await userService.getAdminTelegramChatIds(payload.brandId);
+  if (adminChatIds.includes(whitelist.telegramUserId)) return;
 
   const statusLine = payload.status === 'paid' ? '✅ <b>Заказ оплачен</b>' : '❌ <b>Платёж отменён</b>';
   const baseUrl =
@@ -227,6 +234,8 @@ export async function notifyTelegramCdekTrackForUser(payload: {
   if (!token) return;
   const whitelist = await telegramService.findTelegramWhitelistByUserId(payload.userId, scope);
   if (!whitelist?.telegramUserId) return;
+  const adminChatIds = await userService.getAdminTelegramChatIds(payload.brandId);
+  if (adminChatIds.includes(whitelist.telegramUserId)) return;
 
   const track = payload.trackNumber.trim();
   if (!track) return;
