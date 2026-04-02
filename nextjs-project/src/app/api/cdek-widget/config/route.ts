@@ -28,6 +28,8 @@ interface WidgetParcel {
   weight: number
 }
 
+const WIDGET_FALLBACK_DIMENSION_CM = 1
+
 export async function POST(request: Request) {
   try {
     const brandId = resolveBrandOrDefaultFromRequest(request)
@@ -82,11 +84,12 @@ export async function POST(request: Request) {
     const p = packages[0]
     const goods: WidgetParcel[] = [
       {
-        // Widget expects dimensions in centimeters and weight in grams.
-        // В проекте исторически габариты часто вводились в см, поэтому передаём как есть.
-        width: p?.width ?? 10,
-        height: p?.height ?? 10,
-        length: p?.length ?? 10,
+        // Для виджета используем безопасные габариты 1x1x1:
+        // это рекомендация СДЭК для сценариев, где точные Д/Ш/В
+        // на этапе предварительного расчёта могут быть неточными.
+        width: WIDGET_FALLBACK_DIMENSION_CM,
+        height: WIDGET_FALLBACK_DIMENSION_CM,
+        length: WIDGET_FALLBACK_DIMENSION_CM,
         weight: p?.weight ?? 100,
       },
     ]

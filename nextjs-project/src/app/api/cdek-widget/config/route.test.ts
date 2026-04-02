@@ -70,9 +70,9 @@ describe('POST /api/cdek-widget/config', () => {
       },
       goods: [
         {
-          width: 20,
-          height: 30,
-          length: 10,
+          width: 1,
+          height: 1,
+          length: 1,
           weight: 100,
         },
       ],
