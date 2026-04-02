@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { confirmMaxLinkAndReturnUserId } from '@/bot/runtime/max-links';
 import { notifyMaxConnection } from '@/lib/max-notify';
@@ -35,11 +35,13 @@ export async function POST(request: Request) {
     if (!result)
       return NextResponse.json({ error: 'Invalid or expired code' }, { status: 400 });
 
-    void notifyMaxConnection({
-      userId: result.userId,
-      maxUserId: body.maxUserId,
-      brandId: result.brandId,
-    });
+    after(() =>
+      notifyMaxConnection({
+        userId: result.userId,
+        maxUserId: body.maxUserId,
+        brandId: result.brandId,
+      })
+    );
     return NextResponse.json({ success: true, message: 'Вы добавлены в список уведомлений' });
   } catch (error) {
     console.error('MAX confirm error:', error);

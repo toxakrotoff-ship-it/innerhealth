@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { getProjectRoot } from '@/lib/project-root';
@@ -147,18 +147,14 @@ export async function POST(request: Request) {
       status: 'PENDING',
     });
 
-    notifyTelegramNewReview({
+    const reviewNotifyPayload = {
       reviewId: review.id,
       authorName,
       text,
       brandId,
-    });
-    void notifyMaxNewReview({
-      reviewId: review.id,
-      authorName,
-      text,
-      brandId,
-    });
+    } as const;
+    notifyTelegramNewReview(reviewNotifyPayload);
+    after(() => notifyMaxNewReview(reviewNotifyPayload));
 
     return NextResponse.json({ success: true });
   } catch (error) {

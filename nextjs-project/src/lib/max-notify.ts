@@ -25,11 +25,23 @@ async function sendToUsers(
   text: string,
   options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[]; reviewId?: string }
 ): Promise<void> {
+  if (userIds.length === 0) {
+    console.warn('[max-notify] no recipients', { brandId: options?.brandId ?? null });
+    return;
+  }
+
   const bot = await getMaxBot(options);
-  if (!bot || userIds.length === 0) return;
+  if (!bot) {
+    console.warn('[max-notify] bot token is missing', { brandId: options?.brandId ?? null });
+    return;
+  }
+
   for (const userId of userIds) {
     const id = Number.parseInt(userId, 10);
-    if (!Number.isFinite(id)) continue;
+    if (!Number.isFinite(id)) {
+      console.warn('[max-notify] invalid recipient id', { userId, brandId: options?.brandId ?? null });
+      continue;
+    }
     const message = await bot.api
       .sendMessageToUser(id, text, {
         format: 'markdown',

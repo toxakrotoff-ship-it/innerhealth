@@ -7,7 +7,12 @@ vi.mock('@/lib/telegram-notify', () => ({
   notifyTelegramInfraAlert: vi.fn().mockResolvedValue(undefined),
 }))
 
+vi.mock('@/lib/max-notify', () => ({
+  notifyMaxInfraAlert: vi.fn().mockResolvedValue(undefined),
+}))
+
 const telegramNotify = await import('@/lib/telegram-notify')
+const maxNotify = await import('@/lib/max-notify')
 
 describe('POST /api/admin/infra-alert', () => {
   beforeEach(() => {
@@ -72,6 +77,11 @@ describe('POST /api/admin/infra-alert', () => {
       severity: 'critical',
       message: 'CPU high',
     })
+    expect(vi.mocked(maxNotify.notifyMaxInfraAlert)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(maxNotify.notifyMaxInfraAlert)).toHaveBeenCalledWith({
+      kind: 'cpu',
+      severity: 'critical',
+      message: 'CPU high',
+    })
   })
 })
-

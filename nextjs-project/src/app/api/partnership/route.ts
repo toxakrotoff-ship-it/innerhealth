@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
 import { notifyMaxForm } from '@/lib/max-notify'
 import * as partnershipService from '@/services/partnership.service'
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       message: message || undefined,
     }, brandId)
 
-    notifyTelegramForm({
+    const formNotifyPayload = {
       formName: 'Партнёрская заявка',
       fields: {
         Имя: name,
@@ -108,19 +108,9 @@ export async function POST(request: Request) {
         Сообщение: message ?? '—',
       },
       brandId,
-    })
-    void notifyMaxForm({
-      formName: 'Партнёрская заявка',
-      fields: {
-        Имя: name,
-        Email: email,
-        Телефон: phone,
-        Роль: role ?? '—',
-        'Ссылки на соцсети': socialLinks ?? '—',
-        Сообщение: message ?? '—',
-      },
-      brandId,
-    })
+    } as const
+    notifyTelegramForm(formNotifyPayload)
+    after(() => notifyMaxForm(formNotifyPayload))
 
     return NextResponse.json({ success: true })
   } catch (e) {

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 import { createOrderBodySchema } from '@/lib/validations/order'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import {
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
     const promoCodeStr = promoCodeId
       ? await promoService.getPromoCodeStringById(promoCodeId, brandId)
       : null
-    notifyTelegramOrder({
+    const orderNotifyPayload = {
       orderId: order.id,
       total: order.total,
       items: order.items.map((oi) => ({
@@ -191,29 +191,14 @@ export async function POST(request: Request) {
       promoCode: promoCodeStr,
       promoCodeId: order.promoCodeId ?? undefined,
       brandId,
-    })
-    void notifyMaxOrder({
-      orderId: order.id,
-      total: order.total,
-      items: order.items.map((oi) => ({
-        title: oi.product.title,
-        quantity: oi.quantity,
-        price: oi.price,
-      })),
-      shipping: {
-        fullName: shipping.fullName.trim(),
-        phone: shipping.phone.trim(),
-        email: shipping.email.trim(),
-        address: shipping.address.trim(),
-        city: shipping.city.trim(),
-        zipCode: (shipping.zipCode ?? '').toString().trim(),
-        country: (shipping.country ?? 'Россия').trim(),
-      },
-      promoCode: promoCodeStr,
-      promoCodeId: order.promoCodeId ?? undefined,
-      customerUserId: userId,
-      brandId,
-    })
+    } as const
+    notifyTelegramOrder(orderNotifyPayload)
+    after(() =>
+      notifyMaxOrder({
+        ...orderNotifyPayload,
+        customerUserId: userId,
+      })
+    )
 
     const orderNotificationPayload = {
       orderId: order.id,
@@ -306,20 +291,15 @@ export async function POST(request: Request) {
       } catch (yooErr) {
         console.error('YooKassa create payment error:', yooErr)
         const errorMessage = yooErr instanceof Error ? yooErr.message : String(yooErr)
-        notifyTelegramPaymentError({
+        const paymentErrorPayload = {
           orderId: order.id,
           total,
           errorMessage,
           context: 'create',
           brandId,
-        })
-        void notifyMaxPaymentError({
-          orderId: order.id,
-          total,
-          errorMessage,
-          context: 'create',
-          brandId,
-        })
+        } as const
+        notifyTelegramPaymentError(paymentErrorPayload)
+        after(() => notifyMaxPaymentError(paymentErrorPayload))
         return NextResponse.json(
           { error: 'Заказ создан, но не удалось создать платёж. Мы свяжемся с вами.' },
           {
