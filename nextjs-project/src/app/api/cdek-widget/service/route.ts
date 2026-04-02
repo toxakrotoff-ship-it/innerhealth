@@ -429,6 +429,39 @@ async function parseIncoming(request: Request): Promise<Record<string, unknown>>
   }
 }
 
+function summarizeIncomingPayload(data: Record<string, unknown>): Record<string, unknown> {
+  const from = data.from
+  const fromLocation = data.from_location
+  const to = data.to
+  const toLocation = data.to_location
+  const goods = Array.isArray(data.goods) ? data.goods : []
+  const packages = Array.isArray(data.packages) ? data.packages : []
+
+  const summarizeUnknownLocation = (value: unknown): Record<string, unknown> | null => {
+    if (!value || typeof value !== 'object') return null
+    const location = value as Record<string, unknown>
+    return {
+      code: location.code ?? null,
+      city_code: location.city_code ?? null,
+      city_uuid: location.city_uuid ?? null,
+      postal_code: location.postal_code ?? null,
+      address: location.address ?? null,
+      country_code: location.country_code ?? null,
+      delivery_point: location.delivery_point ?? null,
+    }
+  }
+
+  return {
+    action: data.action ?? null,
+    from: summarizeUnknownLocation(from),
+    from_location: summarizeUnknownLocation(fromLocation),
+    to: summarizeUnknownLocation(to),
+    to_location: summarizeUnknownLocation(toLocation),
+    goods,
+    packages,
+  }
+}
+
 export async function GET(request: Request) {
   return handle(request)
 }
@@ -447,7 +480,18 @@ async function handle(request: Request) {
       return json({ message: 'CDEK credentials are missing in admin settings' }, { status: 400 })
     }
 
-    const incoming = normalizeWidgetPayload(await parseIncoming(request))
+    const rawIncoming = await parseIncoming(request)
+    console.warn('[cdek/widget][incoming][raw]', {
+      brandId,
+      payload: summarizeIncomingPayload(rawIncoming),
+    })
+
+    const incoming = normalizeWidgetPayload(rawIncoming)
+    console.warn('[cdek/widget][incoming][normalized]', {
+      brandId,
+      payload: summarizeIncomingPayload(incoming),
+    })
+
     const parsed = requestSchema.safeParse(incoming)
     if (!parsed.success) return json({ message: 'Action is required' }, { status: 400 })
 
