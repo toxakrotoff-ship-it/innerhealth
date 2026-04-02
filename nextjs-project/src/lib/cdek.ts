@@ -181,11 +181,33 @@ export interface CdekTariffResult {
   tariff_code: number
   tariff_name?: string
   tariff_description?: string
+  delivery_mode?: number
   delivery_sum: number
   period_min: number
   period_max: number
   calendar_min?: number
   calendar_max?: number
+}
+
+const CDEK_WIDGET_TARIFF_METADATA: Record<number, { tariff_name: string; delivery_mode: number }> = {
+  136: {
+    tariff_name: 'Посылка склад-склад',
+    delivery_mode: 4,
+  },
+  137: {
+    tariff_name: 'Посылка склад-дверь',
+    delivery_mode: 3,
+  },
+}
+
+function enrichTariffResult(result: Partial<CdekTariffResult>, tariffCode: number): CdekTariffResult {
+  const metadata = CDEK_WIDGET_TARIFF_METADATA[tariffCode]
+  return {
+    ...result,
+    tariff_code: result.tariff_code ?? tariffCode,
+    tariff_name: result.tariff_name ?? metadata?.tariff_name,
+    delivery_mode: result.delivery_mode ?? metadata?.delivery_mode,
+  } as CdekTariffResult
 }
 
 /**
@@ -671,10 +693,7 @@ async function calculateCdekTariff(
       throw new Error(`CDEK calculator tariff error: ${compact || 'unknown'}`)
     }
     const parsed = data as Partial<CdekCalculatorTariffResponse>
-    return {
-      ...parsed,
-      tariff_code: parsed.tariff_code ?? request.tariff_code,
-    } as CdekCalculatorTariffResponse
+    return enrichTariffResult(parsed, request.tariff_code) as CdekCalculatorTariffResponse
   }
 
   const base = getCdekApiBase(overrideCredentials ?? null)
