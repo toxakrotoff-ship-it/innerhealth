@@ -117,13 +117,26 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
         {shouldShowCdekTrackingBlock ? (
           <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <h2 className="text-lg font-semibold text-text">Трекинг CDEK</h2>
-            <p className="mt-2 text-sm text-gray-700">
-              <span className="font-medium">UUID заказа CDEK:</span> {order.cdekOrderUuid ?? '—'}
-            </p>
-            <p className="mt-1 text-sm text-gray-700">
-              <span className="font-medium">Трек-номер:</span> {order.cdekTrackNumber ?? 'Ещё не присвоен'}
-            </p>
-            {cdekTrackingLink ? (
+            {order.cdekOrderError ? (
+              <>
+                <p className="mt-2 text-sm text-amber-700">{order.cdekOrderError}</p>
+                {order.cdekOrderUuid ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Невалидный UUID CDEK: {order.cdekOrderUuid}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm text-gray-700">
+                  <span className="font-medium">UUID заказа CDEK:</span> {order.cdekOrderUuid ?? '—'}
+                </p>
+                <p className="mt-1 text-sm text-gray-700">
+                  <span className="font-medium">Трек-номер:</span> {order.cdekTrackNumber ?? 'Ещё не присвоен'}
+                </p>
+              </>
+            )}
+            {cdekTrackingLink && !order.cdekOrderError ? (
               <a
                 href={cdekTrackingLink}
                 target="_blank"

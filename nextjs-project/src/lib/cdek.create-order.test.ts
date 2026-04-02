@@ -265,6 +265,12 @@ describe('createCdekOrder', () => {
     expect(payload.delivery_point).toBe('SPB222')
     expect(payload).not.toHaveProperty('from_location')
     expect(payload).not.toHaveProperty('to_location')
+    expect(payload.packages[0]).toMatchObject({
+      weight: 400,
+      length: 1,
+      width: 1,
+      height: 1,
+    })
     expect(payload.packages[0].items.map((item: { ware_key: string }) => item.ware_key)).toEqual([
       'SKU-001',
       'Товар без SKU',
@@ -382,6 +388,12 @@ describe('createCdekOrder', () => {
       address: 'улица Пушкина, 10, 12, 3, 4, 45',
     })
     expect(payload).not.toHaveProperty('from_location')
+    expect(payload.packages[0]).toMatchObject({
+      weight: 100,
+      length: 1,
+      width: 1,
+      height: 1,
+    })
   })
 
   it('returns business error when sender pvz setting is missing', async () => {

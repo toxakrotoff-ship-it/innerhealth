@@ -310,7 +310,16 @@ export default function AdminOrdersPage() {
         {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' || order.shippingInfo?.deliveryMethod === 'cdek_door') && (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">СДЭК</h3>
-            {order.cdekTrackNumber ? (
+            {order.cdekOrderError ? (
+              <>
+                <p className="text-amber-700 mb-2">{order.cdekOrderError}</p>
+                {order.cdekOrderUuid ? (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Невалидный UUID: <span className="font-mono">{order.cdekOrderUuid}</span>
+                  </p>
+                ) : null}
+              </>
+            ) : order.cdekTrackNumber ? (
               <>
                 <p className="text-gray-900">
                   <span className="font-medium">Трек-номер:</span>{' '}
@@ -338,19 +347,17 @@ export default function AdminOrdersPage() {
                 </p>
                 <p className="mt-1 text-xs text-gray-500">Трек-номер ещё не присвоен</p>
               </>
-            ) : order.cdekOrderError ? (
-              <p className="text-amber-700 mb-2">{order.cdekOrderError}</p>
             ) : null}
             {order.status === 'paid' && (
               <div className="mt-2 flex flex-wrap gap-3">
-                {!order.cdekOrderUuid ? (
+                {!order.cdekOrderUuid || !!order.cdekOrderError ? (
                   <button
                     type="button"
                     disabled={cdekLoadingId === order.id}
                     onClick={() => handleCreateCdekShipment(order.id)}
                     className="text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
                   >
-                    {cdekLoadingId === order.id ? 'Создание…' : 'Создать отгрузку в СДЭК'}
+                    {cdekLoadingId === order.id ? 'Создание…' : order.cdekOrderError ? 'Повторить создание отгрузки СДЭК' : 'Создать отгрузку в СДЭК'}
                   </button>
                 ) : (
                   <button

@@ -479,6 +479,8 @@ const DEFAULT_PACKAGE_DEFAULTS: CdekPackageDefaults = {
   heightMm: 15,
 }
 
+const ORDER_REGISTRATION_FALLBACK_DIMENSION = 1
+
 /**
  * Минимальные габариты для одного пакета (если у товара не указаны).
  * СДЭК принимает целые числа; вес в г, размеры в мм.
@@ -540,6 +542,18 @@ export function mergeCdekPackages(packages: CdekPackage[]): CdekPackage[] {
       height: maxH,
     },
   ]
+}
+
+function buildSafePackagesForCdekOrderRegistration(packages: CdekPackage[]): CdekPackage[] {
+  return packages.map((pkg) => ({
+    weight: pkg.weight,
+    // Для регистрации отгрузки используем безопасные габариты 1x1x1.
+    // Расчёт в виджете уже выполняется отдельно, а здесь важнее не сломать
+    // создание заказа в CDEK из-за слишком грубых/неточных размеров товара.
+    length: ORDER_REGISTRATION_FALLBACK_DIMENSION,
+    width: ORDER_REGISTRATION_FALLBACK_DIMENSION,
+    height: ORDER_REGISTRATION_FALLBACK_DIMENSION,
+  }))
 }
 
 let cachedToken: {
@@ -1434,7 +1448,8 @@ export async function createCdekOrder(
       }
     }
 
-    const packages = mergeCdekPackages(
+    const packages = buildSafePackagesForCdekOrderRegistration(
+      mergeCdekPackages(
       order.items.map((item) =>
         productToCdekPackage(
           item.product.weight,
@@ -1444,6 +1459,7 @@ export async function createCdekOrder(
           item.quantity,
           packageDefaults
         )
+      )
       )
     )
 

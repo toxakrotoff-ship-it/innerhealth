@@ -35,7 +35,7 @@ export async function createCdekShipmentForOrder(
     }
   }
 
-  if (order.cdekOrderUuid && !force) {
+  if (order.cdekOrderUuid && !order.cdekOrderError && !force) {
     return {
       success: true,
       uuid: order.cdekOrderUuid,
