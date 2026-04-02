@@ -670,7 +670,11 @@ async function calculateCdekTariff(
         .join('; ')
       throw new Error(`CDEK calculator tariff error: ${compact || 'unknown'}`)
     }
-    return data as CdekCalculatorTariffResponse
+    const parsed = data as Partial<CdekCalculatorTariffResponse>
+    return {
+      ...parsed,
+      tariff_code: parsed.tariff_code ?? request.tariff_code,
+    } as CdekCalculatorTariffResponse
   }
 
   const base = getCdekApiBase(overrideCredentials ?? null)

@@ -69,10 +69,6 @@ type WidgetTariffAttempt = {
   request: CdekCalculatorTariffListRequest
 }
 
-function buildCdekAttemptDate(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, '+0000')
-}
-
 function summarizeLocation(location: CdekLocation | undefined): Record<string, unknown> | null {
   if (!location) return null
   return {
@@ -111,101 +107,35 @@ async function buildWidgetTariffAttempts(params: {
   senderSettings: ResolvedCdekSenderSettings
 }): Promise<WidgetTariffAttempt[]> {
   const { request, credentials, senderSettings } = params
-  const explicitDate = request.date ?? buildCdekAttemptDate()
 
   const baseRequest: CdekCalculatorTariffListRequest = {
     from_location: senderSettings.calculatorFromLocation,
     to_location: request.to_location as CdekLocation,
     packages: request.packages,
-    type: request.type,
+    type: 1,
     currency: request.currency,
     lang: request.lang,
     services: request.services,
-    additional_order_types: request.additional_order_types,
-    date: request.date,
     tariff_codes: [...WIDGET_TARIFF_CODES],
   }
 
-  const attempts: WidgetTariffAttempt[] = [
-    { name: 'base', request: baseRequest },
-    {
-      name: 'type=1',
-      request: {
-        ...baseRequest,
-        type: 1,
-      },
-    },
-    {
-      name: 'type=2',
-      request: {
-        ...baseRequest,
-        type: 2,
-      },
-    },
-    {
-      name: 'type=1+date',
-      request: {
-        ...baseRequest,
-        type: 1,
-        date: explicitDate,
-      },
-    },
-    {
-      name: 'type=2+date',
-      request: {
-        ...baseRequest,
-        type: 2,
-        date: explicitDate,
-      },
-    },
-    {
-      name: 'type=1+ltl',
-      request: {
-        ...baseRequest,
-        type: 1,
-        additional_order_types: [2],
-      },
-    },
-    {
-      name: 'type=2+ltl',
-      request: {
-        ...baseRequest,
-        type: 2,
-        additional_order_types: [2],
-      },
-    },
-  ]
+  const attempts: WidgetTariffAttempt[] = [{ name: 'base', request: baseRequest }]
 
   if (senderSettings.fromPostalCode) {
     attempts.push({
-      name: 'from.postal_code+type=1',
+      name: 'from.postal_code',
       request: {
         ...baseRequest,
         from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
-        type: 1,
-      },
-    })
-    attempts.push({
-      name: 'from.postal_code+type=2',
-      request: {
-        ...baseRequest,
-        from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
-        type: 2,
-      },
-    })
-    attempts.push({
-      name: 'from.postal_code+type=2+date',
-      request: {
-        ...baseRequest,
-        from_location: { postal_code: senderSettings.fromPostalCode, country_code: 'RU' },
-        type: 2,
-        date: explicitDate,
       },
     })
   }
 
   const toCode = request.to_location.code
-  if (typeof toCode === 'number' && Number.isFinite(toCode) && toCode > 0) {
+  const hasPostalCode =
+    typeof request.to_location.postal_code === 'string' &&
+    request.to_location.postal_code.trim().length > 0
+  if (!hasPostalCode && typeof toCode === 'number' && Number.isFinite(toCode) && toCode > 0) {
     try {
       const cities = await getCdekCities(
         { country_codes: ['RU'], code: toCode, size: 20, page: 0 },
@@ -228,7 +158,7 @@ async function buildWidgetTariffAttempts(params: {
 
       if (resolvedPostalCode) {
         attempts.push({
-          name: 'to.postal_code+type=1',
+          name: 'to.postal_code',
           request: {
             ...baseRequest,
             to_location: {
@@ -236,45 +166,6 @@ async function buildWidgetTariffAttempts(params: {
               country_code: 'RU',
               address: baseRequest.to_location.address,
             },
-            type: 1,
-          },
-        })
-        attempts.push({
-          name: 'to.postal_code+type=2',
-          request: {
-            ...baseRequest,
-            to_location: {
-              postal_code: resolvedPostalCode,
-              country_code: 'RU',
-              address: baseRequest.to_location.address,
-            },
-            type: 2,
-          },
-        })
-        attempts.push({
-          name: 'to.postal_code+type=2+date',
-          request: {
-            ...baseRequest,
-            to_location: {
-              postal_code: resolvedPostalCode,
-              country_code: 'RU',
-              address: baseRequest.to_location.address,
-            },
-            type: 2,
-            date: explicitDate,
-          },
-        })
-        attempts.push({
-          name: 'to.postal_code+type=1+ltl',
-          request: {
-            ...baseRequest,
-            to_location: {
-              postal_code: resolvedPostalCode,
-              country_code: 'RU',
-              address: baseRequest.to_location.address,
-            },
-            type: 1,
-            additional_order_types: [2],
           },
         })
       }
@@ -371,7 +262,11 @@ async function calculateForWidgetTariffs(params: {
           console.warn('[cdek/widget][calculate] success', {
             brandId: params.brandId,
             name: attempt.name,
-            tariff_codes: tariffs.map((t) => t.tariff_code),
+            tariffs: tariffs.map((t) => ({
+              tariff_code: t.tariff_code ?? null,
+              delivery_sum: t.delivery_sum ?? null,
+              tariff_name: t.tariff_name ?? null,
+            })),
           })
 
           return json(
@@ -481,22 +376,17 @@ async function handle(request: Request) {
     }
 
     const rawIncoming = await parseIncoming(request)
-    console.warn('[cdek/widget][incoming][raw]', {
-      brandId,
-      payload: summarizeIncomingPayload(rawIncoming),
-    })
-
     const incoming = normalizeWidgetPayload(rawIncoming)
-    console.warn('[cdek/widget][incoming][normalized]', {
-      brandId,
-      payload: summarizeIncomingPayload(incoming),
-    })
 
     const parsed = requestSchema.safeParse(incoming)
     if (!parsed.success) return json({ message: 'Action is required' }, { status: 400 })
 
     const data: Record<string, unknown> = { ...parsed.data }
     if (parsed.data.action === 'calculate') {
+      console.warn('[cdek/widget][incoming][normalized]', {
+        brandId,
+        payload: summarizeIncomingPayload(incoming),
+      })
       const senderSettingsResult = await resolveCdekSenderSettings({
         brandId,
         overrideCredentials: cdekCredentials,
