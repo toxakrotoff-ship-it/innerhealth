@@ -22,7 +22,6 @@ import {
 import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
-import { getNextTariff } from '@/lib/cdek-tariff'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
 
@@ -172,7 +171,6 @@ export function CartPageContent({
   const [selectedCity, setSelectedCity] = useState<CdekCityOption | null>(null)
   const [pvzTariff, setPvzTariff] = useState<CdekTariffSummary | null>(null)
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
-  const [calculationLoading, setCalculationLoading] = useState(false)
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
   const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
   const [deliveryPoints, setDeliveryPoints] = useState<CdekPvzOption[]>([])
@@ -374,85 +372,10 @@ export function CartPageContent({
     [brandId]
   )
 
-  const handleCalculateDelivery = useCallback(async () => {
-    if (cityCode == null) return
-    setCalculationLoading(true)
-    setDeliveryError(null)
-    try {
-      const payload = {
-        items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-        toLocation: { cityCode },
-      }
-      const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
-      const [resPvz, resDoor] = await Promise.all([
-        fetch(`/api/cdek/calculator${brandQuery}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...payload,
-            deliveryKind: 'pvz',
-            toLocation: {
-              ...payload.toLocation,
-              pvzCode: selectedPvz?.code ?? undefined,
-            },
-          }),
-        }),
-        fetch(`/api/cdek/calculator${brandQuery}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, deliveryKind: 'address' }),
-        }),
-      ])
-      const dataPvz = await resPvz.json()
-      const dataDoor = await resDoor.json()
-      if (!resPvz.ok) throw new Error(dataPvz.error ?? 'Ошибка расчёта ПВЗ')
-      if (!resDoor.ok) throw new Error(dataDoor.error ?? 'Ошибка расчёта до двери')
-      const tariffsPvz = dataPvz.tariffs ?? []
-      const tariffsDoor = dataDoor.tariffs ?? []
-      const mappedTariffsPvz: CdekTariffSummary[] = tariffsPvz.map((t: CdekTariffSummary) => ({
-        deliverySum: t.deliverySum,
-        periodMin: t.periodMin,
-        periodMax: t.periodMax,
-        tariffCode: t.tariffCode,
-      }))
-      const mappedTariffsDoor: CdekTariffSummary[] = tariffsDoor.map((t: CdekTariffSummary) => ({
-        deliverySum: t.deliverySum,
-        periodMin: t.periodMin,
-        periodMax: t.periodMax,
-        tariffCode: t.tariffCode,
-      }))
-      setPvzTariff((prev) =>
-        getNextTariff({
-          currentTariff: prev,
-          nextTariffs: mappedTariffsPvz,
-          preserveCurrentOnEmpty: hasWidgetTariffSelection && deliveryMethod === 'cdek_pvz',
-        })
-      )
-      setDoorTariff((prev) =>
-        getNextTariff({
-          currentTariff: prev,
-          nextTariffs: mappedTariffsDoor,
-          preserveCurrentOnEmpty: hasWidgetTariffSelection && deliveryMethod === 'cdek_door',
-        })
-      )
-    } catch (e) {
-      setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта доставки')
-    } finally {
-      setCalculationLoading(false)
-    }
-  }, [cityCode, items, brandId, selectedPvz?.code, hasWidgetTariffSelection, deliveryMethod])
-
   useEffect(() => {
     if (!usingSavedAddress || !selectedSavedAddressId) return
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
-
-  /** Расчёт СДЭК при выборе города и при изменении корзины (не только для сохранённого адреса). */
-  useEffect(() => {
-    if (cityCode == null) return
-    if (deliveryMethod === 'pickup') return
-    void handleCalculateDelivery()
-  }, [cityCode, items, deliveryMethod, handleCalculateDelivery])
 
   useEffect(() => {
     if (cityCode != null && deliveryMethod === 'cdek_pvz') {
@@ -1174,12 +1097,10 @@ export function CartPageContent({
                     <span>
                       {selectedDeliveryTariff?.deliverySum != null
                         ? `${selectedDeliveryTariff.deliverySum.toLocaleString('ru-RU')} ₽`
-                        : calculationLoading
-                          ? '…'
-                          : `${deliverySum.toLocaleString('ru-RU')} ₽`}
+                        : `${deliverySum.toLocaleString('ru-RU')} ₽`}
                     </span>
                   </div>
-                  {cityCode != null && !calculationLoading && !deliveryError && (
+                  {cityCode != null && !deliveryError && (
                     <p
                       className={cn(
                         'mt-0.5 text-xs xl:mt-1 2xl:mt-1.5 3xl:mt-2 4xl:mt-2.5 5xl:mt-3 6xl:mt-4',
