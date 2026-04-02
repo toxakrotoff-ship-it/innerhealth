@@ -4,6 +4,7 @@ import {
   calculateCdekTariffList,
   getCdekToken,
   resolveCdekSenderSettings,
+  type CdekLocation,
 } from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import * as settingsService from '@/services/settings.service'
@@ -104,7 +105,7 @@ async function proxyToCdek(params: {
 async function calculateForWidgetTariffs(params: {
   data: Record<string, unknown>
   credentials: NonNullable<Awaited<ReturnType<typeof settingsService.getCdekCredentials>>>
-  senderFromLocation: Record<string, unknown>
+  senderFromLocation: CdekLocation
 }) {
   const parsed = calculatorPayloadSchema.safeParse(params.data)
   if (!parsed.success) {
@@ -218,10 +219,8 @@ async function handle(request: Request) {
       action: parsed.data.action,
       data,
     })
-    const responseText =
-      parsed.data.action === 'calculate' ? normalizeCalculateResponse(text) : text
 
-    return new NextResponse(responseText, {
+    return new NextResponse(text, {
       status,
       headers: {
         'Content-Type': 'application/json',
