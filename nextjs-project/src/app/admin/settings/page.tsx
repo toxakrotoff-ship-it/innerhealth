@@ -26,6 +26,15 @@ interface AdminTelegram {
   infraAlertsEnabled: boolean;
 }
 
+interface AdminMax {
+  id: string;
+  email: string;
+  name: string;
+  maxUserId: string | null;
+  linkedAt: string | null;
+  infraAlertsEnabled: boolean;
+}
+
 type BotSettingsMode = 'telegram' | 'max';
 type SettingsScope = 'global' | 'inner' | 'sprint-power';
 
@@ -181,9 +190,11 @@ export default function AdminSettingsPage() {
   const [success, setSuccess] = useState(false);
   const [admins, setAdmins] = useState<AdminMailbox[] | null>(null);
   const [telegramList, setTelegramList] = useState<AdminTelegram[] | null>(null);
+  const [maxList, setMaxList] = useState<AdminMax[] | null>(null);
   const [mailboxEdit, setMailboxEdit] = useState<Record<string, string>>({});
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [unlinkingUserId, setUnlinkingUserId] = useState<string | null>(null);
+  const [unlinkingTelegramUserId, setUnlinkingTelegramUserId] = useState<string | null>(null);
+  const [unlinkingMaxUserId, setUnlinkingMaxUserId] = useState<string | null>(null);
   const [updatingInfraAlertsUserId, setUpdatingInfraAlertsUserId] = useState<string | null>(null);
   const [twoFactorStatus, setTwoFactorStatus] = useState<{
     twoFactorEnabled: boolean;
@@ -257,6 +268,7 @@ export default function AdminSettingsPage() {
     loadSettings();
     loadAdmins();
     loadTelegram();
+    loadMax();
     load2FAStatus();
   }, [settingsScope]);
 
@@ -354,6 +366,18 @@ export default function AdminSettingsPage() {
       }
     } catch {
       setTelegramList(null);
+    }
+  }
+
+  async function loadMax() {
+    try {
+      const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/max'));
+      if (res.ok) {
+        const data = await res.json();
+        setMaxList(data);
+      }
+    } catch {
+      setMaxList(null);
     }
   }
 
@@ -964,10 +988,10 @@ export default function AdminSettingsPage() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              disabled={unlinkingUserId !== null}
+                              disabled={unlinkingTelegramUserId !== null}
                               onClick={async () => {
                                 if (!confirm('Отвязать Telegram у этого пользователя?')) return;
-                                setUnlinkingUserId(t.id);
+                                setUnlinkingTelegramUserId(t.id);
                                 try {
                                   const deleteUrl = `${buildScopedAdminEndpoint('/api/admin/settings/telegram')}${settingsScope === 'global' ? '?' : '&'}userId=${encodeURIComponent(t.id)}`;
                                   const res = await fetch(deleteUrl, { method: 'DELETE' });
@@ -979,11 +1003,124 @@ export default function AdminSettingsPage() {
                                 } catch (e) {
                                   setError(e instanceof Error ? e.message : 'Ошибка');
                                 } finally {
-                                  setUnlinkingUserId(null);
+                                  setUnlinkingTelegramUserId(null);
                                 }
                               }}
                             >
-                              {unlinkingUserId === t.id ? '…' : 'Отвязать'}
+                              {unlinkingTelegramUserId === t.id ? '…' : 'Отвязать'}
+                            </Button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {maxList !== null && (
+          <div className="card mt-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">MAX администраторов</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Привязанные аккаунты MAX для уведомлений о заказах. Управление привязкой — в профиле пользователя или через бота.
+            </p>
+            {maxList.length === 0 ? (
+              <p className="text-sm text-gray-500">Нет администраторов с привязанным MAX.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-horizontal min-w-[500px]">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Пользователь</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">MAX ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Привязан</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Тех. алерты</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-28">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maxList.map((m) => (
+                      <tr key={m.id} className="hover:bg-gray-50 border-b border-gray-100">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <span className="font-medium">{m.name}</span>
+                          <span className="text-gray-500 ml-1">({m.email})</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono text-gray-600">{m.maxUserId ?? '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {m.linkedAt
+                            ? new Date(m.linkedAt).toLocaleDateString('ru-RU', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {m.maxUserId ? (
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4"
+                                checked={Boolean(m.infraAlertsEnabled)}
+                                disabled={updatingInfraAlertsUserId !== null}
+                                onChange={async (e) => {
+                                  setUpdatingInfraAlertsUserId(m.id);
+                                  setError(null);
+                                  try {
+                                    const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/max'), {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        userId: m.id,
+                                        infraAlertsEnabled: e.target.checked,
+                                      }),
+                                    });
+                                    if (!res.ok) {
+                                      const data = await res.json().catch(() => ({}));
+                                      throw new Error(data.error || 'Ошибка');
+                                    }
+                                    await loadMax();
+                                  } catch (err) {
+                                    setError(err instanceof Error ? err.message : 'Ошибка');
+                                  } finally {
+                                    setUpdatingInfraAlertsUserId(null);
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">вкл</span>
+                            </label>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {m.maxUserId ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={unlinkingMaxUserId !== null}
+                              onClick={async () => {
+                                if (!confirm('Отвязать MAX у этого пользователя?')) return;
+                                setUnlinkingMaxUserId(m.id);
+                                try {
+                                  const deleteUrl = `${buildScopedAdminEndpoint('/api/admin/settings/max')}${settingsScope === 'global' ? '?' : '&'}userId=${encodeURIComponent(m.id)}`;
+                                  const res = await fetch(deleteUrl, { method: 'DELETE' });
+                                  if (!res.ok) {
+                                    const data = await res.json().catch(() => ({}));
+                                    throw new Error(data.error || 'Ошибка');
+                                  }
+                                  await loadMax();
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : 'Ошибка');
+                                } finally {
+                                  setUnlinkingMaxUserId(null);
+                                }
+                              }}
+                            >
+                              {unlinkingMaxUserId === m.id ? '…' : 'Отвязать'}
                             </Button>
                           ) : null}
                         </td>
