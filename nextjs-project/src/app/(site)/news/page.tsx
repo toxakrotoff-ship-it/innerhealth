@@ -1,5 +1,3 @@
-import Link from 'next/link'
-import Image from 'next/image'
 import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -9,6 +7,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
+import { PostCard } from '@/components/site/post-card'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
@@ -79,70 +78,24 @@ export default async function NewsListPage() {
             minItemWidth={260}
             gap="lg"
             cols={1}
-            colsTablet={1}
+            colsTablet={2}
             colsDesktop={2}
-            colsXl={2}
+            colsXl={3}
             cols2xl={3}
-            cols3xl={3}
+            cols3xl={4}
             cols4xl={4}
             className="auto-rows-min gap-4 sm:gap-5 md:gap-6"
           >
             {posts.map((post) => (
-              <Link
+              <PostCard
                 key={post.id}
                 href={`/news/${post.slug}`}
-                className={`group flex flex-col overflow-hidden rounded-2xl border transition-all ${
-                  isSprintTheme
-                    ? 'bg-[#0F172A] border-[#1B2946] hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]'
-                    : 'bg-white border-gray-200 hover:border-action-blue hover:shadow-sm'
-                }`}
-              >
-                <div
-                  className={`relative aspect-[16/10] w-full shrink-0 ${
-                    isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
-                  }`}
-                >
-                  {post.previewImage ? (
-                    <Image
-                      src={
-                        post.previewImage.startsWith('/')
-                          ? post.previewImage
-                          : `/${post.previewImage}`
-                      }
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, 10rem"
-                    />
-                  ) : (
-                    <span
-                      className={`absolute inset-0 flex items-center justify-center text-sm ${
-                        isSprintTheme ? 'text-slate-500' : 'text-gray-400'
-                      }`}
-                      >
-                        Новость
-                      </span>
-                    )}
-                  {isSprintTheme && (
-                    <>
-                      <div className="absolute inset-0 bg-linear-to-t from-[#060A14] via-[#060A14]/30 to-transparent" />
-                      <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 backdrop-blur">
-                        Новость
-                      </span>
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col justify-between gap-3 p-5">
-                  <span
-                    className={`font-semibold leading-6 transition-colors ${
-                      isSprintTheme ? 'text-slate-100 group-hover:text-[#9CC0FF]' : 'text-text hover:text-action-blue'
-                    }`}
-                  >
-                    {post.title}
-                  </span>
-                  {isSprintTheme && <span className="text-sm font-medium text-[#7AA2FF]">Открыть новость</span>}
-                </div>
-              </Link>
+                title={post.title}
+                previewImage={post.previewImage}
+                typeLabel="Новость"
+                isSprintTheme={isSprintTheme}
+                actionLabel="Открыть новость"
+              />
             ))}
           </FluidGrid>
         ) : (

@@ -126,7 +126,7 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
               <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
             </Link>
             <Link
-              href="/informaciya"
+              href="/sertifikaty-sootvetstviya"
               className="desktop-button-scale rounded-full border border-white/20 bg-transparent px-7 py-3 text-sm font-semibold transition-all hover:bg-white/5 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
             >
               НАШИ СЕРТИФИКАТЫ

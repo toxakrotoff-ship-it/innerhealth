@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import type { Metadata } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
+import { FluidGrid } from '@/components/ui/fluid-grid'
 import { Heading1 } from '@/components/ui/responsive-text'
+import { PostCard } from '@/components/site/post-card'
 import { getPostPathByType } from '@/lib/post-url'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
@@ -111,66 +112,29 @@ export default async function InformaciyaPage() {
           </section>
         )}
         {posts.length > 0 ? (
-          <ul className="space-y-4">
+          <FluidGrid
+            minItemWidth={260}
+            gap="lg"
+            cols={1}
+            colsTablet={2}
+            colsDesktop={2}
+            colsXl={3}
+            cols2xl={3}
+            cols3xl={4}
+            className="auto-rows-min gap-4 sm:gap-5 md:gap-6"
+          >
             {posts.map((post) => (
-              <li key={post.id}>
-                <Link
-                  href={getPostPathByType('article', post.slug)}
-                  className={`group flex flex-col overflow-hidden rounded-2xl border transition-all ${
-                    isSprintTheme
-                      ? 'bg-[#0F172A] border-[#1B2946] hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.25)]'
-                      : 'bg-white border-gray-200 hover:border-action-blue hover:shadow-sm'
-                  }`}
-                >
-                  <div
-                    className={`relative aspect-[16/10] w-full shrink-0 ${
-                      isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
-                    }`}
-                  >
-                    {post.previewImage ? (
-                      <Image
-                        src={
-                          post.previewImage.startsWith('/')
-                            ? post.previewImage
-                            : `/${post.previewImage}`
-                        }
-                        alt=""
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 100vw, 10rem"
-                      />
-                    ) : (
-                      <span
-                        className={`absolute inset-0 flex items-center justify-center text-sm ${
-                          isSprintTheme ? 'text-slate-500' : 'text-gray-400'
-                        }`}
-                      >
-                        Статья
-                      </span>
-                    )}
-                    {isSprintTheme && (
-                      <>
-                        <div className="absolute inset-0 bg-linear-to-t from-[#0A1128]/15 via-transparent to-transparent" />
-                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
-                          Статья
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col justify-between gap-3 p-5">
-                    <span
-                      className={`font-semibold leading-6 transition-colors ${
-                        isSprintTheme ? 'text-slate-100 group-hover:text-[#9CC0FF]' : 'text-text hover:text-action-blue'
-                      }`}
-                    >
-                      {post.title}
-                    </span>
-                    {isSprintTheme && <span className="text-sm font-medium text-slate-400">Читать материал</span>}
-                  </div>
-                </Link>
-              </li>
+              <PostCard
+                key={post.id}
+                href={getPostPathByType('article', post.slug)}
+                title={post.title}
+                previewImage={post.previewImage}
+                typeLabel="Статья"
+                isSprintTheme={isSprintTheme}
+                actionLabel={isSprintTheme ? 'Читать материал' : 'Открыть статью'}
+              />
             ))}
-          </ul>
+          </FluidGrid>
         ) : (
           <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>Пока нет статей.</p>
         )}
