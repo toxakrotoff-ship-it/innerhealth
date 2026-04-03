@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { getProjectRoot } from '@/lib/project-root';
 
-const ALLOWED_FOLDERS = ['products', 'posts', 'content', 'categories'] as const;
+const ALLOWED_FOLDERS = ['products', 'posts', 'content', 'categories', 'popup'] as const;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
