@@ -16,7 +16,7 @@ function getAnonId(): string {
   return next
 }
 
-function getFullPath(pathname: string, searchParams: ReadonlyURLSearchParams): string {
+function getFullPath(pathname: string, searchParams: URLSearchParams): string {
   const query = searchParams.toString()
   return query ? `${pathname}?${query}` : pathname
 }
