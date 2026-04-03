@@ -105,7 +105,12 @@ BUILD_ARGS=()
 if [ "${NO_CACHE}" = "1" ]; then
   BUILD_ARGS+=(--no-cache)
 fi
-docker_compose build "${BUILD_ARGS[@]}" app migrator telegram-bot
+log "Building app image..."
+docker_compose build "${BUILD_ARGS[@]}" app
+log "Building migrator image..."
+docker_compose build "${BUILD_ARGS[@]}" migrator
+log "Building bot image..."
+docker_compose build "${BUILD_ARGS[@]}" telegram-bot
 docker_compose up -d db
 
 log "Waiting for database to be healthy..."
