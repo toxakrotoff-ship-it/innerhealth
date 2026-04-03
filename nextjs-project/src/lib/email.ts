@@ -393,11 +393,20 @@ export interface NewOrderEmailPayload {
     country: string
   }
   promoCode?: string | null
+  cdekTrackNumber?: string | null
 }
 
 export interface PaidOrderEmailPayload extends NewOrderEmailPayload {
   /** Трек-номер СДЭК (если уже сформирован) */
   cdekTrackNumber?: string | null
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function formatRub(value: number): string {
+  return `${value.toFixed(2)} ₽`
 }
 
 /**
@@ -432,42 +441,144 @@ export async function sendNewOrderNotification(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-  }
-  const { orderId, total, items, shipping, promoCode } = payload
+  const { orderId, total, items, shipping, promoCode, cdekTrackNumber } = payload
   const itemsLines = items.map(
-    (i) => `${i.title} — ${i.quantity} × ${i.price.toFixed(2)} ₽ = ${(i.quantity * i.price).toFixed(2)} ₽`
+    (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
   )
+  const itemsHtml = items
+    .map((i) => {
+      const lineTotal = i.quantity * i.price
+      return `
+        <tr>
+          <td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;font-size:14px;line-height:1.45;color:#111827;">
+            <div style="font-weight:600;">${escapeHtml(i.title)}</div>
+            <div style="margin-top:4px;color:#6b7280;">${i.quantity} шт. × ${formatRub(i.price)}</div>
+          </td>
+          <td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:14px;font-weight:700;color:#111827;white-space:nowrap;">
+            ${formatRub(lineTotal)}
+          </td>
+        </tr>
+      `.trim()
+    })
+    .join('')
+  const cityLine = [shipping.city, shipping.zipCode, shipping.country].filter(Boolean).join(', ')
+  const trackLine = cdekTrackNumber?.trim() ? `\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}\n` : ''
   const text =
     `Новый заказ на сайте\n\n` +
     `ID заказа: ${orderId}\n` +
-    `Сумма: ${total.toFixed(2)} ₽\n\n` +
+    `Сумма: ${formatRub(total)}\n\n` +
     `Состав:\n${itemsLines.join('\n')}\n\n` +
     (promoCode ? `Промокод: ${promoCode}\n\n` : '') +
+    trackLine +
     `Доставка:\n` +
     `ФИО: ${shipping.fullName}\n` +
     `Телефон: ${shipping.phone}\n` +
     `Email: ${shipping.email}\n` +
     `Адрес: ${shipping.address}\n` +
-    `Город: ${shipping.city}, ${shipping.zipCode}, ${shipping.country}\n`
+    `Город: ${cityLine}\n`
   const html = `
-    <h2>Новый заказ на сайте</h2>
-    <p><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
-    <p><strong>Сумма:</strong> ${total.toFixed(2)} ₽</p>
-    <h3>Состав заказа</h3>
-    <ul>
-      ${items.map((i) => `<li>${escapeHtml(i.title)} — ${i.quantity} × ${i.price.toFixed(2)} ₽ = ${(i.quantity * i.price).toFixed(2)} ₽</li>`).join('')}
-    </ul>
-    ${promoCode ? `<p><strong>Промокод:</strong> ${escapeHtml(promoCode)}</p>` : ''}
-    <h3>Доставка</h3>
-    <ul>
-      <li><strong>ФИО:</strong> ${escapeHtml(shipping.fullName)}</li>
-      <li><strong>Телефон:</strong> ${escapeHtml(shipping.phone)}</li>
-      <li><strong>Email:</strong> ${escapeHtml(shipping.email)}</li>
-      <li><strong>Адрес:</strong> ${escapeHtml(shipping.address)}</li>
-      <li><strong>Город:</strong> ${escapeHtml(shipping.city)}, ${escapeHtml(shipping.zipCode)}, ${escapeHtml(shipping.country)}</li>
-    </ul>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Новый заказ — Inner Health</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f1eb;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+    Новый заказ ${escapeHtml(orderId)} на сумму ${formatRub(total)}
+  </div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#f7f4ee 0%,#f3f1eb 100%);">
+    <tr>
+      <td style="padding:24px 12px 40px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;background-color:#fffdf9;border:1px solid #ebe6dc;border-radius:24px;overflow:hidden;">
+          <tr>
+            <td style="padding:28px 28px 22px;background:linear-gradient(135deg,#16302b 0%,#27544c 100%);">
+              <div style="font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#d8e9e3;">Inner Health</div>
+              <h1 style="margin:14px 0 8px;font-family:Arial,'Segoe UI',sans-serif;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Новый заказ</h1>
+              <p style="margin:0;font-size:15px;line-height:1.5;color:#d9ebe4;">Заказ оформлен на сайте и ожидает обработки.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 20px 12px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="padding:0 8px 12px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4efe4;border-radius:18px;">
+                      <tr>
+                        <td style="padding:16px 18px;">
+                          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7b6d57;">ID заказа</div>
+                          <div style="margin-top:8px;font-size:24px;line-height:1.2;font-weight:800;color:#1f2937;word-break:break-word;">${escapeHtml(orderId)}</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 8px 12px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#eef6f2;border-radius:18px;">
+                      <tr>
+                        <td style="padding:16px 18px;">
+                          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4d7a6d;">Сумма заказа</div>
+                          <div style="margin-top:8px;font-size:28px;line-height:1.1;font-weight:800;color:#16302b;">${formatRub(total)}</div>
+                          ${promoCode ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Промокод: <strong>${escapeHtml(promoCode)}</strong></div>` : ''}
+                          ${cdekTrackNumber?.trim() ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Трек-номер СДЭК: <strong style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</strong></div>` : ''}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 28px 0;">
+              <h2 style="margin:0 0 14px;font-family:Arial,'Segoe UI',sans-serif;font-size:20px;line-height:1.2;font-weight:800;color:#111827;">Состав заказа</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;background-color:#ffffff;">
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                      <thead>
+                        <tr style="background-color:#faf7f1;">
+                          <th style="padding:12px 16px;text-align:left;font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;">Позиция</th>
+                          <th style="padding:12px 16px;text-align:right;font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;">Сумма</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${itemsHtml}
+                        <tr style="background-color:#fcfcfb;">
+                          <td style="padding:16px;border-bottom:none;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;">Итого</td>
+                          <td style="padding:16px;border-bottom:none;text-align:right;font-size:18px;font-weight:800;color:#111827;white-space:nowrap;">${formatRub(total)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 28px 32px;">
+              <h2 style="margin:0 0 14px;font-family:Arial,'Segoe UI',sans-serif;font-size:20px;line-height:1.2;font-weight:800;color:#111827;">Доставка и контакты</h2>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#fafaf9;border:1px solid #ebe6dc;border-radius:18px;">
+                <tr>
+                  <td style="padding:18px 18px 8px;font-size:14px;line-height:1.55;color:#374151;">
+                    <p style="margin:0 0 10px;"><strong style="color:#111827;">ФИО:</strong> ${escapeHtml(shipping.fullName)}</p>
+                    <p style="margin:0 0 10px;"><strong style="color:#111827;">Телефон:</strong> <a href="tel:${escapeHtml(shipping.phone)}" style="color:#0f766e;text-decoration:none;">${escapeHtml(shipping.phone)}</a></p>
+                    <p style="margin:0 0 10px;"><strong style="color:#111827;">Email:</strong> <a href="mailto:${escapeHtml(shipping.email)}" style="color:#0f766e;text-decoration:none;">${escapeHtml(shipping.email)}</a></p>
+                    <p style="margin:0 0 10px;"><strong style="color:#111827;">Адрес:</strong> ${escapeHtml(shipping.address)}</p>
+                    <p style="margin:0;"><strong style="color:#111827;">Город:</strong> ${escapeHtml(cityLine)}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
   `.trim()
   try {
     console.log('[email] Sending new order notification to', unique.join(', '))
@@ -522,24 +633,24 @@ export async function sendCustomerOrderConfirmation(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-  }
-  const { orderId, total, items } = payload
+  const { total, items, cdekTrackNumber } = payload
   const orderSummary = items
     .map(
       (i) =>
-        `${i.title} — ${i.quantity} × ${i.price.toFixed(2)} ₽ = ${(i.quantity * i.price).toFixed(2)} ₽`
+        `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
     )
     .join('\n')
   const orderSummaryHtml = items
     .map(
       (i) =>
-        `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(i.title)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${i.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(i.quantity * i.price).toFixed(2)} ₽</td></tr>`
+        `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(i.title)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${i.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatRub(i.quantity * i.price)}</td></tr>`
     )
     .join('')
+  const trackLine = cdekTrackNumber?.trim()
+    ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
+    : ''
   const text =
-    `Вас приветствует Inner Health!\n\n${username}, благодарим за заказ.\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${total.toFixed(2)} ₽\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Вас приветствует Inner Health!\n\n${username}, благодарим за заказ.\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
   const html = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -576,7 +687,8 @@ export async function sendCustomerOrderConfirmation(
                   ${orderSummaryHtml}
                 </tbody>
               </table>
-              <p style="margin:0 0 24px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${total.toFixed(2)} ₽</p>
+              <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${formatRub(total)}</p>
+              ${cdekTrackNumber?.trim() ? `<p style="margin:0 0 24px;font-size:14px;color:#374151;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</span></p>` : '<div style="height:24px;line-height:24px;font-size:0;">&nbsp;</div>'}
               <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
             </td>
           </tr>
@@ -639,26 +751,23 @@ export async function sendCustomerOrderPaidEmail(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-  }
   const { orderId, total, items, cdekTrackNumber } = payload
   const orderSummary = items
     .map(
       (i) =>
-        `${i.title} — ${i.quantity} × ${i.price.toFixed(2)} ₽ = ${(i.quantity * i.price).toFixed(2)} ₽`
+        `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
     )
     .join('\n')
   const trackLine = cdekTrackNumber?.trim()
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${total.toFixed(2)} ₽${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
       (i) =>
-        `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(i.title)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${i.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${(i.quantity * i.price).toFixed(2)} ₽</td></tr>`
+        `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(i.title)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${i.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatRub(i.quantity * i.price)}</td></tr>`
     )
     .join('')
   const trackHtml = cdekTrackNumber?.trim()
@@ -700,7 +809,7 @@ export async function sendCustomerOrderPaidEmail(
                   ${htmlItems}
                 </tbody>
               </table>
-              <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${total.toFixed(2)} ₽</p>
+              <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${formatRub(total)}</p>
               ${trackHtml}
               <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
             </td>

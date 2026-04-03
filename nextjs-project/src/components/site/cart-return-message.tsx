@@ -1,3 +1,5 @@
+import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
+
 /**
  * Shows message when returning from YooKassa payment page
  * (return_url: /cart?payment=success or /cart?payment=cancel).
@@ -5,16 +7,19 @@
  */
 export function CartReturnMessage({
   payment,
+  paymentSuccessMessage,
 }: {
   payment?: string
+  paymentSuccessMessage?: unknown
 }) {
   if (payment === 'success') {
     return (
       <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-center">
         <p className="font-medium text-green-800">Оплата прошла успешно</p>
-        <p className="mt-1 text-sm text-green-700">
-          Заказ принят в обработку. Мы свяжемся с вами для подтверждения доставки.
-        </p>
+        <TipTapDocRenderer
+          raw={paymentSuccessMessage}
+          className="mt-3 text-sm text-green-700 [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_p]:my-0 [&_p+*]:mt-1"
+        />
       </div>
     )
   }

@@ -18,7 +18,10 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER'],
+  })
   if (session instanceof NextResponse) return session
 
   let parsedParams: z.infer<typeof userAddressParamsSchema>
@@ -77,7 +80,10 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER'],
+  })
   if (session instanceof NextResponse) return session
 
   let parsedParams: z.infer<typeof userAddressParamsSchema>

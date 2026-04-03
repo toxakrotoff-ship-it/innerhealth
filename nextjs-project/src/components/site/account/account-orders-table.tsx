@@ -20,10 +20,10 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
     <section className="space-y-4">
       <div className="rounded-2xl sm:rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-semibold text-text">Мои заказы</h1>
+          <h1 className="min-w-0 flex-1 text-xl font-semibold text-text sm:text-2xl">Мои заказы</h1>
           <Link
             href="/account"
-            className="rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue"
+            className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue sm:w-auto"
           >
             Вернуться в профиль
           </Link>
@@ -43,7 +43,7 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                     href={`/account/orders/${order.id}`}
                     className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 active:bg-gray-100 min-h-[44px] flex flex-col gap-1"
                   >
-                    <span className="font-medium text-text">{order.id}</span>
+                    <span className="break-all font-medium text-text">{order.id}</span>
                     <span
                       className={[
                         'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',

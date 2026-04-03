@@ -33,6 +33,7 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'home', label: 'Главная' },
   { id: 'about', label: 'О нас' },
   { id: 'catalog', label: 'Каталог' },
+  { id: 'cart', label: 'Корзина' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },
   { id: 'sotrudnichestvo', label: 'Сотрудничество' },

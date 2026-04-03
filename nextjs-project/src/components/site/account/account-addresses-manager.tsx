@@ -504,7 +504,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
   return (
     <section className="space-y-6">
       <div className="rounded-3xl border border-gray-200 bg-white p-4 sm:p-6">
-        <h1 className="text-2xl font-semibold text-text">Мои адреса</h1>
+        <h1 className="text-xl font-semibold text-text sm:text-2xl">Мои адреса</h1>
         <p className="mt-2 text-sm text-gray-600">
           Можно сохранить до 3 адресов для быстрого оформления заказа.
         </p>
@@ -515,12 +515,13 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
             type="button"
             onClick={createAddress}
             disabled={isSubmitting || reachedAddressLimit}
+            className="w-full sm:w-auto"
           >
             {reachedAddressLimit ? 'Лимит адресов достигнут' : 'Добавить адрес'}
           </Button>
         </div>
 
-        {errorMessage ? <p className="mt-3 text-sm text-red-600">{errorMessage}</p> : null}
+        {errorMessage ? <p className="mt-3 break-words text-sm text-red-600">{errorMessage}</p> : null}
       </div>
 
       <div className="space-y-3">
@@ -531,29 +532,40 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
               {isEditing ? (
                 <div className="space-y-3">
                   {renderForm(editForm, setEditForm, editLookup, setEditLookup)}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       type="button"
                       onClick={() => saveEditedAddress(address.id)}
                       disabled={isSubmitting}
+                      className="w-full sm:w-auto"
                     >
                       Сохранить
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => setEditingAddressId(null)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingAddressId(null)}
+                      className="w-full sm:w-auto"
+                    >
                       Отмена
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-semibold text-text">{address.label}</p>
                     <p className="text-sm text-gray-700">{address.city}</p>
-                    <p className="text-sm text-gray-600">{address.addressLine}</p>
+                    <p className="break-words text-sm text-gray-600">{address.addressLine}</p>
                     <p className="text-xs text-gray-500">Метод: {address.deliveryMethod}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => startEditing(address)}>
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => startEditing(address)}
+                      className="w-full sm:w-auto"
+                    >
                       Редактировать
                     </Button>
                     <Button
@@ -561,6 +573,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
                       variant="destructive"
                       onClick={() => deleteAddress(address.id)}
                       disabled={isSubmitting}
+                      className="w-full sm:w-auto"
                     >
                       Удалить
                     </Button>

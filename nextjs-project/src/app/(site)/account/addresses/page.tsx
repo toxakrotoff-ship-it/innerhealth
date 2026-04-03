@@ -25,8 +25,7 @@ export default async function AccountAddressesPage() {
 
   return (
     <div className="mx-auto max-w-[min(70rem,92vw)] px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-semibold text-text">Мои адреса</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-start gap-3">
         <Link
           href="/account"
           className="rounded-full border border-gray-300 bg-white px-4 py-2 min-h-[40px] inline-flex items-center justify-center text-sm font-medium text-text transition hover:border-action-blue"

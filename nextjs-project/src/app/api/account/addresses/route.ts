@@ -15,7 +15,10 @@ function isUserAddressServiceError(error: unknown): error is UserAddressServiceE
 }
 
 export async function GET() {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER'],
+  })
   if (session instanceof NextResponse) return session
 
   try {
@@ -40,7 +43,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER'],
+  })
   if (session instanceof NextResponse) return session
 
   let payload: z.infer<typeof createUserAddressBodySchema>

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 
 export interface RequireUserSessionOptions {
   requiresVerifiedEmail?: boolean
+  allowedRoles?: readonly string[]
 }
 
 export async function requireUserSession(
@@ -15,7 +16,8 @@ export async function requireUserSession(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (session.user.role !== 'USER') {
+  const allowedRoles = options?.allowedRoles ?? ['USER']
+  if (!allowedRoles.includes(session.user.role ?? '')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

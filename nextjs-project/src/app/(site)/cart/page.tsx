@@ -8,7 +8,7 @@ import { Heading1 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
-import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import { getResolvedBlock, getResolvedBlocksForPage } from '@/services/content-block.service'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
@@ -28,6 +28,11 @@ export default async function CartPage({ searchParams }: CartPageProps) {
   const session = await getServerSession(authOptions)
   const { payment } = await searchParams
   const contactBlocks = await getResolvedBlocksForPage('contacts', brandId)
+  const paymentSuccessMessageBlock = await getResolvedBlock(
+    'cart',
+    'cart.paymentSuccessMessage',
+    brandId
+  )
   const contactsAddress = contactBlocks.find((block) => block.key === 'contacts.address')?.text?.trim()
   const pickupAddress = contactsAddress || `г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис ${siteTitle}`
   const canUseSavedAddresses =
@@ -37,7 +42,7 @@ export default async function CartPage({ searchParams }: CartPageProps) {
       <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'py-0 text-slate-100' : 'py-10'}>
       <Heading1 className={isSprintTheme ? 'mb-6 text-slate-100' : 'mb-6'}>Корзина</Heading1>
       <CheckoutTrustStrip isSprintTheme={isSprintTheme} />
-      <CartReturnMessage payment={payment} />
+      <CartReturnMessage payment={payment} paymentSuccessMessage={paymentSuccessMessageBlock?.richJson ?? null} />
       <ScalableSpacing size="lg" />
       <CartPageContent
         isSprintTheme={isSprintTheme}

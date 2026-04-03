@@ -130,6 +130,14 @@ const CONTACTS_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'contacts', key: 'contacts.section.write_title' },
 ] as const
 
+const CART_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  {
+    page: 'cart',
+    key: 'cart.paymentSuccessMessage',
+    adminLabel: 'Корзина — сообщение после успешной оплаты',
+  },
+] as const
+
 const COOPERATION_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'sotrudnichestvo', key: 'cooperation.title' },
   { page: 'sotrudnichestvo', key: 'cooperation.subtitle' },
@@ -170,6 +178,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     catalog: CATALOG_ADMIN_SCHEMA,
     faq: INNER_FAQ_ADMIN_SCHEMA,
     contacts: CONTACTS_ADMIN_SCHEMA,
+    cart: CART_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
   },
@@ -179,6 +188,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     catalog: CATALOG_ADMIN_SCHEMA,
     faq: SPRINT_FAQ_ADMIN_SCHEMA,
     contacts: CONTACTS_ADMIN_SCHEMA,
+    cart: CART_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
   },
@@ -889,6 +899,62 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Контакты — примечание к режиму',
     type: 'short',
     text: '*по предварительному звонку',
+  },
+
+  // Корзина
+  {
+    page: 'cart',
+    key: 'cart.paymentSuccessMessage',
+    label: 'Корзина — сообщение после успешной оплаты',
+    type: 'rich',
+    richJson: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Вы успешно оплатили заказ, информация о составе и доставке придет на указанную почту.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Если письмо не доставлено, проверьте спам и напишите сразу нам.',
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Для подключения уведомлений в мессенджерах MAX или Telegram требуется ',
+            },
+            {
+              type: 'text',
+              text: 'регистрация',
+              marks: [
+                {
+                  type: 'link',
+                  attrs: {
+                    href: '/register',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'text',
+              text: '.',
+            },
+          ],
+        },
+      ],
+    } as JSONContent,
   },
 
   // FAQ
