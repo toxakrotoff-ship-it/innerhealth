@@ -83,7 +83,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
       TELEGRAM_SITE_URL: http://app:3000
       RUN_MIGRATE: "0"
-    command: ["npm", "run", "telegram-bot"]
+    command: ["node", "dist-bot/telegram-bot.js"]
     depends_on:
       app:
         condition: service_started
@@ -109,7 +109,7 @@ services:
       TELEGRAM_SITE_URL: http://app:3000
       TELEGRAM_BOT_BRAND_ID: sprint-power
       RUN_MIGRATE: "0"
-    command: ["npm", "run", "telegram-bot"]
+    command: ["node", "dist-bot/telegram-bot.js"]
     depends_on:
       app:
         condition: service_started
@@ -134,7 +134,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
       MAX_SITE_URL: http://app:3000
       RUN_MIGRATE: "0"
-    command: ["npm", "run", "max-bot:dev"]
+    command: ["node", "dist-bot/max-bot.js"]
     depends_on:
       app:
         condition: service_started
@@ -160,7 +160,7 @@ services:
       MAX_SITE_URL: http://app:3000
       MAX_BOT_BRAND_ID: sprint-power
       RUN_MIGRATE: "0"
-    command: ["npm", "run", "max-bot:dev"]
+    command: ["node", "dist-bot/max-bot.js"]
     depends_on:
       app:
         condition: service_started

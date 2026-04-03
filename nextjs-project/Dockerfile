@@ -26,6 +26,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 RUN npm run build
+RUN npm run build:bot
 
 FROM build-base AS prod-deps
 
@@ -38,7 +39,17 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --ignore-scripts \
   && npx prisma generate
 
-FROM prod-deps AS migrator
+FROM build-base AS migrator-deps
+
+WORKDIR /app
+
+COPY deploy/runtime/migrator.package.json ./package.json
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+RUN --mount=type=cache,target=/root/.npm npm install --omit=dev --ignore-scripts --no-package-lock
+
+FROM migrator-deps AS migrator
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -49,6 +60,17 @@ RUN adduser --system --uid 1001 nextjs
 USER nextjs
 
 CMD ["npx", "prisma", "migrate", "deploy"]
+
+FROM build-base AS bot-deps
+
+WORKDIR /app
+
+COPY deploy/runtime/bot.package.json ./package.json
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+RUN --mount=type=cache,target=/root/.npm npm install --omit=dev --ignore-scripts --no-package-lock \
+  && npx prisma generate
 
 # --- Production stage (образ для web app) ---
 FROM runtime-base AS runner
@@ -100,22 +122,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=prod-deps --chown=nextjs:nodejs /app/package.json /app/package-lock.json* ./
-COPY --from=prod-deps --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=prod-deps --chown=nextjs:nodejs /app/prisma.config.ts ./
-COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-RUN --mount=type=cache,target=/root/.npm npm install typescript --no-save --ignore-scripts
-
-COPY --chown=nextjs:nodejs scripts ./scripts
-COPY --chown=nextjs:nodejs tsconfig.json ./tsconfig.json
-COPY --chown=nextjs:nodejs src/bot ./src/bot
-COPY --chown=nextjs:nodejs src/lib/brand ./src/lib/brand
-COPY --chown=nextjs:nodejs src/lib/max ./src/lib/max
-COPY --chown=nextjs:nodejs src/lib/max-bot-menu.ts ./src/lib/max-bot-menu.ts
-COPY --chown=nextjs:nodejs src/lib/prisma.ts ./src/lib/prisma.ts
-COPY --chown=nextjs:nodejs src/lib/project-root.ts ./src/lib/project-root.ts
-COPY --chown=nextjs:nodejs src/lib/settings-encryption.ts ./src/lib/settings-encryption.ts
+COPY --from=bot-deps --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=bot-deps --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=bot-deps --chown=nextjs:nodejs /app/prisma.config.ts ./
+COPY --from=bot-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/dist-bot ./dist-bot
 
 USER nextjs
 
-CMD ["npm", "run", "telegram-bot"]
+CMD ["node", "dist-bot/telegram-bot.js"]
