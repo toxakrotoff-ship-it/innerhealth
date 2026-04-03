@@ -869,12 +869,6 @@ export default async function HomePage() {
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
-      <HowToOrderSteps
-        showBorders={newProducts.length > 0}
-        title={howToOrder.title}
-        steps={howToOrder.steps}
-      />
-      {newProducts.length > 0 && <SpacingVertical size="lg" />}
 
       {newProducts.length > 0 && (
         <>
@@ -965,78 +959,6 @@ export default async function HomePage() {
       )}
       {newProducts.length > 0 && <SpacingVertical size="lg" />}
 
-      {/* Новости — делаем карточки в стиле категорий */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
-              </p>
-            </div>
-            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ НОВОСТИ
-              <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {newsPosts.length > 0 ? (
-            <ScrollReveal as="div" variant="fade-up">
-              <FluidGrid
-                cols={1}
-                colsTablet={2}
-                colsDesktop={3}
-                colsXl={3}
-                cols2xl={3}
-                cols3xl={3}
-                cols4xl={3}
-                gap={4}
-                adaptiveGap
-              >
-                {newsPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/news/${post.slug}`}
-                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                  >
-                    <TiltCard>
-                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                        {post.previewImage && (
-                          <>
-                            <Image
-                              src={post.previewImage}
-                              alt={post.title}
-                              fill
-                              className="object-cover object-center"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            />
-                            <div
-                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
-                              aria-hidden
-                            />
-                          </>
-                        )}
-                        <div className="relative z-10 space-y-2 max-w-xs">
-                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
-                            Новость
-                          </span>
-                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                            {post.title}
-                          </span>
-                        </div>
-                      </div>
-                    </TiltCard>
-                  </Link>
-                ))}
-              </FluidGrid>
-            </ScrollReveal>
-          ) : (
-            <p className="text-gray-500">Пока нет новостей.</p>
-          )}
-        </AdaptiveContainer>
-      </section>
-      <SpacingVertical size="lg" />
-
       {/* Разделы каталога — фоны карточек сохраняем */}
       <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
         <AdaptiveContainer maxWidth="default">
@@ -1123,6 +1045,85 @@ export default async function HomePage() {
               СМОТРЕТЬ ВЕСЬ КАТАЛОГ <NavArrowRight className="w-4 h-4" aria-hidden />
             </Link>
           </div>
+        </AdaptiveContainer>
+      </section>
+      <SpacingVertical size="lg" />
+
+      <HowToOrderSteps
+        showBorders={newProducts.length > 0}
+        title={howToOrder.title}
+        steps={howToOrder.steps}
+      />
+      <SpacingVertical size="lg" />
+
+      {/* Новости — делаем карточки в стиле категорий */}
+      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
+              </p>
+            </div>
+            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+              ВСЕ НОВОСТИ
+              <NavArrowRight className="w-4 h-4" aria-hidden />
+            </Link>
+          </div>
+          {newsPosts.length > 0 ? (
+            <ScrollReveal as="div" variant="fade-up">
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={3}
+                colsXl={3}
+                cols2xl={3}
+                cols3xl={3}
+                cols4xl={3}
+                gap={4}
+                adaptiveGap
+              >
+                {newsPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/news/${post.slug}`}
+                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                  >
+                    <TiltCard>
+                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                        {post.previewImage && (
+                          <>
+                            <Image
+                              src={post.previewImage}
+                              alt={post.title}
+                              fill
+                              className="object-cover object-center"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                              aria-hidden
+                            />
+                          </>
+                        )}
+                        <div className="relative z-10 space-y-2 max-w-xs">
+                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
+                            Новость
+                          </span>
+                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                            {post.title}
+                          </span>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Link>
+                ))}
+              </FluidGrid>
+            </ScrollReveal>
+          ) : (
+            <p className="text-gray-500">Пока нет новостей.</p>
+          )}
         </AdaptiveContainer>
       </section>
       <SpacingVertical size="lg" />
