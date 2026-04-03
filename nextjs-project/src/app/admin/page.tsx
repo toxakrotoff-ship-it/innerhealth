@@ -12,12 +12,28 @@ import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/bran
 export const dynamic = 'force-dynamic'
 
 type PeriodKey = '7d' | '30d' | '90d' | 'all'
+type PageSortKey = 'path' | 'pageViews' | 'clicks' | 'ctr'
+type SortDirection = 'asc' | 'desc'
 
 function resolvePeriod(period: string | undefined): PeriodKey {
   if (period === '7d' || period === '30d' || period === '90d' || period === 'all') {
     return period
   }
   return '30d'
+}
+
+function resolvePageSortKey(value: string | undefined): PageSortKey {
+  if (value === 'path' || value === 'pageViews' || value === 'clicks' || value === 'ctr') {
+    return value
+  }
+  return 'pageViews'
+}
+
+function resolveSortDirection(value: string | undefined): SortDirection {
+  if (value === 'asc' || value === 'desc') {
+    return value
+  }
+  return 'desc'
 }
 
 function parseDateParam(value: string | undefined): Date | undefined {
@@ -61,6 +77,10 @@ interface PageStat {
   path: string
   pageViews: number
   clicks: number
+}
+
+interface PageStatWithCtr extends PageStat {
+  ctr: number | null
 }
 
 interface FunnelStat {
@@ -414,7 +434,31 @@ export default async function AdminPage({
         ? resolvedSearchParams.to[0]
         : undefined
 
+  const sortParam =
+    typeof resolvedSearchParams.sort === 'string'
+      ? resolvedSearchParams.sort
+      : Array.isArray(resolvedSearchParams.sort)
+        ? resolvedSearchParams.sort[0]
+        : undefined
+
+  const dirParam =
+    typeof resolvedSearchParams.dir === 'string'
+      ? resolvedSearchParams.dir
+      : Array.isArray(resolvedSearchParams.dir)
+        ? resolvedSearchParams.dir[0]
+        : undefined
+
+  const pagesParam =
+    typeof resolvedSearchParams.pages === 'string'
+      ? resolvedSearchParams.pages
+      : Array.isArray(resolvedSearchParams.pages)
+        ? resolvedSearchParams.pages[0]
+        : undefined
+
   const period = resolvePeriod(periodParam)
+  const pageSortKey = resolvePageSortKey(sortParam)
+  const sortDirection = resolveSortDirection(dirParam)
+  const showAllPageStats = pagesParam === 'all'
 
   const headerStore = await headers()
   const cookieStore = await cookies()
@@ -429,6 +473,28 @@ export default async function AdminPage({
 
   const { from, to, isCustom } = getDateRange(period, fromParam, toParam)
   const { trafficTotal, funnelTotal, ordersCount, pageStats, deviceStats } = await getSummary(period, activeBrand, fromParam, toParam)
+  const pageStatsWithCtr: PageStatWithCtr[] = pageStats.map((row) => ({
+    ...row,
+    ctr: row.pageViews > 0 ? Math.round((row.clicks / row.pageViews) * 100) : null,
+  }))
+  const sortedPageStats = [...pageStatsWithCtr].sort((left, right) => {
+    const factor = sortDirection === 'asc' ? 1 : -1
+
+    if (pageSortKey === 'path') {
+      return left.path.localeCompare(right.path, 'ru', { sensitivity: 'base' }) * factor
+    }
+
+    const leftValue = pageSortKey === 'ctr' ? (left.ctr ?? -1) : left[pageSortKey]
+    const rightValue = pageSortKey === 'ctr' ? (right.ctr ?? -1) : right[pageSortKey]
+
+    if (leftValue !== rightValue) {
+      return (leftValue - rightValue) * factor
+    }
+
+    return left.path.localeCompare(right.path, 'ru', { sensitivity: 'base' })
+  })
+  const visiblePageStats = showAllPageStats ? sortedPageStats : sortedPageStats.slice(0, 5)
+  const hasHiddenPageStats = sortedPageStats.length > 5
   const funnelByDate = funnelTotal.reduce<FunnelDateGroup[]>((acc, row) => {
     const dateKey = row.date.toISOString().slice(0, 10)
     const lastGroup = acc.length > 0 ? acc[acc.length - 1] : undefined
@@ -443,6 +509,48 @@ export default async function AdminPage({
     })
     return acc
   }, [])
+  const tableSearchParams = new URLSearchParams()
+  if (periodParam) tableSearchParams.set('period', periodParam)
+  if (fromParam) tableSearchParams.set('from', fromParam)
+  if (toParam) tableSearchParams.set('to', toParam)
+  if (showAllPageStats) tableSearchParams.set('pages', 'all')
+
+  const getSortHref = (key: PageSortKey) => {
+    const nextDirection: SortDirection =
+      pageSortKey === key && sortDirection === 'desc' ? 'asc' : 'desc'
+    const params = new URLSearchParams(tableSearchParams)
+    params.set('sort', key)
+    params.set('dir', nextDirection)
+    return `${adminBasePath}?${params.toString()}`
+  }
+
+  const renderSortLabel = (label: string, key: PageSortKey) => {
+    const arrow = pageSortKey === key ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+
+    return (
+      <Link
+        href={getSortHref(key)}
+        scroll={false}
+        className="inline-flex items-center gap-1 transition-colors hover:text-gray-700"
+      >
+        <span>{label}</span>
+        <span aria-hidden="true" className="text-[11px] text-gray-400">
+          {arrow}
+        </span>
+      </Link>
+    )
+  }
+
+  const getPageListToggleHref = () => {
+    const params = new URLSearchParams(tableSearchParams)
+    if (showAllPageStats) {
+      params.delete('pages')
+    } else {
+      params.set('pages', 'all')
+    }
+    const query = params.toString()
+    return query ? `${adminBasePath}?${query}` : adminBasePath
+  }
 
   return (
     <div className="admin-container">
@@ -525,8 +633,7 @@ export default async function AdminPage({
           <div className="card">
             <h2 className="text-lg font-semibold mb-3">Топ страниц по просмотрам</h2>
             <div className="space-y-3.5 md:hidden">
-              {pageStats.slice(0, 20).map((row) => {
-                const ctr = row.pageViews > 0 ? Math.round((row.clicks / row.pageViews) * 100) : null
+              {visiblePageStats.map((row) => {
                 return (
                   <div key={row.path} className="rounded-lg border border-gray-200 bg-white p-4">
                     <p className="text-xs text-gray-500 break-all">{row.path}</p>
@@ -540,12 +647,12 @@ export default async function AdminPage({
                     </div>
                     <div className="mt-1.5 flex items-center justify-between text-sm">
                       <span className="text-gray-600">CTR</span>
-                      <span className="font-semibold text-gray-900">{ctr != null ? `${ctr}%` : '—'}</span>
+                      <span className="font-semibold text-gray-900">{row.ctr != null ? `${row.ctr}%` : '—'}</span>
                     </div>
                   </div>
                 )
               })}
-              {pageStats.length === 0 && (
+              {sortedPageStats.length === 0 && (
                 <div className="rounded-lg border border-gray-200 bg-white px-4 py-4 text-sm text-gray-500 text-center">
                   Пока нет данных по страницам за выбранный период.
                 </div>
@@ -556,23 +663,21 @@ export default async function AdminPage({
                 <thead>
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Страница
+                      {renderSortLabel('Страница', 'path')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Просмотры
+                      {renderSortLabel('Просмотры', 'pageViews')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      Клики
+                      {renderSortLabel('Клики', 'clicks')}
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                      CTR
+                      {renderSortLabel('CTR', 'ctr')}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pageStats.slice(0, 50).map((row) => {
-                    const ctr =
-                      row.pageViews > 0 ? Math.round((row.clicks / row.pageViews) * 100) : null
+                  {visiblePageStats.map((row) => {
                     return (
                       <tr key={row.path} className="border-b border-gray-100">
                         <td className="px-4 py-2 text-sm text-gray-700">
@@ -585,12 +690,12 @@ export default async function AdminPage({
                           {row.clicks}
                         </td>
                         <td className="px-4 py-2 text-sm text-gray-700">
-                          {ctr != null ? `${ctr}%` : '—'}
+                          {row.ctr != null ? `${row.ctr}%` : '—'}
                         </td>
                       </tr>
                     )
                   })}
-                  {pageStats.length === 0 && (
+                  {sortedPageStats.length === 0 && (
                     <tr>
                       <td
                         colSpan={4}
@@ -603,6 +708,17 @@ export default async function AdminPage({
                 </tbody>
               </table>
             </div>
+            {hasHiddenPageStats && (
+              <div className="mt-4 flex justify-center">
+                <Link
+                  href={getPageListToggleHref()}
+                  scroll={false}
+                  className="text-sm font-medium text-gray-600 underline underline-offset-4 transition-colors hover:text-gray-900"
+                >
+                  {showAllPageStats ? 'свернуть' : 'смотреть больше'}
+                </Link>
+              </div>
+            )}
           </div>
           <div className="card">
             <h2 className="text-lg font-semibold mb-3">Устройства</h2>

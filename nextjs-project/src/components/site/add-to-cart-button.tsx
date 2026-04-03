@@ -89,6 +89,7 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={handleClick}
+      data-analytics-click="manual"
       disabled={disabled}
       className={cn(
         'inline-flex items-center justify-center rounded-full text-center font-medium transition-colors',

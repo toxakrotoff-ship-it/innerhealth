@@ -16,6 +16,42 @@ function getAnonId(): string {
   return next
 }
 
+function getFullPath(pathname: string, searchParams: ReadonlyURLSearchParams): string {
+  const query = searchParams.toString()
+  return query ? `${pathname}?${query}` : pathname
+}
+
+function getTrackedClickTarget(target: EventTarget | null): HTMLElement | null {
+  if (!(target instanceof Element)) return null
+
+  const interactive = target.closest<HTMLElement>(
+    'a[href],button,[role="button"],input[type="button"],input[type="submit"]'
+  )
+
+  if (!interactive) return null
+  if (interactive.closest('[data-analytics-click="manual"]')) return null
+  if (
+    interactive instanceof HTMLButtonElement ||
+    interactive instanceof HTMLInputElement
+  ) {
+    if (interactive.disabled) return null
+  }
+
+  return interactive
+}
+
+function getClickMeta(target: HTMLElement): Record<string, string> {
+  const text = target.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+  const href = target instanceof HTMLAnchorElement ? target.href : ''
+
+  return {
+    kind: 'ui_click',
+    element: target.tagName.toLowerCase(),
+    ...(text ? { text: text.slice(0, 200) } : {}),
+    ...(href ? { href } : {}),
+  }
+}
+
 export function PageViewTracker() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -23,8 +59,7 @@ export function PageViewTracker() {
 
   useEffect(() => {
     if (!pathname) return
-    const query = searchParams.toString()
-    const fullPath = query ? `${pathname}?${query}` : pathname
+    const fullPath = getFullPath(pathname, searchParams)
     if (lastPathRef.current === fullPath) return
     lastPathRef.current = fullPath
 
@@ -57,6 +92,30 @@ export function PageViewTracker() {
     })
   }, [pathname, searchParams])
 
+  useEffect(() => {
+    if (!pathname) return
+
+    const handleClick = (event: MouseEvent) => {
+      if (event.defaultPrevented) return
+      if (event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+      const trackedTarget = getTrackedClickTarget(event.target)
+      if (!trackedTarget) return
+
+      logAnalyticsEvent({
+        type: 'CLICK',
+        path: getFullPath(pathname, searchParams),
+        meta: getClickMeta(trackedTarget),
+      })
+    }
+
+    document.addEventListener('click', handleClick)
+
+    return () => {
+      document.removeEventListener('click', handleClick)
+    }
+  }, [pathname, searchParams])
+
   return null
 }
-
