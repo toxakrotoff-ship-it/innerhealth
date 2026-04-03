@@ -14,6 +14,9 @@ export function getPhoneDigits(value: string): string {
   if (digits.length > 0 && digits[0] === '8') {
     return RU_COUNTRY_CODE + digits.slice(1)
   }
+  if (digits.length === RU_PHONE_DIGITS_LENGTH - 1 && digits[0] === '9') {
+    return RU_COUNTRY_CODE + digits
+  }
   return digits
 }
 
