@@ -14,6 +14,7 @@ import {
   notifyMaxPaidOrderForAdmins,
 } from '@/lib/max-notify'
 import { sendCustomerOrderPaidEmail } from '@/lib/email'
+import { sendCdekTrackEmailsForOrder } from '@/lib/cdek-track-email'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
 
@@ -157,10 +158,13 @@ export async function POST(request: Request) {
         console.error('[webhook/yookassa] CDEK order create failed after retries', orderId, lastError)
       }
 
-      // If we received track number during CDEK creation, notify user once.
+      // If we received track number during CDEK creation, notify once.
+      const updatedOrder = await orderService.findOrderWithShipping(orderId)
+      const newTrackNumber = updatedOrder?.cdekTrackNumber ?? null
+      if (!previousTrackNumber && newTrackNumber) {
+        after(() => sendCdekTrackEmailsForOrder(orderId, newTrackNumber))
+      }
       if (order.userId) {
-        const updatedOrder = await orderService.findOrderWithShipping(orderId)
-        const newTrackNumber = updatedOrder?.cdekTrackNumber ?? null
         if (!previousTrackNumber && newTrackNumber) {
           void notifyTelegramCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
           after(() =>

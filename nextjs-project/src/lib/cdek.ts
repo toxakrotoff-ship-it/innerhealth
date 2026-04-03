@@ -1657,6 +1657,7 @@ export async function syncCdekTrackNumberIfDue(
 ): Promise<{ checked: boolean; trackNumber?: string | null }> {
   const orderService = await import('@/services/order.service')
   const settingsService = await import('@/services/settings.service')
+  const cdekTrackEmail = await import('@/lib/cdek-track-email')
   const candidate = await orderService.findOrderForCdekTrackSync(orderId)
   if (!candidate?.cdekOrderUuid || candidate.cdekTrackNumber) {
     return { checked: false, trackNumber: candidate?.cdekTrackNumber ?? null }
@@ -1691,6 +1692,9 @@ export async function syncCdekTrackNumberIfDue(
       ...(trackNumber ? { cdekTrackNumber: trackNumber, cdekOrderError: null } : {}),
       ...(snapshot.validationError ? { cdekOrderError: snapshot.validationError } : {}),
     })
+    if (!candidate.cdekTrackNumber && trackNumber) {
+      void cdekTrackEmail.sendCdekTrackEmailsForOrder(orderId, trackNumber)
+    }
     return { checked: true, trackNumber }
   } catch (error) {
     console.error('[CDEK syncTrackNumber]', orderId, error)

@@ -409,6 +409,10 @@ function formatRub(value: number): string {
   return `${value.toFixed(2)} ₽`
 }
 
+function getCdekTrackingUrl(trackNumber: string): string {
+  return `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(trackNumber)}`
+}
+
 /**
  * Send new order notification from support@innerhealth.ru to admin mailbox(s).
  * No-op if SMTP is not configured or toEmails is empty.
@@ -836,6 +840,212 @@ export async function sendCustomerOrderPaidEmail(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[email] Send paid email error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Send separate admin notification when CDEK track number appears.
+ * No-op if SMTP is not configured or toEmails is empty.
+ */
+export async function sendAdminCdekTrackNotification(
+  toEmails: string[],
+  payload: PaidOrderEmailPayload
+): Promise<{ ok: boolean; error?: string }> {
+  const unique = Array.from(new Set(toEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)))
+  const trackNumber = payload.cdekTrackNumber?.trim()
+  if (unique.length === 0 || !trackNumber) return { ok: true }
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; admin CDEK track email not sent')
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+
+  const { orderId, total, shipping } = payload
+  const trackingUrl = getCdekTrackingUrl(trackNumber)
+  const text =
+    `Получен трек-номер СДЭК\n\n` +
+    `ID заказа: ${orderId}\n` +
+    `Трек-номер СДЭК: ${trackNumber}\n` +
+    `Сумма заказа: ${formatRub(total)}\n` +
+    `Получатель: ${shipping.fullName}\n` +
+    `Телефон: ${shipping.phone}\n` +
+    `Email: ${shipping.email}\n` +
+    `Отслеживание: ${trackingUrl}\n`
+  const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Трек-номер СДЭК получен</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:26px 28px;background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.82);">Inner Health</div>
+              <h1 style="margin:12px 0 0;font-size:24px;line-height:1.15;font-weight:700;color:#ffffff;">Получен трек СДЭК</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;">
+              <p style="margin:0 0 16px;font-size:14px;color:#374151;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 20px;font-size:16px;color:#111827;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(trackNumber)}</span></p>
+              <p style="margin:0 0 20px;font-size:14px;color:#374151;"><strong>Сумма заказа:</strong> ${formatRub(total)}</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f9fafb;border-radius:12px;">
+                <tr>
+                  <td style="padding:16px 18px;font-size:14px;line-height:1.55;color:#374151;">
+                    <p style="margin:0 0 8px;"><strong style="color:#111827;">Получатель:</strong> ${escapeHtml(shipping.fullName)}</p>
+                    <p style="margin:0 0 8px;"><strong style="color:#111827;">Телефон:</strong> ${escapeHtml(shipping.phone)}</p>
+                    <p style="margin:0;"><strong style="color:#111827;">Email:</strong> ${escapeHtml(shipping.email)}</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;"><a href="${trackingUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background-color:#0f766e;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">Открыть отслеживание</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim()
+
+  try {
+    console.log('[email] Sending admin CDEK track notification to', unique.join(', '))
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      replyTo: REPLY_TO,
+      to: unique.join(', '),
+      subject: `Трек СДЭК для заказа ${orderId} — Inner Health`,
+      text,
+      html,
+    })
+    console.log('[email] Admin CDEK track notification sent')
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send admin CDEK track notification error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+/**
+ * Send separate customer notification when CDEK track number appears.
+ * No-op if SMTP is not configured or email/track are missing.
+ */
+export async function sendCustomerCdekTrackNotification(
+  to: string,
+  username: string,
+  payload: PaidOrderEmailPayload
+): Promise<{ ok: boolean; error?: string }> {
+  const trimmedTo = to.trim().toLowerCase()
+  const trackNumber = payload.cdekTrackNumber?.trim()
+  if (!trimmedTo || !trackNumber) return { ok: true }
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; customer CDEK track email not sent to', trimmedTo)
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+
+  const { orderId } = payload
+  const trackingUrl = getCdekTrackingUrl(trackNumber)
+  const text =
+    `Здравствуйте, ${username}.\n\n` +
+    `Для заказа ${orderId} получен трек-номер СДЭК: ${trackNumber}\n\n` +
+    `Отслеживание: ${trackingUrl}\n\n` +
+    `* Данное письмо создано автоматически, отвечать на него не требуется.`
+  const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Трек-номер СДЭК</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:26px 28px;background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);text-align:center;">
+              <h1 style="margin:0;font-size:24px;line-height:1.15;font-weight:700;color:#ffffff;">Трек-номер СДЭК получен</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;">
+              <p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#374151;">${escapeHtml(username)}, ваш заказ передан в СДЭК.</p>
+              <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 20px;font-size:16px;color:#111827;"><strong>Трек-номер:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(trackNumber)}</span></p>
+              <p style="margin:0 0 24px;"><a href="${trackingUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background-color:#0f766e;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">Отследить заказ</a></p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim()
+
+  try {
+    console.log('[email] Sending customer CDEK track notification to', trimmedTo)
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      replyTo: REPLY_TO,
+      to: trimmedTo,
+      subject: `Трек СДЭК для заказа ${orderId} — Inner Health`,
+      text,
+      html,
+    })
+    console.log('[email] Customer CDEK track notification sent to', trimmedTo)
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send customer CDEK track notification error:', message)
     return { ok: false, error: message }
   }
 }

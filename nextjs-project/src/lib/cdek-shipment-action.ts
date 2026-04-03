@@ -1,5 +1,6 @@
 import 'server-only'
 import { createCdekOrder } from '@/lib/cdek'
+import { sendCdekTrackEmailsForOrder } from '@/lib/cdek-track-email'
 import * as orderService from '@/services/order.service'
 
 export type CdekShipmentActionResult =
@@ -55,5 +56,8 @@ export async function createCdekShipmentForOrder(
     cdekTrackNumber: result.trackNumber ?? null,
     cdekOrderError: null,
   })
+  if (!order.cdekTrackNumber && result.trackNumber) {
+    void sendCdekTrackEmailsForOrder(orderId, result.trackNumber)
+  }
   return { success: true, uuid: result.uuid, trackNumber: result.trackNumber ?? null }
 }
