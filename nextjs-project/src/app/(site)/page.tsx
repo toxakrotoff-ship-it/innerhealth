@@ -1057,7 +1057,7 @@ export default async function HomePage() {
       <SpacingVertical size="lg" />
 
       {/* Новости — делаем карточки в стиле категорий */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+      <section className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44">
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
             <div className="space-y-1">
