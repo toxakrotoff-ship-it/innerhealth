@@ -21,6 +21,22 @@ export interface RuntimeMaxBotSettings {
   webhookSecret?: string;
 }
 
+function resolveCandidateValue(
+  candidates: string[],
+  valuesByStorageKey: Map<string, string>
+): string {
+  let fallbackEmptyValue = '';
+
+  for (const candidate of candidates) {
+    const value = valuesByStorageKey.get(candidate);
+    if (value === undefined) continue;
+    if (value !== '') return value;
+    fallbackEmptyValue = value;
+  }
+
+  return fallbackEmptyValue;
+}
+
 function getStorageKeyCandidates(logicalKey: string, brandId?: BrandId | null): string[] {
   if (brandId && isBrandScopedSettingKey(logicalKey)) {
     return [makeScopedSettingKey(brandId, logicalKey), logicalKey];
@@ -65,8 +81,7 @@ export async function getRuntimeSettingsMap(
 
   const resolved: Record<string, string> = {};
   for (const [logicalKey, candidates] of Array.from(candidateKeyMap.entries())) {
-    resolved[logicalKey] =
-      candidates.map((candidate) => valuesByStorageKey.get(candidate)).find((value) => value !== undefined) ?? '';
+    resolved[logicalKey] = resolveCandidateValue(candidates, valuesByStorageKey);
   }
 
   return resolved;

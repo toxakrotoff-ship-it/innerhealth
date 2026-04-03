@@ -67,6 +67,22 @@ type SettingsCacheEntry = {
   expiresAt: number
 }
 
+function resolveCandidateValue(
+  storageKeyCandidates: string[],
+  valuesByStorageKey: Map<string, string>
+): string | undefined {
+  let fallbackEmptyValue: string | undefined
+
+  for (const storageKey of storageKeyCandidates) {
+    const value = valuesByStorageKey.get(storageKey)
+    if (value === undefined) continue
+    if (value !== '') return value
+    if (fallbackEmptyValue === undefined) fallbackEmptyValue = value
+  }
+
+  return fallbackEmptyValue
+}
+
 const SETTINGS_CACHE_TTL_MS = (() => {
   const raw = Number(process.env.SETTINGS_CACHE_TTL_MS ?? '60000')
   return Number.isFinite(raw) && raw >= 0 ? raw : 60000
@@ -139,9 +155,7 @@ export async function getSettingsMap(
     for (const [logicalKey, storageKeyCandidates] of Array.from(
       storageKeyCandidatesByLogicalKey.entries()
     )) {
-      const resolvedValue = storageKeyCandidates
-        .map((storageKey) => rowsByStorageKey.get(storageKey))
-        .find((value) => value !== undefined)
+      const resolvedValue = resolveCandidateValue(storageKeyCandidates, rowsByStorageKey)
       if (resolvedValue !== undefined) {
         map[logicalKey] = resolvedValue
       }
