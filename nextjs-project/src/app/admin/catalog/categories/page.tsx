@@ -28,7 +28,7 @@ import {
 } from '@/lib/category-tree';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
-import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
+import { useAdminBrand } from '@/app/admin/context/admin-brand';
 
 interface CategoryFormState {
   title: string;
@@ -111,7 +111,7 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
 
 export default function AdminCategoriesPage() {
   const adminBasePath = useAdminBasePath();
-  const [activeBrand, setActiveBrand] = useState<'inner' | 'sprint-power' | null>(null);
+  const activeBrand = useAdminBrand();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -125,42 +125,6 @@ export default function AdminCategoriesPage() {
     showInCategoriesBlock: true,
   });
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const normalizedBase = adminBasePath.toLowerCase();
-    if (normalizedBase.includes('sprint-power')) {
-      setActiveBrand('sprint-power');
-      return;
-    }
-    if (normalizedBase.includes('inner')) {
-      setActiveBrand('inner');
-      return;
-    }
-
-    const rawPathname = window.location.pathname.toLowerCase();
-    if (rawPathname.includes('/sprint-power')) {
-      setActiveBrand('sprint-power');
-      return;
-    }
-    if (rawPathname.includes('/inner')) {
-      setActiveBrand('inner');
-      return;
-    }
-    const fromCookie = document.cookie
-      .split(';')
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith(`${ADMIN_BRAND_COOKIE_NAME}=`))
-      ?.split('=')[1];
-    if (fromCookie === 'sprint-power') {
-      setActiveBrand('sprint-power');
-      return;
-    }
-    if (fromCookie === 'inner') {
-      setActiveBrand('inner');
-      return;
-    }
-    setActiveBrand(null);
-  }, [adminBasePath]);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(
@@ -186,7 +150,6 @@ export default function AdminCategoriesPage() {
   }, [categoryTree, editingCategory]);
 
   const fetchCategories = async () => {
-    if (!activeBrand) return;
     try {
       setIsLoading(true);
       const cats = await getCategories({ brandId: activeBrand });
@@ -200,7 +163,7 @@ export default function AdminCategoriesPage() {
   };
 
   useEffect(() => {
-    if (activeBrand) void fetchCategories();
+    void fetchCategories();
   }, [activeBrand]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {

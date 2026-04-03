@@ -10,6 +10,7 @@ import { ProductTable } from './components/ProductTable'
 import { Product } from '@prisma/client'
 import { CategorySidebar } from './components/CategorySidebar'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
+import { useAdminBrand } from '@/app/admin/context/admin-brand'
 import { NO_CATEGORY_ID } from './constants'
 
 interface ProductWithCategories extends Product {
@@ -18,6 +19,7 @@ interface ProductWithCategories extends Product {
 
 export default function AdminCatalogPage() {
   const base = useAdminBasePath()
+  const activeBrand = useAdminBrand()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -41,7 +43,8 @@ export default function AdminCatalogPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/products', { credentials: 'include' })
+      const params = new URLSearchParams({ brand: activeBrand })
+      const response = await fetch(`/api/admin/products?${params.toString()}`, { credentials: 'include' })
       if (!response.ok) throw new Error(`Ошибка: ${response.status}`)
       const data = await response.json()
       if (data && typeof data === 'object' && !Array.isArray(data)) {
@@ -60,8 +63,8 @@ export default function AdminCatalogPage() {
   }
 
   useEffect(() => {
-    fetchProducts()
-  }, [selectedCategory])
+    void fetchProducts()
+  }, [selectedCategory, activeBrand])
 
   useEffect(() => {
     if (categoriesPanelOpen) setCategoriesEverOpened(true)

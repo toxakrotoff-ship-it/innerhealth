@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { Category, getCategoriesWithCounts } from '../actions'
 import { NO_CATEGORY_ID } from '../constants'
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
-import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
+import { useAdminBrand } from '@/app/admin/context/admin-brand'
 
 type ProductWithCategories = {
   id: string
@@ -26,47 +26,11 @@ interface CategorySidebarProps {
 
 export function CategorySidebar({ selectedCategory, onCategorySelect, products = [] }: CategorySidebarProps) {
   const base = useAdminBasePath()
+  const activeBrand = useAdminBrand()
   const [categories, setCategories] = useState<(Category & { productCount: number })[]>([])
   const [loading, setLoading] = useState(true)
   const [totalProducts, setTotalProducts] = useState(0)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
-  const [activeBrand, setActiveBrand] = useState<'inner' | 'sprint-power' | null>(null)
-
-  useEffect(() => {
-    const normalizedBase = base.toLowerCase()
-    if (normalizedBase.includes('sprint-power')) {
-      setActiveBrand('sprint-power')
-      return
-    }
-    if (normalizedBase.includes('inner')) {
-      setActiveBrand('inner')
-      return
-    }
-
-    const rawPathname = window.location.pathname.toLowerCase()
-    if (rawPathname.includes('/sprint-power')) {
-      setActiveBrand('sprint-power')
-      return
-    }
-    if (rawPathname.includes('/inner')) {
-      setActiveBrand('inner')
-      return
-    }
-    const fromCookie = document.cookie
-      .split(';')
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith(`${ADMIN_BRAND_COOKIE_NAME}=`))
-      ?.split('=')[1]
-    if (fromCookie === 'sprint-power') {
-      setActiveBrand('sprint-power')
-      return
-    }
-    if (fromCookie === 'inner') {
-      setActiveBrand('inner')
-      return
-    }
-    setActiveBrand(null)
-  }, [base])
 
   const toggleExpanded = (categoryId: string) => {
     setExpandedIds((prev) => {
@@ -79,21 +43,19 @@ export function CategorySidebar({ selectedCategory, onCategorySelect, products =
 
   useEffect(() => {
     const load = async () => {
-      if (!activeBrand) {
-        setLoading(false)
-        return
-      }
       try {
+        setLoading(true)
         const data = await getCategoriesWithCounts({ brandId: activeBrand })
         setCategories(data)
         setTotalProducts(data.reduce((s, c) => s + c.productCount, 0))
       } catch {
         setCategories([])
+        setTotalProducts(0)
       } finally {
         setLoading(false)
       }
     }
-    load()
+    void load()
   }, [activeBrand])
 
   if (loading) {

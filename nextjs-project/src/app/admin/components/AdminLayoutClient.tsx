@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import ProfileMenu from './ProfileMenu';
 import AdminNav from './AdminNav';
 import { AdminBasePathProvider } from '@/app/admin/context/admin-base-path';
+import { AdminBrandProvider } from '@/app/admin/context/admin-brand';
 import type { Session } from 'next-auth';
 import { AdminBrandSwitcher } from '@/app/admin/components/AdminBrandSwitcher';
 import { getBrandDefinitions, type BrandId } from '@/lib/brand/brand';
@@ -51,106 +52,108 @@ export default function AdminLayoutClient({
   }, [isSidebarOpen]);
 
   return (
-    <AdminBasePathProvider value={adminBasePath}>
-    <div
-      className={`admin-layout${isSidebarOpen ? ' admin-sidebar-open' : ''}`}
-      data-sidebar-open={isSidebarOpen}
-    >
-      <aside className="admin-sidebar" aria-hidden={!isSidebarOpen}>
-        <div className="admin-sidebar-brand">
-          <div className="admin-sidebar-logo">
-            <span className="text-white font-bold text-lg tracking-tight">{brandShortLabel}</span>
-          </div>
-          <span className="admin-sidebar-title">{brandLabel}</span>
-          <span className="admin-sidebar-subtitle">Админ-панель</span>
+    <AdminBrandProvider value={activeBrand}>
+      <AdminBasePathProvider value={adminBasePath}>
+        <div
+          className={`admin-layout${isSidebarOpen ? ' admin-sidebar-open' : ''}`}
+          data-sidebar-open={isSidebarOpen}
+        >
+          <aside className="admin-sidebar" aria-hidden={!isSidebarOpen}>
+            <div className="admin-sidebar-brand">
+              <div className="admin-sidebar-logo">
+                <span className="text-white font-bold text-lg tracking-tight">{brandShortLabel}</span>
+              </div>
+              <span className="admin-sidebar-title">{brandLabel}</span>
+              <span className="admin-sidebar-subtitle">Админ-панель</span>
+              <button
+                type="button"
+                className="admin-sidebar-close"
+                onClick={() => setIsSidebarOpen(false)}
+                aria-label="Закрыть меню"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <nav className="admin-sidebar-nav">
+              <AdminNav />
+            </nav>
+            <div className="admin-sidebar-profile">
+              <ProfileMenu
+                userName={session.user?.name}
+                userEmail={session.user?.email}
+                userRole={session.user?.role}
+                lastLogin={session.user?.lastLogin}
+                triggerLabel="Профиль"
+              />
+            </div>
+          </aside>
+
+          <div
+            className="admin-sidebar-backdrop"
+            aria-hidden={!isSidebarOpen}
+            onClick={() => setIsSidebarOpen(false)}
+            role="button"
+            tabIndex={-1}
+            aria-label="Закрыть меню"
+          />
+
           <button
             type="button"
-            className="admin-sidebar-close"
-            onClick={() => setIsSidebarOpen(false)}
-            aria-label="Закрыть меню"
+            className="admin-fab-menu"
+            aria-label="Открыть меню"
+            aria-expanded={isSidebarOpen}
+            onClick={() => setIsSidebarOpen(true)}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-        </div>
-        <nav className="admin-sidebar-nav">
-          <AdminNav />
-        </nav>
-        <div className="admin-sidebar-profile">
-          <ProfileMenu
-            userName={session.user?.name}
-            userEmail={session.user?.email}
-            userRole={session.user?.role}
-            lastLogin={session.user?.lastLogin}
-            triggerLabel="Профиль"
-          />
-        </div>
-      </aside>
 
-      <div
-        className="admin-sidebar-backdrop"
-        aria-hidden={!isSidebarOpen}
-        onClick={() => setIsSidebarOpen(false)}
-        role="button"
-        tabIndex={-1}
-        aria-label="Закрыть меню"
-      />
-
-      <button
-        type="button"
-        className="admin-fab-menu"
-        aria-label="Открыть меню"
-        aria-expanded={isSidebarOpen}
-        onClick={() => setIsSidebarOpen(true)}
-      >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      <div className="admin-main">
-        <header className="admin-header">
-          <div className="admin-header-inner">
-            <button
-              type="button"
-              className="admin-header-mobile-menu"
-              aria-label="Открыть меню"
-              aria-expanded={isSidebarOpen}
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="admin-header-spacer" />
-            <div className="flex items-center gap-3">
-              <AdminBrandSwitcher adminBasePath={adminBasePath} activeBrand={activeBrand} />
-              <Link
-                href={siteHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-action-blue hover:text-action-blue"
-              >
-                На сайт
-              </Link>
-              <div className="admin-header-profile">
-                <ProfileMenu
-                  userName={session.user?.name}
-                  userEmail={session.user?.email}
-                  userRole={session.user?.role}
-                  lastLogin={session.user?.lastLogin}
-                />
+          <div className="admin-main">
+            <header className="admin-header">
+              <div className="admin-header-inner">
+                <button
+                  type="button"
+                  className="admin-header-mobile-menu"
+                  aria-label="Открыть меню"
+                  aria-expanded={isSidebarOpen}
+                  onClick={() => setIsSidebarOpen(true)}
+                >
+                  <svg className="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <div className="admin-header-spacer" />
+                <div className="flex items-center gap-3">
+                  <AdminBrandSwitcher adminBasePath={adminBasePath} activeBrand={activeBrand} />
+                  <Link
+                    href={siteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:border-action-blue hover:text-action-blue"
+                  >
+                    На сайт
+                  </Link>
+                  <div className="admin-header-profile">
+                    <ProfileMenu
+                      userName={session.user?.name}
+                      userEmail={session.user?.email}
+                      userRole={session.user?.role}
+                      lastLogin={session.user?.lastLogin}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </header>
+            </header>
 
-        <main className="admin-content-wrapper">
-          {children}
-        </main>
-      </div>
-    </div>
-    </AdminBasePathProvider>
+            <main className="admin-content-wrapper">
+              {children}
+            </main>
+          </div>
+        </div>
+      </AdminBasePathProvider>
+    </AdminBrandProvider>
   );
 }
