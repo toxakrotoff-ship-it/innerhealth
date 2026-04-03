@@ -1,7 +1,15 @@
-# --- Build stage ---
-FROM node:20-alpine AS builder
+## syntax=docker/dockerfile:1.7
+
+FROM node:20-alpine AS build-base
 
 RUN apk add --no-cache libc6-compat python3 make g++
+
+FROM node:20-alpine AS runtime-base
+
+RUN apk add --no-cache libc6-compat
+
+# --- Build stage ---
+FROM build-base AS builder
 
 WORKDIR /app
 
@@ -9,7 +17,7 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 RUN npx prisma generate
@@ -19,10 +27,31 @@ ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 RUN npm run build
 
-# --- Production stage (образ для web app) ---
-FROM node:20-alpine AS runner
+FROM build-base AS prod-deps
 
-RUN apk add --no-cache libc6-compat python3 make g++
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --ignore-scripts \
+  && npx prisma generate
+
+FROM prod-deps AS migrator
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+USER nextjs
+
+CMD ["npx", "prisma", "migrate", "deploy"]
+
+# --- Production stage (образ для web app) ---
+FROM runtime-base AS runner
 
 WORKDIR /app
 
@@ -31,13 +60,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-
-# Только манифесты и схема; зависимости ставим здесь (без postinstall — prisma ниже)
-COPY --from=builder /app/package.json /app/package-lock.json* ./
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./
-ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
-RUN npm ci --omit=dev --ignore-scripts && npx prisma generate
 
 # Артефакты сборки Next.js (standalone)
 # В режиме `output: 'standalone'` достаточно:
@@ -49,14 +71,13 @@ RUN npm ci --omit=dev --ignore-scripts && npx prisma generate
 # `.next/standalone/public`, иначе запросы к статике из `public/` вернут 404.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./.next/standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/standalone/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/public ./.next/standalone/public
+RUN mkdir -p ./.next/standalone/.next \
+  && ln -s ../../static ./.next/standalone/.next/static \
+  && ln -s ../../public ./.next/standalone/public
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
-
-RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
@@ -69,9 +90,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", ".next/standalone/server.js"]
 
 # --- Production stage (lightweight image for bot runners only) ---
-FROM node:20-alpine AS bot-runner
-
-RUN apk add --no-cache libc6-compat python3 make g++
+FROM runtime-base AS bot-runner
 
 WORKDIR /app
 
@@ -81,13 +100,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/package.json /app/package-lock.json* ./
-COPY prisma ./prisma
-COPY prisma.config.ts ./
-ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
-RUN npm ci --omit=dev --ignore-scripts \
-  && npm install ts-node tsconfig-paths typescript --no-save \
-  && npx prisma generate
+COPY --from=prod-deps --chown=nextjs:nodejs /app/package.json /app/package-lock.json* ./
+COPY --from=prod-deps --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=prod-deps --chown=nextjs:nodejs /app/prisma.config.ts ./
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN --mount=type=cache,target=/root/.npm npm install typescript --no-save --ignore-scripts
 
 COPY --chown=nextjs:nodejs scripts ./scripts
 COPY --chown=nextjs:nodejs tsconfig.json ./tsconfig.json
@@ -98,8 +115,6 @@ COPY --chown=nextjs:nodejs src/lib/max-bot-menu.ts ./src/lib/max-bot-menu.ts
 COPY --chown=nextjs:nodejs src/lib/prisma.ts ./src/lib/prisma.ts
 COPY --chown=nextjs:nodejs src/lib/project-root.ts ./src/lib/project-root.ts
 COPY --chown=nextjs:nodejs src/lib/settings-encryption.ts ./src/lib/settings-encryption.ts
-
-RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 

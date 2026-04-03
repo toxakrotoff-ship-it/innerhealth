@@ -8,16 +8,28 @@ log() {
   echo "[$(date -Is)] $*"
 }
 
+docker_compose() {
+  DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" COMPOSE_DOCKER_CLI_BUILD="${COMPOSE_DOCKER_CLI_BUILD:-1}" docker compose "$@"
+}
+
 docker_disk_free_mb() {
   df -Pm / | awk 'NR==2 { print $4 }'
 }
 
-cleanup_docker_cache() {
-  log "Cleaning up Docker cache..."
+cleanup_docker_cache_if_needed() {
+  local min_free_mb="${1}"
+  local free_mb
+  free_mb="$(docker_disk_free_mb)"
+  if [ -n "${free_mb}" ] && [ "${free_mb}" -ge "${min_free_mb}" ]; then
+    log "Free disk is healthy (${free_mb}MB), skipping Docker cache cleanup."
+    return 0
+  fi
+
+  log "Low disk (${free_mb:-0}MB). Running safe Docker cleanup..."
   docker image prune -f || true
-  docker builder prune -af || true
   docker container prune -f || true
   docker network prune -f || true
+  docker builder prune -af --filter "until=${DOCKER_CACHE_MAX_AGE:-168h}" || true
 }
 
 require_free_disk_mb() {
@@ -33,6 +45,8 @@ require_free_disk_mb() {
 }
 
 MIN_FREE_MB="${MIN_FREE_MB:-3072}"
+POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-1536}"
+NO_CACHE="${NO_CACHE:-0}"
 # Каталог с docker-compose (nextjs-project) — сюда вернёмся для сборки
 DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DEPLOY_DIR"
@@ -55,38 +69,40 @@ git pull --ff-only origin "${CURRENT_BRANCH}"
 
 cd "$DEPLOY_DIR"
 
-cleanup_docker_cache
+cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
 require_free_disk_mb "${MIN_FREE_MB}"
 
-log "Building app image (with cache)..."
-docker compose build app
+BUILD_ARGS=()
+if [ "${NO_CACHE}" = "1" ]; then
+  BUILD_ARGS+=(--no-cache)
+fi
 
-log "Building bot image (with cache)..."
-docker compose build telegram-bot
+log "Building app, migrator and bot images..."
+docker_compose build "${BUILD_ARGS[@]}" app migrator telegram-bot
 
 log "Migration status (before deploy)..."
-docker compose run --rm app npx prisma migrate status || true
+docker_compose run --rm migrator npx prisma migrate status || true
 
 log "Applying migrations from repo..."
-docker compose run --rm app npx prisma migrate deploy
+docker_compose run --rm migrator
 
 log "Restarting app..."
-docker compose up -d --force-recreate app
+docker_compose up -d --force-recreate app
 
 log "Restarting telegram-bot (no separate build)..."
 # Telegram-боты используют отдельный bot image.
-docker compose up -d --force-recreate --no-build telegram-bot telegram-bot-sprint
+docker_compose up -d --force-recreate --no-build telegram-bot telegram-bot-sprint
 
 log "Restarting max-bot (no separate build)..."
-docker compose up -d --force-recreate --no-build max-bot max-bot-sprint
+docker_compose up -d --force-recreate --no-build max-bot max-bot-sprint
 
 log "Recreating nginx (pick up new host/domain config)..."
-docker compose up -d --force-recreate nginx
+docker_compose up -d --force-recreate nginx
 
 log "Removing old telegram-bot image (if still present)..."
 docker image rm nextjs-project-telegram-bot:latest || true
 
-cleanup_docker_cache
+cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
 
 log "Done."
-docker compose ps
+docker_compose ps

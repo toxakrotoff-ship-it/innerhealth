@@ -9,16 +9,28 @@ log() {
   echo "[$(date -Is)] $*"
 }
 
+docker_compose() {
+  DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" COMPOSE_DOCKER_CLI_BUILD="${COMPOSE_DOCKER_CLI_BUILD:-1}" docker compose "$@"
+}
+
 docker_disk_free_mb() {
   df -Pm / | awk 'NR==2 { print $4 }'
 }
 
-cleanup_docker_cache() {
-  log "Cleaning up Docker cache before build..."
+cleanup_docker_cache_if_needed() {
+  local min_free_mb="${1}"
+  local free_mb
+  free_mb="$(docker_disk_free_mb)"
+  if [ -n "${free_mb}" ] && [ "${free_mb}" -ge "${min_free_mb}" ]; then
+    log "Free disk is healthy (${free_mb}MB), skipping Docker cache cleanup."
+    return 0
+  fi
+
+  log "Low disk (${free_mb:-0}MB). Running safe Docker cleanup..."
   docker image prune -f || true
-  docker builder prune -af || true
   docker container prune -f || true
   docker network prune -f || true
+  docker builder prune -af --filter "until=${DOCKER_CACHE_MAX_AGE:-168h}" || true
 }
 
 require_free_disk_mb() {
@@ -34,6 +46,8 @@ require_free_disk_mb() {
 }
 
 MIN_FREE_MB="${MIN_FREE_MB:-4096}"
+POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-2048}"
+NO_CACHE="${NO_CACHE:-0}"
 
 log "Pulling latest code..."
 git fetch --prune origin
@@ -48,7 +62,7 @@ if ! git merge-base --is-ancestor "HEAD" "origin/${CURRENT_BRANCH}"; then
 fi
 git pull --ff-only origin "${CURRENT_BRANCH}"
 
-cleanup_docker_cache
+cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
 require_free_disk_mb "${MIN_FREE_MB}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
@@ -87,28 +101,30 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
 fi
 
 log "Building and starting containers..."
-docker compose build --no-cache
-docker compose up -d db
+BUILD_ARGS=()
+if [ "${NO_CACHE}" = "1" ]; then
+  BUILD_ARGS+=(--no-cache)
+fi
+docker_compose build "${BUILD_ARGS[@]}" app migrator telegram-bot
+docker_compose up -d db
 
 log "Waiting for database to be healthy..."
 sleep 5
 
 log "Applying migrations (one-off container)..."
-docker compose run --rm app npx prisma migrate deploy
+docker_compose run --rm migrator
 
 log "Starting app and remaining services..."
-docker compose up -d
+docker_compose up -d
 
 log "Reloading nginx with current config..."
-docker compose up -d --force-recreate nginx
+docker_compose up -d --force-recreate nginx
 
-log "Cleaning up Docker cache after deploy..."
-docker image prune -f || true
-docker builder prune -af || true
+cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
 
 log "Waiting for app to be up..."
 sleep 5
-docker compose ps
+docker_compose ps
 
 log "Done. App: http://$(hostname -I 2>/dev/null | awk '{print $1}'):80 (or your domain)"
 log "Set RUN_MIGRATE=1 in .env if you want migrations to run on every container start (optional)."

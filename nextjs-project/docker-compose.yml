@@ -34,6 +34,22 @@ services:
           cpus: "1.0"
           memory: 1500M
 
+  migrator:
+    image: nextjs-project-migrator:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - ops
+    logging: *default-logging
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
