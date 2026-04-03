@@ -2,9 +2,9 @@ import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
-import { getEmailRiskVerdict } from '@/lib/security/email-risk'
 import { getBaseUrlForEmails, sendEmailVerificationLinkEmail } from '@/lib/email'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
 import { verifyEmailRequestBodySchema } from '@/lib/validations/account'
 import {
   EMAIL_VERIFICATION_ERROR_CODES,
@@ -53,15 +53,18 @@ export async function POST(request: Request) {
     )
   }
 
-  if (payload.email && getEmailRiskVerdict(payload.email) === 'block') {
-    return NextResponse.json(
-      { ok: true },
-      {
-        headers: {
-          'Cache-Control': 'no-store',
-        },
-      }
-    )
+  if (payload.email) {
+    const emailValidation = await validatePublicEmailDomain(payload.email, { hideReason: true })
+    if (!emailValidation.valid) {
+      return NextResponse.json(
+        { ok: true },
+        {
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
+    }
   }
 
   const session = await getServerSession(authOptions)

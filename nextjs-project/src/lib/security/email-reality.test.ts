@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { vi } from "vitest";
+vi.mock("server-only", () => ({}));
 import { validateEmailReality } from "./email-reality";
 import type { EmailRealityDnsResolver } from "./email-reality";
 
@@ -34,5 +36,17 @@ describe("email-reality", () => {
     const res = await validateEmailReality("user@example.com", { dns });
     expect(res.valid).toBe(true);
   });
-});
 
+  it("allows dns_unknown outcomes to avoid false negatives on transient dns issues", async () => {
+    const dns: EmailRealityDnsResolver = {
+      resolveMx: async () => {
+        throw new Error("timeout");
+      },
+      resolveA: async () => {
+        throw new Error("servfail");
+      },
+    };
+    const res = await validateEmailReality("user@example.com", { dns });
+    expect(res.valid).toBe(true);
+  });
+});

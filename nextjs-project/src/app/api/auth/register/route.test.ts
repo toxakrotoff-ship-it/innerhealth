@@ -29,6 +29,24 @@ vi.mock("@/services/email-verification.service", () => ({
   }),
 }));
 
+vi.mock("@/lib/security/public-email-domain", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/security/public-email-domain")>("@/lib/security/public-email-domain");
+  return {
+    ...actual,
+    validatePublicEmailDomain: vi.fn(async (email: string) => {
+      if (email.includes("@nonexistent.invalid")) {
+        return {
+          valid: false,
+          reason: "domain_not_resolvable",
+          userMessage: "Домен email не существует",
+          shouldHideReason: false,
+        };
+      }
+      return actual.validatePublicEmailDomain(email);
+    }),
+  };
+});
+
 const userService = await import("@/services/user.service");
 
 describe("POST /api/auth/register", () => {
@@ -58,6 +76,22 @@ describe("POST /api/auth/register", () => {
     const body = await res.json();
     expect(body.error).toBeDefined();
     expect(body.error).not.toMatch(/disposable|internal|stack|prisma|database/i);
+  });
+
+  it("returns 400 for non-resolvable domain", async () => {
+    const res = await POST(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "user@nonexistent.invalid",
+          password: "password1234",
+        }),
+      })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Домен email не существует");
   });
 
   it("does not expose sensitive internals in error text", async () => {

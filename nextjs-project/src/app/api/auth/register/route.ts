@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getEmailRiskVerdict } from '@/lib/security/email-risk'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { getBaseUrlForEmails, sendEmailVerificationLinkEmail } from '@/lib/email'
 import { hashPassword } from '@/lib/password'
+import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
 import { registerBodySchema } from '@/lib/validations/account'
 import { issueEmailVerificationToken } from '@/services/email-verification.service'
 import * as userService from '@/services/user.service'
@@ -43,9 +43,10 @@ export async function POST(request: Request) {
     )
   }
 
-  if (getEmailRiskVerdict(payload.email) === 'block') {
+  const emailValidation = await validatePublicEmailDomain(payload.email)
+  if (!emailValidation.valid) {
     return NextResponse.json(
-      { error: 'Registration is not allowed for this email domain.' },
+      { error: emailValidation.userMessage || 'Registration is not allowed for this email domain.' },
       {
         status: 400,
         headers: {

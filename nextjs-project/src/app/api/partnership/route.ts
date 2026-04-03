@@ -1,35 +1,13 @@
 import { after, NextResponse } from 'next/server'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
 import { notifyMaxForm } from '@/lib/max-notify'
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
+import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
 import * as partnershipService from '@/services/partnership.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const PARTNERSHIP_RATE_LIMIT = 5
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function getClientId(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown'
-  return ip
-}
-
-function checkRateLimit(clientId: string): { success: boolean } {
-  const now = Date.now()
-  const windowMs = 60_000
-  let entry = rateLimitMap.get(clientId)
-  if (!entry) {
-    rateLimitMap.set(clientId, { count: 1, resetAt: now + windowMs })
-    return { success: true }
-  }
-  if (now > entry.resetAt) {
-    entry = { count: 1, resetAt: now + windowMs }
-    rateLimitMap.set(clientId, entry)
-    return { success: true }
-  }
-  entry.count += 1
-  if (entry.count > PARTNERSHIP_RATE_LIMIT) return { success: false }
-  return { success: true }
-}
 
 const nameMin = 2
 const nameMax = 120
@@ -41,19 +19,28 @@ const messageMax = 2000
 
 export async function POST(request: Request) {
   const brandId = resolveBrandOrDefaultFromRequest(request)
-  const clientId = getClientId(request)
-  if (!checkRateLimit(clientId).success) {
+  const clientId = getClientIdentifier(request)
+  const rate = await checkRateLimit(clientId, 'partnership-form', PARTNERSHIP_RATE_LIMIT)
+  if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много заявок. Попробуйте позже.' },
-      { status: 429 }
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
     )
   }
 
   try {
     const body = await request.json()
-    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const name =
+      typeof body.name === 'string' ? sanitizeHumanName(body.name.trim()).slice(0, nameMax) : ''
     const email = typeof body.email === 'string' ? body.email.trim() : ''
-    const phone = typeof body.phone === 'string' ? body.phone.trim() : ''
+    const phone =
+      typeof body.phone === 'string' ? sanitizePhone(body.phone.trim()).slice(0, phoneMax) : ''
     const role = typeof body.role === 'string' ? body.role.trim().slice(0, roleMax) : null
     const socialLinks =
       typeof body.socialLinks === 'string'
@@ -74,10 +61,10 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    const emailSimple = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailSimple.test(email)) {
+    const emailValidation = await validatePublicEmailDomain(email)
+    if (!emailValidation.valid) {
       return NextResponse.json(
-        { error: 'Некорректный формат email.' },
+        { error: emailValidation.userMessage || 'Укажите корректный email.' },
         { status: 400 }
       )
     }
