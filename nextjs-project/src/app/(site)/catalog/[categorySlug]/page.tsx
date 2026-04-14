@@ -23,6 +23,7 @@ import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { groupProductsForListing } from '@/lib/product-grouping'
+import { getResolvedBlock } from '@/services/content-block.service'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -99,6 +100,13 @@ export default async function CategoryPage({ params }: PageProps) {
   })
   const dbBrand = resolveDbBrand(activeBrand)
   const isSprintTheme = isSprintPowerBrand(activeBrand)
+  const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant', activeBrand)
+  const categoryTitleFont =
+    categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
+      ? 'font-sans'
+      : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
+        ? 'font-script'
+        : 'font-display'
   const category = await prisma.category.findUnique({
     where: { brand_slug: { brand: dbBrand, slug: categorySlug } },
     include: {
@@ -232,7 +240,9 @@ export default async function CategoryPage({ params }: PageProps) {
 
       <section className={`py-12 ${isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}`}>
         <AdaptiveContainer maxWidth="default">
-          <h1 className={`text-2xl font-bold mb-6 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
+          <h1
+            className={`mb-6 text-lg font-medium tracking-tight drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
+          >
             {category.title}
           </h1>
           {category.children.length > 0 && (
@@ -359,7 +369,7 @@ export default async function CategoryPage({ params }: PageProps) {
               cols4xl={6}
               gap="6"
               adaptiveGap={false}
-              className="max-[389px]:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+              className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
             >
               {listingItems.map((item, index) =>
                 item.kind === 'single' ? (

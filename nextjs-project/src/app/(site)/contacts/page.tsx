@@ -156,16 +156,26 @@ export default async function ContactsPage() {
                 >
                   {showroomTitle}
                 </ResponsiveText>
-                <p className={isSprintTheme ? 'text-slate-300' : 'text-gray-700'}>{address}</p>
+                <p className={`whitespace-pre-line ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
+                  {address}
+                </p>
               </div>
 
               <div>
                 <p className={`font-medium mb-1 ${isSprintTheme ? 'text-slate-100' : 'text-gray-900'}`}>
                   {scheduleTitle}
                 </p>
-                <p>{workingWeekdays}</p>
-                <p>{workingWeekends}</p>
-                <p className={`text-sm mt-1 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>{workingNote}</p>
+                <p className="whitespace-pre-line">{workingWeekdays}</p>
+                <p className="whitespace-pre-line">{workingWeekends}</p>
+                <p
+                  className={`mt-2 max-w-xl whitespace-pre-line rounded-md border px-3 py-2 text-sm font-semibold leading-snug ${
+                    isSprintTheme
+                      ? 'border-amber-400/35 bg-amber-500/10 text-amber-50'
+                      : 'border-amber-200 bg-amber-50 text-amber-950'
+                  }`}
+                >
+                  {workingNote}
+                </p>
               </div>
 
               <div className="pt-2">

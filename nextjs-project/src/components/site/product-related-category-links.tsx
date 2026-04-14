@@ -12,7 +12,7 @@ interface ProductRelatedCategoryLinksProps {
   /** Primary category name for visible context (SEO + users). */
   categoryTitle: string
   items: ProductRelatedCategoryLinkItem[]
-  /** Sprint Power / dark PDP — avoid light gray box + low-contrast pastel links. */
+  /** Sprint Power / dark PDP uses slate styles; Inner Health keeps a fixed light panel (no `dark:`). */
   isSprintTheme?: boolean
 }
 
@@ -31,39 +31,34 @@ export function ProductRelatedCategoryLinks({
     <nav
       aria-label={`Похожие товары: ${categoryTitle}`}
       className={cn(
-        'mt-5 rounded-xl border px-4 py-3',
-        isSprintTheme
-          ? 'border-slate-700/80 bg-slate-900/90 shadow-[0_8px_24px_rgba(2,6,23,0.35)]'
-          : 'border-gray-100 bg-gray-50/80 dark:border-gray-700 dark:bg-gray-900/40'
+        'mt-8 border-t pt-4 sm:mt-10',
+        isSprintTheme ? 'border-slate-700' : 'border-gray-200'
       )}
     >
       <p
         className={cn(
-          'mb-2 text-sm',
-          isSprintTheme ? 'text-slate-300' : 'text-gray-600 dark:text-gray-400'
+          'mb-1.5 text-xs leading-snug',
+          isSprintTheme ? 'text-slate-500' : 'text-gray-500'
         )}
       >
-        В разделе «{categoryTitle}» также смотрят:
+        Также в «{categoryTitle}»:
       </p>
-      <ul className="flex flex-col gap-2 text-sm">
-        {linked.map((item) => {
-          const anchor = item.sku?.trim() ? `${item.title} (SKU: ${item.sku.trim()})` : item.title
-          return (
-            <li key={item.id}>
-              <Link
-                href={`/product/${item.slug}`}
-                className={cn(
-                  'font-medium underline-offset-2 hover:underline',
-                  isSprintTheme
-                    ? 'text-[#9AB8FF] hover:text-[#C8D6FF]'
-                    : 'text-action-blue'
-                )}
-              >
-                {anchor}
-              </Link>
-            </li>
-          )
-        })}
+      <ul className="flex flex-col gap-1 text-sm">
+        {linked.map((item) => (
+          <li key={item.id}>
+            <Link
+              href={`/product/${item.slug}`}
+              className={cn(
+                'underline-offset-2 hover:underline',
+                isSprintTheme
+                  ? 'text-slate-300 hover:text-[#9AB8FF]'
+                  : 'text-gray-700 hover:text-action-blue'
+              )}
+            >
+              {item.title}
+            </Link>
+          </li>
+        ))}
       </ul>
     </nav>
   )

@@ -41,7 +41,7 @@ export function Breadcrumbs({ items, isInverted = false }: BreadcrumbsProps) {
                   <BreadcrumbLink asChild>
                     <Link
                       href={item.href}
-                      className={`desktop-microtext-scale min-h-[32px] inline-flex items-center transition-colors hover:no-underline ${hoverClassName}`}
+                      className={`desktop-microtext-scale min-h-[32px] inline-flex items-center font-medium transition-colors hover:no-underline ${hoverClassName}`}
                     >
                       {item.label}
                     </Link>

@@ -278,15 +278,7 @@ export function ProductPageContent({
             <p className={`mb-4 max-w-2xl text-sm ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>
               Подборка похожих позиций из каталога — удобно сравнить состав и цену.
             </p>
-            {relatedProductsCategoryTitle ? (
-              <ProductRelatedCategoryLinks
-                categoryTitle={relatedProductsCategoryTitle}
-                items={relatedProducts}
-                isSprintTheme={isSprintTheme}
-              />
-            ) : null}
             <FluidGrid
-              className="mt-6"
               cols={2}
               colsTablet={3}
               colsDesktop={4}
@@ -323,6 +315,13 @@ export function ProductPageContent({
                 )
               )}
             </FluidGrid>
+            {relatedProductsCategoryTitle ? (
+              <ProductRelatedCategoryLinks
+                categoryTitle={relatedProductsCategoryTitle}
+                items={relatedProducts}
+                isSprintTheme={isSprintTheme}
+              />
+            ) : null}
           </section>
         </ScalableSpacing>
       )}

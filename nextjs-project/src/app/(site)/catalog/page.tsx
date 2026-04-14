@@ -32,6 +32,7 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
+import { formatProductsCountRu } from '@/lib/ru-product-count'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -256,11 +257,11 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         {cat.title}
                       </span>
                       <span
-                        className={`relative z-10 text-sm drop-shadow mt-1 ${
+                        className={`relative z-10 mt-1 text-sm font-medium drop-shadow ${categoryTitleFont} ${
                           bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
                         }`}
                       >
-                        {cat._count.products} товаров
+                        {formatProductsCountRu(cat._count.products)}
                       </span>
                     </div>
                   </TiltCard>
@@ -292,7 +293,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 cols4xl={6}
                 gap="6"
                 adaptiveGap={false}
-                className="max-[389px]:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+                className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
               >
                 {listingItems.map((item, index) =>
                   item.kind === 'single' ? (

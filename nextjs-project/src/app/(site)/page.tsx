@@ -37,6 +37,7 @@ import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveBrand } from '@/lib/brand/brand'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
+import { formatProductsCountRu } from '@/lib/ru-product-count'
 
 const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -614,7 +615,7 @@ function SprintPowerHome({
                   className="rounded-xl bg-[#1E293B] p-4"
                 >
                   <p className="text-sm font-semibold text-slate-100">{category.title}</p>
-                  <p className="text-xs text-slate-400">{category._count.products} товаров</p>
+                  <p className="text-xs text-slate-400">{formatProductsCountRu(category._count.products)}</p>
                 </Link>
               ))}
             </div>
@@ -1026,9 +1027,9 @@ export default async function HomePage() {
                           {cat.title}
                         </span>
                         <span
-                          className={`relative z-10 mt-1 text-sm drop-shadow 2xl:text-base ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
+                          className={`relative z-10 mt-1 text-sm font-medium drop-shadow 2xl:text-base ${categoryTitleFont} ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
                         >
-                          {cat._count.products} товаров
+                          {formatProductsCountRu(cat._count.products)}
                         </span>
                       </div>
                     </TiltCard>
