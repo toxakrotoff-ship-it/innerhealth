@@ -43,6 +43,8 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
       : 'object-contain object-center'
     : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
+  const mobilePhotoFitClass = cn('max-sm:object-contain max-sm:object-center')
+
   return (
     <ScrollReveal as="div" variant="fade-up">
       <article
@@ -51,7 +53,13 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
           isSprintTheme ? 'border-slate-700/80 bg-slate-900 text-slate-100' : 'border-gray-200 bg-white'
         )}
       >
-        <div className={cn('relative aspect-3/4 overflow-hidden', isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue')}>
+        <div
+          className={cn(
+            'relative aspect-3/4 overflow-hidden',
+            'max-sm:aspect-square max-sm:w-[42%] max-sm:shrink-0',
+            isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue'
+          )}
+        >
           <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
             <ProductQuickView
               id={activeVariant.id}
@@ -73,7 +81,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
               src={activePhotoSrc}
               alt={group.baseTitle}
               fill
-              className={cn('z-10', activePhotoFitClass)}
+              className={cn('z-10', activePhotoFitClass, mobilePhotoFitClass)}
               style={
                 activePhotoTransform
                   ? {
@@ -92,11 +100,11 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
             </div>
           )}
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
-          <div className="flex-1 min-h-0 min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 max-sm:flex-row max-sm:gap-3 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
+          <div className="flex-1 min-h-0 min-w-0 max-sm:flex max-sm:flex-col">
             <h3
               className={cn(
-                'min-w-0 max-w-full line-clamp-2 break-words text-sm font-medium transition-colors [overflow-wrap:anywhere] 2xl:text-[0.95rem] 3xl:text-base',
+                'min-w-0 max-w-full line-clamp-2 wrap-anywhere text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
                 isSprintTheme ? 'text-slate-100' : 'text-text'
               )}
             >
@@ -106,7 +114,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
               {group.flavorOptions.find((option) => option.id === activeVariant.id)?.label ? (
                 <span
                   className={cn(
-                    'inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs line-clamp-1 [overflow-wrap:anywhere]',
+                    'inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs line-clamp-1 wrap-anywhere max-sm:px-1.5 max-sm:text-[11px]',
                     isSprintTheme ? 'bg-slate-700 text-slate-200' : 'bg-highlight-blue text-gray-700'
                   )}
                 >
@@ -134,7 +142,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
                 </span>
               )}
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1.5 max-sm:gap-1">
               {group.flavorOptions.map((option) => {
                 const isSelected = option.id === activeVariant.id
                 const label = option.label ?? `Вкус ${group.flavorOptions.findIndex((item) => item.id === option.id) + 1}`
@@ -144,7 +152,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
                     type="button"
                     onClick={() => setSelectedId(option.id)}
                     className={cn(
-                      'rounded-full border px-2 py-0.5 text-[11px] transition-colors',
+                      'rounded-full border px-2 py-0.5 text-[11px] transition-colors max-sm:px-1.5',
                       isSelected
                         ? isSprintTheme
                           ? 'border-[#7AA2FF] bg-[#7AA2FF] text-slate-950'
@@ -161,7 +169,7 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
               })}
             </div>
           </div>
-          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 3xl:mt-3 3xl:gap-2">
+          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 max-sm:mt-0 max-sm:flex-1 max-sm:justify-end 3xl:mt-3 3xl:gap-2">
             <AddToCartButton
               productId={activeVariant.id}
               title={activeVariant.title}

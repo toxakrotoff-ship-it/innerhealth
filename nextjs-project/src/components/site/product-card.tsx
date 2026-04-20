@@ -71,6 +71,8 @@ export function ProductCard({
       : 'object-contain object-center'
     : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
+  const mobilePhotoFitClass = cn('max-sm:object-contain max-sm:object-center')
+
   const updateStyles = () => {
     if (ref.current) {
       ref.current.style.setProperty('--r-x', `${state.current.rotateY}deg`)
@@ -117,7 +119,13 @@ export function ProductCard({
           transform: 'rotateX(var(--r-y)) rotateY(var(--r-x))',
         }}
       >
-        <div className={cn('relative aspect-3/4 overflow-hidden', isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue')}>
+        <div
+          className={cn(
+            'relative aspect-3/4 overflow-hidden',
+            'max-sm:aspect-square max-sm:w-[42%] max-sm:shrink-0',
+            isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue'
+          )}
+        >
           <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
             <ProductQuickView
               id={id}
@@ -139,7 +147,7 @@ export function ProductCard({
               src={photoSrc!}
               alt={title}
               fill
-              className={cn('z-10', photoFitClass)}
+              className={cn('z-10', photoFitClass, mobilePhotoFitClass)}
               style={
                 photoTransform
                   ? {
@@ -160,11 +168,11 @@ export function ProductCard({
             </div>
           )}
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
-          <div className="flex-1 min-h-0 min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 max-sm:flex-row max-sm:gap-3 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
+          <div className="flex-1 min-h-0 min-w-0 max-sm:flex max-sm:flex-col">
             <h3
               className={cn(
-                'min-w-0 max-w-full line-clamp-2 break-words text-sm font-medium transition-colors [overflow-wrap:anywhere] 2xl:text-[0.95rem] 3xl:text-base',
+                'min-w-0 max-w-full line-clamp-2 wrap-anywhere text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
                 isSprintTheme ? 'text-slate-100 group-hover:text-[#7AA2FF]' : 'text-text group-hover:text-action-blue'
               )}
             >
@@ -191,7 +199,7 @@ export function ProductCard({
               )}
             </div>
           </div>
-          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 3xl:mt-3 3xl:gap-2">
+          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 max-sm:mt-0 max-sm:flex-1 max-sm:justify-end 3xl:mt-3 3xl:gap-2">
             <AddToCartButton
               productId={id}
               title={title}

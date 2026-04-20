@@ -60,6 +60,19 @@ const ReviewCtaBlock = nextDynamic(
   { ssr: true }
 )
 
+function withTimeout<TValue, TFallback>(
+  promise: Promise<TValue>,
+  timeoutMs: number,
+  fallback: TFallback
+): Promise<TValue | TFallback> {
+  return Promise.race([
+    promise,
+    new Promise<TFallback>((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs)
+    }),
+  ])
+}
+
 export async function generateMetadata(
   _props: unknown,
   _parent: ResolvingMetadata
@@ -174,6 +187,7 @@ function getHowToOrderContent(blocks: ContentBlockResolved[]) {
 }
 
 async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
+  const dbTimeoutMs = 2500
   const categoryScopeWhere =
     activeBrand === 'sprint-power'
       ? { slug: { startsWith: 'sp-' } }
@@ -184,36 +198,44 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
       : { slug: { not: { startsWith: 'sp-' } } }
   const categories = await (async () => {
     try {
-      const categoriesForBlock = await prisma.category.findMany({
-        where: { showInCategoriesBlock: true, ...categoryScopeWhere },
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          _count: {
-            select: {
-              products: {
-                where: { product: { isDraft: false } },
+      const categoriesForBlock = await withTimeout(
+        prisma.category.findMany({
+          where: { showInCategoriesBlock: true, ...categoryScopeWhere },
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            _count: {
+              select: {
+                products: {
+                  where: { product: { isDraft: false } },
+                },
               },
             },
           },
-        },
-      })
+        }),
+        dbTimeoutMs,
+        []
+      )
 
       if (categoriesForBlock.length > 0) return categoriesForBlock
 
       // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
-      return prisma.category.findMany({
-        where: categoryScopeWhere,
-        orderBy: { sortOrder: 'asc' },
-        include: {
-          _count: {
-            select: {
-              products: {
-                where: { product: { isDraft: false } },
+      return withTimeout(
+        prisma.category.findMany({
+          where: categoryScopeWhere,
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            _count: {
+              select: {
+                products: {
+                  where: { product: { isDraft: false } },
+                },
               },
             },
           },
-        },
-      })
+        }),
+        dbTimeoutMs,
+        []
+      )
     } catch {
       return []
     }
@@ -221,20 +243,28 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
 
   const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
     await Promise.allSettled([
-      productService.getProductsForHomeInBrandScope(8, activeBrand),
-      prisma.post.findMany({
-        where: { published: true, type: 'news', ...postScopeWhere } as Prisma.PostWhereInput,
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-      prisma.post.findMany({
-        where: { published: true, type: 'article', ...postScopeWhere } as Prisma.PostWhereInput,
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-      reviewService.getApprovedReviews(activeBrand).then((items) => items.slice(0, 6)),
+      withTimeout(productService.getProductsForHomeInBrandScope(8, activeBrand), dbTimeoutMs, []),
+      withTimeout(
+        prisma.post.findMany({
+          where: { published: true, type: 'news', ...postScopeWhere } as Prisma.PostWhereInput,
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        dbTimeoutMs,
+        []
+      ),
+      withTimeout(
+        prisma.post.findMany({
+          where: { published: true, type: 'article', ...postScopeWhere } as Prisma.PostWhereInput,
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        dbTimeoutMs,
+        []
+      ),
+      withTimeout(reviewService.getApprovedReviews(activeBrand).then((items) => items.slice(0, 6)), dbTimeoutMs, []),
     ])
 
   const newProducts =
@@ -302,10 +332,11 @@ type SprintHomeData = {
 }
 
 async function getSprintHomeData(): Promise<SprintHomeData> {
-  const categoriesRaw = await prisma.$queryRaw<
-    Array<{ id: string; title: string; slug: string; productsCount: number }>
-  >(
-    Prisma.sql`
+  const dbTimeoutMs = 2500
+  const categoriesRaw =
+    (await withTimeout(
+      prisma.$queryRaw<Array<{ id: string; title: string; slug: string; productsCount: number }>>(
+        Prisma.sql`
       SELECT
         c.id,
         c.title,
@@ -319,26 +350,33 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       ORDER BY c."sortOrder" ASC NULLS LAST, c.title ASC
       LIMIT 6
     `
-  )
+      ),
+      dbTimeoutMs,
+      []
+    )) ?? []
 
   const [products, categories, reviews, newsPosts, articlePosts] = await Promise.all([
-    prisma.product.findMany({
-      where: {
-        isDraft: false,
-        brand: SPRINT_POWER_PRODUCT_BRAND,
-        isFeaturedInNewArrivals: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 2,
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        photo: true,
-        slug: true,
-        brand: true,
-      },
-    }),
+    withTimeout(
+      prisma.product.findMany({
+        where: {
+          isDraft: false,
+          brand: SPRINT_POWER_PRODUCT_BRAND,
+          isFeaturedInNewArrivals: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 2,
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          photo: true,
+          slug: true,
+          brand: true,
+        },
+      }),
+      dbTimeoutMs,
+      []
+    ),
     Promise.resolve(
       categoriesRaw.map((item) => ({
         id: item.id,
@@ -347,53 +385,69 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         _count: { products: item.productsCount },
       }))
     ),
-    reviewService.getApprovedReviews('sprint-power').then((items) =>
-      items.slice(0, 2).map((item) => ({
-        id: item.id,
-        authorName: item.authorName,
-        socialLink: item.socialLink,
-        text: item.text,
-      }))
+    withTimeout(
+      reviewService.getApprovedReviews('sprint-power').then((items) =>
+        items.slice(0, 2).map((item) => ({
+          id: item.id,
+          authorName: item.authorName,
+          socialLink: item.socialLink,
+          text: item.text,
+        }))
+      ),
+      dbTimeoutMs,
+      []
     ),
-    prisma.post.findMany({
-      where: {
-        published: true,
-        type: 'news',
-        slug: { startsWith: 'sp-' },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      select: { id: true, title: true, slug: true, previewImage: true },
-    }),
-    prisma.post.findMany({
-      where: {
-        published: true,
-        type: 'article',
-        slug: { startsWith: 'sp-' },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 3,
-      select: { id: true, title: true, slug: true, previewImage: true },
-    }),
+    withTimeout(
+      prisma.post.findMany({
+        where: {
+          published: true,
+          type: 'news',
+          slug: { startsWith: 'sp-' },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, title: true, slug: true, previewImage: true },
+      }),
+      dbTimeoutMs,
+      []
+    ),
+    withTimeout(
+      prisma.post.findMany({
+        where: {
+          published: true,
+          type: 'article',
+          slug: { startsWith: 'sp-' },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, title: true, slug: true, previewImage: true },
+      }),
+      dbTimeoutMs,
+      []
+    ),
   ])
 
   const featuredProduct =
     products[0] ??
-    (await prisma.product.findFirst({
-      where: {
-        isDraft: false,
-        brand: SPRINT_POWER_PRODUCT_BRAND,
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        photo: true,
-        slug: true,
-        brand: true,
-      },
-    }))
+    ((await withTimeout(
+      prisma.product.findFirst({
+        where: {
+          isDraft: false,
+          brand: SPRINT_POWER_PRODUCT_BRAND,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          photo: true,
+          slug: true,
+          brand: true,
+        },
+      }),
+      dbTimeoutMs,
+      null
+    )) as SprintHomeData['featuredProduct'])
 
   return { products, featuredProduct, categories, reviews, newsPosts, articlePosts }
 }
