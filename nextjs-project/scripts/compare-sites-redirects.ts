@@ -508,7 +508,7 @@ async function main(): Promise<void> {
     }
     const { PrismaClient } = await import('@prisma/client');
     const { PrismaPg } = await import('@prisma/adapter-pg');
-    const { default: Pool } = (await import('pg')) as { default: new (config: { connectionString: string }) => unknown };
+    const { Pool } = await import('pg');
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const adapter = new PrismaPg(pool);
     const prisma = new PrismaClient({ adapter });
