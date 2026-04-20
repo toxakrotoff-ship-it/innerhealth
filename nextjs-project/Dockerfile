@@ -1,10 +1,10 @@
 ## syntax=docker/dockerfile:1.7
 
-FROM node:20-alpine AS build-base
+FROM node:22-alpine AS build-base
 
 RUN apk add --no-cache libc6-compat python3 make g++
 
-FROM node:20-alpine AS runtime-base
+FROM node:22-alpine AS runtime-base
 
 RUN apk add --no-cache libc6-compat
 
