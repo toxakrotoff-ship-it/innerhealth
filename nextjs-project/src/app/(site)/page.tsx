@@ -853,6 +853,7 @@ function SprintPowerHome({
 export default async function HomePage() {
   const headerStore = await headers()
   const cookieStore = await cookies()
+  const dbTimeoutMs = 2500
   const activeBrand = resolveBrand({
     forwardedBrand: headerStore.get('x-brand'),
     cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
@@ -860,19 +861,27 @@ export default async function HomePage() {
   })
 
   if (activeBrand === 'sprint-power') {
+    const emptySprintHomeData: SprintHomeData = {
+      products: [],
+      featuredProduct: null,
+      categories: [],
+      reviews: [],
+      newsPosts: [],
+      articlePosts: [],
+    }
     const [sprintHomeData, sprintHomeBlocks, sprintFaqItems] = await Promise.all([
-      getSprintHomeData(),
-      getResolvedBlocksForPage('home', activeBrand),
-      faqService.getPublishedFaqItems(activeBrand),
+      withTimeout(getSprintHomeData(), dbTimeoutMs, emptySprintHomeData),
+      withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, []),
+      withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, []),
     ])
     return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} faqItems={sprintFaqItems} />
   }
 
   const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData(activeBrand)
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
-    getResolvedBlocksForPage('home', activeBrand),
-    getResolvedBlocksForPage('catalog', activeBrand),
-    getActiveSitePopup({ brandId: activeBrand }),
+    withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, []),
+    withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, []),
+    withTimeout(getActiveSitePopup({ brandId: activeBrand }), dbTimeoutMs, null),
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')

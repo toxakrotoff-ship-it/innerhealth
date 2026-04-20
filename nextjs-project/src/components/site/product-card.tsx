@@ -71,7 +71,7 @@ export function ProductCard({
       : 'object-contain object-center'
     : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
-  const mobilePhotoFitClass = cn('max-sm:object-contain max-sm:object-center')
+  const mobilePhotoFitClass = cn('max-sm:object-cover max-sm:object-center')
 
   const updateStyles = () => {
     if (ref.current) {
@@ -110,7 +110,7 @@ export function ProductCard({
       >
       <article
         className={cn(
-          'relative flex h-full w-full flex-col overflow-hidden rounded-2xl border transition-[transform,border-color,box-shadow] duration-200 ease-out',
+          'relative flex h-full w-full flex-col overflow-hidden rounded-2xl border transition-[transform,border-color,box-shadow] duration-200 ease-out max-sm:flex-row',
           isSprintTheme
             ? 'border-slate-700/80 bg-slate-900 shadow-[0_10px_30px_rgba(2,6,23,0.45)] group-hover:border-[#7AA2FF]/70 group-hover:shadow-[0_16px_40px_rgba(2,6,23,0.65)]'
             : 'border-gray-200 bg-white shadow-sm group-hover:shadow-md'
@@ -122,8 +122,8 @@ export function ProductCard({
         <div
           className={cn(
             'relative aspect-3/4 overflow-hidden',
-            'max-sm:aspect-square max-sm:w-[42%] max-sm:shrink-0',
-            isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue'
+            'max-sm:w-[40%] max-sm:shrink-0 max-[360px]:w-[36%]',
+            isSprintTheme ? 'bg-slate-800 max-sm:bg-slate-900' : 'bg-highlight-blue max-sm:bg-white'
           )}
         >
           <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
@@ -168,27 +168,18 @@ export function ProductCard({
             </div>
           )}
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 max-sm:flex-row max-sm:gap-3 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
-          <div className="flex-1 min-h-0 min-w-0 max-sm:flex max-sm:flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 max-sm:gap-2 max-sm:py-3 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
+          <div className="min-h-0 min-w-0 max-sm:flex max-sm:items-start max-sm:justify-between max-sm:gap-3">
             <h3
               className={cn(
-                'min-w-0 max-w-full line-clamp-2 wrap-anywhere text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
+                'min-w-0 max-w-full line-clamp-2 break-words hyphens-auto text-sm font-medium transition-colors max-sm:line-clamp-none 2xl:text-[0.95rem] 3xl:text-base',
                 isSprintTheme ? 'text-slate-100 group-hover:text-[#7AA2FF]' : 'text-text group-hover:text-action-blue'
               )}
             >
               {title}
             </h3>
-            {showSku && sku?.trim() && (
-              <p
-                className={cn(
-                  'desktop-microtext-scale mt-1 min-w-0 max-w-full line-clamp-1 overflow-hidden text-ellipsis',
-                  isSprintTheme ? 'text-slate-400' : 'text-gray-500'
-                )}
-              >
-                SKU: {sku.trim()}
-              </p>
-            )}
-            <div className="mt-1.5 flex items-center gap-1.5">
+
+            <div className="mt-0 flex shrink-0 items-baseline gap-2 max-sm:pt-0.5">
               <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
                 {price.toLocaleString('ru-RU')} ₽
               </span>
@@ -199,7 +190,19 @@ export function ProductCard({
               )}
             </div>
           </div>
-          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 max-sm:mt-0 max-sm:flex-1 max-sm:justify-end 3xl:mt-3 3xl:gap-2">
+
+          {showSku && sku?.trim() && (
+            <p
+              className={cn(
+                'desktop-microtext-scale -mt-1 min-w-0 max-w-full line-clamp-1 overflow-hidden text-ellipsis',
+                isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+              )}
+            >
+              SKU: {sku.trim()}
+            </p>
+          )}
+
+          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 max-sm:mt-0 3xl:mt-3 3xl:gap-2">
             <AddToCartButton
               productId={id}
               title={title}
