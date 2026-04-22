@@ -140,23 +140,35 @@ export async function calculateGiftsForOrder(params: {
   return result
 }
 
+/** Same visibility window as {@link getPublicGiftPromotions} (for counts / listing). */
+function buildPublicGiftPromotionWhere(
+  now: Date,
+  brandId: BrandId | null
+): Prisma.GiftPromotionWhereInput {
+  return {
+    brand: resolveDbBrand(brandId),
+    status: 'enabled',
+    showOnSite: true,
+    OR: [{ validFrom: null }, { validFrom: { lte: now } }],
+    AND: [{ OR: [{ validTo: null }, { validTo: { gte: now } }] }],
+  }
+}
+
+export async function countPublicGiftPromotions(
+  now: Date,
+  brandId: BrandId | null = null
+): Promise<number> {
+  return prisma.giftPromotion.count({
+    where: buildPublicGiftPromotionWhere(now, brandId),
+  })
+}
+
 export async function getPublicGiftPromotions(
   now: Date,
   brandId: BrandId | null = null
 ) {
   const promos = await prisma.giftPromotion.findMany({
-    where: {
-      brand: resolveDbBrand(brandId),
-      status: 'enabled',
-      showOnSite: true,
-      OR: [
-        { validFrom: null },
-        { validFrom: { lte: now } },
-      ],
-      AND: [
-        { OR: [{ validTo: null }, { validTo: { gte: now } }] },
-      ],
-    },
+    where: buildPublicGiftPromotionWhere(now, brandId),
     orderBy: { createdAt: 'desc' },
     include: {
       giftProduct: {

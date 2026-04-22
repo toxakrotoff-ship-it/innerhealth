@@ -37,7 +37,11 @@ import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveBrand } from '@/lib/brand/brand'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
-import { formatProductsCountRu } from '@/lib/ru-product-count'
+import {
+  formatAktsiiCatalogBlockSubtitleRu,
+  formatProductsCountRu,
+} from '@/lib/ru-product-count'
+import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 
 const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -196,50 +200,53 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
     activeBrand === 'sprint-power'
       ? { slug: { startsWith: 'sp-' } }
       : { slug: { not: { startsWith: 'sp-' } } }
-  const categories = await (async () => {
-    try {
-      const categoriesForBlock = await withTimeout(
-        prisma.category.findMany({
-          where: { showInCategoriesBlock: true, ...categoryScopeWhere },
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            _count: {
-              select: {
-                products: {
-                  where: { product: { isDraft: false } },
+  const [categories, publicGiftPromotionCount] = await Promise.all([
+    (async () => {
+      try {
+        const categoriesForBlock = await withTimeout(
+          prisma.category.findMany({
+            where: { showInCategoriesBlock: true, ...categoryScopeWhere },
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              _count: {
+                select: {
+                  products: {
+                    where: { product: { isDraft: false } },
+                  },
                 },
               },
             },
-          },
-        }),
-        dbTimeoutMs,
-        []
-      )
+          }),
+          dbTimeoutMs,
+          []
+        )
 
-      if (categoriesForBlock.length > 0) return categoriesForBlock
+        if (categoriesForBlock.length > 0) return categoriesForBlock
 
-      // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
-      return withTimeout(
-        prisma.category.findMany({
-          where: categoryScopeWhere,
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            _count: {
-              select: {
-                products: {
-                  where: { product: { isDraft: false } },
+        // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
+        return withTimeout(
+          prisma.category.findMany({
+            where: categoryScopeWhere,
+            orderBy: { sortOrder: 'asc' },
+            include: {
+              _count: {
+                select: {
+                  products: {
+                    where: { product: { isDraft: false } },
+                  },
                 },
               },
             },
-          },
-        }),
-        dbTimeoutMs,
-        []
-      )
-    } catch {
-      return []
-    }
-  })()
+          }),
+          dbTimeoutMs,
+          []
+        )
+      } catch {
+        return []
+      }
+    })(),
+    withTimeout(countPublicGiftPromotions(new Date(), activeBrand), dbTimeoutMs, 0),
+  ])
 
   const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
     await Promise.allSettled([
@@ -285,7 +292,7 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
     createdAt: r.createdAt.toISOString(),
   }))
 
-  return { categories, newProducts, newsPosts, articlePosts, reviews }
+  return { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount }
 }
 
 type SprintHomeData = {
@@ -329,6 +336,7 @@ type SprintHomeData = {
     slug: string
     previewImage: string | null
   }>
+  publicGiftPromotionCount: number
 }
 
 async function getSprintHomeData(): Promise<SprintHomeData> {
@@ -355,77 +363,79 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       []
     )) ?? []
 
-  const [products, categories, reviews, newsPosts, articlePosts] = await Promise.all([
-    withTimeout(
-      prisma.product.findMany({
-        where: {
-          isDraft: false,
-          brand: SPRINT_POWER_PRODUCT_BRAND,
-          isFeaturedInNewArrivals: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-        select: {
-          id: true,
-          title: true,
-          price: true,
-          photo: true,
-          slug: true,
-          brand: true,
-        },
-      }),
-      dbTimeoutMs,
-      []
-    ),
-    Promise.resolve(
-      categoriesRaw.map((item) => ({
-        id: item.id,
-        title: item.title,
-        slug: item.slug,
-        _count: { products: item.productsCount },
-      }))
-    ),
-    withTimeout(
-      reviewService.getApprovedReviews('sprint-power').then((items) =>
-        items.slice(0, 2).map((item) => ({
+  const [products, categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
+    await Promise.all([
+      withTimeout(
+        prisma.product.findMany({
+          where: {
+            isDraft: false,
+            brand: SPRINT_POWER_PRODUCT_BRAND,
+            isFeaturedInNewArrivals: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 2,
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            photo: true,
+            slug: true,
+            brand: true,
+          },
+        }),
+        dbTimeoutMs,
+        []
+      ),
+      Promise.resolve(
+        categoriesRaw.map((item) => ({
           id: item.id,
-          authorName: item.authorName,
-          socialLink: item.socialLink,
-          text: item.text,
+          title: item.title,
+          slug: item.slug,
+          _count: { products: item.productsCount },
         }))
       ),
-      dbTimeoutMs,
-      []
-    ),
-    withTimeout(
-      prisma.post.findMany({
-        where: {
-          published: true,
-          type: 'news',
-          slug: { startsWith: 'sp-' },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-      dbTimeoutMs,
-      []
-    ),
-    withTimeout(
-      prisma.post.findMany({
-        where: {
-          published: true,
-          type: 'article',
-          slug: { startsWith: 'sp-' },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 3,
-        select: { id: true, title: true, slug: true, previewImage: true },
-      }),
-      dbTimeoutMs,
-      []
-    ),
-  ])
+      withTimeout(
+        reviewService.getApprovedReviews('sprint-power').then((items) =>
+          items.slice(0, 2).map((item) => ({
+            id: item.id,
+            authorName: item.authorName,
+            socialLink: item.socialLink,
+            text: item.text,
+          }))
+        ),
+        dbTimeoutMs,
+        []
+      ),
+      withTimeout(
+        prisma.post.findMany({
+          where: {
+            published: true,
+            type: 'news',
+            slug: { startsWith: 'sp-' },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        dbTimeoutMs,
+        []
+      ),
+      withTimeout(
+        prisma.post.findMany({
+          where: {
+            published: true,
+            type: 'article',
+            slug: { startsWith: 'sp-' },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+          select: { id: true, title: true, slug: true, previewImage: true },
+        }),
+        dbTimeoutMs,
+        []
+      ),
+      withTimeout(countPublicGiftPromotions(new Date(), 'sprint-power'), dbTimeoutMs, 0),
+    ])
 
   const featuredProduct =
     products[0] ??
@@ -449,7 +459,15 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       null
     )) as SprintHomeData['featuredProduct'])
 
-  return { products, featuredProduct, categories, reviews, newsPosts, articlePosts }
+  return {
+    products,
+    featuredProduct,
+    categories,
+    reviews,
+    newsPosts,
+    articlePosts,
+    publicGiftPromotionCount,
+  }
 }
 
 function SprintPowerHome({
@@ -669,7 +687,14 @@ function SprintPowerHome({
                   className="rounded-xl bg-[#1E293B] p-4"
                 >
                   <p className="text-sm font-semibold text-slate-100">{category.title}</p>
-                  <p className="text-xs text-slate-400">{formatProductsCountRu(category._count.products)}</p>
+                  <p className="text-xs text-slate-400">
+                    {category.slug === 'aktsii'
+                      ? formatAktsiiCatalogBlockSubtitleRu(
+                          category._count.products,
+                          data.publicGiftPromotionCount
+                        )
+                      : formatProductsCountRu(category._count.products)}
+                  </p>
                 </Link>
               ))}
             </div>
@@ -868,6 +893,7 @@ export default async function HomePage() {
       reviews: [],
       newsPosts: [],
       articlePosts: [],
+      publicGiftPromotionCount: 0,
     }
     const [sprintHomeData, sprintHomeBlocks, sprintFaqItems] = await Promise.all([
       withTimeout(getSprintHomeData(), dbTimeoutMs, emptySprintHomeData),
@@ -877,7 +903,8 @@ export default async function HomePage() {
     return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} faqItems={sprintFaqItems} />
   }
 
-  const { categories, newProducts, newsPosts, articlePosts, reviews } = await getHomeData(activeBrand)
+  const { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount } =
+    await getHomeData(activeBrand)
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
     withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, []),
     withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, []),
@@ -1092,7 +1119,12 @@ export default async function HomePage() {
                         <span
                           className={`relative z-10 mt-1 text-sm font-medium drop-shadow 2xl:text-base ${categoryTitleFont} ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
                         >
-                          {formatProductsCountRu(cat._count.products)}
+                          {cat.slug === 'aktsii'
+                            ? formatAktsiiCatalogBlockSubtitleRu(
+                                cat._count.products,
+                                publicGiftPromotionCount
+                              )
+                            : formatProductsCountRu(cat._count.products)}
                         </span>
                       </div>
                     </TiltCard>

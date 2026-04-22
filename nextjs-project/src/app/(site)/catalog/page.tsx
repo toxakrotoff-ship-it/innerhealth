@@ -32,7 +32,11 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
-import { formatProductsCountRu } from '@/lib/ru-product-count'
+import {
+  formatAktsiiCatalogBlockSubtitleRu,
+  formatProductsCountRu,
+} from '@/lib/ru-product-count'
+import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -117,7 +121,8 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     view,
   } = parseCatalogSearchParams(sp)
 
-  const [categories, brandOptions, catalogResult] = await Promise.all([
+  const now = new Date()
+  const [categories, brandOptions, catalogResult, publicGiftPromotionCount] = await Promise.all([
     prisma.category.findMany({
       where: { showInCategoriesBlock: true, brand: dbBrand },
       orderBy: { sortOrder: 'asc' },
@@ -147,6 +152,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       sort,
       brandId,
     }),
+    countPublicGiftPromotions(now, brandId),
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories)
@@ -261,7 +267,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                           bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
                         }`}
                       >
-                        {formatProductsCountRu(cat._count.products)}
+                        {cat.slug === 'aktsii'
+                          ? formatAktsiiCatalogBlockSubtitleRu(cat._count.products, publicGiftPromotionCount)
+                          : formatProductsCountRu(cat._count.products)}
                       </span>
                     </div>
                   </TiltCard>

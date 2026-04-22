@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatProductsCountRu } from './ru-product-count'
+import { formatAktsiiCatalogBlockSubtitleRu, formatProductsCountRu } from './ru-product-count'
 
 describe('formatProductsCountRu', () => {
   it('uses товар for 1, 21, 31 and товаров for 11', () => {
@@ -19,5 +19,14 @@ describe('formatProductsCountRu', () => {
     expect(formatProductsCountRu(5)).toBe('5 товаров')
     expect(formatProductsCountRu(12)).toBe('12 товаров')
     expect(formatProductsCountRu(14)).toBe('14 товаров')
+  })
+})
+
+describe('formatAktsiiCatalogBlockSubtitleRu', () => {
+  it('sums products and site promotions with товар pluralization', () => {
+    expect(formatAktsiiCatalogBlockSubtitleRu(3, 0)).toBe('3 товара')
+    expect(formatAktsiiCatalogBlockSubtitleRu(0, 1)).toBe('1 товар')
+    expect(formatAktsiiCatalogBlockSubtitleRu(3, 1)).toBe('4 товара')
+    expect(formatAktsiiCatalogBlockSubtitleRu(1, 2)).toBe('3 товара')
   })
 })
