@@ -89,14 +89,15 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
     sudo certbot certonly --standalone --non-interactive --agree-tos \
       ${CERTBOT_DOMAIN_ARGS} -m "${CERT_EMAIL}" || echo "WARN: certbot failed, continuing without updating certificate."
 
-    if [ -d "/etc/letsencrypt/live/${FIRST_DOMAIN}" ]; then
+    LIVE_DIR="$(sudo sh -c "ls -d /etc/letsencrypt/live/${FIRST_DOMAIN}* 2>/dev/null | head -n 1" || true)"
+    if [ -n "${LIVE_DIR}" ] && [ -d "${LIVE_DIR}" ]; then
       log "Copying certificate to deploy/nginx/ssl/ ..."
       mkdir -p deploy/nginx/ssl
-      sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/fullchain.pem" "deploy/nginx/ssl/fullchain.pem"
-      sudo cp "/etc/letsencrypt/live/${FIRST_DOMAIN}/privkey.pem" "deploy/nginx/ssl/privkey.pem"
+      sudo cp "${LIVE_DIR}/fullchain.pem" "deploy/nginx/ssl/fullchain.pem"
+      sudo cp "${LIVE_DIR}/privkey.pem" "deploy/nginx/ssl/privkey.pem"
       sudo chmod 600 deploy/nginx/ssl/privkey.pem || true
     else
-      echo "WARN: /etc/letsencrypt/live/${FIRST_DOMAIN} not found; certificate was not copied."
+      echo "WARN: /etc/letsencrypt/live/${FIRST_DOMAIN}* not found; certificate was not copied."
     fi
   else
     echo "WARN: certbot not installed; skip certificate issuance. Install certbot or unset CERT_DOMAINS/CERT_EMAIL."
