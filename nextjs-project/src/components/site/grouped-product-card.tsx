@@ -123,19 +123,6 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
             </div>
           </div>
 
-          <div className="mt-1 min-h-[22px]">
-            {group.flavorOptions.find((option) => option.id === activeVariant.id)?.label ? (
-              <span
-                className={cn(
-                  'inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs line-clamp-1 wrap-anywhere max-sm:px-1.5 max-sm:text-[11px]',
-                  isSprintTheme ? 'bg-slate-700 text-slate-200' : 'bg-highlight-blue text-gray-700'
-                )}
-              >
-                {group.flavorOptions.find((option) => option.id === activeVariant.id)?.label}
-              </span>
-            ) : null}
-          </div>
-
           {showSku && activeVariant.sku?.trim() && (
             <p
               className={cn(
