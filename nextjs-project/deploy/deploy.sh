@@ -67,7 +67,7 @@ require_free_disk_mb "${MIN_FREE_MB}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):
-#   export CERT_DOMAINS="innerhaealth.inetrnet.pp.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
+#   export CERT_DOMAINS="innerhealth.ru www.innerhealth.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
 #   export CERT_EMAIL=you@example.com
 # Backward compatibility: CERT_DOMAIN is still supported for a single domain.
 DOMAINS_INPUT="${CERT_DOMAINS:-${CERT_DOMAIN:-}}"
@@ -81,7 +81,10 @@ if [ -n "${DOMAINS_INPUT}" ] && [ -n "${CERT_EMAIL:-}" ]; then
 
   log "Issuing/renewing TLS certificate for: ${DOMAINS_NORMALIZED}"
   if command -v certbot >/dev/null 2>&1; then
-    # Standalone mode: certbot binds to :80, so make sure nginx is stopped beforehand.
+    # Standalone mode: certbot binds to :80, so stop our nginx container first.
+    log "Stopping nginx container (free :80 for certbot)..."
+    docker_compose stop nginx || true
+
     # shellcheck disable=SC2086
     sudo certbot certonly --standalone --non-interactive --agree-tos \
       ${CERTBOT_DOMAIN_ARGS} -m "${CERT_EMAIL}" || echo "WARN: certbot failed, continuing without updating certificate."
