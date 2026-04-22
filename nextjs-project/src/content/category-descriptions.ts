@@ -39,7 +39,7 @@ export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
     ],
   },
   'gribnaya-kollekciya': {
-    heroImage: '/images/categories/gribnaya-kollekciya.jpg',
+    heroImage: '/images/categories/gribnaya-kollekciya.png',
     heroTitle: 'ГРИБНАЯ КОЛЛЕКЦИЯ',
     descriptionHeading: 'Преимущества грибной коллекции Inner Health:',
     bullets: [
@@ -57,7 +57,7 @@ export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
     ],
   },
   bulony: {
-    heroImage: '/images/categories/bulony.webp',
+    heroImage: '/images/categories/bulony.png',
     heroTitle: 'ПЕПТИДЫ КОСТНОГО БУЛЬОНА',
     descriptionHeading: 'Пептиды костного бульона Inner Health:',
     bullets: [
@@ -77,7 +77,7 @@ export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
     ],
   },
   nutrienty: {
-    heroImage: '/images/categories/nutrienty.jpg',
+    heroImage: '/images/categories/nutrienty.png',
     heroTitle: 'НУТРИЕНТЫ',
     descriptionHeading: 'Преимущества нутриентов Inner Health:',
     bullets: [
