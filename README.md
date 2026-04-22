@@ -43,7 +43,7 @@ innerhealth/
 
 ### Требования
 
-- Node.js 18+
+- Node.js 22 (LTS)
 - PostgreSQL
 - (Опционально) Docker и Docker Compose — для деплоя
 

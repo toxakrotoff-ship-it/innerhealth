@@ -22,6 +22,8 @@ nextjs-project/public/uploads/
 
 # Build and output
 .next/
+**/.next.bak-*/
+**/.next.bak-*
 out/
 build/
 dist/
