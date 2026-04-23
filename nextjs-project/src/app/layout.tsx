@@ -5,6 +5,10 @@ import { Unbounded } from 'next/font/google'
 import { IconoirProvider } from 'iconoir-react'
 import { Preloader } from '@/components/site/preloader'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { headers } from 'next/headers'
+import { resolveBrandByHost } from '@/lib/brand/brand'
+import * as settingsService from '@/services/settings.service'
+import { parseMetrikaSnippet } from '@/lib/analytics/metrika-snippet'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -120,6 +124,13 @@ export default async function RootLayout({
 }) {
   const { brandId } = await getServerBrandContext()
   const shouldShowPreloader = brandId !== 'sprint-power'
+  const headerStore = await headers()
+  const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
+  const hostBrandId = resolveBrandByHost(host)
+  const metrikaMap = await settingsService.getSettingsMap(['yandexMetrikaHeadCode'], {
+    brandId: hostBrandId,
+  })
+  const metrika = parseMetrikaSnippet(metrikaMap.yandexMetrikaHeadCode)
 
   return (
     <html
@@ -134,6 +145,19 @@ export default async function RootLayout({
               'html.preloader-skip .preloader-overlay,html[data-preloader-skip="1"] .preloader-overlay{display:none!important}',
           }}
         />
+        {metrika ? (
+          <script
+            type={metrika.scriptType}
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: metrika.scriptInner }}
+          />
+        ) : null}
+        {metrika?.noscriptInner ? (
+          <noscript
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: metrika.noscriptInner }}
+          />
+        ) : null}
       </head>
       <body className="min-h-screen bg-gray-50 font-sans subpixel-antialiased text-gray-900">
         <IconoirProvider
