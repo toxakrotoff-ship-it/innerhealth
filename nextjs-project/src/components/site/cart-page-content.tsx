@@ -1207,13 +1207,18 @@ function CartLineRow({
   const hasDiscount = lineTotalAfterPromo < lineTotalOriginal && lineTotalOriginal > 0
   return (
     <div className={cn('flex gap-4 rounded-xl border p-4 xl:gap-6 xl:p-6 2xl:gap-8 2xl:p-8 3xl:gap-10 3xl:p-10 4xl:gap-12 4xl:p-12 5xl:gap-16 5xl:p-16 6xl:gap-20 6xl:p-20', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
-      <div className={cn('relative h-20 w-20 shrink-0 overflow-hidden rounded-lg', isSprintTheme ? 'bg-slate-800' : 'bg-highlight-blue')}>
+      <div
+        className={cn(
+          'relative w-20 shrink-0 overflow-hidden rounded-lg aspect-[3/4] border',
+          isSprintTheme ? 'border-slate-700 bg-transparent' : 'border-gray-100 bg-transparent'
+        )}
+      >
         {line.photo ? (
           <Image
             src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
             alt={line.title ?? ''}
             fill
-            className="object-contain object-center"
+            className="object-cover object-center"
           />
         ) : (
           <span className="text-action-blue/40 text-2xl m-auto">?</span>

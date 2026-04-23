@@ -134,13 +134,13 @@ export function CartDrawer() {
             <ul className="space-y-4 max-w-full">
               {items.map((line) => (
                 <li key={line.productId} className="flex gap-3 border-b border-gray-100 pb-4 w-full overflow-hidden">
-                  <div className="relative w-16 h-16 rounded-lg bg-highlight-blue shrink-0 overflow-hidden">
+                  <div className="relative w-16 aspect-[3/4] rounded-lg shrink-0 overflow-hidden border border-gray-100 bg-transparent">
                     {line.photo ? (
                       <Image
                         src={line.photo.startsWith('/') ? line.photo : `/${line.photo.replace(/^\//, '')}`}
                         alt={line.title ?? ''}
                         fill
-                        className="object-contain object-center"
+                        className="object-cover object-center"
                       />
                     ) : (
                       <span className="text-action-blue/40 text-2xl m-auto">?</span>
