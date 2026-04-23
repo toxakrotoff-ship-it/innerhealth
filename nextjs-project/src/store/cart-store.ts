@@ -15,12 +15,21 @@ export interface CartLine {
   isPromoEligible?: boolean
   /** Цена за единицу при применении промокода (если задана — подставляется вместо расчёта %/фикс) */
   discountPrice?: number | null
+  /** Gift line inserted by gift promotion sync. */
+  isGift?: boolean
+  giftPromotionId?: string | null
 }
 
 export type CartLineDetails = Pick<
   CartLine,
   'title' | 'price' | 'photo' | 'slug' | 'hasPromoPrice' | 'isPromoEligible' | 'discountPrice'
 >
+
+export interface GiftLineInput {
+  readonly giftProductId: string
+  readonly quantity: number
+  readonly giftPromotionId: string
+}
 
 interface CartState {
   items: CartLine[]
@@ -30,6 +39,7 @@ interface CartState {
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
   mergeItemDetails: (productId: string, details: CartLineDetails) => void
+  applyGiftLines: (params: { readonly gifts: readonly GiftLineInput[] }) => void
   syncOwner: (ownerId: string | null) => void
   openDrawer: () => void
   closeDrawer: () => void
@@ -93,6 +103,42 @@ export const useCartStore = create<CartState>()(
             i.productId === productId ? { ...i, ...details } : i
           ),
         }))
+      },
+
+      applyGiftLines(params) {
+        set((state) => {
+          const nonGift = state.items.filter((i) => i.isGift !== true)
+          const nextGifts: CartLine[] = params.gifts.map((g) => ({
+            productId: g.giftProductId,
+            quantity: Math.max(1, Math.floor(g.quantity)),
+            price: 0,
+            isGift: true,
+            giftPromotionId: g.giftPromotionId,
+            hasPromoPrice: true,
+            isPromoEligible: false,
+            discountPrice: null,
+            title: undefined,
+            photo: null,
+            slug: null,
+          }))
+
+          const items = [...nonGift, ...nextGifts]
+
+          if (items.length === state.items.length) {
+            const same = items.every((it, idx) => {
+              const prev = state.items[idx]
+              return (
+                prev?.productId === it.productId &&
+                prev?.quantity === it.quantity &&
+                (prev?.isGift ?? false) === (it.isGift ?? false) &&
+                (prev?.giftPromotionId ?? null) === (it.giftPromotionId ?? null)
+              )
+            })
+            if (same) return state
+          }
+
+          return { items }
+        })
       },
 
       syncOwner(ownerId) {

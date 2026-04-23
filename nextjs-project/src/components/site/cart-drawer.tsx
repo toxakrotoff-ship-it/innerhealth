@@ -144,19 +144,26 @@ export function CartDrawer() {
                     >
                       {line.title ?? 'Загрузка...'}
                     </Link>
+                    {line.isGift === true ? (
+                      <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        Подарок
+                      </span>
+                    ) : null}
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-sm text-gray-600">
                         {line.price != null
                           ? `${line.price.toLocaleString('ru-RU')} ₽ × ${line.quantity}`
                           : `— × ${line.quantity}`}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(line.productId)}
-                        className="text-gray-400 hover:text-destructive text-sm"
-                      >
-                        Удалить
-                      </button>
+                      {line.isGift === true ? null : (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(line.productId)}
+                          className="text-gray-400 hover:text-destructive text-sm"
+                        >
+                          Удалить
+                        </button>
+                      )}
                     </div>
                   </div>
                 </li>

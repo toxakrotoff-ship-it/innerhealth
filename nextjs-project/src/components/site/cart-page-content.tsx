@@ -24,6 +24,7 @@ import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
+import { usePromoStore } from '@/store/promo-store'
 
 interface PromoResult {
   valid: boolean
@@ -127,6 +128,7 @@ export function CartPageContent({
   const removeItem = useCartStore((s) => s.removeItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const mergeItemDetails = useCartStore((s) => s.mergeItemDetails)
+  const setHasPromoCode = usePromoStore((s) => s.setHasPromoCode)
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
@@ -415,8 +417,10 @@ export function CartPageContent({
       })
       const data = await res.json()
       setPromoResult(data)
+      setHasPromoCode(Boolean(data?.valid))
     } catch {
       setPromoResult({ valid: false, error: 'Ошибка запроса' })
+      setHasPromoCode(false)
     } finally {
       setPromoLoading(false)
     }
@@ -480,7 +484,9 @@ export function CartPageContent({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price ?? 0 })),
+          items: items
+            .filter((i) => i.isGift !== true)
+            .map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price ?? 0 })),
           total: totalWithDelivery,
           deliverySum: deliverySum > 0 ? deliverySum : undefined,
           promoCodeId: promoResult?.valid ? promoResult.id : null,
@@ -560,7 +566,9 @@ export function CartPageContent({
     )
   }
 
-  if (items.length === 0 && !orderSuccess) {
+  const hasNonGiftItems = items.some((i) => i.isGift !== true)
+
+  if (!hasNonGiftItems && !orderSuccess) {
     return (
       <div className={cn('rounded-2xl border p-8 text-center xl:p-10 2xl:p-12 3xl:p-16 4xl:p-20 5xl:p-24 6xl:p-32', isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-white')}>
         <p className={cn('mb-4', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>Корзина пуста</p>
@@ -611,15 +619,22 @@ export function CartPageContent({
             isEligibleForPercent
               ? lineTotalOriginal * (totalAfterPromo / subtotalEligiblePercent)
               : lineTotalOriginal
-          const isGift = false
+          const isGift = line.isGift === true
           return (
             <CartLineRow
               key={line.productId}
               line={line}
               lineTotalAfterPromo={lineTotalAfterPromo}
+              isGift={isGift}
               isSprintTheme={isSprintTheme}
-              onRemove={() => removeItem(line.productId)}
-              onQuantityChange={(q) => updateQuantity(line.productId, q)}
+              onRemove={() => {
+                if (isGift) return
+                removeItem(line.productId)
+              }}
+              onQuantityChange={(q) => {
+                if (isGift) return
+                updateQuantity(line.productId, q)
+              }}
             />
           )
         })}
@@ -1165,6 +1180,7 @@ export function CartPageContent({
 function CartLineRow({
   line,
   lineTotalAfterPromo,
+  isGift = false,
   isSprintTheme = false,
   onRemove,
   onQuantityChange,
@@ -1172,6 +1188,7 @@ function CartLineRow({
   line: CartLine
   /** Сумма по строке после скидки по промокоду (если применена). */
   lineTotalAfterPromo: number
+  isGift?: boolean
   isSprintTheme?: boolean
   onRemove: () => void
   onQuantityChange: (q: number) => void
@@ -1199,22 +1216,38 @@ function CartLineRow({
         >
           {line.title ?? 'Загрузка...'}
         </Link>
+        {isGift ? (
+          <span
+            className={cn(
+              'mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+              isSprintTheme ? 'bg-emerald-900/40 text-emerald-200' : 'bg-emerald-50 text-emerald-700'
+            )}
+          >
+            Подарок
+          </span>
+        ) : null}
         <div className="mt-1 flex items-center gap-3">
           <span className={cn(isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
             {line.price != null
               ? `${line.price.toLocaleString('ru-RU')} ₽ × `
               : '— × '}
-            <input
-              type="number"
-              min={1}
-              value={line.quantity}
-              onChange={(e) => onQuantityChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className={cn('inline-block w-14 rounded border px-1 py-0.5 text-center text-base', isSprintTheme ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-gray-300')}
-            />
+            {isGift ? (
+              <span className="inline-block w-14 text-center text-base">{line.quantity}</span>
+            ) : (
+              <input
+                type="number"
+                min={1}
+                value={line.quantity}
+                onChange={(e) => onQuantityChange(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className={cn('inline-block w-14 rounded border px-1 py-0.5 text-center text-base', isSprintTheme ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-gray-300')}
+              />
+            )}
           </span>
-          <button type="button" onClick={onRemove} className="text-sm text-red-600 hover:underline">
-            Удалить
-          </button>
+          {!isGift ? (
+            <button type="button" onClick={onRemove} className="text-sm text-red-600 hover:underline">
+              Удалить
+            </button>
+          ) : null}
         </div>
       </div>
       <div className={cn('text-right font-medium', isSprintTheme ? 'text-slate-100' : 'text-text')}>

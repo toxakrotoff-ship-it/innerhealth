@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
 import { CartOwnerSync } from '@/components/site/cart-owner-sync'
+import { CartGiftSync } from '@/components/site/cart-gift-sync'
 import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
@@ -89,6 +90,7 @@ export default async function SiteLayout({
       />
       <PageViewTracker />
       <CartOwnerSync />
+      <CartGiftSync />
       {bodyCode ? (
         <div
           aria-hidden="true"
