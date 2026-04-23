@@ -318,7 +318,9 @@ export function CdekWidget({
       {!error && !isReady ? (
         <div className="text-sm text-gray-600">Загружаем виджет СДЭК…</div>
       ) : null}
-      <div id={rootId} style={{ height: 650, width: '100%' }} />
+      <div className="relative h-[650px] w-full overflow-hidden rounded-xl">
+        <div id={rootId} className="h-full w-full" />
+      </div>
     </div>
   )
 }
