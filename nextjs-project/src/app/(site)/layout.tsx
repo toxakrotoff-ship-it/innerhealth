@@ -1,6 +1,7 @@
 import nextDynamic from 'next/dynamic'
 import { cookies, headers } from 'next/headers'
 import Script from 'next/script'
+import type { Metadata } from 'next'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
@@ -23,6 +24,28 @@ const CookieConsent = nextDynamic(
 
 /** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    icons: {
+      icon: [
+        {
+          url: '/favicon-on-black.svg',
+          type: 'image/svg+xml',
+          media: '(prefers-color-scheme: light)',
+        },
+        {
+          url: '/favicon-on-white.svg',
+          type: 'image/svg+xml',
+          media: '(prefers-color-scheme: dark)',
+        },
+        // Fallbacks for UAs that ignore media/type variants
+        { url: '/icon.png', type: 'image/png' },
+      ],
+      apple: [{ url: '/apple-icon.png', type: 'image/png' }],
+    },
+  }
+}
 
 function createHashRedirectScript(hashRedirectsJson: string): string {
   return `
