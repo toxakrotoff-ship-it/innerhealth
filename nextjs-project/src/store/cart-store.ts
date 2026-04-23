@@ -20,9 +20,11 @@ export interface CartLine {
   giftPromotionId?: string | null
 }
 
-export type CartLineDetails = Pick<
-  CartLine,
-  'title' | 'price' | 'photo' | 'slug' | 'hasPromoPrice' | 'isPromoEligible' | 'discountPrice'
+export type CartLineDetails = Partial<
+  Pick<
+    CartLine,
+    'title' | 'price' | 'photo' | 'slug' | 'hasPromoPrice' | 'isPromoEligible' | 'discountPrice'
+  >
 >
 
 export interface GiftLineInput {

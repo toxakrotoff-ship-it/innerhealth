@@ -50,10 +50,8 @@ export function CartDrawer() {
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
-    const slimIds = items
-      .filter((i) => i.isGift !== true)
-      .filter((i) => i.title == null)
-      .map((i) => i.productId)
+    const giftIds = new Set(items.filter((i) => i.isGift === true).map((i) => i.productId))
+    const slimIds = items.filter((i) => i.title == null).map((i) => i.productId)
     if (slimIds.length === 0) return
     const controller = new AbortController()
     const brandId = getCookieValue('ih_active_brand')
@@ -62,6 +60,15 @@ export function CartDrawer() {
       .then((res) => res.json())
       .then((products: Array<{ id: string; title: string; price: number; priceOld: number | null; photo: string | null; slug: string | null; isPromoEligible: boolean | null; discountPrice: number | null }>) => {
         products.forEach((p) => {
+          const isGift = giftIds.has(p.id)
+          if (isGift) {
+            mergeItemDetails(p.id, {
+              title: p.title,
+              photo: p.photo ?? null,
+              slug: p.slug ?? null,
+            })
+            return
+          }
           const hasPromoPrice = p.priceOld != null && p.priceOld > p.price
           mergeItemDetails(p.id, {
             title: p.title,
