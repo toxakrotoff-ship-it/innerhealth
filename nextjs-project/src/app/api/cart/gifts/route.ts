@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server'
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service'
-import type { BrandId } from '@/lib/brand/brand'
+import * as productService from '@/services/product.service'
+import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
 
 interface GiftCalcItemInput {
   productId: string
   quantity: number
-  price: number
-  hasPromoPrice: boolean
 }
 
 interface GiftCalcBody {
   items: GiftCalcItemInput[]
   hasPromoCode: boolean
-  brandId: BrandId | null
 }
 
 function parseGiftCalcBody(value: unknown): GiftCalcBody {
@@ -21,35 +19,50 @@ function parseGiftCalcBody(value: unknown): GiftCalcBody {
   const v = value as Record<string, unknown>
   const rawItems = Array.isArray(v.items) ? (v.items as unknown[]) : []
   const hasPromoCode = Boolean(v.hasPromoCode)
-  const brandId = typeof v.brandId === 'string' ? (v.brandId as BrandId) : null
 
   const items: GiftCalcItemInput[] = rawItems
     .map((raw) => raw as Record<string, unknown>)
     .map((i) => ({
       productId: String(i.productId ?? '').trim(),
       quantity: Number(i.quantity ?? 0),
-      price: Number(i.price ?? 0),
-      hasPromoPrice: Boolean(i.hasPromoPrice),
     }))
     .filter((i) => i.productId.length > 0)
     .map((i) => ({
       ...i,
       quantity: Number.isFinite(i.quantity) ? Math.max(0, Math.floor(i.quantity)) : 0,
-      price: Number.isFinite(i.price) ? Math.max(0, i.price) : 0,
     }))
 
   if (items.length > 200) throw new Error('Too many items')
 
-  return { items, hasPromoCode, brandId }
+  return { items, hasPromoCode }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { items, hasPromoCode, brandId } = parseGiftCalcBody(body)
+    const { items, hasPromoCode } = parseGiftCalcBody(body)
+    const brandId = resolveBrandFromRequest(req)
+
+    const productIds = Array.from(new Set(items.map((i) => i.productId)))
+    const products = productIds.length > 0 ? await productService.getProductsForCart(productIds, brandId) : []
+    const productMap = new Map(products.map((p) => [p.id, p]))
+
+    const itemsForCalculation = items
+      .map((i) => {
+        const p = productMap.get(i.productId)
+        if (!p) return null
+        const hasPromoPrice = p.priceOld != null && p.priceOld > p.price
+        return {
+          productId: i.productId,
+          quantity: i.quantity,
+          price: p.price,
+          hasPromoPrice,
+        }
+      })
+      .filter((x): x is NonNullable<typeof x> => x != null && x.quantity > 0)
 
     const gifts = await calculateGiftsForOrder({
-      items,
+      items: itemsForCalculation,
       hasPromoCode,
       brandId,
     })
