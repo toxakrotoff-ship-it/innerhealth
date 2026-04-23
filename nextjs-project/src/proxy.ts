@@ -36,13 +36,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net", // Yandex Maps JS API (загрузка бандла с yastatic.net)
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net https://mc.yandex.ru", // Yandex Maps JS API + Yandex Metrika
     // Yandex Maps v3 uses WebWorkers from blob:/data: (e.g. content_provider.worker.js).
     "worker-src 'self' blob: data: https://yastatic.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru", // Yandex Maps API and tiles
+    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru https://mc.yandex.ru", // Yandex Maps API + Yandex Metrika
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
