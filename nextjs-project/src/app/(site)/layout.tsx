@@ -1,5 +1,6 @@
 import nextDynamic from 'next/dynamic'
 import { cookies, headers } from 'next/headers'
+import Script from 'next/script'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
@@ -10,6 +11,7 @@ import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { getRedirectMap } from '@/services/redirect.service'
 import { resolveSiteBrand, ACTIVE_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
+import { parseMetrikaSnippet } from '@/lib/analytics/metrika-snippet'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -68,9 +70,10 @@ export default async function SiteLayout({
     activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
-  const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'], {
+  const map = await settingsService.getSettingsMap(['yandexMetrikaHeadCode', 'yandexMetrikaBodyCode'], {
     brandId: activeBrand,
   })
+  const metrikaHead = parseMetrikaSnippet(map.yandexMetrikaHeadCode)
   const bodyCode = map.yandexMetrikaBodyCode
   const redirects = await getRedirectMap({ brandId: activeBrand })
   const hashRedirects = redirects.reduce<Record<string, string>>((acc, item) => {
@@ -88,6 +91,14 @@ export default async function SiteLayout({
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: hashRedirectScript }}
       />
+      {metrikaHead ? (
+        <Script
+          id="yandex-metrika-head"
+          strategy="beforeInteractive"
+          type={metrikaHead.scriptType}
+          dangerouslySetInnerHTML={{ __html: metrikaHead.scriptInner }}
+        />
+      ) : null}
       <PageViewTracker />
       <CartOwnerSync />
       <CartGiftSync />
@@ -95,6 +106,12 @@ export default async function SiteLayout({
         <div
           aria-hidden="true"
           dangerouslySetInnerHTML={{ __html: bodyCode }}
+        />
+      ) : null}
+      {metrikaHead?.noscriptInner ? (
+        <noscript
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: metrikaHead.noscriptInner }}
         />
       ) : null}
       <SiteHeader brandId={activeBrand} />
