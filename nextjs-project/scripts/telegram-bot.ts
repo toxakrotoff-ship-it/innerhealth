@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { Agent } from 'undici';
+import { socksDispatcher } from 'fetch-socks';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 import {
   getTelegramBotUserCapabilities,
@@ -44,14 +45,66 @@ if (!TELEGRAM_SERVICE_SECRET) {
   process.exit(1);
 }
 
+function parseTelegramSocksProxyUrl(raw: string): {
+  host: string;
+  port: number;
+  userId?: string;
+  password?: string;
+} | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('tg://socks?')) {
+    const url = new URL(trimmed);
+    const host = url.searchParams.get('server')?.trim() ?? '';
+    const port = Number(url.searchParams.get('port') ?? '');
+    if (!host || !Number.isFinite(port) || port <= 0) return null;
+    const userId = url.searchParams.get('user')?.trim() || undefined;
+    const password = url.searchParams.get('pass')?.trim() || undefined;
+    return { host, port, userId, password };
+  }
+  if (trimmed.startsWith('socks5://') || trimmed.startsWith('socks://')) {
+    const url = new URL(trimmed);
+    const host = url.hostname.trim();
+    const port = Number(url.port);
+    if (!host || !Number.isFinite(port) || port <= 0) return null;
+    const userId = url.username ? decodeURIComponent(url.username) : undefined;
+    const password = url.password ? decodeURIComponent(url.password) : undefined;
+    return { host, port, userId, password };
+  }
+  return null;
+}
+
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const telegramApiDispatcher = new Agent({
-  connect: {
-    timeout: 30_000,
-  },
-  // Helps in environments where one Telegram IP family/address intermittently stalls.
-  autoSelectFamily: true,
-});
+const telegramSocksProxyRaw =
+  process.env.TELEGRAM_SOCKS_PROXY_URL?.trim() ||
+  process.env.TELEGRAM_PROXY_SOCKS_URL?.trim() ||
+  '';
+const telegramSocksProxy = telegramSocksProxyRaw
+  ? parseTelegramSocksProxyUrl(telegramSocksProxyRaw)
+  : null;
+
+const telegramApiDispatcher = telegramSocksProxy
+  ? socksDispatcher(
+      {
+        type: 5,
+        host: telegramSocksProxy.host,
+        port: telegramSocksProxy.port,
+        ...(telegramSocksProxy.userId ? { userId: telegramSocksProxy.userId } : {}),
+        ...(telegramSocksProxy.password ? { password: telegramSocksProxy.password } : {}),
+      },
+      {
+        connect: {
+          timeout: 30_000,
+        },
+      },
+    )
+  : new Agent({
+      connect: {
+        timeout: 30_000,
+      },
+      // Helps in environments where one Telegram IP family/address intermittently stalls.
+      autoSelectFamily: true,
+    });
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
