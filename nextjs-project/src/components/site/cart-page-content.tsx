@@ -132,7 +132,10 @@ export function CartPageContent({
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
-    const slimIds = items.filter((i) => i.title == null).map((i) => i.productId)
+    const slimIds = items
+      .filter((i) => i.isGift !== true)
+      .filter((i) => i.title == null)
+      .map((i) => i.productId)
     if (slimIds.length === 0) return
     const controller = new AbortController()
     const brandQuery = brandId ? `&brand=${encodeURIComponent(brandId)}` : ''
