@@ -6,11 +6,9 @@ function extractInlineScript(code: string): string {
   const trimmed = code.trim()
   if (!trimmed.toLowerCase().includes('<script')) return trimmed
 
-  const openTagEnd = trimmed.indexOf('>')
-  const closeTagStart = trimmed.toLowerCase().lastIndexOf('</script')
-  if (openTagEnd < 0 || closeTagStart < 0 || closeTagStart <= openTagEnd) return trimmed
-
-  return trimmed.slice(openTagEnd + 1, closeTagStart).trim()
+  const firstScriptMatch = trimmed.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i)
+  if (!firstScriptMatch?.[1]) return trimmed
+  return firstScriptMatch[1].trim()
 }
 
 export default async function SiteHead(): Promise<ReactElement> {
