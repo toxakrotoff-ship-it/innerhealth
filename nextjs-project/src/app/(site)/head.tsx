@@ -1,14 +1,16 @@
 import * as settingsService from '@/services/settings.service'
-import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { headers } from 'next/headers'
+import { resolveBrandByHost } from '@/lib/brand/brand'
 import { parseMetrikaSnippet } from '@/lib/analytics/metrika-snippet'
 
 export default async function SiteHead() {
-  // Resolve brand for other head needs; Metrika is intentionally read from global settings
-  // to avoid brand-cookie mismatches preventing analytics injection on the primary domain.
-  await getServerBrandContext()
+  const headerStore = await headers()
+  const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
+  // Important: resolve by host only (ignore cookies) so each domain gets its own counter.
+  const brandId = resolveBrandByHost(host)
   const map = await settingsService.getSettingsMap([
     'yandexMetrikaHeadCode',
-  ], { brandId: null })
+  ], { brandId })
 
   const headCode = map.yandexMetrikaHeadCode
   const parsed = headCode ? parseMetrikaSnippet(headCode) : null
