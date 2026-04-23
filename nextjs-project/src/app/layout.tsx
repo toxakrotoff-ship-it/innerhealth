@@ -6,9 +6,12 @@ import { IconoirProvider } from 'iconoir-react'
 import { Preloader } from '@/components/site/preloader'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { headers } from 'next/headers'
+import { unstable_noStore as noStore } from 'next/cache'
 import { resolveBrandByHost } from '@/lib/brand/brand'
 import * as settingsService from '@/services/settings.service'
 import { parseMetrikaSnippet } from '@/lib/analytics/metrika-snippet'
+
+export const dynamic = 'force-dynamic'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -122,6 +125,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  noStore()
   const { brandId } = await getServerBrandContext()
   const shouldShowPreloader = brandId !== 'sprint-power'
   const headerStore = await headers()
