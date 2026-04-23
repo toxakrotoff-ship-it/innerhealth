@@ -164,7 +164,11 @@ export const useCartStore = create<CartState>()(
       /** Persist only productId and quantity to reduce localStorage size. */
       partialize: (state) => ({
         ownerKey: state.ownerKey,
-        items: state.items.map(({ productId, quantity }) => ({ productId, quantity })),
+        // Important: never persist gift lines. Gift lines are derived state and must be recalculated,
+        // otherwise they get rehydrated as regular lines (without isGift) and duplicate on refresh.
+        items: state.items
+          .filter((i) => i.isGift !== true)
+          .map(({ productId, quantity }) => ({ productId, quantity })),
       }),
     }
   )
