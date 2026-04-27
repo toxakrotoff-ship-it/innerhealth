@@ -178,9 +178,12 @@ export async function POST(request: Request) {
         const paidOrder = await orderService.findOrderForPaidEmail(orderId)
         if (paidOrder?.shippingInfo?.email && paidOrder.shippingInfo.fullName) {
           const username = paidOrder.shippingInfo.fullName
+          const itemsSubtotal = paidOrder.items.reduce((sum, oi) => sum + oi.quantity * oi.price, 0)
+          const shippingCost = Math.max(0, paidOrder.total - itemsSubtotal)
           await sendCustomerOrderPaidEmail(paidOrder.shippingInfo.email, username, {
             orderId: paidOrder.id,
             total: paidOrder.total,
+            shippingCost,
             items: paidOrder.items.map((oi) => ({
               title: oi.product.title,
               quantity: oi.quantity,
