@@ -6,13 +6,23 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { cn } from '@/lib/utils'
 import { useModalPresence } from '@/components/ui/modal-layer'
 
-const GALLERY_IMAGES = [
+const DEFAULT_GALLERY_IMAGES = [
   { src: '/images/gallery/gallery-1.png', alt: 'Фото 1' },
   { src: '/images/gallery/gallery-2.png', alt: 'Фото 2' },
   { src: '/images/gallery/gallery-3.png', alt: 'Фото 3' },
 ] as const
 
-export function GalleryBlock() {
+export interface GalleryImageEntry {
+  src: string
+  alt: string
+}
+
+interface GalleryBlockProps {
+  images?: readonly GalleryImageEntry[]
+}
+
+export function GalleryBlock({ images }: GalleryBlockProps) {
+  const resolvedImages = images && images.length > 0 ? images : DEFAULT_GALLERY_IMAGES
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const { mounted: lightboxMounted, visible: lightboxVisible } = useModalPresence(lightboxOpen)
@@ -25,12 +35,12 @@ export function GalleryBlock() {
   const close = useCallback(() => setLightboxOpen(false), [])
 
   const goPrev = useCallback(() => {
-    setCurrentIndex((i) => (i <= 0 ? GALLERY_IMAGES.length - 1 : i - 1))
-  }, [])
+    setCurrentIndex((i) => (i <= 0 ? resolvedImages.length - 1 : i - 1))
+  }, [resolvedImages.length])
 
   const goNext = useCallback(() => {
-    setCurrentIndex((i) => (i >= GALLERY_IMAGES.length - 1 ? 0 : i + 1))
-  }, [])
+    setCurrentIndex((i) => (i >= resolvedImages.length - 1 ? 0 : i + 1))
+  }, [resolvedImages.length])
 
   useEffect(() => {
     if (!lightboxMounted) return
@@ -50,7 +60,7 @@ export function GalleryBlock() {
     }
   }, [lightboxOpen])
 
-  const current = GALLERY_IMAGES[currentIndex]
+  const current = resolvedImages[currentIndex]
 
   return (
     <>
@@ -61,7 +71,7 @@ export function GalleryBlock() {
             variant="fade-up"
             className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 xl:gap-6 2xl:gap-8 3xl:gap-10 4xl:gap-12 gap-4 sm:gap-6"
           >
-            {GALLERY_IMAGES.map((img, index) => (
+            {resolvedImages.map((img, index) => (
               <button
                 type="button"
                 key={img.src}
@@ -138,7 +148,7 @@ export function GalleryBlock() {
           </button>
 
           <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">
-            {currentIndex + 1} / {GALLERY_IMAGES.length}
+            {currentIndex + 1} / {resolvedImages.length}
           </span>
         </div>
       )}

@@ -93,6 +93,15 @@ export default async function CertificatesPage() {
   const contactsEmail = getBlockText(blocks, 'certificates.section.contacts.email', 'innerhealth@mail.ru')
   const contactsPageLabel = getBlockText(blocks, 'certificates.section.contacts.contactsPageLabel', 'Контакты')
 
+  const galleryImages = Array.from({ length: 12 }, (_, i) => i + 1)
+    .map((i) => {
+      const src = getBlockText(blocks, `certificates.gallery.image${i}.src`, '').trim()
+      if (src.length === 0) return null
+      const alt = getBlockText(blocks, `certificates.gallery.image${i}.alt`, `Сертификат ${i}`).trim()
+      return { src, alt: alt.length > 0 ? alt : `Сертификат ${i}` }
+    })
+    .filter((img): img is { src: string; alt: string } => img != null)
+
   return (
     <div className="bg-white min-h-screen">
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
@@ -110,7 +119,7 @@ export default async function CertificatesPage() {
           </p>
         </header>
 
-        <GalleryBlock />
+        <GalleryBlock images={galleryImages} />
 
         <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">

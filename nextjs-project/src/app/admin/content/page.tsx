@@ -385,7 +385,8 @@ export default function AdminContentPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {selectedBlock.key.endsWith('.image1.src') ||
-                      selectedBlock.key.endsWith('.image2.src')
+                      selectedBlock.key.endsWith('.image2.src') ||
+                      selectedBlock.key.includes('.gallery.image') && selectedBlock.key.endsWith('.src')
                         ? 'URL изображения'
                         : 'Текст'}
                     </label>
@@ -399,8 +400,9 @@ export default function AdminContentPage() {
                         Впишите слово из заголовка выше — именно оно будет выделено цветом на сайте. Цвет задаётся ниже.
                       </p>
                     )}
-                    {(selectedBlock.key === 'about.image1.src' ||
-                      selectedBlock.key === 'about.image2.src') && (
+                    {((selectedBlock.key === 'about.image1.src' ||
+                      selectedBlock.key === 'about.image2.src') ||
+                      (selectedBlock.key.includes('.gallery.image') && selectedBlock.key.endsWith('.src'))) && (
                       <>
                         <CoverImageDropzone
                           value={selectedBlock.text}
