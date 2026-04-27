@@ -37,16 +37,17 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     logoText: 'INNER HEALTH',
     navLinks: [
       { label: 'Каталог', href: '/catalog' },
+      { label: 'Новости', href: '/#news' },
       { label: 'О нас', href: '/o-nas' },
       { label: 'Акции', href: '/catalog/aktsii' },
       { label: 'Статьи', href: '/informaciya' },
       { label: 'Контакты', href: '/contacts' },
     ],
     mobileNavLinks: [
-      { label: 'О нас', href: '/o-nas' },
-      { label: 'Новости', href: '/news' },
-      { label: 'Статьи', href: '/informaciya' },
       { label: 'Каталог', href: '/catalog' },
+      { label: 'Новости', href: '/#news' },
+      { label: 'О нас', href: '/o-nas' },
+      { label: 'Статьи', href: '/informaciya' },
       { label: 'АКЦИИ', href: '/catalog/aktsii' },
       { label: 'Сотрудничество', href: '/sotrudnichestvo' },
       { label: 'Контакты', href: '/contacts' },
@@ -55,7 +56,6 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     footerLinks: [
       { label: 'О нас', href: '/o-nas' },
       { label: 'Контакты', href: '/contacts' },
-      { label: 'Сертификаты соответствия', href: '/sertifikaty-sootvetstviya' },
       { label: 'Сотрудничество', href: '/sotrudnichestvo' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
