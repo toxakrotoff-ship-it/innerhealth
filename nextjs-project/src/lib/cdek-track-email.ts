@@ -17,9 +17,13 @@ export async function sendCdekTrackEmailsForOrder(
   const order = await orderService.findOrderForPaidEmail(orderId)
   if (!order?.shippingInfo) return
 
+  const itemsSubtotal = order.items.reduce((sum, oi) => sum + oi.quantity * oi.price, 0)
+  const shippingCost = Math.max(0, order.total - itemsSubtotal)
+
   const payload = {
     orderId: order.id,
     total: order.total,
+    shippingCost,
     items: order.items.map((oi) => ({
       title: oi.product.title,
       quantity: oi.quantity,
