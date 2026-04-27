@@ -382,6 +382,7 @@ export async function sendNewUserCredentials(
 export interface NewOrderEmailPayload {
   orderId: string
   total: number
+  shippingCost: number
   items: Array<{ title: string; quantity: number; price: number }>
   shipping: {
     fullName: string
@@ -445,7 +446,7 @@ export async function sendNewOrderNotification(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { orderId, total, items, shipping, promoCode, cdekTrackNumber } = payload
+  const { orderId, total, shippingCost, items, shipping, promoCode, cdekTrackNumber } = payload
   const itemsLines = items.map(
     (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
   )
@@ -470,8 +471,9 @@ export async function sendNewOrderNotification(
   const text =
     `Новый заказ на сайте\n\n` +
     `ID заказа: ${orderId}\n` +
-    `Сумма: ${formatRub(total)}\n\n` +
     `Состав:\n${itemsLines.join('\n')}\n\n` +
+    `Доставка: ${formatRub(shippingCost)}\n` +
+    `Итого: ${formatRub(total)}\n\n` +
     (promoCode ? `Промокод: ${promoCode}\n\n` : '') +
     trackLine +
     `Доставка:\n` +
@@ -525,6 +527,7 @@ export async function sendNewOrderNotification(
                         <td style="padding:16px 18px;">
                           <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#4d7a6d;">Сумма заказа</div>
                           <div style="margin-top:8px;font-size:28px;line-height:1.1;font-weight:800;color:#16302b;">${formatRub(total)}</div>
+                          <div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Доставка: <strong>${formatRub(shippingCost)}</strong></div>
                           ${promoCode ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Промокод: <strong>${escapeHtml(promoCode)}</strong></div>` : ''}
                           ${cdekTrackNumber?.trim() ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Трек-номер СДЭК: <strong style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</strong></div>` : ''}
                         </td>
@@ -550,6 +553,14 @@ export async function sendNewOrderNotification(
                       </thead>
                       <tbody>
                         ${itemsHtml}
+                        <tr style="background-color:#ffffff;">
+                          <td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;font-size:14px;line-height:1.45;color:#111827;">
+                            <div style="font-weight:600;">Доставка</div>
+                          </td>
+                          <td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-size:14px;font-weight:700;color:#111827;white-space:nowrap;">
+                            ${formatRub(shippingCost)}
+                          </td>
+                        </tr>
                         <tr style="background-color:#fcfcfb;">
                           <td style="padding:16px;border-bottom:none;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;">Итого</td>
                           <td style="padding:16px;border-bottom:none;text-align:right;font-size:18px;font-weight:800;color:#111827;white-space:nowrap;">${formatRub(total)}</td>
@@ -637,7 +648,7 @@ export async function sendCustomerOrderConfirmation(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { total, items, cdekTrackNumber } = payload
+  const { total, shippingCost, items, cdekTrackNumber } = payload
   const orderSummary = items
     .map(
       (i) =>
@@ -654,7 +665,7 @@ export async function sendCustomerOrderConfirmation(
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Вас приветствует Inner Health!\n\n${username}, благодарим за заказ.\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Вас приветствует Inner Health!\n\n${username}, благодарим за заказ.\n\nСостав заказа:\n${orderSummary}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
   const html = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -691,6 +702,7 @@ export async function sendCustomerOrderConfirmation(
                   ${orderSummaryHtml}
                 </tbody>
               </table>
+              <p style="margin:0 0 6px;font-size:14px;color:#374151;">Доставка: <strong>${formatRub(shippingCost)}</strong></p>
               <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${formatRub(total)}</p>
               ${cdekTrackNumber?.trim() ? `<p style="margin:0 0 24px;font-size:14px;color:#374151;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</span></p>` : '<div style="height:24px;line-height:24px;font-size:0;">&nbsp;</div>'}
               <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
@@ -755,7 +767,7 @@ export async function sendCustomerOrderPaidEmail(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { orderId, total, items, cdekTrackNumber } = payload
+  const { orderId, total, shippingCost, items, cdekTrackNumber } = payload
   const orderSummary = items
     .map(
       (i) =>
@@ -766,7 +778,7 @@ export async function sendCustomerOrderPaidEmail(
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
@@ -813,6 +825,7 @@ export async function sendCustomerOrderPaidEmail(
                   ${htmlItems}
                 </tbody>
               </table>
+              <p style="margin:0 0 6px;font-size:14px;color:#374151;">Доставка: <strong>${formatRub(shippingCost)}</strong></p>
               <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${formatRub(total)}</p>
               ${trackHtml}
               <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>

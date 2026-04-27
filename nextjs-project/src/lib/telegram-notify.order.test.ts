@@ -43,6 +43,7 @@ describe('notifyTelegramOrder', () => {
     telegramNotify.notifyTelegramOrder({
       orderId: 'order-123',
       total: 2500,
+      shippingCost: 300,
       items: [{ title: 'Omega-3', quantity: 2, price: 1250 }],
       shipping: {
         fullName: 'Ivan Ivanov',
@@ -79,6 +80,7 @@ describe('notifyTelegramOrder', () => {
       })
     )
     expect(partnerBody.text).not.toContain('<b>Доставка:</b>')
+    expect(adminBodies[0]?.text).toContain('Доставка — 300 ₽')
   })
 
   it('sends order status only to the linked chat of the requested user', async () => {
@@ -97,7 +99,7 @@ describe('notifyTelegramOrder', () => {
     })
 
     expect(telegramService.findTelegramWhitelistByUserId).toHaveBeenCalledWith('user-1', { brandId: 'inner' })
-    expect(userService.getAdminTelegramChatIds).not.toHaveBeenCalled()
+    expect(userService.getAdminTelegramChatIds).toHaveBeenCalledWith('inner')
     expect(global.fetch).toHaveBeenCalledTimes(1)
 
     const body = JSON.parse(String(vi.mocked(global.fetch).mock.calls[0]?.[1]?.body))

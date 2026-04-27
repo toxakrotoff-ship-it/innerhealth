@@ -56,6 +56,7 @@ function escapeHtml(s: string): string {
 export interface OrderNotifyPayload {
   orderId: string;
   total: number;
+  shippingCost: number;
   items: Array<{ title: string; quantity: number; price: number }>;
   shipping: {
     fullName: string;
@@ -97,6 +98,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
           `• ${escapeHtml(i.title)} — ${i.quantity} × ${i.price.toFixed(0)} ₽ = ${(i.quantity * i.price).toFixed(0)} ₽`
       ),
       '',
+      `Доставка — ${payload.shippingCost.toFixed(0)} ₽`,
       `Итого: <b>${payload.total.toFixed(0)} ₽</b>`,
       payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
       '',

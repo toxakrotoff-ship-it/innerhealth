@@ -175,6 +175,7 @@ export async function POST(request: Request) {
     const orderNotifyPayload = {
       orderId: order.id,
       total: order.total,
+      shippingCost: deliverySum,
       items: order.items.map((oi) => ({
         title: oi.product.title,
         quantity: oi.quantity,
@@ -204,6 +205,7 @@ export async function POST(request: Request) {
     const orderNotificationPayload = {
       orderId: order.id,
       total: order.total,
+      shippingCost: deliverySum,
       items: order.items.map((oi) => ({
         title: oi.product.title,
         quantity: oi.quantity,

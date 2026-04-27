@@ -87,6 +87,7 @@ async function sendToUsers(
 export interface MaxOrderNotifyPayload {
   orderId: string;
   total: number;
+  shippingCost: number;
   items: Array<{ title: string; quantity: number; price: number }>;
   shipping: {
     fullName: string;
@@ -116,6 +117,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
         `• ${escapeHtml(item.title)} — ${item.quantity} × ${item.price.toFixed(0)} ₽ = ${(item.quantity * item.price).toFixed(0)} ₽`
     ),
     '',
+    `Доставка — ${payload.shippingCost.toFixed(0)} ₽`,
     `Итого: **${payload.total.toFixed(0)} ₽**`,
     payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
     '',

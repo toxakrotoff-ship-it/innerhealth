@@ -55,6 +55,7 @@ describe('notifyMaxOrder', () => {
     await maxNotify.notifyMaxOrder({
       orderId: 'order-123',
       total: 2500,
+      shippingCost: 300,
       items: [{ title: 'Omega-3', quantity: 2, price: 1250 }],
       shipping: {
         fullName: 'Ivan Ivanov',
@@ -104,6 +105,9 @@ describe('notifyMaxOrder', () => {
     expect(String(partnerText)).not.toContain('**Доставка:**')
     const customerText = sendMessageToUser.mock.calls[3]?.[1]
     expect(String(customerText)).not.toContain('**Доставка:**')
+
+    const adminText = sendMessageToUser.mock.calls[0]?.[1]
+    expect(String(adminText)).toContain('Доставка — 300 ₽')
   })
 
   it('sends order status only to the linked user id', async () => {
@@ -120,7 +124,7 @@ describe('notifyMaxOrder', () => {
     })
 
     expect(maxService.findMaxWhitelistByUserId).toHaveBeenCalledWith('user-1', { brandId: 'inner' })
-    expect(userService.getAdminMaxUserIds).not.toHaveBeenCalled()
+    expect(userService.getAdminMaxUserIds).toHaveBeenCalledWith('inner')
     expect(sendMessageToUser).toHaveBeenCalledTimes(1)
     expect(sendMessageToUser).toHaveBeenCalledWith(
       401,
