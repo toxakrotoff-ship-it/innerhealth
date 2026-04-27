@@ -11,6 +11,11 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const siteConfig = getBrandSiteConfig(brandId)
   const isSprintTheme = brandId === 'sprint-power'
   const footerLinks = siteConfig.footerLinks
+  const legalHrefs = new Set<string>(['/privacy', '/oferta'])
+  const legalLinks = footerLinks.filter((link) => legalHrefs.has(link.href))
+  const nonLegalLinks = footerLinks.filter((link) => !legalHrefs.has(link.href))
+  const infoLinks = nonLegalLinks.slice(0, 3)
+  const customerLinks = nonLegalLinks.slice(3)
   const blocks = await getResolvedBlocksForPage('footer', brandId)
   const fullName = blocks.find((b) => b.key === 'footer.legal.fullName')
   const address = blocks.find((b) => b.key === 'footer.legal.address')
@@ -98,7 +103,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 Информация
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {footerLinks.slice(0, 3).map(({ label, href }) => (
+                {infoLinks.map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
@@ -136,7 +141,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 Покупателям
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {footerLinks.slice(3, 7).map(({ label, href }) => (
+                {customerLinks.map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}
@@ -174,7 +179,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 Юридическое
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
-                {footerLinks.slice(7, 9).map(({ label, href }) => (
+                {legalLinks.map(({ label, href }) => (
                   <li key={href}>
                     <Link
                       href={href}

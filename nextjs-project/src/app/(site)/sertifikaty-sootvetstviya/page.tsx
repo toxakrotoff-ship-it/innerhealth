@@ -4,6 +4,7 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { GalleryBlock } from '@/components/site/gallery-block'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { getResolvedBlocksForPage } from '@/services/content-block.service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteTitle } = await getServerBrandContext()
@@ -20,7 +21,78 @@ const breadcrumbItems = [
 
 export const revalidate = 86400
 
-export default function CertificatesPage() {
+function getBlockText(
+  blocks: ReadonlyArray<{ key: string; text: string | null }>,
+  key: string,
+  fallback: string
+): string {
+  return blocks.find((b) => b.key === key)?.text ?? fallback
+}
+
+export default async function CertificatesPage() {
+  const { brandId } = await getServerBrandContext()
+  const blocks = await getResolvedBlocksForPage('certificates', brandId)
+
+  const title = getBlockText(blocks, 'certificates.title', 'Сертификаты соответствия')
+  const subtitle = getBlockText(
+    blocks,
+    'certificates.subtitle',
+    'Документы, подтверждающие качество и соответствие продукции требованиям безопасности'
+  )
+
+  const aboutTitle = getBlockText(blocks, 'certificates.section.about.title', 'О документах')
+  const aboutP1 = getBlockText(
+    blocks,
+    'certificates.section.about.p1',
+    'Inner Health уделяет особое внимание качеству и безопасности продукции. Ниже представлены сертификаты соответствия, декларации о соответствии и иные документы, подтверждающие соответствие товаров действующим нормам и стандартам.'
+  )
+  const aboutP2 = getBlockText(
+    blocks,
+    'certificates.section.about.p2',
+    'При необходимости вы можете запросить копии документов по электронной почте:'
+  )
+
+  const declarationsTitle = getBlockText(
+    blocks,
+    'certificates.section.declarations.title',
+    'Декларации о соответствии ТР ТС'
+  )
+  const declarationsP1 = getBlockText(
+    blocks,
+    'certificates.section.declarations.p1',
+    'Продукция, реализуемая в рамках Таможенного союза (ЕАЭС), сопровождается декларациями о соответствии техническим регламентам ТР ТС (например, ТР ТС 021/2011 «О безопасности пищевой продукции», ТР ТС 029/2012 и др.), где применимо.'
+  )
+  const declarationsNote = getBlockText(
+    blocks,
+    'certificates.section.declarations.note',
+    'Декларации хранятся у продавца и предоставляются по запросу покупателя или контролирующих органов.'
+  )
+
+  const productCertificatesTitle = getBlockText(
+    blocks,
+    'certificates.section.productCertificates.title',
+    'Сертификаты на продукцию'
+  )
+  const productCertificatesP1 = getBlockText(
+    blocks,
+    'certificates.section.productCertificates.p1',
+    'Отдельные категории товаров могут иметь добровольную сертификацию или сертификаты соответствия по российским и международным стандартам (в том числе органическая продукция, при наличии).'
+  )
+  const productCertificatesNote = getBlockText(
+    blocks,
+    'certificates.section.productCertificates.note',
+    'Актуальный перечень сертификатов и сканы документов будут размещены в этом разделе. По вопросам наличия сертификатов на конкретный товар обращайтесь в службу поддержки.'
+  )
+
+  const contactsTitle = getBlockText(blocks, 'certificates.section.contacts.title', 'Контакты')
+  const contactsIntro = getBlockText(
+    blocks,
+    'certificates.section.contacts.intro',
+    'По вопросам сертификатов и документов:'
+  )
+  const contactsEmail = getBlockText(blocks, 'certificates.section.contacts.email', 'innerhealth@mail.ru')
+  const contactsPageLabel = getBlockText(blocks, 'certificates.section.contacts.contactsPageLabel', 'Контакты')
+
   return (
     <div className="bg-white min-h-screen">
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
@@ -31,11 +103,10 @@ export default function CertificatesPage() {
         <article>
         <header className="mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
-            Сертификаты соответствия
+            {title}
           </h1>
           <p className="mt-2 text-gray-500 text-sm">
-            Документы, подтверждающие качество и соответствие продукции
-            требованиям безопасности
+            {subtitle}
           </p>
         </header>
 
@@ -44,22 +115,18 @@ export default function CertificatesPage() {
         <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
-              О документах
+              {aboutTitle}
             </h2>
             <p className="mb-4">
-              Inner Health уделяет особое внимание качеству и безопасности
-              продукции. Ниже представлены сертификаты соответствия, декларации
-              о соответствии и иные документы, подтверждающие соответствие
-              товаров действующим нормам и стандартам.
+              {aboutP1}
             </p>
             <p>
-              При необходимости вы можете запросить копии документов по
-              электронной почте{' '}
+              {aboutP2}{' '}
               <a
-                href="mailto:innerhealth@mail.ru"
+                href={`mailto:${contactsEmail}`}
                 className="text-action-blue hover:underline"
               >
-                innerhealth@mail.ru
+                {contactsEmail}
               </a>
               .
             </p>
@@ -67,57 +134,49 @@ export default function CertificatesPage() {
 
           <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
-              Декларации о соответствии ТР ТС
+              {declarationsTitle}
             </h2>
             <p className="mb-4">
-              Продукция, реализуемая в рамках Таможенного союза (ЕАЭС),
-              сопровождается декларациями о соответствии техническим регламентам
-              ТР ТС (например, ТР ТС 021/2011 «О безопасности пищевой продукции»,
-              ТР ТС 029/2012 и др.), где применимо.
+              {declarationsP1}
             </p>
             <p className="text-gray-600 text-sm">
-              Декларации хранятся у продавца и предоставляются по запросу
-              покупателя или контролирующих органов.
+              {declarationsNote}
             </p>
           </section>
 
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
-              Сертификаты на продукцию
+              {productCertificatesTitle}
             </h2>
             <p className="mb-4">
-              Отдельные категории товаров могут иметь добровольную сертификацию
-              или сертификаты соответствия по российским и международным
-              стандартам (в том числе органическая продукция, при наличии).
+              {productCertificatesP1}
             </p>
             <p className="text-gray-600 text-sm">
-              Актуальный перечень сертификатов и сканы документов будут
-              размещены в этом разделе. По вопросам наличия сертификатов на
-              конкретный товар обращайтесь в службу поддержки.
+              {productCertificatesNote}
             </p>
           </section>
 
           <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
-              Контакты
+              {contactsTitle}
             </h2>
             <p className="mb-2">
-              По вопросам сертификатов и документов:
+              {contactsIntro}
             </p>
             <ul className="list-disc pl-6 space-y-1 text-gray-700">
               <li>
                 Email:{' '}
                 <a
-                  href="mailto:innerhealth@mail.ru"
+                  href={`mailto:${contactsEmail}`}
                   className="text-action-blue hover:underline"
                 >
-                  innerhealth@mail.ru
+                  {contactsEmail}
                 </a>
               </li>
               <li>
                 Раздел{' '}
                 <Link href="/contacts" className="text-action-blue hover:underline">
-                  Контакты
+                  {contactsPageLabel}
                 </Link>{' '}
                 — форма обратной связи и другие способы связи.
               </li>

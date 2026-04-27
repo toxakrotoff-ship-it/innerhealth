@@ -36,6 +36,7 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'cart', label: 'Корзина' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },
+  { id: 'certificates', label: 'Сертификаты соответствия' },
   { id: 'sotrudnichestvo', label: 'Сотрудничество' },
   { id: 'footer', label: 'Футер' },
 ]
