@@ -8,8 +8,6 @@ import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { headers } from 'next/headers'
 import { unstable_noStore as noStore } from 'next/cache'
 import { resolveBrandByHost } from '@/lib/brand/brand'
-import * as settingsService from '@/services/settings.service'
-import { parseMetrikaSnippet } from '@/lib/analytics/metrika-snippet'
 
 export const dynamic = 'force-dynamic'
 
@@ -131,10 +129,37 @@ export default async function RootLayout({
   const headerStore = await headers()
   const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
   const hostBrandId = resolveBrandByHost(host)
-  const metrikaMap = await settingsService.getSettingsMap(['yandexMetrikaHeadCode'], {
-    brandId: hostBrandId,
-  })
-  const metrika = parseMetrikaSnippet(metrikaMap.yandexMetrikaHeadCode)
+  const shouldRenderMetrika = hostBrandId === 'inner'
+
+  const metrikaHeadScriptInner = `
+(function(m,e,t,r,i,k,a){
+    m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+})(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
+
+ym(92621260, 'init', {webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+`.trim()
+
+  const metrikaHeadNoscriptInner = `<div><img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" /></div>`
+
+  const metrikaBodyScriptInner = `
+(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+m[i].l=1*new Date();
+for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+ym(92621260, "init", {
+     clickmap:true,
+     trackLinks:true,
+     accurateTrackBounce:true,
+     webvisor:true
+});
+`.trim()
+
+  const metrikaBodyNoscriptInner = `<div><img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" /></div>`
 
   return (
     <html
@@ -149,21 +174,34 @@ export default async function RootLayout({
               'html.preloader-skip .preloader-overlay,html[data-preloader-skip="1"] .preloader-overlay{display:none!important}',
           }}
         />
-        {metrika ? (
+        {shouldRenderMetrika ? (
           <script
-            type={metrika.scriptType}
+            type="text/javascript"
             suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: metrika.scriptInner }}
+            dangerouslySetInnerHTML={{ __html: metrikaHeadScriptInner }}
           />
         ) : null}
-        {metrika?.noscriptInner ? (
+        {shouldRenderMetrika ? (
           <noscript
             suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: metrika.noscriptInner }}
+            dangerouslySetInnerHTML={{ __html: metrikaHeadNoscriptInner }}
           />
         ) : null}
       </head>
       <body className="min-h-screen bg-gray-50 font-sans subpixel-antialiased text-gray-900">
+        {shouldRenderMetrika ? (
+          <>
+            <script
+              type="text/javascript"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: metrikaBodyScriptInner }}
+            />
+            <noscript
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: metrikaBodyNoscriptInner }}
+            />
+          </>
+        ) : null}
         <IconoirProvider
           iconProps={{
             color: 'currentColor',

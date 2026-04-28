@@ -75,7 +75,7 @@ const FIELDS: Array<{
   label: string;
   type: 'text' | 'password' | 'select' | 'textarea';
   placeholder?: string;
-  group: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics';
+  group: 'cdek' | 'yookassa' | 'site' | 'telegram';
   options?: Array<{ value: string; label: string }>;
 }> = [
   { key: 'telegram_bot_token', label: 'Токен Telegram-бота', type: 'password', placeholder: '••••••••', group: 'telegram' },
@@ -152,20 +152,6 @@ const FIELDS: Array<{
   { key: 'schema_org_phone', label: 'Телефон для schema.org', type: 'text', group: 'site' },
   { key: 'schema_org_address', label: 'Адрес (одной строкой)', type: 'text', group: 'site' },
   { key: 'schema_org_social_links', label: 'Ссылки для sameAs (через запятую)', type: 'text', group: 'site' },
-  {
-    key: 'yandexMetrikaHeadCode',
-    label: 'Yandex Metrika — код для <head>',
-    type: 'textarea',
-    placeholder: '<script type="text/javascript">...</script>',
-    group: 'analytics',
-  },
-  {
-    key: 'yandexMetrikaBodyCode',
-    label: 'Yandex Metrika — код для <body>',
-    type: 'textarea',
-    placeholder: '<noscript>...</noscript>',
-    group: 'analytics',
-  },
 ];
 
 const BOT_MODE_FIELDS: Record<BotSettingsMode, string[]> = {
@@ -173,12 +159,11 @@ const BOT_MODE_FIELDS: Record<BotSettingsMode, string[]> = {
   max: ['max_bot_token', 'max_bot_mode', 'max_bot_webhook_url', 'max_bot_webhook_secret'],
 };
 
-const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram' | 'analytics'; title: string }> = [
+const GROUPS: Array<{ id: 'cdek' | 'yookassa' | 'site' | 'telegram'; title: string }> = [
   { id: 'telegram', title: 'Боты и каналы уведомлений' },
   { id: 'cdek', title: 'Доставка (СДЭК)' },
   { id: 'yookassa', title: 'Оплата (ЮKassa)' },
   { id: 'site', title: 'Общие настройки сайта' },
-  { id: 'analytics', title: 'Аналитика / Счётчики' },
 ];
 
 export default function AdminSettingsPage() {

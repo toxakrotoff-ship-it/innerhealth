@@ -7,7 +7,6 @@ import { BackToTopButton } from '@/components/site/back-to-top-button'
 import { CartOwnerSync } from '@/components/site/cart-owner-sync'
 import { CartGiftSync } from '@/components/site/cart-gift-sync'
 import { SiteLayoutJsonLd } from './site-layout-json-ld'
-import * as settingsService from '@/services/settings.service'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { getRedirectMap } from '@/services/redirect.service'
 import { resolveSiteBrand, ACTIVE_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
@@ -91,10 +90,6 @@ export default async function SiteLayout({
     activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
-  const map = await settingsService.getSettingsMap(['yandexMetrikaBodyCode'], {
-    brandId: activeBrand,
-  })
-  const bodyCode = map.yandexMetrikaBodyCode
   const redirects = await getRedirectMap({ brandId: activeBrand })
   const hashRedirects = redirects.reduce<Record<string, string>>((acc, item) => {
     if (!item.sourcePath.startsWith('/#')) return acc
@@ -114,12 +109,6 @@ export default async function SiteLayout({
       <PageViewTracker />
       <CartOwnerSync />
       <CartGiftSync />
-      {bodyCode ? (
-        <div
-          aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: bodyCode }}
-        />
-      ) : null}
       <SiteHeader brandId={activeBrand} />
       <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] 2xl:pt-[calc(4.5rem+env(safe-area-inset-top))] 3xl:pt-[calc(5rem+env(safe-area-inset-top))] 4xl:pt-[calc(6rem+env(safe-area-inset-top))] 5xl:pt-[calc(7rem+env(safe-area-inset-top))] 6xl:pt-[calc(8rem+env(safe-area-inset-top))]">
         {children}
