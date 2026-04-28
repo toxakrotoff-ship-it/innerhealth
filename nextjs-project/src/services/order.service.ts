@@ -16,7 +16,7 @@ const orderAdminInclude = {
 export async function findOrderForWebhook(orderId: string) {
   return prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, status: true, yookassaPaymentId: true, userId: true },
+    select: { id: true, orderNumber: true, status: true, yookassaPaymentId: true, userId: true },
   });
 }
 
@@ -41,6 +41,7 @@ export async function findOrderWithShipping(orderId: string) {
     where: { id: orderId },
     select: {
       id: true,
+      orderNumber: true,
       status: true,
       cdekOrderUuid: true,
       cdekTrackNumber: true,
@@ -66,6 +67,7 @@ export async function findOrderForPaidEmail(orderId: string) {
     where: { id: orderId },
     select: {
       id: true,
+      orderNumber: true,
       total: true,
       status: true,
       cdekTrackNumber: true,
@@ -99,6 +101,7 @@ export async function findOrderForCdekShipment(orderId: string) {
     where: { id: orderId },
     select: {
       id: true,
+      orderNumber: true,
       status: true,
       cdekOrderUuid: true,
       cdekTrackNumber: true,
@@ -118,6 +121,7 @@ export interface AdminOrderDto {
   promoCode: {
     code: string;
   } | null;
+  yookassaPaymentId: string | null;
   cdekOrderUuid: string | null;
   cdekTrackNumber: string | null;
   cdekOrderError: string | null;
@@ -154,6 +158,7 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    yookassaPaymentId: order.yookassaPaymentId ?? null,
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
@@ -232,6 +237,7 @@ export async function getOrdersForAdminWithTrash(options: {
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    yookassaPaymentId: order.yookassaPaymentId ?? null,
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
@@ -274,6 +280,7 @@ export async function getOrderDetailForAdmin(
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
     promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    yookassaPaymentId: order.yookassaPaymentId ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
     shippingInfo: order.shippingInfo
       ? {
@@ -298,6 +305,54 @@ export async function getOrderDetailForAdmin(
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
   };
+}
+
+export interface PendingYookassaSyncOrderCandidate {
+  id: string;
+  status: string;
+  createdAt: Date;
+  yookassaPaymentId: string;
+}
+
+export async function getPendingOrdersWithYookassaPayment(options: {
+  since: Date;
+  take: number;
+  brandId?: BrandId | null;
+}): Promise<PendingYookassaSyncOrderCandidate[]> {
+  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(options.brandId)
+    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
+    : {
+        NOT: {
+          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
+        },
+      };
+
+  const rows = await prisma.order.findMany({
+    where: {
+      deletedAt: null,
+      status: 'pending',
+      yookassaPaymentId: { not: null },
+      createdAt: { gte: options.since },
+      ...brandWhere,
+    },
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+      yookassaPaymentId: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: options.take,
+  });
+
+  return rows
+    .filter((row) => typeof row.yookassaPaymentId === 'string' && row.yookassaPaymentId.length > 0)
+    .map((row) => ({
+      id: row.id,
+      status: row.status,
+      createdAt: row.createdAt,
+      yookassaPaymentId: row.yookassaPaymentId as string,
+    }));
 }
 
 export async function findOrderForCdekTrackSync(

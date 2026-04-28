@@ -55,6 +55,7 @@ function escapeHtml(s: string): string {
 
 export interface OrderNotifyPayload {
   orderId: string;
+  orderNumber?: number | null;
   total: number;
   shippingCost: number;
   items: Array<{ title: string; quantity: number; price: number }>;
@@ -74,6 +75,13 @@ export interface OrderNotifyPayload {
   brandId?: BrandId;
 }
 
+function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
+  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
+    return `#${payload.orderNumber}`;
+  }
+  return payload.orderId;
+}
+
 export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   const settingsScope = payload.brandId ? { brandId: payload.brandId } : {};
   let adminChatIds: string[] = [];
@@ -88,9 +96,10 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
   }).then(async (result) => {
     if (!result || result.chatIds.length === 0) return;
     const { token, chatIds } = result;
+    const orderLabel = escapeHtml(formatOrderLabel(payload));
     const lines: string[] = [
       '<b>Новый заказ</b>',
-      `ID: ${escapeHtml(payload.orderId)}`,
+      `Заказ: ${orderLabel}`,
       '',
       '<b>Состав:</b>',
       ...payload.items.map(
@@ -126,7 +135,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
           const partnerText =
             `💰 <b>Заказ по вашему промокоду</b>\n\n` +
             `Промокод: ${promoLabel}\n` +
-            `Заказ ID: ${escapeHtml(payload.orderId)}\n` +
+            `Заказ: ${orderLabel}\n` +
             `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
           return sendMessage(token, partnerChatId, partnerText).catch((e) =>
             console.error('[telegram-notify] partner order notify error:', e)
@@ -140,6 +149,7 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
 export async function notifyTelegramOrderStatusForUser(payload: {
   userId: string;
   orderId: string;
+  orderNumber?: number | null;
   status: 'paid' | 'canceled';
   brandId?: BrandId;
 }): Promise<void> {
@@ -159,7 +169,7 @@ export async function notifyTelegramOrderStatusForUser(payload: {
   const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
   const lines = [
     statusLine,
-    `ID: <code>${escapeHtml(payload.orderId)}</code>`,
+    `Заказ: <code>${escapeHtml(formatOrderLabel(payload))}</code>`,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
   ].filter(Boolean);
   await sendMessage(token, whitelist.telegramUserId, lines.join('\n')).catch(() => {});
@@ -167,6 +177,7 @@ export async function notifyTelegramOrderStatusForUser(payload: {
 
 export async function notifyTelegramPaidOrderForAdmins(payload: {
   orderId: string;
+  orderNumber?: number | null;
   deliveryMethod?: string | null;
   cdekOrderUuid?: string | null;
   cdekOrderError?: string | null;
@@ -190,7 +201,7 @@ export async function notifyTelegramPaidOrderForAdmins(payload: {
     : '';
   const lines = [
     '✅ <b>Заказ оплачен</b>',
-    `ID: <code>${escapeHtml(payload.orderId)}</code>`,
+    `Заказ: <code>${escapeHtml(formatOrderLabel(payload))}</code>`,
     isCdek
       ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
       : 'Доставка: не СДЭК',
@@ -228,6 +239,7 @@ export async function notifyTelegramPaidOrderForAdmins(payload: {
 export async function notifyTelegramCdekTrackForUser(payload: {
   userId: string;
   orderId: string;
+  orderNumber?: number | null;
   trackNumber: string;
   brandId?: BrandId;
 }): Promise<void> {
@@ -249,7 +261,7 @@ export async function notifyTelegramCdekTrackForUser(payload: {
   const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
   const lines = [
     '📦 <b>CDEK: трек-номер сформирован</b>',
-    `Заказ: <code>${escapeHtml(payload.orderId)}</code>`,
+    `Заказ: <code>${escapeHtml(formatOrderLabel(payload))}</code>`,
     `Трек: <code>${escapeHtml(track)}</code>`,
     `Отследить: ${escapeHtml(trackUrl)}`,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',

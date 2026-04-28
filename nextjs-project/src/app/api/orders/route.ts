@@ -174,6 +174,7 @@ export async function POST(request: Request) {
       : null
     const orderNotifyPayload = {
       orderId: order.id,
+      orderNumber: order.orderNumber ?? null,
       total: order.total,
       shippingCost: deliverySum,
       items: order.items.map((oi) => ({
@@ -204,6 +205,7 @@ export async function POST(request: Request) {
 
     const orderNotificationPayload = {
       orderId: order.id,
+      orderNumber: order.orderNumber ?? null,
       total: order.total,
       shippingCost: deliverySum,
       items: order.items.map((oi) => ({
@@ -269,7 +271,7 @@ export async function POST(request: Request) {
             : undefined
         const { paymentId, confirmationUrl } = await createYookassaPayment({
           amount: total,
-          description: `Заказ №${order.id}`,
+          description: `Заказ №${order.orderNumber ?? order.id}`,
           orderId: order.id,
           customerEmail: shipping.email.trim(),
           receiptItems: receiptWithDelivery,

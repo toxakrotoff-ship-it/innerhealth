@@ -86,6 +86,7 @@ async function sendToUsers(
 
 export interface MaxOrderNotifyPayload {
   orderId: string;
+  orderNumber?: number | null;
   total: number;
   shippingCost: number;
   items: Array<{ title: string; quantity: number; price: number }>;
@@ -104,12 +105,20 @@ export interface MaxOrderNotifyPayload {
   brandId?: BrandId;
 }
 
+function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
+  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
+    return `#${payload.orderNumber}`;
+  }
+  return payload.orderId;
+}
+
 export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
+  const orderLabel = escapeHtml(formatOrderLabel(payload));
   const lines: string[] = [
     '**Новый заказ**',
-    `ID: ${escapeHtml(payload.orderId)}`,
+    `Заказ: ${orderLabel}`,
     '',
     '**Состав:**',
     ...payload.items.map(
@@ -137,7 +146,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
       const partnerText =
         `💰 **Заказ по вашему промокоду**\n\n` +
         `Промокод: ${promoLabel}\n` +
-        `Заказ ID: ${escapeHtml(payload.orderId)}\n` +
+        `Заказ: ${orderLabel}\n` +
         `Сумма: **${payload.total.toFixed(0)} ₽**`;
       await sendToUsers([partnerMaxUserId], partnerText, scope);
     }
@@ -148,7 +157,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     if (customerLink && !adminUserIds.includes(customerLink.maxUserId)) {
       const customerText =
         `✅ **Ваш заказ принят**\n\n` +
-        `Номер: ${escapeHtml(payload.orderId)}\n` +
+        `Номер: ${orderLabel}\n` +
         `Сумма: **${payload.total.toFixed(0)} ₽**`;
       await sendToUsers([customerLink.maxUserId], customerText, scope);
     }
@@ -158,6 +167,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
 export async function notifyMaxOrderStatusForUser(payload: {
   userId: string;
   orderId: string;
+  orderNumber?: number | null;
   status: 'paid' | 'canceled';
   brandId?: BrandId;
 }): Promise<void> {
@@ -175,7 +185,7 @@ export async function notifyMaxOrderStatusForUser(payload: {
   const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
   const lines = [
     statusLine,
-    `ID: \`${escapeHtml(payload.orderId)}\``,
+    `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
   ].filter(Boolean);
   await sendToUsers([link.maxUserId], lines.join('\n'), scope);
@@ -183,6 +193,7 @@ export async function notifyMaxOrderStatusForUser(payload: {
 
 export async function notifyMaxPaidOrderForAdmins(payload: {
   orderId: string;
+  orderNumber?: number | null;
   deliveryMethod?: string | null;
   cdekOrderUuid?: string | null;
   cdekOrderError?: string | null;
@@ -201,7 +212,7 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
   const adminOrdersUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/orders` : '/admin/orders';
   const lines = [
     '✅ **Заказ оплачен**',
-    `ID: \`${escapeHtml(payload.orderId)}\``,
+    `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
     isCdek
       ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
       : 'Доставка: не СДЭК',
@@ -234,6 +245,7 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
 export async function notifyMaxCdekTrackForUser(payload: {
   userId: string;
   orderId: string;
+  orderNumber?: number | null;
   trackNumber: string;
   brandId?: BrandId;
 }): Promise<void> {
@@ -253,7 +265,7 @@ export async function notifyMaxCdekTrackForUser(payload: {
   const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
   const lines = [
     '📦 **CDEK: трек-номер сформирован**',
-    `Заказ: \`${escapeHtml(payload.orderId)}\``,
+    `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
     `Трек: \`${escapeHtml(track)}\``,
     `Отследить: ${escapeHtml(trackUrl)}`,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',

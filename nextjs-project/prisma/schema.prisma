@@ -152,6 +152,8 @@ model OrderItem {
 
 model Order {
   id                  String        @id @default(cuid())
+  /// Короткий публичный номер заказа для UI/писем/уведомлений (не используется в связях БД)
+  orderNumber         Int           @unique @default(autoincrement())
   userId              String?
   total               Float
   /// Сумма скидки по промокоду (для расчёта дохода партнёра от скидок)

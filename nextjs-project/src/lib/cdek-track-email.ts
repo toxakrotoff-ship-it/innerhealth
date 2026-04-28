@@ -22,6 +22,7 @@ export async function sendCdekTrackEmailsForOrder(
 
   const payload = {
     orderId: order.id,
+    orderNumber: order.orderNumber ?? null,
     total: order.total,
     shippingCost,
     items: order.items.map((oi) => ({

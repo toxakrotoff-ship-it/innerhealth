@@ -42,6 +42,7 @@ interface Order {
   items?: OrderItem[];
   shippingInfo: ShippingInfoSummary | null;
   promoCode: PromoCodeInfo | null;
+  yookassaPaymentId?: string | null;
   cdekOrderUuid?: string | null;
   cdekTrackNumber?: string | null;
   cdekOrderError?: string | null;
@@ -74,6 +75,9 @@ export default function AdminOrdersPage() {
   const [popupError, setPopupError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [cdekLoadingId, setCdekLoadingId] = useState<string | null>(null);
+  const [yookassaLoadingId, setYookassaLoadingId] = useState<string | null>(null);
+  const [yookassaBulkLoading, setYookassaBulkLoading] = useState(false);
+  const [yookassaBulkDays, setYookassaBulkDays] = useState(7);
   const [mode, setMode] = useState<'active' | 'trash'>('active');
   const [trashActionLoading, setTrashActionLoading] = useState<string | null>(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
@@ -211,6 +215,86 @@ export default function AdminOrdersPage() {
       alert('Ошибка запроса');
     } finally {
       setCdekLoadingId(null);
+    }
+  }
+
+  async function handleSyncYookassaPayment(orderId: string) {
+    setYookassaLoadingId(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/yookassa-sync`, { method: 'POST' });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        orderStatus?: string;
+        paymentStatus?: string;
+        updated?: boolean;
+      };
+
+      if (!res.ok || !data.ok) {
+        alert(data.error ?? 'Не удалось синхронизировать оплату ЮKassa');
+        return;
+      }
+
+      if (data.orderStatus) {
+        setOrders((prev) =>
+          prev.map((o) => (o.id === orderId ? { ...o, status: data.orderStatus ?? o.status } : o))
+        );
+      }
+
+      if (data.updated) {
+        alert(`Статус заказа обновлён (${data.paymentStatus ?? 'ЮKassa'}).`);
+      } else {
+        alert(`Статус платежа: ${data.paymentStatus ?? 'неизвестно'}. Обновление не требуется.`);
+      }
+    } catch {
+      alert('Ошибка запроса');
+    } finally {
+      setYookassaLoadingId(null);
+    }
+  }
+
+  async function handleBulkSyncYookassaPending() {
+    if (
+      !window.confirm(
+        `Синхронизировать pending-заказы по ЮKassa за последние ${yookassaBulkDays} дней?`
+      )
+    ) {
+      return;
+    }
+
+    setYookassaBulkLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('days', String(yookassaBulkDays));
+      params.set('take', '50');
+      const res = await fetch(`/api/admin/orders/yookassa-sync-bulk?${params.toString()}`, {
+        method: 'POST',
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        scanned?: number;
+        updated?: number;
+        updatedToPaid?: number;
+        updatedToCanceled?: number;
+        errors?: number;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        alert(data.error ?? 'Не удалось синхронизировать pending-заказы');
+        return;
+      }
+
+      alert(
+        `ЮKassa sync: проверено ${data.scanned ?? 0}, обновлено ${data.updated ?? 0} (paid: ${
+          data.updatedToPaid ?? 0
+        }, canceled: ${data.updatedToCanceled ?? 0}), ошибок: ${data.errors ?? 0}.`
+      );
+
+      await fetchOrders(mode);
+    } catch {
+      alert('Ошибка запроса');
+    } finally {
+      setYookassaBulkLoading(false);
     }
   }
 
@@ -373,6 +457,25 @@ export default function AdminOrdersPage() {
             )}
           </div>
         )}
+
+        {order.status === 'pending' && order.yookassaPaymentId ? (
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">ЮKassa</h3>
+            <p className="text-xs text-gray-500">
+              Payment ID: <span className="font-mono">{order.yookassaPaymentId}</span>
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button
+                type="button"
+                disabled={yookassaLoadingId === order.id}
+                onClick={() => handleSyncYookassaPayment(order.id)}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+              >
+                {yookassaLoadingId === order.id ? 'Проверка…' : 'Проверить оплату ЮKassa'}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -417,6 +520,35 @@ export default function AdminOrdersPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          {mode === 'active' ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  ЮKassa sync (pending)
+                </label>
+                <select
+                  className="form-input text-sm"
+                  value={yookassaBulkDays}
+                  onChange={(e) => setYookassaBulkDays(parseInt(e.target.value, 10))}
+                  disabled={yookassaBulkLoading}
+                >
+                  <option value={1}>1 день</option>
+                  <option value={3}>3 дня</option>
+                  <option value={7}>7 дней</option>
+                  <option value={14}>14 дней</option>
+                  <option value={30}>30 дней</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleBulkSyncYookassaPending()}
+                disabled={yookassaBulkLoading}
+                className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-60"
+              >
+                {yookassaBulkLoading ? 'Синхронизация…' : 'Синхронизировать pending'}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {mode === 'trash' && (

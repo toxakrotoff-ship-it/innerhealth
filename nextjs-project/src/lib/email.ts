@@ -381,6 +381,7 @@ export async function sendNewUserCredentials(
 
 export interface NewOrderEmailPayload {
   orderId: string
+  orderNumber?: number | null
   total: number
   shippingCost: number
   items: Array<{ title: string; quantity: number; price: number }>
@@ -404,6 +405,13 @@ export interface PaidOrderEmailPayload extends NewOrderEmailPayload {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
+  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
+    return `#${payload.orderNumber}`
+  }
+  return payload.orderId
 }
 
 function formatRub(value: number): string {
@@ -447,6 +455,7 @@ export async function sendNewOrderNotification(
     greetingTimeout: 15000,
   })
   const { orderId, total, shippingCost, items, shipping, promoCode, cdekTrackNumber } = payload
+  const orderLabel = formatOrderLabel(payload)
   const itemsLines = items.map(
     (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
   )
@@ -470,7 +479,7 @@ export async function sendNewOrderNotification(
   const trackLine = cdekTrackNumber?.trim() ? `\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}\n` : ''
   const text =
     `Новый заказ на сайте\n\n` +
-    `ID заказа: ${orderId}\n` +
+    `Заказ: ${orderLabel}\n` +
     `Состав:\n${itemsLines.join('\n')}\n\n` +
     `Доставка: ${formatRub(shippingCost)}\n` +
     `Итого: ${formatRub(total)}\n\n` +
@@ -514,7 +523,7 @@ export async function sendNewOrderNotification(
                       <tr>
                         <td style="padding:16px 18px;">
                           <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#7b6d57;">ID заказа</div>
-                          <div style="margin-top:8px;font-size:24px;line-height:1.2;font-weight:800;color:#1f2937;word-break:break-word;">${escapeHtml(orderId)}</div>
+                          <div style="margin-top:8px;font-size:24px;line-height:1.2;font-weight:800;color:#1f2937;word-break:break-word;">${escapeHtml(orderLabel)}</div>
                         </td>
                       </tr>
                     </table>
@@ -601,7 +610,7 @@ export async function sendNewOrderNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Новый заказ ${orderId} — Inner Health`,
+      subject: `Новый заказ ${orderLabel} — Inner Health`,
       text,
       html,
     })
@@ -768,6 +777,7 @@ export async function sendCustomerOrderPaidEmail(
     greetingTimeout: 15000,
   })
   const { orderId, total, shippingCost, items, cdekTrackNumber } = payload
+  const orderLabel = formatOrderLabel(payload)
   const orderSummary = items
     .map(
       (i) =>
@@ -778,7 +788,7 @@ export async function sendCustomerOrderPaidEmail(
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nID заказа: ${orderId}\n\nСостав заказа:\n${orderSummary}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
@@ -811,7 +821,7 @@ export async function sendCustomerOrderPaidEmail(
           <tr>
             <td style="padding:32px;">
               <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#374151;"><strong>${escapeHtml(username)}</strong>, ваш заказ оплачен.</p>
-              <p style="margin:0 0 16px;font-size:14px;color:#4b5563;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#4b5563;"><strong>Заказ:</strong> ${escapeHtml(orderLabel)}</p>
               <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#111827;">Состав заказа:</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin-bottom:20px;font-size:14px;color:#4b5563;">
                 <thead>
@@ -844,7 +854,7 @@ export async function sendCustomerOrderPaidEmail(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: trimmedTo,
-      subject: `Заказ ${orderId} оплачен — Inner Health`,
+      subject: `Заказ ${orderLabel} оплачен — Inner Health`,
       text,
       html,
     })
@@ -893,10 +903,11 @@ export async function sendAdminCdekTrackNotification(
   })
 
   const { orderId, total, shipping } = payload
+  const orderLabel = formatOrderLabel(payload)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =
     `Получен трек-номер СДЭК\n\n` +
-    `ID заказа: ${orderId}\n` +
+    `Заказ: ${orderLabel}\n` +
     `Трек-номер СДЭК: ${trackNumber}\n` +
     `Сумма заказа: ${formatRub(total)}\n` +
     `Получатель: ${shipping.fullName}\n` +
@@ -924,7 +935,7 @@ export async function sendAdminCdekTrackNotification(
           </tr>
           <tr>
             <td style="padding:28px;">
-              <p style="margin:0 0 16px;font-size:14px;color:#374151;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 16px;font-size:14px;color:#374151;"><strong>Заказ:</strong> ${escapeHtml(orderLabel)}</p>
               <p style="margin:0 0 20px;font-size:16px;color:#111827;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(trackNumber)}</span></p>
               <p style="margin:0 0 20px;font-size:14px;color:#374151;"><strong>Сумма заказа:</strong> ${formatRub(total)}</p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f9fafb;border-radius:12px;">
@@ -953,7 +964,7 @@ export async function sendAdminCdekTrackNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Трек СДЭК для заказа ${orderId} — Inner Health`,
+      subject: `Трек СДЭК для заказа ${orderLabel} — Inner Health`,
       text,
       html,
     })
@@ -1003,10 +1014,11 @@ export async function sendCustomerCdekTrackNotification(
   })
 
   const { orderId } = payload
+  const orderLabel = formatOrderLabel(payload)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =
     `Здравствуйте, ${username}.\n\n` +
-    `Для заказа ${orderId} получен трек-номер СДЭК: ${trackNumber}\n\n` +
+    `Для заказа ${orderLabel} получен трек-номер СДЭК: ${trackNumber}\n\n` +
     `Отслеживание: ${trackingUrl}\n\n` +
     `* Данное письмо создано автоматически, отвечать на него не требуется.`
   const html = `
@@ -1030,7 +1042,7 @@ export async function sendCustomerCdekTrackNotification(
           <tr>
             <td style="padding:28px;">
               <p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#374151;">${escapeHtml(username)}, ваш заказ передан в СДЭК.</p>
-              <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>ID заказа:</strong> ${escapeHtml(orderId)}</p>
+              <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Заказ:</strong> ${escapeHtml(orderLabel)}</p>
               <p style="margin:0 0 20px;font-size:16px;color:#111827;"><strong>Трек-номер:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(trackNumber)}</span></p>
               <p style="margin:0 0 24px;"><a href="${trackingUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background-color:#0f766e;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">Отследить заказ</a></p>
               <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">* Данное письмо создано автоматически, отвечать на него не требуется.</p>
@@ -1050,7 +1062,7 @@ export async function sendCustomerCdekTrackNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: trimmedTo,
-      subject: `Трек СДЭК для заказа ${orderId} — Inner Health`,
+      subject: `Трек СДЭК для заказа ${orderLabel} — Inner Health`,
       text,
       html,
     })
