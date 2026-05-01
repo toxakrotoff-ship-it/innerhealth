@@ -3,6 +3,7 @@ import * as userService from '@/services/user.service';
 import * as settingsService from '@/services/settings.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
+import { formatOrderLabel } from '@/lib/order-label';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -69,17 +70,15 @@ export interface OrderNotifyPayload {
     country: string;
   };
   promoCode?: string | null;
+  /** Сумма скидки по промокоду (руб.), для отдельной строки в уведомлении. */
+  promoDiscountAmount?: number | null;
   /** If set, partner linked to this promo will receive a separate short notification. */
   promoCodeId?: string | null;
   /** Соответствует scope настроек в админке (telegram_bot_token и т.д.). */
   brandId?: BrandId;
-}
-
-function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
-  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
-    return `#${payload.orderNumber}`;
-  }
-  return payload.orderId;
+  deliveryMethod?: string | null;
+  cdekOrderUuid?: string | null;
+  cdekOrderError?: string | null;
 }
 
 export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
@@ -97,8 +96,29 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
     if (!result || result.chatIds.length === 0) return;
     const { token, chatIds } = result;
     const orderLabel = escapeHtml(formatOrderLabel(payload));
+    const promoDiscount =
+      payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
+        ? payload.promoDiscountAmount.toFixed(2)
+        : null;
+    const isCdek =
+      payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+    const cdekLines: string[] = [];
+    if (isCdek) {
+      cdekLines.push(
+        '',
+        '<b>СДЭК:</b>',
+        `Способ: ${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'}`
+      );
+      if (payload.cdekOrderUuid) {
+        cdekLines.push(`UUID: <code>${escapeHtml(payload.cdekOrderUuid)}</code>`);
+      } else if (payload.cdekOrderError) {
+        cdekLines.push(`Ошибка: ${escapeHtml(payload.cdekOrderError)}`);
+      } else {
+        cdekLines.push('Отгрузка ещё не создана');
+      }
+    }
     const lines: string[] = [
-      '<b>Новый заказ</b>',
+      '<b>Заказ оплачен</b>',
       `Заказ: ${orderLabel}`,
       '',
       '<b>Состав:</b>',
@@ -110,6 +130,8 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
       `Доставка — ${payload.shippingCost.toFixed(0)} ₽`,
       `Итого: <b>${payload.total.toFixed(0)} ₽</b>`,
       payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
+      promoDiscount ? `Скидка по промокоду: ${promoDiscount} ₽` : '',
+      ...cdekLines,
       '',
       '<b>Доставка:</b>',
       `ФИО: ${escapeHtml(payload.shipping.fullName)}`,
@@ -119,8 +141,21 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
       `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
     ];
     const text = lines.filter(Boolean).join('\n');
+    const replyMarkup =
+      isCdek && !payload.cdekOrderUuid
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Создать отгрузку в СДЭК',
+                  callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
+                },
+              ],
+            ],
+          }
+        : undefined;
     for (const chatId of chatIds) {
-      await sendMessage(token, chatId, text).catch((e) =>
+      await sendMessage(token, chatId, text, replyMarkup ? { replyMarkup } : undefined).catch((e) =>
         console.error('[telegram-notify] order notify error:', e)
       );
     }
@@ -132,11 +167,15 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
           if (!partnerChatId || !token) return;
           if (adminChatIds.includes(partnerChatId)) return;
           const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
+          const discountLine =
+            payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
+              ? `\nСкидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
+              : '';
           const partnerText =
             `💰 <b>Заказ по вашему промокоду</b>\n\n` +
             `Промокод: ${promoLabel}\n` +
             `Заказ: ${orderLabel}\n` +
-            `Сумма: <b>${payload.total.toFixed(0)} ₽</b>`;
+            `Сумма: <b>${payload.total.toFixed(0)} ₽</b>${discountLine}`;
           return sendMessage(token, partnerChatId, partnerText).catch((e) =>
             console.error('[telegram-notify] partner order notify error:', e)
           );

@@ -6,14 +6,12 @@ import { notifyMaxPaymentError } from '@/lib/max-notify'
 import {
   notifyTelegramOrderStatusForUser,
   notifyTelegramCdekTrackForUser,
-  notifyTelegramPaidOrderForAdmins,
 } from '@/lib/telegram-notify'
 import {
   notifyMaxOrderStatusForUser,
   notifyMaxCdekTrackForUser,
-  notifyMaxPaidOrderForAdmins,
 } from '@/lib/max-notify'
-import { sendCustomerOrderPaidEmail } from '@/lib/email'
+import { scheduleNotifyAllChannelsAfterOrderPaid } from '@/lib/order-paid-notifications'
 import { sendCdekTrackEmailsForOrder } from '@/lib/cdek-track-email'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
@@ -123,9 +121,21 @@ export async function POST(request: Request) {
 
     await orderService.updateOrderStatus(orderId, 'paid')
     if (order.userId) {
-      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'paid', brandId: orderBrandId })
+      void notifyTelegramOrderStatusForUser({
+        userId: order.userId,
+        orderId,
+        orderNumber: order.orderNumber ?? null,
+        status: 'paid',
+        brandId: orderBrandId,
+      })
       after(() =>
-        notifyMaxOrderStatusForUser({ userId: order.userId!, orderId, status: 'paid', brandId: orderBrandId })
+        notifyMaxOrderStatusForUser({
+          userId: order.userId!,
+          orderId,
+          orderNumber: order.orderNumber ?? null,
+          status: 'paid',
+          brandId: orderBrandId,
+        })
       )
     }
 
@@ -166,73 +176,46 @@ export async function POST(request: Request) {
       }
       if (order.userId) {
         if (!previousTrackNumber && newTrackNumber) {
-          void notifyTelegramCdekTrackForUser({ userId: order.userId, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
+          void notifyTelegramCdekTrackForUser({
+            userId: order.userId,
+            orderId,
+            orderNumber: order.orderNumber ?? null,
+            trackNumber: newTrackNumber,
+            brandId: orderBrandId,
+          })
           after(() =>
-            notifyMaxCdekTrackForUser({ userId: order.userId!, orderId, trackNumber: newTrackNumber, brandId: orderBrandId })
+            notifyMaxCdekTrackForUser({
+              userId: order.userId!,
+              orderId,
+              orderNumber: order.orderNumber ?? null,
+              trackNumber: newTrackNumber,
+              brandId: orderBrandId,
+            })
           )
         }
       }
 
-      // Customer "paid" email (includes CDEK track number if already known).
-      try {
-        const paidOrder = await orderService.findOrderForPaidEmail(orderId)
-        if (paidOrder?.shippingInfo?.email && paidOrder.shippingInfo.fullName) {
-          const username = paidOrder.shippingInfo.fullName
-          const itemsSubtotal = paidOrder.items.reduce((sum, oi) => sum + oi.quantity * oi.price, 0)
-          const shippingCost = Math.max(0, paidOrder.total - itemsSubtotal)
-          await sendCustomerOrderPaidEmail(paidOrder.shippingInfo.email, username, {
-            orderId: paidOrder.id,
-            total: paidOrder.total,
-            shippingCost,
-            items: paidOrder.items.map((oi) => ({
-              title: oi.product.title,
-              quantity: oi.quantity,
-              price: oi.price,
-            })),
-            shipping: {
-              fullName: paidOrder.shippingInfo.fullName,
-              phone: paidOrder.shippingInfo.phone,
-              email: paidOrder.shippingInfo.email,
-              address: paidOrder.shippingInfo.address,
-              city: paidOrder.shippingInfo.city,
-              zipCode: paidOrder.shippingInfo.zipCode,
-              country: paidOrder.shippingInfo.country ?? 'Россия',
-            },
-            promoCode: paidOrder.promoCode?.code ?? null,
-            cdekTrackNumber: paidOrder.cdekTrackNumber ?? null,
-          })
-        }
-      } catch (e) {
-        console.warn('[webhook/yookassa] paid email failed', orderId, e instanceof Error ? e.message : String(e))
-      }
     }
 
-    const paidOrderForAdmins = await orderService.findOrderForCdekShipment(orderId)
-    const paidDeliveryMethod = paidOrderForAdmins?.shippingInfo?.deliveryMethod ?? null
-    if (paidDeliveryMethod === 'cdek_pvz' || paidDeliveryMethod === 'cdek_door') {
-      void notifyTelegramPaidOrderForAdmins({
-        orderId,
-        deliveryMethod: paidDeliveryMethod,
-        cdekOrderUuid: paidOrderForAdmins?.cdekOrderUuid ?? null,
-        cdekOrderError: paidOrderForAdmins?.cdekOrderError ?? null,
-        brandId: orderBrandId,
-      })
-      after(() =>
-        notifyMaxPaidOrderForAdmins({
-          orderId,
-          deliveryMethod: paidDeliveryMethod,
-          cdekOrderUuid: paidOrderForAdmins?.cdekOrderUuid ?? null,
-          cdekOrderError: paidOrderForAdmins?.cdekOrderError ?? null,
-          brandId: orderBrandId,
-        })
-      )
-    }
+    scheduleNotifyAllChannelsAfterOrderPaid(orderId)
   } else if (body.event === 'payment.canceled' && order.status === 'pending') {
     await orderService.updateOrderStatus(orderId, 'canceled')
     if (order.userId) {
-      void notifyTelegramOrderStatusForUser({ userId: order.userId, orderId, status: 'canceled', brandId: orderBrandId })
+      void notifyTelegramOrderStatusForUser({
+        userId: order.userId,
+        orderId,
+        orderNumber: order.orderNumber ?? null,
+        status: 'canceled',
+        brandId: orderBrandId,
+      })
       after(() =>
-        notifyMaxOrderStatusForUser({ userId: order.userId!, orderId, status: 'canceled', brandId: orderBrandId })
+        notifyMaxOrderStatusForUser({
+          userId: order.userId!,
+          orderId,
+          orderNumber: order.orderNumber ?? null,
+          status: 'canceled',
+          brandId: orderBrandId,
+        })
       )
     }
   }

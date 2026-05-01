@@ -7,14 +7,12 @@ import {
   appendDeliveryReceiptItem,
   getBaseUrl,
 } from '@/lib/yookassa'
-import { notifyTelegramOrder, notifyTelegramPaymentError } from '@/lib/telegram-notify'
-import { notifyMaxOrder, notifyMaxPaymentError } from '@/lib/max-notify'
-import { sendOrderEmailsWithDelay } from '@/lib/email'
+import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
+import { notifyMaxPaymentError } from '@/lib/max-notify'
 import { randomUUID } from 'crypto'
 import * as productService from '@/services/product.service'
 import * as promoService from '@/services/promo.service'
 import * as orderService from '@/services/order.service'
-import * as userService from '@/services/user.service'
 import * as settingsService from '@/services/settings.service'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -168,69 +166,6 @@ export async function POST(request: Request) {
         doorAddress: shipping.doorAddress,
       },
     })
-
-    const promoCodeStr = promoCodeId
-      ? await promoService.getPromoCodeStringById(promoCodeId, brandId)
-      : null
-    const orderNotifyPayload = {
-      orderId: order.id,
-      orderNumber: order.orderNumber ?? null,
-      total: order.total,
-      shippingCost: deliverySum,
-      items: order.items.map((oi) => ({
-        title: oi.product.title,
-        quantity: oi.quantity,
-        price: oi.price,
-      })),
-      shipping: {
-        fullName: shipping.fullName.trim(),
-        phone: shipping.phone.trim(),
-        email: shipping.email.trim(),
-        address: shipping.address.trim(),
-        city: shipping.city.trim(),
-        zipCode: (shipping.zipCode ?? '').toString().trim(),
-        country: (shipping.country ?? 'Россия').trim(),
-      },
-      promoCode: promoCodeStr,
-      promoCodeId: order.promoCodeId ?? undefined,
-      brandId,
-    } as const
-    notifyTelegramOrder(orderNotifyPayload)
-    after(() =>
-      notifyMaxOrder({
-        ...orderNotifyPayload,
-        customerUserId: userId,
-      })
-    )
-
-    const orderNotificationPayload = {
-      orderId: order.id,
-      orderNumber: order.orderNumber ?? null,
-      total: order.total,
-      shippingCost: deliverySum,
-      items: order.items.map((oi) => ({
-        title: oi.product.title,
-        quantity: oi.quantity,
-        price: oi.price,
-      })),
-      shipping: {
-        fullName: shipping.fullName.trim(),
-        phone: shipping.phone.trim(),
-        email: shipping.email.trim(),
-        address: shipping.address.trim(),
-        city: shipping.city.trim(),
-        zipCode: (shipping.zipCode ?? '').toString().trim(),
-        country: (shipping.country ?? 'Россия').trim(),
-      },
-      promoCode: promoCodeStr,
-    }
-    const adminEmails = await userService.getAdminNotificationEmails()
-    void sendOrderEmailsWithDelay(
-      adminEmails,
-      shipping.email.trim(),
-      shipping.fullName.trim(),
-      orderNotificationPayload
-    )
 
     const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
     const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()

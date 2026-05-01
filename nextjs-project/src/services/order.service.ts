@@ -61,7 +61,7 @@ export async function findOrderWithItemsAndShippingForCdek(orderId: string) {
   });
 }
 
-/** Get order details for customer "paid" email. */
+/** Get order details for customer "paid" email and post-payment notifications. */
 export async function findOrderForPaidEmail(orderId: string) {
   return prisma.order.findUnique({
     where: { id: orderId },
@@ -70,7 +70,12 @@ export async function findOrderForPaidEmail(orderId: string) {
       orderNumber: true,
       total: true,
       status: true,
+      userId: true,
+      promoCodeId: true,
+      promoDiscountAmount: true,
       cdekTrackNumber: true,
+      cdekOrderUuid: true,
+      cdekOrderError: true,
       promoCode: { select: { code: true } },
       items: {
         select: {

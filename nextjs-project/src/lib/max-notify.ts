@@ -4,6 +4,7 @@ import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
+import { formatOrderLabel } from '@/lib/order-label';
 
 interface MaxAttachmentRequest {
   type: string;
@@ -100,24 +101,38 @@ export interface MaxOrderNotifyPayload {
     country: string;
   };
   promoCode?: string | null;
+  promoDiscountAmount?: number | null;
   promoCodeId?: string | null;
   customerUserId?: string | null;
   brandId?: BrandId;
-}
-
-function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
-  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
-    return `#${payload.orderNumber}`;
-  }
-  return payload.orderId;
+  deliveryMethod?: string | null;
+  cdekOrderUuid?: string | null;
+  cdekOrderError?: string | null;
 }
 
 export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
   const orderLabel = escapeHtml(formatOrderLabel(payload));
+  const isCdek =
+    payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+  const cdekLines: string[] = [];
+  if (isCdek) {
+    cdekLines.push(
+      '',
+      '**СДЭК:**',
+      `Способ: ${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'}`
+    );
+    if (payload.cdekOrderUuid) {
+      cdekLines.push(`UUID: \`${escapeHtml(payload.cdekOrderUuid)}\``);
+    } else if (payload.cdekOrderError) {
+      cdekLines.push(`Ошибка: ${escapeHtml(payload.cdekOrderError)}`);
+    } else {
+      cdekLines.push('Отгрузка ещё не создана');
+    }
+  }
   const lines: string[] = [
-    '**Новый заказ**',
+    '**Заказ оплачен**',
     `Заказ: ${orderLabel}`,
     '',
     '**Состав:**',
@@ -129,6 +144,10 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     `Доставка — ${payload.shippingCost.toFixed(0)} ₽`,
     `Итого: **${payload.total.toFixed(0)} ₽**`,
     payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
+    payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
+      ? `Скидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
+      : '',
+    ...cdekLines,
     '',
     '**Доставка:**',
     `ФИО: ${escapeHtml(payload.shipping.fullName)}`,
@@ -137,17 +156,43 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     `Адрес: ${escapeHtml(payload.shipping.address)}`,
     `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
   ];
-  await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'), scope);
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXTAUTH_URL?.trim() ||
+    '';
+  const adminOrdersUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/orders` : '/admin/orders';
+  const needsCdekButton = isCdek && !payload.cdekOrderUuid;
+  const attachments = needsCdekButton
+    ? [
+        Keyboard.inlineKeyboard([
+          [
+            Keyboard.button.callback(
+              'Создать отгрузку в СДЭК',
+              `cdek_create_${payload.orderId}`.slice(0, 256)
+            ),
+          ],
+          [Keyboard.button.link('Открыть в админке', adminOrdersUrl)],
+        ]),
+      ]
+    : undefined;
+  await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'), {
+    ...scope,
+    ...(attachments ? { attachments } : {}),
+  });
 
   if (payload.promoCodeId) {
     const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId, scope);
     if (partnerMaxUserId && !adminUserIds.includes(partnerMaxUserId)) {
       const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
+      const discountLine =
+        payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
+          ? `\nСкидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
+          : '';
       const partnerText =
         `💰 **Заказ по вашему промокоду**\n\n` +
         `Промокод: ${promoLabel}\n` +
         `Заказ: ${orderLabel}\n` +
-        `Сумма: **${payload.total.toFixed(0)} ₽**`;
+        `Сумма: **${payload.total.toFixed(0)} ₽**${discountLine}`;
       await sendToUsers([partnerMaxUserId], partnerText, scope);
     }
   }
@@ -156,7 +201,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId, scope);
     if (customerLink && !adminUserIds.includes(customerLink.maxUserId)) {
       const customerText =
-        `✅ **Ваш заказ принят**\n\n` +
+        `✅ **Заказ оплачен**\n\n` +
         `Номер: ${orderLabel}\n` +
         `Сумма: **${payload.total.toFixed(0)} ₽**`;
       await sendToUsers([customerLink.maxUserId], customerText, scope);

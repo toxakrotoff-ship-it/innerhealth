@@ -3,6 +3,7 @@ import { requireAdminSession } from '@/lib/require-admin'
 import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
+import { scheduleNotifyAllChannelsAfterOrderPaid } from '@/lib/order-paid-notifications'
 
 interface YookassaSyncResponse {
   ok: boolean
@@ -64,6 +65,7 @@ export async function POST(
     await orderService.updateOrderStatus(orderId, 'paid')
     updated = true
     orderStatus = 'paid'
+    scheduleNotifyAllChannelsAfterOrderPaid(orderId)
   } else if (paymentStatus === 'canceled' && previousOrderStatus === 'pending') {
     await orderService.updateOrderStatus(orderId, 'canceled')
     updated = true

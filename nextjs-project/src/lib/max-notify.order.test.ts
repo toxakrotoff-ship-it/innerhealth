@@ -79,13 +79,13 @@ describe('notifyMaxOrder', () => {
     expect(sendMessageToUser).toHaveBeenNthCalledWith(
       1,
       101,
-      expect.stringContaining('**Новый заказ**'),
+      expect.stringContaining('**Заказ оплачен**'),
       expect.any(Object)
     )
     expect(sendMessageToUser).toHaveBeenNthCalledWith(
       2,
       102,
-      expect.stringContaining('**Новый заказ**'),
+      expect.stringContaining('**Заказ оплачен**'),
       expect.any(Object)
     )
     expect(sendMessageToUser).toHaveBeenNthCalledWith(
@@ -97,7 +97,7 @@ describe('notifyMaxOrder', () => {
     expect(sendMessageToUser).toHaveBeenNthCalledWith(
       4,
       301,
-      expect.stringContaining('**Ваш заказ принят**'),
+      expect.stringContaining('**Заказ оплачен**'),
       expect.any(Object)
     )
 

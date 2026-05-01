@@ -5,6 +5,7 @@ import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
 import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
+import { scheduleNotifyAllChannelsAfterOrderPaid } from '@/lib/order-paid-notifications'
 
 const querySchema = z.object({
   days: z.coerce.number().int().min(1).max(60).default(7),
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
         wasUpdated = true
         updated++
         updatedToPaid++
+        scheduleNotifyAllChannelsAfterOrderPaid(candidate.id)
       } else if (paymentStatus === 'canceled' && previousOrderStatus === 'pending') {
         await orderService.updateOrderStatus(candidate.id, 'canceled')
         orderStatus = 'canceled'

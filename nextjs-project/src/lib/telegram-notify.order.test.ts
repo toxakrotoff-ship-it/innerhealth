@@ -70,8 +70,8 @@ describe('notifyTelegramOrder', () => {
     const partnerBody = JSON.parse(String(calls[2]?.[1]?.body))
 
     expect(adminBodies).toEqual([
-      expect.objectContaining({ chat_id: 'admin-1', text: expect.stringContaining('<b>Новый заказ</b>') }),
-      expect.objectContaining({ chat_id: 'admin-2', text: expect.stringContaining('<b>Новый заказ</b>') }),
+      expect.objectContaining({ chat_id: 'admin-1', text: expect.stringContaining('<b>Заказ оплачен</b>') }),
+      expect.objectContaining({ chat_id: 'admin-2', text: expect.stringContaining('<b>Заказ оплачен</b>') }),
     ])
     expect(partnerBody).toEqual(
       expect.objectContaining({

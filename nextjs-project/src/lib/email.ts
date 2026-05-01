@@ -1,5 +1,7 @@
 import nodemailer from 'nodemailer'
 
+import { formatOrderLabel } from '@/lib/order-label'
+
 const DEFAULT_PUBLIC_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://innerhaealth.inetrnet.pp.ru'
 
 /**
@@ -395,6 +397,8 @@ export interface NewOrderEmailPayload {
     country: string
   }
   promoCode?: string | null
+  /** Сумма скидки по промокоду в рублях (отдельная строка в письме). */
+  promoDiscountAmount?: number | null
   cdekTrackNumber?: string | null
 }
 
@@ -407,13 +411,6 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function formatOrderLabel(payload: { orderId: string; orderNumber?: number | null }): string {
-  if (typeof payload.orderNumber === 'number' && Number.isFinite(payload.orderNumber) && payload.orderNumber > 0) {
-    return `#${payload.orderNumber}`
-  }
-  return payload.orderId
-}
-
 function formatRub(value: number): string {
   return `${value.toFixed(2)} ₽`
 }
@@ -423,7 +420,7 @@ function getCdekTrackingUrl(trackNumber: string): string {
 }
 
 /**
- * Send new order notification from support@innerhealth.ru to admin mailbox(s).
+ * Уведомление админам об оплаченном заказе (support@innerhealth.ru → почтовые ящики админов).
  * No-op if SMTP is not configured or toEmails is empty.
  */
 export async function sendNewOrderNotification(
@@ -454,7 +451,8 @@ export async function sendNewOrderNotification(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { orderId, total, shippingCost, items, shipping, promoCode, cdekTrackNumber } = payload
+  const { orderId, total, shippingCost, items, shipping, promoCode, promoDiscountAmount, cdekTrackNumber } =
+    payload
   const orderLabel = formatOrderLabel(payload)
   const itemsLines = items.map(
     (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
@@ -477,13 +475,19 @@ export async function sendNewOrderNotification(
     .join('')
   const cityLine = [shipping.city, shipping.zipCode, shipping.country].filter(Boolean).join(', ')
   const trackLine = cdekTrackNumber?.trim() ? `\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}\n` : ''
+  const promoExtras = [
+    promoCode ? `Промокод: ${promoCode}` : '',
+    promoDiscountAmount != null && promoDiscountAmount > 0
+      ? `Скидка по промокоду: ${formatRub(promoDiscountAmount)}`
+      : '',
+  ].filter(Boolean)
+  const promoSection = promoExtras.length > 0 ? `\n${promoExtras.join('\n')}` : ''
   const text =
-    `Новый заказ на сайте\n\n` +
+    `Заказ оплачен\n\n` +
     `Заказ: ${orderLabel}\n` +
     `Состав:\n${itemsLines.join('\n')}\n\n` +
     `Доставка: ${formatRub(shippingCost)}\n` +
-    `Итого: ${formatRub(total)}\n\n` +
-    (promoCode ? `Промокод: ${promoCode}\n\n` : '') +
+    `Итого: ${formatRub(total)}${promoSection}\n` +
     trackLine +
     `Доставка:\n` +
     `ФИО: ${shipping.fullName}\n` +
@@ -497,11 +501,11 @@ export async function sendNewOrderNotification(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Новый заказ — Inner Health</title>
+  <title>Заказ оплачен — Inner Health</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f3f1eb;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
-    Новый заказ ${escapeHtml(orderId)} на сумму ${formatRub(total)}
+    Заказ оплачен ${escapeHtml(orderId)}, сумма ${formatRub(total)}
   </div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#f7f4ee 0%,#f3f1eb 100%);">
     <tr>
@@ -510,8 +514,8 @@ export async function sendNewOrderNotification(
           <tr>
             <td style="padding:28px 28px 22px;background:linear-gradient(135deg,#16302b 0%,#27544c 100%);">
               <div style="font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#d8e9e3;">Inner Health</div>
-              <h1 style="margin:14px 0 8px;font-family:Arial,'Segoe UI',sans-serif;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Новый заказ</h1>
-              <p style="margin:0;font-size:15px;line-height:1.5;color:#d9ebe4;">Заказ оформлен на сайте и ожидает обработки.</p>
+              <h1 style="margin:14px 0 8px;font-family:Arial,'Segoe UI',sans-serif;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Заказ оплачен</h1>
+              <p style="margin:0;font-size:15px;line-height:1.5;color:#d9ebe4;">Оплата получена, заказ можно обрабатывать.</p>
             </td>
           </tr>
           <tr>
@@ -538,6 +542,11 @@ export async function sendNewOrderNotification(
                           <div style="margin-top:8px;font-size:28px;line-height:1.1;font-weight:800;color:#16302b;">${formatRub(total)}</div>
                           <div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Доставка: <strong>${formatRub(shippingCost)}</strong></div>
                           ${promoCode ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Промокод: <strong>${escapeHtml(promoCode)}</strong></div>` : ''}
+                          ${
+                            promoDiscountAmount != null && promoDiscountAmount > 0
+                              ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Скидка по промокоду: <strong>${formatRub(promoDiscountAmount)}</strong></div>`
+                              : ''
+                          }
                           ${cdekTrackNumber?.trim() ? `<div style="margin-top:10px;font-size:13px;line-height:1.4;color:#45665d;">Трек-номер СДЭК: <strong style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</strong></div>` : ''}
                         </td>
                       </tr>
@@ -605,16 +614,16 @@ export async function sendNewOrderNotification(
 </html>
   `.trim()
   try {
-    console.log('[email] Sending new order notification to', unique.join(', '))
+    console.log('[email] Sending paid order admin notification to', unique.join(', '))
     await transporter.sendMail({
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Новый заказ ${orderLabel} — Inner Health`,
+      subject: `Заказ оплачен ${orderLabel} — Inner Health`,
       text,
       html,
     })
-    console.log('[email] New order notification sent')
+    console.log('[email] Paid order admin notification sent')
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -776,7 +785,7 @@ export async function sendCustomerOrderPaidEmail(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { orderId, total, shippingCost, items, cdekTrackNumber } = payload
+  const { orderId, total, shippingCost, items, cdekTrackNumber, promoCode, promoDiscountAmount } = payload
   const orderLabel = formatOrderLabel(payload)
   const orderSummary = items
     .map(
@@ -784,11 +793,18 @@ export async function sendCustomerOrderPaidEmail(
         `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
     )
     .join('\n')
+  const promoTextLines = [
+    promoCode?.trim() ? `Промокод: ${promoCode.trim()}` : '',
+    promoDiscountAmount != null && promoDiscountAmount > 0
+      ? `Скидка по промокоду: ${formatRub(promoDiscountAmount)}`
+      : '',
+  ].filter(Boolean)
+  const promoTextSection = promoTextLines.length > 0 ? `\n${promoTextLines.join('\n')}` : ''
   const trackLine = cdekTrackNumber?.trim()
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}${promoTextSection}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
@@ -799,6 +815,17 @@ export async function sendCustomerOrderPaidEmail(
   const trackHtml = cdekTrackNumber?.trim()
     ? `<p style="margin:12px 0 0;font-size:14px;color:#374151;"><strong>Трек-номер СДЭК:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${escapeHtml(cdekTrackNumber.trim())}</span></p>`
     : ''
+  const promoHtmlBlock =
+    promoCode?.trim() || (promoDiscountAmount != null && promoDiscountAmount > 0)
+      ? `<div style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#374151;">
+          ${promoCode?.trim() ? `<p style="margin:0 0 6px;"><strong>Промокод:</strong> ${escapeHtml(promoCode.trim())}</p>` : ''}
+          ${
+            promoDiscountAmount != null && promoDiscountAmount > 0
+              ? `<p style="margin:0;"><strong>Скидка по промокоду:</strong> ${formatRub(promoDiscountAmount)}</p>`
+              : ''
+          }
+        </div>`
+      : ''
   const html = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -835,6 +862,7 @@ export async function sendCustomerOrderPaidEmail(
                   ${htmlItems}
                 </tbody>
               </table>
+              ${promoHtmlBlock}
               <p style="margin:0 0 6px;font-size:14px;color:#374151;">Доставка: <strong>${formatRub(shippingCost)}</strong></p>
               <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#0f766e;">Итого: ${formatRub(total)}</p>
               ${trackHtml}
@@ -1076,11 +1104,10 @@ export async function sendCustomerCdekTrackNotification(
 }
 
 /**
- * Send order-related emails with a random delay between admin notification and customer confirmation.
- * Runs in background: admin → delay → customer. Reduces burst pattern for better deliverability.
+ * После успешной оплаты: письмо админам → пауза → письмо клиенту об оплате.
  * Delay range: env EMAIL_SEND_DELAY_MS_MIN / EMAIL_SEND_DELAY_MS_MAX (default 5–15 s; cap 25 min).
  */
-export async function sendOrderEmailsWithDelay(
+export async function sendPaidOrderEmailsWithDelay(
   adminEmails: string[],
   customerEmail: string,
   customerName: string,
@@ -1091,10 +1118,10 @@ export async function sendOrderEmailsWithDelay(
       await sendNewOrderNotification(adminEmails, payload)
     }
     const delayMs = getEmailSendDelayMs()
-    console.log('[email] Delay before customer order email:', Math.round(delayMs / 1000), 's')
+    console.log('[email] Delay before customer paid email:', Math.round(delayMs / 1000), 's')
     await sleep(delayMs)
-    await sendCustomerOrderConfirmation(customerEmail, customerName, payload)
+    await sendCustomerOrderPaidEmail(customerEmail, customerName, payload)
   } catch (e) {
-    console.error('[orders] Order emails error:', e)
+    console.error('[orders] Paid order emails error:', e)
   }
 }
