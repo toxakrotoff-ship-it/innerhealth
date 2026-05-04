@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { redirect } from 'next/navigation'
+import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
@@ -79,19 +80,32 @@ export default async function ProductByIdPage({ params }: PageProps) {
     return a.category.title.localeCompare(b.category.title, 'ru')
   })
   const primaryCategory = sortedCategoryLinks[0]?.category
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: 'Каталог', href: '/catalog' },
+    ...(primaryCategory
+      ? [{ label: primaryCategory.title, href: `/catalog/${primaryCategory.slug}` }]
+      : []),
+    { label: product.title },
+  ]
+  const productPath = `/product/id/${id}`
 
   const categoryIds = product.categories.map((item) => item.categoryId)
   const relatedProducts = await productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId)
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
   return (
-    <ProductPageContent
-      product={product}
-      tabs={buildTabs(product)}
-      photos={photos}
-      relatedProducts={relatedProducts}
-      relatedProductsCategoryTitle={primaryCategory?.title ?? null}
-      isSprintTheme={isSprintTheme}
-    />
+    <section className={isSprintTheme ? 'bg-[#060A14] py-6' : ''}>
+      <BreadcrumbJsonLd items={breadcrumbItems} currentPath={productPath} />
+      <ProductPageContent
+        product={product}
+        tabs={buildTabs(product)}
+        photos={photos}
+        relatedProducts={relatedProducts}
+        relatedProductsCategoryTitle={primaryCategory?.title ?? null}
+        breadcrumbItems={breadcrumbItems}
+        isSprintTheme={isSprintTheme}
+      />
+    </section>
   )
 }

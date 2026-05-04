@@ -84,7 +84,28 @@ interface StockBadgeState {
   className: string
 }
 
-function getStockBadge(quantity: number | null | undefined): StockBadgeState {
+function getStockBadge(quantity: number | null | undefined, isSprintTheme: boolean): StockBadgeState {
+  if (isSprintTheme) {
+    if (quantity == null)
+      return {
+        label: 'В наличии',
+        className: 'border border-emerald-800/70 bg-emerald-950/55 text-emerald-200',
+      }
+    if (quantity <= 0)
+      return {
+        label: 'Товар временно закончился',
+        className: 'border border-slate-600 bg-slate-800/80 text-slate-300',
+      }
+    if (quantity >= 10)
+      return {
+        label: 'В наличии',
+        className: 'border border-emerald-800/70 bg-emerald-950/55 text-emerald-200',
+      }
+    return {
+      label: 'Заканчивается',
+      className: 'border border-amber-800/60 bg-amber-950/45 text-amber-100',
+    }
+  }
   if (quantity == null) return { label: 'В наличии', className: 'bg-green-100 text-green-700' }
   if (quantity <= 0) return { label: 'Товар временно закончился', className: 'bg-gray-100 text-gray-700' }
   if (quantity >= 10) return { label: 'В наличии', className: 'bg-green-100 text-green-700' }
@@ -106,7 +127,7 @@ function ProductDescriptionBlock({
   const className = cn(
     'mt-6 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
     isSprintTheme
-      ? 'text-slate-300 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
+      ? 'prose-invert text-slate-300 prose-headings:text-slate-100 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
       : 'text-text [&_p]:text-text [&_li]:text-text [&_strong]:text-gray-900'
   )
   if (looksLikeHtmlMarkup(description)) {
@@ -123,7 +144,7 @@ function ProductLongTextBlock({ text, isSprintTheme }: { text: string; isSprintT
   const className = cn(
     'prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
     isSprintTheme
-      ? 'text-slate-300 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
+      ? 'prose-invert text-slate-300 prose-headings:text-slate-100 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
       : 'text-text [&_p]:text-text [&_li]:text-text [&_strong]:text-gray-900'
   )
   if (looksLikeHtmlMarkup(text)) {
@@ -150,8 +171,13 @@ export function ProductPageContent({
   const isPreorderEnabled = product.isPreorderEnabled === true
   const isUnavailable = isOutOfStock && !isPreorderEnabled
   const stock = isOutOfStock && isPreorderEnabled
-    ? { label: 'Предзаказ', className: 'bg-amber-100 text-amber-700' }
-    : getStockBadge(product.quantity)
+    ? {
+        label: 'Предзаказ',
+        className: isSprintTheme
+          ? 'border border-amber-800/60 bg-amber-950/45 text-amber-100'
+          : 'bg-amber-100 text-amber-700',
+      }
+    : getStockBadge(product.quantity, isSprintTheme)
   const crumbs: BreadcrumbItemType[] =
     breadcrumbItems ??
     [
@@ -182,8 +208,20 @@ export function ProductPageContent({
         adaptiveGap={false}
         className="gap-10"
       >
-        <ProductMediaGallery title={product.title} photos={photos} />
-        <div>
+        <div
+          className={cn(
+            isSprintTheme &&
+              'rounded-2xl border border-slate-700/70 bg-slate-900/20 p-3 sm:p-4 lg:self-start'
+          )}
+        >
+          <ProductMediaGallery title={product.title} photos={photos} isSprintTheme={isSprintTheme} />
+        </div>
+        <div
+          className={cn(
+            isSprintTheme &&
+              'rounded-2xl border border-slate-700/70 bg-slate-900/35 p-5 sm:p-6 lg:self-start'
+          )}
+        >
           <Heading1 className={isSprintTheme ? 'text-slate-100' : undefined}>{product.title}</Heading1>
           {product.sku?.trim() && (
             <p className={`mt-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>SKU: {product.sku.trim()}</p>

@@ -830,26 +830,44 @@ function SprintPowerHome({
             )}
           </div>
 
-          <div className="rounded-3xl bg-[#111D3A] p-6 md:p-8">
-            <p className="text-2xl font-bold text-white">
-              {getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
-            </p>
-            <p className="mt-2 text-sm text-slate-300">
-              {getBlockTextForBrand(
-                blocks,
-                'home',
-                'crossBrand.text',
-                'sprint-power',
-                'Активное долголетие, превентивная медицина, нутрицевтика.'
-              )}
-            </p>
-            <a
-              href={innerSiteUrl}
-              className="mt-4 inline-flex rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
-            >
-              {getBlockTextForBrand(blocks, 'home', 'crossBrand.cta', 'sprint-power', 'На Inner Health')}
-            </a>
+          <div className="overflow-hidden rounded-3xl bg-[#111D3A]">
+            <div className="flex flex-col md:flex-row md:items-stretch">
+              <div className="flex flex-1 flex-col justify-center p-6 md:p-8">
+                <p className="text-2xl font-bold text-white">
+                  {getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
+                </p>
+                <p className="mt-2 text-sm text-slate-300">
+                  {getBlockTextForBrand(
+                    blocks,
+                    'home',
+                    'crossBrand.text',
+                    'sprint-power',
+                    'Активное долголетие, превентивная медицина, нутрицевтика.'
+                  )}
+                </p>
+                <a
+                  href={innerSiteUrl}
+                  className="mt-4 inline-flex w-fit rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+                >
+                  {getBlockTextForBrand(blocks, 'home', 'crossBrand.cta', 'sprint-power', 'На Inner Health')}
+                </a>
+              </div>
+              <a
+                href={innerSiteUrl}
+                className="relative block aspect-[5/4] w-full shrink-0 overflow-hidden md:aspect-auto md:w-[min(44%,22rem)] md:max-w-[50%] md:self-stretch md:min-h-[12rem] lg:w-[min(40%,26rem)]"
+              >
+                <Image
+                  src="/images/sprint-power/cross-brand-inner-health.png"
+                  alt="Inner Health — нутрицевтика и превентивная медицина"
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 768px) 100vw, min(44vw, 26rem)"
+                />
+              </a>
+            </div>
           </div>
+
+          <PartnersBlock brand="sprint-power" useInnerStyling />
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-900">

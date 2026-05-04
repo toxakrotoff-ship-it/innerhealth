@@ -81,6 +81,7 @@ function TabContent({ text, isSprintTheme }: { text: string; isSprintTheme: bool
       <div
         className={cn(
           'prose prose-sm max-w-none',
+          isSprintTheme && 'prose-invert prose-headings:text-slate-100',
           '[&_img]:max-w-full',
           '[&_ul]:list-disc [&_ol]:list-decimal',
           characteristicTableClasses(isSprintTheme)
@@ -125,9 +126,15 @@ interface ProductTabsProps {
   isSprintTheme?: boolean
 }
 
+const tabActiveRing = (isSprintTheme: boolean) =>
+  isSprintTheme
+    ? 'data-[state=active]:border-[#7AA2FF] data-[state=active]:bg-transparent data-[state=active]:text-[#7AA2FF]'
+    : 'data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue'
+
 export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductTabsProps) {
   if (tabs.length === 0) return null
   const shouldShowSwipeHint = tabs.length > 2
+  const activeTabAccent = tabActiveRing(isSprintTheme)
 
   return (
     <section
@@ -144,7 +151,7 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
               'h-auto w-full justify-start gap-x-1 overflow-x-auto rounded-none border-b border-transparent bg-transparent p-0 whitespace-nowrap',
               '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',
               '[&>button]:rounded-none [&>button]:border-b-2 [&>button]:border-transparent [&>button]:bg-transparent [&>button]:shadow-none',
-              'data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue'
+              activeTabAccent
             )}
           >
             {tabs.map((tab, index) => (
@@ -153,7 +160,7 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
                 value={`tab-${index}`}
                 className={cn(
                   '-mb-px shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-sm font-medium sm:px-4',
-                  'data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue data-[state=active]:shadow-none',
+                  `${activeTabAccent} data-[state=active]:shadow-none`,
                   isSprintTheme
                     ? 'text-slate-400 hover:text-slate-200'
                     : 'text-gray-600 hover:text-text'
@@ -183,7 +190,9 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
             <div
               className={cn(
                 'prose prose-sm max-w-none prose-ul:my-2 prose-li:my-0 leading-relaxed',
-                isSprintTheme ? 'text-slate-300' : 'text-text'
+                isSprintTheme
+                  ? 'prose-invert text-slate-300 prose-headings:text-slate-100'
+                  : 'text-text'
               )}
             >
               <TabContent text={tab.content} isSprintTheme={isSprintTheme} />

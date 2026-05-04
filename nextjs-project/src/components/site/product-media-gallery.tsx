@@ -10,9 +10,11 @@ import type { ProductGalleryPhoto } from '@/lib/product-gallery'
 interface ProductMediaGalleryProps {
   title: string
   photos: ProductGalleryPhoto[]
+  /** Same layout as Inner; surfaces and thumb borders use Sprint palette when true */
+  isSprintTheme?: boolean
 }
 
-export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps) {
+export function ProductMediaGallery({ title, photos, isSprintTheme = false }: ProductMediaGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [isLightboxOpen, setIsLightboxOpen] = useState(false)
   const { mounted: lightboxMounted, visible: lightboxVisible } = useModalPresence(isLightboxOpen)
@@ -42,10 +44,26 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
       : 'object-contain object-center'
     : getProductImagePostprocessClasses({ surface: 'gallery-main' })
 
+  const mainSurface = isSprintTheme
+    ? 'bg-slate-800/90 ring-1 ring-slate-700/80'
+    : 'bg-highlight-blue'
+  const thumbInactiveBorder = isSprintTheme ? 'border-slate-600' : 'border-gray-200'
+  const thumbActiveBorder = isSprintTheme ? 'border-[#7AA2FF]' : 'border-action-blue'
+
   if (!active) {
     return (
-      <div className="relative aspect-3/4 max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue flex items-center justify-center overflow-hidden">
-        <span className="text-action-blue/40 text-6xl">?</span>
+      <div
+        className={cn(
+          'relative aspect-3/4 max-w-md mx-auto lg:mx-0 rounded-2xl flex items-center justify-center overflow-hidden',
+          mainSurface
+        )}
+      >
+        <span
+          className={cn('text-6xl', isSprintTheme ? 'text-[#7AA2FF]/35' : 'text-action-blue/40')}
+          aria-hidden
+        >
+          ?
+        </span>
       </div>
     )
   }
@@ -55,7 +73,10 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
       <div className="space-y-3">
         <button
           type="button"
-          className="relative block aspect-3/4 w-full max-w-md mx-auto lg:mx-0 rounded-2xl bg-highlight-blue overflow-hidden"
+          className={cn(
+            'relative block aspect-3/4 w-full max-w-md mx-auto lg:mx-0 rounded-2xl overflow-hidden',
+            mainSurface
+          )}
           onClick={() => setIsLightboxOpen(true)}
           aria-label="Открыть изображение крупнее"
         >
@@ -87,7 +108,7 @@ export function ProductMediaGallery({ title, photos }: ProductMediaGalleryProps)
                 type="button"
                 className={cn(
                   'relative h-16 w-16 shrink-0 rounded-lg border overflow-hidden',
-                  index === activeIndex ? 'border-action-blue' : 'border-gray-200'
+                  index === activeIndex ? thumbActiveBorder : thumbInactiveBorder
                 )}
                 onClick={() => setActiveIndex(index)}
                 aria-label={`Показать фото ${index + 1}`}
