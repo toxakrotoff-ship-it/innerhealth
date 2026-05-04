@@ -198,9 +198,13 @@ export async function upsertSettings(
 export const YOOKASSA_KEYS = [
   'yookassa_shop_id',
   'yookassa_secret_key',
+  'yookassa_term_id',
   'yookassa_receipt_vat_code',
   'yookassa_receipt_vat_code_delivery',
 ] as const;
+
+/** Пара учётных данных для статуса и поиска зашифрованных, но нечитаемых значений. */
+const YOOKASSA_CREDENTIAL_KEYS = ['yookassa_shop_id', 'yookassa_secret_key'] as const;
 
 export async function getYookassaSettingsMap(options: SettingsScopeOptions = {}) {
   return getSettingsMap(YOOKASSA_KEYS, options);
@@ -344,22 +348,25 @@ export async function getYookassaCredentialsStatus(
   const hasSecret = (map.yookassa_secret_key ?? '').trim().length > 0
   if (hasShopId && hasSecret) return { status: 'ok' }
 
-  const candidates = resolveStorageCandidatesForCredentialKey('yookassa_secret_key', options)
+  const candidateKeys = YOOKASSA_CREDENTIAL_KEYS.flatMap((key) =>
+    resolveStorageCandidatesForCredentialKey(key, options)
+  )
   const rows = await prisma.siteSetting.findMany({
-    where: { key: { in: candidates } },
+    where: { key: { in: candidateKeys } },
     select: { key: true, value: true },
   })
-  const encryptedRow = candidates
-    .map((candidateKey) => rows.find((row) => row.key === candidateKey))
-    .find((row) => row !== undefined)
-  const storedValue = encryptedRow?.value ?? ''
-  if (
-    storedValue &&
-    isEncryptedSettingValue(storedValue) &&
-    isEncryptedSettingValue(decryptSettingValue(storedValue))
-  ) {
-    return { status: 'unreadable_encrypted' }
-  }
+  const rowsByKey = new Map(rows.map((row) => [row.key, row.value]))
 
+  const hasUnreadableEncryptedValue = YOOKASSA_CREDENTIAL_KEYS.some((key) => {
+    const candidates = resolveStorageCandidatesForCredentialKey(key, options)
+    const storedValue = candidates
+      .map((candidateKey) => rowsByKey.get(candidateKey))
+      .find((value) => value !== undefined)
+    if (!storedValue) return false
+    if (!isEncryptedSettingValue(storedValue)) return false
+    return isEncryptedSettingValue(decryptSettingValue(storedValue))
+  })
+
+  if (hasUnreadableEncryptedValue) return { status: 'unreadable_encrypted' }
   return { status: 'missing' }
 }

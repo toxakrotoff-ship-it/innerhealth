@@ -89,7 +89,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: metaCopy.description,
       images: [
         {
-          url: '/hero-portrait.png',
+          url: brandId === 'sprint-power' ? '/sprint-power-mockup.png' : '/hero-portrait.png',
           alt: siteTitle,
         },
       ],
@@ -98,7 +98,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title: metaCopy.defaultTitle,
       description: metaCopy.description,
-      images: ['/hero-portrait.png'],
+      images: [brandId === 'sprint-power' ? '/sprint-power-mockup.png' : '/hero-portrait.png'],
     },
     robots: {
       index: true,
@@ -161,9 +161,15 @@ ym(92621260, "init", {
 
   const metrikaBodyNoscriptInner = `<div><img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" /></div>`
 
+  const bodySurfaceClass =
+    brandId === 'sprint-power'
+      ? 'min-h-screen bg-slate-50 font-sans subpixel-antialiased text-slate-900'
+      : 'min-h-screen bg-gray-50 font-sans subpixel-antialiased text-gray-900'
+
   return (
     <html
       lang="ru"
+      data-brand={brandId}
       className={`${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}
       suppressHydrationWarning
     >
@@ -188,7 +194,7 @@ ym(92621260, "init", {
           />
         ) : null}
       </head>
-      <body className="min-h-screen bg-gray-50 font-sans subpixel-antialiased text-gray-900">
+      <body className={bodySurfaceClass}>
         {shouldRenderMetrika ? (
           <>
             <script

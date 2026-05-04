@@ -39,6 +39,8 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'certificates', label: 'Сертификаты соответствия' },
   { id: 'sotrudnichestvo', label: 'Сотрудничество' },
   { id: 'footer', label: 'Футер' },
+  { id: 'legal-privacy', label: 'Политика конфиденциальности' },
+  { id: 'legal-oferta', label: 'Публичная оферта' },
 ]
 
 const COLOR_OPTIONS: Array<{ value: string; label: string }> = [

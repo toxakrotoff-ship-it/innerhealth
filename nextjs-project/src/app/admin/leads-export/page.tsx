@@ -6,7 +6,7 @@ export default function AdminLeadsExportPage() {
       <div className="admin-content">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Выгрузка лидов</h1>
         <p className="text-gray-500 mb-6">
-          Скачайте единый CSV с лидами за выбранный период: заявки с формы «Сотрудничество», заявки с Тильды и быстрые заявки «Купить в 1 клик». В файле: ФИО, email, телефон, адрес, роль, комментарий, товар, промокод, дата и др.
+          Скачайте единый CSV с лидами за выбранный период: заявки с формы «Сотрудничество», заявки с Тильды и быстрые заявки «Купить в 1 клик». В файле: источник, витрина, ФИО, email, телефон, адрес, роль, комментарий, товар, промокод, дата и др. По умолчанию выгрузка соответствует активному бренду в переключателе админки; при необходимости включите все витрины одной выгрузкой.
         </p>
 
         <div className="card max-w-xl space-y-4">
@@ -15,6 +15,22 @@ export default function AdminLeadsExportPage() {
             action="/api/admin/leads/export"
             className="space-y-4"
           >
+            <div className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+              <input
+                id="leads-export-all-brands"
+                type="checkbox"
+                name="allBrands"
+                value="1"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="leads-export-all-brands" className="text-sm text-gray-700">
+                <span className="font-medium">Все витрины</span>
+                <span className="block text-xs text-gray-500">
+                  Включить лиды Inner Health и Sprint Power в один файл (колонка «Витрина»). Если выключено — только активный бренд в шапке админки.
+                </span>
+              </label>
+            </div>
+
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Быстрый выбор периода</label>
               <select

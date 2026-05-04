@@ -3,6 +3,7 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { LegalPageRichOrStatic } from '@/components/site/legal/legal-page-rich-or-static'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { siteTitle, siteUrl } = await getServerBrandContext()
@@ -21,7 +22,7 @@ const breadcrumbItems = [
 export const revalidate = 86400
 
 export default async function PublichnayaOfertaPage() {
-  const { siteUrl } = await getServerBrandContext()
+  const { brandId, siteUrl } = await getServerBrandContext()
   const normalizedSiteUrl = `${siteUrl.replace(/\/+$/, '')}/`
   const privacyUrl = `${siteUrl.replace(/\/+$/, '')}/privacy`
   return (
@@ -38,6 +39,7 @@ export default async function PublichnayaOfertaPage() {
           </h1>
         </header>
 
+        <LegalPageRichOrStatic page="legal-oferta" blockKey="legal-oferta.body" brandId={brandId}>
         <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
             <p className="mb-4">
@@ -260,6 +262,7 @@ export default async function PublichnayaOfertaPage() {
             </p>
           </section>
         </div>
+        </LegalPageRichOrStatic>
 
         <nav className="mt-12 pt-6 border-t border-gray-200">
           <Link href="/" className="text-action-blue hover:underline font-medium">

@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
-import { getAllLeadsForExport, buildLeadsCsv, LeadExportFilter } from '@/services/leads-export.service'
+import {
+  getAllLeadsForExport,
+  buildLeadsCsv,
+  LeadExportFilter,
+  type LeadsExportBrandScope,
+} from '@/services/leads-export.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const presetSchema = z
@@ -9,6 +14,8 @@ const presetSchema = z
   .optional()
 
 const querySchema = z.object({
+  /** При значении `1` или `on` — лиды всех витрин (см. чекбокс на странице выгрузки). */
+  allBrands: z.string().optional(),
   preset: presetSchema,
   from: z
     .string()
@@ -110,7 +117,6 @@ function buildFilterFromQuery(data: ParsedQuery): LeadExportFilter | undefined {
 export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
 
   try {
     const url = new URL(request.url)
@@ -128,10 +134,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Неверный диапазон дат' }, { status: 400 })
     }
 
-    const rows = await getAllLeadsForExport(filter, brandId)
+    const allBrandsRaw = parseResult.data.allBrands
+    const includeAllBrands = allBrandsRaw === '1' || allBrandsRaw === 'on'
+    const brandScope: LeadsExportBrandScope = includeAllBrands
+      ? 'all'
+      : resolveBrandOrDefaultFromRequest(request)
+
+    const rows = await getAllLeadsForExport(filter, brandScope)
     const csv = buildLeadsCsv(rows)
     const date = new Date().toISOString().slice(0, 10)
-    const filename = `leads-${date}.csv`
+    const filename =
+      brandScope === 'all' ? `leads-all-brands-${date}.csv` : `leads-${brandScope}-${date}.csv`
     const bom = '\uFEFF'
     return new NextResponse(bom + csv, {
       status: 200,

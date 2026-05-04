@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
+import type { BrandId } from '@/lib/brand/brand'
 import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
 import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
@@ -60,14 +61,19 @@ export async function POST(request: Request) {
     brandId,
   })
 
-  // For bulk run, all orders are scoped by brand filter from request.
-  const assumedOrderBrandId = brandId === 'sprint-power' ? 'sprint-power' : 'inner'
+  const credentialsByBrand = new Map<BrandId, { shopId: string; secretKey: string } | undefined>()
 
-  const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: assumedOrderBrandId })
-  const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
-  const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
-  const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
-  const credentials = hasFromAdmin ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin } : undefined
+  async function getCredentialsForOrderBrand(orderBrand: BrandId) {
+    const cached = credentialsByBrand.get(orderBrand)
+    if (cached !== undefined) return cached
+    const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: orderBrand })
+    const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
+    const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
+    const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
+    const credentials = hasFromAdmin ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin } : undefined
+    credentialsByBrand.set(orderBrand, credentials)
+    return credentials
+  }
 
   const items: BulkItemResult[] = []
   let updated = 0
@@ -79,6 +85,7 @@ export async function POST(request: Request) {
     const previousOrderStatus = candidate.status
     const paymentId = candidate.yookassaPaymentId
     try {
+      const credentials = await getCredentialsForOrderBrand(candidate.brand)
       const payment = await getYookassaPayment(paymentId, credentials)
       const paymentStatus = payment?.status ?? null
       if (!paymentStatus) {

@@ -107,4 +107,29 @@ describe("POST /api/auth/register", () => {
     expect(body.error).toBeDefined();
     expect(body.error).not.toMatch(/prisma|database|internal|stack/i);
   });
+
+  it("returns 409 with EMAIL_ALREADY_REGISTERED when email exists", async () => {
+    vi.mocked(userService.findUserByEmail).mockResolvedValue({
+      id: "existing",
+      email: "taken@gmail.com",
+    } as Awaited<ReturnType<typeof userService.findUserByEmail>>);
+
+    const res = await POST(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "taken@gmail.com",
+          password: "password1234",
+        }),
+      })
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe("EMAIL_ALREADY_REGISTERED");
+    expect(typeof body.error).toBe("string");
+    expect(body.error.length).toBeGreaterThan(10);
+    expect(body.error).toMatch(/сети магазинов|войдите|кабинет/i);
+    expect(userService.createUser).not.toHaveBeenCalled();
+  });
 });

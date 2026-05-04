@@ -154,6 +154,8 @@ model Order {
   id                  String        @id @default(cuid())
   /// Короткий публичный номер заказа для UI/писем/уведомлений (не используется в связях БД)
   orderNumber         Int           @unique @default(autoincrement())
+  /// Витрина заказа (inner | sprint-power); источник истины для отчётов и интеграций
+  brand               String        @default("inner")
   userId              String?
   total               Float
   /// Сумма скидки по промокоду (для расчёта дохода партнёра от скидок)
@@ -182,6 +184,7 @@ model Order {
   @@index([status])
   @@index([userId, createdAt])
   @@index([deletedAt, createdAt])
+  @@index([brand, createdAt])
 }
 
 model User {

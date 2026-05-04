@@ -198,6 +198,20 @@ const FOOTER_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'footer', key: 'footer.bank.inn' },
 ] as const
 
+/** Юридические страницы: один rich-блок на страницу (пока пустой в defaults → кодовый fallback на витрине). */
+const LEGAL_PAGES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  {
+    page: 'legal-privacy',
+    key: 'legal-privacy.body',
+    adminLabel: 'Политика конфиденциальности — основной текст',
+  },
+  {
+    page: 'legal-oferta',
+    key: 'legal-oferta.body',
+    adminLabel: 'Публичная оферта — основной текст',
+  },
+] as const
+
 const ADMIN_CONTENT_SCHEMA: Record<
   BrandId,
   Partial<Record<string, readonly AdminContentBlockSchemaEntry[]>>
@@ -212,6 +226,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     certificates: CERTIFICATES_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
+    ...Object.fromEntries(LEGAL_PAGES_ADMIN_SCHEMA.map((e) => [e.page, [e]] as const)),
   },
   'sprint-power': {
     home: SPRINT_HOME_ADMIN_SCHEMA,
@@ -223,6 +238,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     certificates: CERTIFICATES_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
+    ...Object.fromEntries(LEGAL_PAGES_ADMIN_SCHEMA.map((e) => [e.page, [e]] as const)),
   },
 }
 
@@ -1533,5 +1549,19 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Как заказать — шаг 3 текст ссылки',
     type: 'short',
     text: 'Контакты',
+  },
+  {
+    page: 'legal-privacy',
+    key: 'legal-privacy.body',
+    label: 'Политика конфиденциальности — основной текст',
+    type: 'rich',
+    richJson: { type: 'doc', content: [] },
+  },
+  {
+    page: 'legal-oferta',
+    key: 'legal-oferta.body',
+    label: 'Публичная оферта — основной текст',
+    type: 'rich',
+    richJson: { type: 'doc', content: [] },
   },
 ]

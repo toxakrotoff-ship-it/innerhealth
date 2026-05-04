@@ -119,7 +119,7 @@
 | Компонент | Файл | Статус | Комментарии |
 |-----------|------|--------|-------------|
 | HeroBlock | `hero-block.tsx` | 🔄 **Смешанный подход** | Адаптивные заголовки, но стандартные контейнеры |
-| SprintPowerBlock | `sprint-power-block.tsx` | ❌ **Без адаптивных компонентов** | Стандартные Tailwind классы |
+| SprintPowerBlock | `sprint-power-block.tsx` | 🔄 **Смешанный подход** | `AdaptiveContainer` + `FluidGrid` для сетки; типографика через стандартные responsive-классы |
 | PartnersBlock | `partners-block.tsx` | 🔄 **Смешанный подход** | Частично адаптивные сетки |
 | ReviewsCarousel | `reviews-carousel.tsx` | 🔄 **Смешанный подход** | Адаптивные размеры карточек |
 

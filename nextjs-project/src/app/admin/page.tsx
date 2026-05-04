@@ -7,7 +7,7 @@ import { AdminStatsRefreshButton } from './components/AdminStatsRefreshButton'
 import { buildFallbackTrafficRowsByPath } from './admin-stats-helpers'
 import type { BrandId } from '@/lib/brand/brand'
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
-import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -165,13 +165,7 @@ async function getSummary(
     anyPrisma.order.count({
       where: {
         ...(dateWhere ? { createdAt: dateWhere } : {}),
-        items: {
-          some: {
-            product: isSprintPowerBrand(activeBrand)
-              ? { brand: SPRINT_POWER_PRODUCT_BRAND }
-              : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] },
-          },
-        },
+        brand: isSprintPowerBrand(activeBrand) ? 'sprint-power' : 'inner',
       },
     }),
     prisma.dailyDeviceStats.aggregate({

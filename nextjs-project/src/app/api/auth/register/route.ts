@@ -6,6 +6,10 @@ import { hashPassword } from '@/lib/password'
 import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
 import { registerBodySchema } from '@/lib/validations/account'
 import { issueEmailVerificationToken } from '@/services/email-verification.service'
+import {
+  EMAIL_ALREADY_REGISTERED_CODE,
+  EMAIL_ALREADY_REGISTERED_MESSAGE,
+} from '@/lib/auth/email-already-registered'
 import * as userService from '@/services/user.service'
 
 const REGISTER_RATE_LIMIT = 5
@@ -59,7 +63,10 @@ export async function POST(request: Request) {
   const existingUser = await userService.findUserByEmail(payload.email)
   if (existingUser) {
     return NextResponse.json(
-      { error: 'Email is already in use' },
+      {
+        code: EMAIL_ALREADY_REGISTERED_CODE,
+        error: EMAIL_ALREADY_REGISTERED_MESSAGE,
+      },
       {
         status: 409,
         headers: {

@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { EMAIL_ALREADY_REGISTERED_CODE } from '@/lib/auth/email-already-registered'
 
 interface RegisterResponse {
   ok?: boolean
   error?: string
+  code?: string
 }
 
 export default function RegisterPage() {
@@ -20,11 +22,13 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [showNetworkAccountHint, setShowNetworkAccountHint] = useState(false)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
     setSuccessMessage('')
+    setShowNetworkAccountHint(false)
 
     if (password !== confirmPassword) {
       setError('Пароли не совпадают')
@@ -49,6 +53,14 @@ export default function RegisterPage() {
       const data = (await response.json().catch(() => null)) as RegisterResponse | null
 
       if (!response.ok) {
+        if (
+          response.status === 409 &&
+          data?.code === EMAIL_ALREADY_REGISTERED_CODE
+        ) {
+          setShowNetworkAccountHint(true)
+          setError(data.error ?? '')
+          return
+        }
         setError(data?.error ?? 'Не удалось зарегистрироваться')
         return
       }
@@ -141,7 +153,24 @@ export default function RegisterPage() {
           />
         </div>
 
-        {error ? <p className="mt-3 w-full text-center text-sm text-red-400">{error}</p> : null}
+        {showNetworkAccountHint ? (
+          <div
+            className="mt-4 w-full rounded-lg border border-sky-400/40 bg-sky-950/40 px-4 py-3 text-sm text-sky-100"
+            role="status"
+          >
+            <p className="text-center leading-relaxed">{error}</p>
+            <div className="mt-3 flex justify-center">
+              <Link
+                href={`/login?email=${encodeURIComponent(email.trim())}`}
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-white px-5 text-sm font-medium text-[#1a2332] hover:bg-white/90"
+              >
+                Войти
+              </Link>
+            </div>
+          </div>
+        ) : error ? (
+          <p className="mt-3 w-full text-center text-sm text-red-400">{error}</p>
+        ) : null}
         {successMessage ? (
           <p className="mt-3 w-full text-center text-sm text-emerald-300">{successMessage}</p>
         ) : null}

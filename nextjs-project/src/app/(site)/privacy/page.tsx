@@ -4,6 +4,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import { LegalPageRichOrStatic } from '@/components/site/legal/legal-page-rich-or-static'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { brandId, siteTitle, siteUrl } = await getServerBrandContext()
@@ -42,6 +43,7 @@ export default async function PrivacyPage() {
           </p>
         </header>
 
+        <LegalPageRichOrStatic page="legal-privacy" blockKey="legal-privacy.body" brandId={brandId}>
         <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
           {/* 1. Общие положения */}
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
@@ -679,6 +681,7 @@ export default async function PrivacyPage() {
             </p>
           </section>
         </div>
+        </LegalPageRichOrStatic>
 
         <nav className="mt-12 pt-6 border-t border-gray-200">
           <Link

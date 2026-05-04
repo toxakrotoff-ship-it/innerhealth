@@ -23,24 +23,28 @@ const CookieConsent = nextDynamic(
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
+  const headerStore = await headers()
+  const cookieStore = await cookies()
+  const activeBrand = resolveSiteBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+
   return {
     icons: {
       icon: [
-        {
-          url: '/favicon-on-black.svg',
-          type: 'image/svg+xml',
-          media: '(prefers-color-scheme: light)',
-        },
-        {
-          url: '/favicon-on-white.svg',
-          type: 'image/svg+xml',
-          media: '(prefers-color-scheme: dark)',
-        },
-        // Fallbacks for UAs that ignore media/type variants
-        { url: '/icon.png', type: 'image/png' },
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+        { url: '/favicon.ico' },
+        { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
       ],
-      apple: [{ url: '/apple-icon.png', type: 'image/png' }],
+      apple: [{ url: '/apple-touch-icon.png', type: 'image/png' }],
     },
+    ...(activeBrand === 'sprint-power'
+      ? {
+          themeColor: '#060A14',
+        }
+      : {}),
   }
 }
 

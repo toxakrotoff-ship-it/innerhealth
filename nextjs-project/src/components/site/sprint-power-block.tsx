@@ -1,11 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, CheckCircle } from 'iconoir-react'
+import { CheckCircle, NavArrowRight } from 'iconoir-react'
 
 import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
-
-const SPRINT_POWER_URL = 'https://sprintpower.ru'
+import { FluidGrid } from '@/components/ui/fluid-grid'
 
 export function SprintPowerBlock() {
   return (
@@ -14,7 +13,21 @@ export function SprintPowerBlock() {
       aria-labelledby="sprint-power-heading"
     >
       <AdaptiveContainer maxWidth="default">
-        <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2 md:gap-16 2xl:gap-20 3xl:gap-24">
+        <FluidGrid
+          cols={1}
+          colsTablet={2}
+          colsDesktop={2}
+          colsXl={2}
+          cols2xl={2}
+          cols3xl={2}
+          cols4xl={2}
+          cols5xl={2}
+          cols6xl={2}
+          align="center"
+          gap={12}
+          adaptiveGap
+          className="md:gap-16 2xl:gap-20 3xl:gap-24"
+        >
           {/* Слева: изображение + плавающая карточка как в референсе */}
           <div className="relative">
             <div className="relative aspect-square overflow-hidden rounded-[40px] bg-slate-100 2xl:rounded-[48px]">
@@ -64,16 +77,14 @@ export function SprintPowerBlock() {
               </li>
             </ul>
             <Link
-              href={SPRINT_POWER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/catalog"
               className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue"
             >
-              ПЕРЕЙТИ НА SPRINTPOWER.RU
-              <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
+              В каталог Sprint Power
+              <NavArrowRight className="h-4 w-4 shrink-0" aria-hidden />
             </Link>
           </div>
-        </div>
+        </FluidGrid>
       </AdaptiveContainer>
     </section>
   )

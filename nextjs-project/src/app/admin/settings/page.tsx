@@ -470,6 +470,11 @@ export default function AdminSettingsPage() {
           <span className="text-xs text-gray-500">
             Режим: {scopeLabelMap[settingsScope]}
           </span>
+          {settingsScope !== 'global' ? (
+            <p className="w-full text-xs text-gray-600">
+              Для этой витрины блоки <strong>ЮKassa</strong> и <strong>СДЭК</strong> сохраняются отдельно. Пустое поле у бренда — берётся значение из вкладки <strong>Global</strong>.
+            </p>
+          ) : null}
         </div>
 
         {error && (

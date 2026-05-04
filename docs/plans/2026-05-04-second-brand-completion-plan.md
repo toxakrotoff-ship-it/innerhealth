@@ -24,7 +24,8 @@
 - Зафиксировать список экранов и API, где бренд выводится из **состава заказа** (`order.service.ts`, CRM, webhooks, письма).
 - Проверить создание платежа ЮKassa и webhook: везде ли передаётся/определяется `brandId` для выбора credentials (уже частично есть — не сломать при добавлении `Order.brand`).
 
-**Результат:** короткая таблица «файл → сегодняшняя логика»; нет кода (или только комментарии в задаче).
+**Результат:** короткая таблица «файл → сегодняшняя логика»; нет кода (или только комментарии в задаче).  
+**Срез зафиксирован:** [order-brand-phase-0-snapshot.md](../backend-notes/order-brand-phase-0-snapshot.md).
 
 ---
 
@@ -58,6 +59,8 @@
 
 **Файлы:** `src/app/api/auth/register/route.ts`, `src/app/register/page.tsx`, тесты рядом.
 
+**Статус:** реализовано (константы и текст — `src/lib/auth/email-already-registered.ts`, предзаполнение email на `/login`).
+
 ---
 
 ## Фаза 3 — Выгрузки «оба бренда» (приоритет 2)
@@ -72,6 +75,8 @@
 
 **Файлы:** `src/services/leads-export.service.ts`, `src/app/api/admin/leads/export/route.ts`, `src/app/admin/leads-export/page.tsx`.
 
+**Статус:** реализовано — `allBrands=1|on`, `LeadsExportBrandScope`, колонка «Витрина», имя файла `leads-all-brands-*.csv` при объединении.
+
 ---
 
 ## Фаза 4 — ЛК: маркировка заказа по витрине (приоритет 3)
@@ -82,6 +87,8 @@
 2. В `AccountOrdersTable` (или аналоге) — колонка или бейдж «Inner Health» / «Sprint Power».
 
 **Результат:** пользователь видит, с какой витрины покупка, без открытия деталей.
+
+**Статус:** реализовано — `Order.brand` в данных списка/детали; `AccountOrdersTable`: колонка «Витрина» (desktop) и бейдж в карточке (mobile); `/account/orders/[id]` — бейдж в шапке; `account-order-storefront-badge.tsx`.
 
 ---
 
@@ -96,6 +103,8 @@
 
 **Результат:** юристы/маркетинг правят тексты без релиза кода.
 
+**Статус:** реализовано для `/privacy` и `/oferta` — страницы `legal-privacy` / `legal-oferta` в контент-блоках, `LegalPageRichOrStatic` + fallback на текущий статический JSX; [storefront-copy-ownership.md](../backend-notes/storefront-copy-ownership.md) обновлён.
+
 ---
 
 ## Фаза 6 — Витрина Sprint: визуал и продуктовые хвосты (приоритет 4)
@@ -108,6 +117,8 @@
 
 **Результат:** визуально цельная вторая витрина на уровне «перекрас + консистентность».
 
+**Статус:** реализовано — `data-brand` на `<html>`, акцентные CSS-переменные для Sprint, фон `body` и превью Open Graph/Twitter по бренду; иконки в метаданных сайта — файлы из `public/`; блок Sprint на главной ведёт на `/catalog` (своя витрина); `SprintPowerBlock` на `FluidGrid`; инвентаризация адаптива обновлена.
+
 ---
 
 ## Фаза 7 — СДЭК и инфра (по необходимости)
@@ -118,6 +129,8 @@
 2. Smoke: оформление заказа Sprint с теми же глобальными учётками СДЭК; при появлении второго договора — только смена значений в админке.
 
 **Результат:** готовность к разводке без переделки архитектуры.
+
+**Статус:** ключи `cdek_*` внесены в brand-scoped список; админка с выбранным брендом сохраняет `brand:cdek_*`, runtime читает scoped → глобальный fallback; описано в [env's.md](../env's.md) и [two-storefronts-architecture.md](../two-storefronts-architecture.md) §7. Smoke оформления Sprint — на стенде вручную.
 
 ---
 

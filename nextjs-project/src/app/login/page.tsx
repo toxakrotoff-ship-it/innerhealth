@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const fromQuery = params.get('email')?.trim()
+    if (!fromQuery) return
+    setEmail(fromQuery)
+    setShowEmailForm(true)
+  }, [])
 
   const handleCredentialsSubmit = useCallback(
     async (e: React.FormEvent) => {

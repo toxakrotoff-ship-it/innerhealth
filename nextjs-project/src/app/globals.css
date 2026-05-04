@@ -137,6 +137,14 @@ html.preloader-skip .preloader-overlay {
     --desktop-ui-scale: 1;
   }
 
+  /** Sprint Power storefront: акценты и фон ближе к тёмному хедеру, без смены всей палитры @theme */
+  html[data-brand='sprint-power'] {
+    --color-action-blue: #3b82f6;
+    --color-ring: #3b82f6;
+    --color-highlight-blue: #dbeafe;
+    --color-soft-background: #f1f5f9;
+  }
+
   @media (min-width: 1440px) {
     :root {
       --desktop-ui-scale: 1.15;

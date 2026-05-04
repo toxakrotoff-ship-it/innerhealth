@@ -1,3 +1,4 @@
+/** @vitest-environment jsdom */
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
@@ -28,6 +29,7 @@ describe('AccountOrdersTable', () => {
         items={[
           {
             id: 'order_1',
+            brand: 'inner',
             status: 'pending',
             total: 123.45,
             createdAt: new Date('2026-03-27T10:00:00.000Z'),
@@ -39,7 +41,27 @@ describe('AccountOrdersTable', () => {
     )
 
     expect(screen.getByText('ID заказа', { selector: 'th' })).toBeInTheDocument()
+    expect(screen.getByText('Витрина', { selector: 'th' })).toBeInTheDocument()
     expect(screen.queryByText('Заказ', { selector: 'th' })).not.toBeInTheDocument()
+  })
+
+  it('renders Sprint Power badge when brand is sprint-power', () => {
+    render(
+      <AccountOrdersTable
+        items={[
+          {
+            id: 'order_sp',
+            brand: 'sprint-power',
+            status: 'paid',
+            total: 99,
+            createdAt: new Date('2026-03-27T10:00:00.000Z'),
+          },
+        ]}
+        page={1}
+        totalPages={1}
+      />,
+    )
+    expect(screen.getAllByText('Sprint Power').length).toBeGreaterThan(0)
   })
 
   it('renders pending status badge label and amber classes', () => {
@@ -48,6 +70,7 @@ describe('AccountOrdersTable', () => {
         items={[
           {
             id: 'order_1',
+            brand: 'inner',
             status: 'pending',
             total: 123.45,
             createdAt: new Date('2026-03-27T10:00:00.000Z'),
@@ -70,6 +93,7 @@ describe('AccountOrdersTable', () => {
         items={[
           {
             id: 'order_1',
+            brand: 'inner',
             status: 'paid',
             total: 123.45,
             createdAt: new Date('2026-03-27T10:00:00.000Z'),

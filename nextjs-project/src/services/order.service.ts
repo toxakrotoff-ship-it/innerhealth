@@ -4,7 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service';
 import { maskPhone, shortAddress } from '@/lib/pii-masking';
 import type { BrandId } from '@/lib/brand/brand';
-import { isSprintPowerBrand, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope';
+import { normalizeBrandId } from '@/lib/brand/brand';
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope';
+import { resolveDbBrand } from '@/lib/brand/brand-db';
 
 const orderAdminInclude = {
   items: { include: { product: true } },
@@ -21,18 +23,14 @@ export async function findOrderForWebhook(orderId: string) {
 }
 
 /**
- * Бренд для настроек уведомлений / ЮKassa: по строкам заказа (товарный brand).
- * Заказы смешанного состава в API не допускаются; при отсутствии позиций — inner.
+ * Бренд заказа для настроек уведомлений / ЮKassa / СДЭК (из `Order.brand`).
  */
 export async function findOrderBrandIdForNotify(orderId: string): Promise<BrandId> {
-  const rows = await prisma.orderItem.findMany({
-    where: { orderId },
-    select: { product: { select: { brand: true } } },
+  const row = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { brand: true },
   });
-  const hasSprintPower = rows.some(
-    (row) => (row.product.brand ?? '').trim() === SPRINT_POWER_PRODUCT_BRAND
-  );
-  return hasSprintPower ? 'sprint-power' : 'inner';
+  return normalizeBrandId(row?.brand) ?? 'inner';
 }
 
 /** Get order with shipping for CDEK flow. */
@@ -130,6 +128,7 @@ export interface AdminOrderDto {
   cdekOrderUuid: string | null;
   cdekTrackNumber: string | null;
   cdekOrderError: string | null;
+  brand: BrandId;
   shippingInfo: {
     fullName: string;
     phoneMasked: string;
@@ -140,17 +139,14 @@ export interface AdminOrderDto {
   } | null;
 }
 
+function orderListBrandWhere(brandId?: BrandId | null): Prisma.OrderWhereInput {
+  return { brand: isSprintPowerBrand(brandId) ? 'sprint-power' : 'inner' };
+}
+
 /** Get all orders for admin list with masked PII. */
 export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<AdminOrderDto[]> {
-  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(brandId)
-    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
-    : {
-        NOT: {
-          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
-        },
-      };
   const orders = await prisma.order.findMany({
-    where: { deletedAt: null, ...brandWhere },
+    where: { deletedAt: null, ...orderListBrandWhere(brandId) },
     include: orderAdminInclude,
     orderBy: { createdAt: 'desc' },
   });
@@ -167,6 +163,7 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
+    brand: normalizeBrandId(order.brand) ?? 'inner',
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -215,13 +212,7 @@ export async function getOrdersForAdminWithTrash(options: {
   mode: 'active' | 'trash';
   brandId?: BrandId | null;
 }): Promise<AdminOrderWithDeletedDto[]> {
-  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(options.brandId)
-    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
-    : {
-        NOT: {
-          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
-        },
-      };
+  const brandWhere = orderListBrandWhere(options.brandId);
 
   const where: Prisma.OrderWhereInput =
     options.mode === 'trash'
@@ -246,6 +237,7 @@ export async function getOrdersForAdminWithTrash(options: {
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
+    brand: normalizeBrandId(order.brand) ?? 'inner',
     shippingInfo: order.shippingInfo
       ? {
           fullName: order.shippingInfo.fullName,
@@ -271,11 +263,9 @@ export async function getOrderDetailForAdmin(
   });
 
   if (!order) return null;
-  const hasSprintPowerItem = order.items.some(
-    (item) => item.product.brand === SPRINT_POWER_PRODUCT_BRAND
-  );
-  if (isSprintPowerBrand(brandId) && !hasSprintPowerItem) return null;
-  if (!isSprintPowerBrand(brandId) && hasSprintPowerItem) return null;
+  const orderBrand = normalizeBrandId(order.brand) ?? 'inner';
+  if (isSprintPowerBrand(brandId) && orderBrand !== 'sprint-power') return null;
+  if (!isSprintPowerBrand(brandId) && orderBrand === 'sprint-power') return null;
 
   return {
     id: order.id,
@@ -309,6 +299,7 @@ export async function getOrderDetailForAdmin(
     })),
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekOrderError: order.cdekOrderError ?? null,
+    brand: orderBrand,
   };
 }
 
@@ -317,6 +308,7 @@ export interface PendingYookassaSyncOrderCandidate {
   status: string;
   createdAt: Date;
   yookassaPaymentId: string;
+  brand: BrandId;
 }
 
 export async function getPendingOrdersWithYookassaPayment(options: {
@@ -324,27 +316,20 @@ export async function getPendingOrdersWithYookassaPayment(options: {
   take: number;
   brandId?: BrandId | null;
 }): Promise<PendingYookassaSyncOrderCandidate[]> {
-  const brandWhere: Prisma.OrderWhereInput = isSprintPowerBrand(options.brandId)
-    ? { items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } } }
-    : {
-        NOT: {
-          items: { some: { product: { brand: SPRINT_POWER_PRODUCT_BRAND } } },
-        },
-      };
-
   const rows = await prisma.order.findMany({
     where: {
       deletedAt: null,
       status: 'pending',
       yookassaPaymentId: { not: null },
       createdAt: { gte: options.since },
-      ...brandWhere,
+      ...orderListBrandWhere(options.brandId),
     },
     select: {
       id: true,
       status: true,
       createdAt: true,
       yookassaPaymentId: true,
+      brand: true,
     },
     orderBy: { createdAt: 'desc' },
     take: options.take,
@@ -357,6 +342,7 @@ export async function getPendingOrdersWithYookassaPayment(options: {
       status: row.status,
       createdAt: row.createdAt,
       yookassaPaymentId: row.yookassaPaymentId as string,
+      brand: normalizeBrandId(row.brand) ?? 'inner',
     }));
 }
 
@@ -456,6 +442,7 @@ export async function createOrderWithItemsAndShipping(params: {
 
     const created = await tx.order.create({
       data: {
+        brand: resolveDbBrand(params.brandId),
         total: params.total,
         status: 'pending',
         promoCodeId: params.promoCodeId || undefined,

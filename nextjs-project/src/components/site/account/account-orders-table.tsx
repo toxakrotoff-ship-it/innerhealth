@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation'
+import { AccountOrderStorefrontBadge } from '@/components/site/account/account-order-storefront-badge'
 
 export interface AccountOrdersTableItem {
   id: string
+  brand: string
   status: string
   total: number
   createdAt: Date
@@ -44,14 +46,17 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                     className="block rounded-xl border border-gray-100 bg-gray-50/50 p-4 active:bg-gray-100 min-h-[44px] flex flex-col gap-1"
                   >
                     <span className="break-all font-medium text-text">{order.id}</span>
-                    <span
-                      className={[
-                        'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                        statusPresentation.badgeClassName,
-                      ].join(' ')}
-                    >
-                      {statusPresentation.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <AccountOrderStorefrontBadge brand={order.brand} />
+                      <span
+                        className={[
+                          'inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                          statusPresentation.badgeClassName,
+                        ].join(' ')}
+                      >
+                        {statusPresentation.label}
+                      </span>
+                    </div>
                     <span className="text-sm text-gray-700">{order.total.toFixed(2)} ₽</span>
                     <span className="text-xs text-gray-500">{order.createdAt.toLocaleString('ru-RU')}</span>
                     {order.cdekTrackNumber ? (
@@ -70,6 +75,7 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-gray-500">
                     <th className="py-2 pr-4">ID заказа</th>
+                    <th className="py-2 pr-4">Витрина</th>
                     <th className="py-2 pr-4">Статус</th>
                     <th className="py-2 pr-4">Сумма</th>
                     <th className="py-2 pr-4">Дата</th>
@@ -83,6 +89,9 @@ export function AccountOrdersTable({ items, page, totalPages }: AccountOrdersTab
                     return (
                       <tr key={order.id} className="border-b border-gray-100">
                         <td className="py-3 pr-4 font-medium text-text">{order.id}</td>
+                        <td className="py-3 pr-4 align-top">
+                          <AccountOrderStorefrontBadge brand={order.brand} />
+                        </td>
                         <td className="py-3 pr-4">
                           <span
                             className={[

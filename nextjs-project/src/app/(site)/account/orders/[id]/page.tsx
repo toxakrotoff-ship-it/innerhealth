@@ -8,6 +8,7 @@ import {
 } from '@/services/account.service'
 import { requireUserPageSession } from '@/lib/auth/require-user-page-session'
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation'
+import { AccountOrderStorefrontBadge } from '@/components/site/account/account-order-storefront-badge'
 
 function isAccountServiceError(error: unknown): error is AccountServiceError {
   if (!error || typeof error !== 'object') return false
@@ -55,6 +56,9 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-text">
               <span className="block">Заказ</span>
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <AccountOrderStorefrontBadge brand={order.brand} />
+              </span>
               <span className="block break-all">{order.id}</span>
             </h1>
           </div>

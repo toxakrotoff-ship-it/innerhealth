@@ -1,12 +1,18 @@
 import 'server-only'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import type { BrandId } from '@/lib/brand/brand'
+import { normalizeBrandId } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 
 export type LeadSource = 'partnership' | 'tilda' | 'quick_order'
 
+/** `all` — лиды обеих витрин; иначе фильтр по колонке `brand` в источниках. */
+export type LeadsExportBrandScope = BrandId | 'all'
+
 export interface LeadExportRow {
   source: LeadSource
+  storefront: string
   name: string
   email: string
   phone: string
@@ -29,6 +35,7 @@ export interface LeadExportFilter {
 
 const CSV_HEADERS: (keyof LeadExportRow)[] = [
   'source',
+  'storefront',
   'name',
   'email',
   'phone',
@@ -46,6 +53,7 @@ const CSV_HEADERS: (keyof LeadExportRow)[] = [
 
 const CSV_HEADER_LABELS: Record<keyof LeadExportRow, string> = {
   source: 'Источник',
+  storefront: 'Витрина',
   name: 'ФИО',
   email: 'Email',
   phone: 'Телефон',
@@ -71,9 +79,15 @@ function formatExportDate(date: Date): string {
   })
 }
 
+function labelForLeadBrand(brand: string | null | undefined): string {
+  const id = normalizeBrandId(brand) ?? 'inner'
+  return id === 'sprint-power' ? 'Sprint Power' : 'Inner Health'
+}
+
 function emptyRow(source: LeadSource, id: string, date: string): LeadExportRow {
   return {
     source,
+    storefront: '',
     name: '',
     email: '',
     phone: '',
@@ -108,44 +122,70 @@ export function buildLeadsCsv(rows: LeadExportRow[]): string {
   return [headerLine, ...dataLines].join('\r\n')
 }
 
+function brandSliceWhere(brandScope: LeadsExportBrandScope): { brand: string } | Record<string, never> {
+  if (brandScope === 'all') return {}
+  return { brand: resolveDbBrand(brandScope) }
+}
+
+function partnershipWhereClause(
+  filter: LeadExportFilter | undefined,
+  brandScope: LeadsExportBrandScope
+): Prisma.PartnershipLeadWhereInput {
+  const brandWhere = brandSliceWhere(brandScope)
+  if (filter && (filter.from || filter.to)) {
+    return {
+      ...brandWhere,
+      createdAt: {
+        ...(filter.from ? { gte: filter.from } : {}),
+        ...(filter.to ? { lte: filter.to } : {}),
+      },
+    }
+  }
+  return { ...brandWhere }
+}
+
+function tildaWhereClause(
+  filter: LeadExportFilter | undefined,
+  brandScope: LeadsExportBrandScope
+): Prisma.TildaLeadWhereInput {
+  const brandWhere = brandSliceWhere(brandScope)
+  if (filter && (filter.from || filter.to)) {
+    return {
+      ...brandWhere,
+      tildaDate: {
+        ...(filter.from ? { gte: filter.from } : {}),
+        ...(filter.to ? { lte: filter.to } : {}),
+      },
+    }
+  }
+  return { ...brandWhere }
+}
+
+function quickOrderWhereClause(
+  filter: LeadExportFilter | undefined,
+  brandScope: LeadsExportBrandScope
+): Prisma.QuickOrderWhereInput {
+  const brandWhere = brandSliceWhere(brandScope)
+  if (filter && (filter.from || filter.to)) {
+    return {
+      ...brandWhere,
+      createdAt: {
+        ...(filter.from ? { gte: filter.from } : {}),
+        ...(filter.to ? { lte: filter.to } : {}),
+      },
+    }
+  }
+  return { ...brandWhere }
+}
+
 /** Fetch all leads from PartnershipLead, TildaLead, QuickOrder and map to unified export rows. */
 export async function getAllLeadsForExport(
-  filter?: LeadExportFilter,
-  brandId: BrandId | null = null
+  filter: LeadExportFilter | undefined,
+  brandScope: LeadsExportBrandScope
 ): Promise<LeadExportRow[]> {
-  const dbBrand = resolveDbBrand(brandId)
-  const partnershipWhere =
-    filter && (filter.from || filter.to)
-      ? {
-          brand: dbBrand,
-          createdAt: {
-            ...(filter.from ? { gte: filter.from } : {}),
-            ...(filter.to ? { lte: filter.to } : {}),
-          },
-        }
-      : { brand: dbBrand }
-
-  const tildaWhere =
-    filter && (filter.from || filter.to)
-      ? {
-          brand: dbBrand,
-          tildaDate: {
-            ...(filter.from ? { gte: filter.from } : {}),
-            ...(filter.to ? { lte: filter.to } : {}),
-          },
-        }
-      : { brand: dbBrand }
-
-  const quickOrderWhere =
-    filter && (filter.from || filter.to)
-      ? {
-          brand: dbBrand,
-          createdAt: {
-            ...(filter.from ? { gte: filter.from } : {}),
-            ...(filter.to ? { lte: filter.to } : {}),
-          },
-        }
-      : { brand: dbBrand }
+  const partnershipWhere = partnershipWhereClause(filter, brandScope)
+  const tildaWhere = tildaWhereClause(filter, brandScope)
+  const quickOrderWhere = quickOrderWhereClause(filter, brandScope)
 
   const [partnershipLeads, tildaLeads, quickOrders] = await Promise.all([
     prisma.partnershipLead.findMany({
@@ -167,6 +207,7 @@ export async function getAllLeadsForExport(
 
   const partnershipRows: LeadExportRow[] = partnershipLeads.map((l) => ({
     ...emptyRow('partnership', l.id, formatExportDate(l.createdAt)),
+    storefront: labelForLeadBrand(l.brand),
     name: l.name ?? '',
     email: l.email ?? '',
     phone: l.phone ?? '',
@@ -176,6 +217,7 @@ export async function getAllLeadsForExport(
 
   const tildaRows: LeadExportRow[] = tildaLeads.map((l) => ({
     ...emptyRow('tilda', l.id, formatExportDate(l.tildaDate)),
+    storefront: labelForLeadBrand(l.brand),
     name: l.name ?? '',
     email: l.email ?? '',
     phone: l.phone ?? '',
@@ -188,6 +230,7 @@ export async function getAllLeadsForExport(
 
   const quickOrderRows: LeadExportRow[] = quickOrders.map((o) => ({
     ...emptyRow('quick_order', o.id, formatExportDate(o.createdAt)),
+    storefront: labelForLeadBrand(o.brand),
     name: o.name ?? '',
     phone: o.phone ?? '',
     messageComment: o.comment ?? '',
