@@ -4,6 +4,12 @@ import type { NextConfig } from 'next'
 const CATALOG_CACHE_CONTROL =
   'public, max-age=3600, stale-while-revalidate=3600'
 
+/** Must match `src/app/admin/layout.tsx` (`ADMIN_SECRET_PATH` or `admin`). */
+const ADMIN_UI_PATH = process.env.ADMIN_SECRET_PATH || 'admin'
+
+const ADMIN_NO_STORE =
+  'private, no-store, max-age=0, must-revalidate'
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   /** При деплое за несколькими инстансами задайте DEPLOYMENT_VERSION для защиты от version skew */
@@ -56,6 +62,14 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Cache-Control', value: CATALOG_CACHE_CONTROL },
         ],
+      },
+      {
+        source: `/${ADMIN_UI_PATH}`,
+        headers: [{ key: 'Cache-Control', value: ADMIN_NO_STORE }],
+      },
+      {
+        source: `/${ADMIN_UI_PATH}/:path*`,
+        headers: [{ key: 'Cache-Control', value: ADMIN_NO_STORE }],
       },
     ]
   },

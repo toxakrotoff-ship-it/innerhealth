@@ -39,6 +39,21 @@ function isEmptyLineDoc(doc: JSONContent): boolean {
   return !doc.content || doc.content.length === 0;
 }
 
+/** Человекочитаемое сообщение для типичных ошибок Next.js после деплоя / skew версий */
+function formatCategoryActionError(context: string, error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  if (/Server Action ['"]?[a-f0-9]+['"]? was not found on the server/i.test(raw)) {
+    return `${context} Открыта старая версия страницы относительно сервера (часто сразу после деплоя). Сделайте жёсткое обновление: Ctrl+Shift+R или Cmd+Shift+R, либо откройте админку в новой вкладке. При нескольких инстансах задайте DEPLOYMENT_VERSION при сборке — см. nextjs-project/docs/DEPLOY.md.`;
+  }
+  if (/failed to find server action/i.test(raw)) {
+    return `${context} Устаревший кэш после обновления сервера. Жёсткое обновление страницы (Ctrl+Shift+R / Cmd+Shift+R).`;
+  }
+  if (/An error occurred in the Server Components render/i.test(raw)) {
+    return `${context} На сервере упал рендер (в production текст скрыт). Проверьте логи приложения по digest из ответа.`;
+  }
+  return `${context} ${raw}`;
+}
+
 interface CategoryFormState {
   title: string;
   slug: string;
@@ -232,11 +247,7 @@ export default function AdminCategoriesPage() {
       setActionError(null);
     } catch (error) {
       console.error('Error creating category:', error);
-      if (error instanceof Error) {
-        setActionError(`Ошибка при создании категории: ${error.message}`);
-      } else {
-        setActionError('Ошибка при создании категории');
-      }
+      setActionError(formatCategoryActionError('Ошибка при создании категории:', error));
     }
   };
 
@@ -287,11 +298,7 @@ export default function AdminCategoriesPage() {
       setActionError(null);
     } catch (error) {
       console.error('Error updating category:', error);
-      if (error instanceof Error) {
-        setActionError(`Ошибка при обновлении категории: ${error.message}`);
-      } else {
-        setActionError('Ошибка при обновлении категории');
-      }
+      setActionError(formatCategoryActionError('Ошибка при обновлении категории:', error));
     }
   };
 
@@ -303,11 +310,7 @@ export default function AdminCategoriesPage() {
       setActionError(null);
     } catch (error) {
       console.error('Error deleting category:', error);
-      if (error instanceof Error) {
-        setActionError(`Ошибка при удалении категории: ${error.message}`);
-      } else {
-        setActionError('Ошибка при удалении категории');
-      }
+      setActionError(formatCategoryActionError('Ошибка при удалении категории:', error));
     }
   };
 
@@ -384,7 +387,7 @@ export default function AdminCategoriesPage() {
         );
       } catch (err) {
         console.error('Error reordering categories:', err);
-        if (err instanceof Error) setActionError(`Ошибка сохранения порядка: ${err.message}`);
+        setActionError(formatCategoryActionError('Ошибка сохранения порядка:', err));
       }
     },
     [flattenedTree]

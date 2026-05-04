@@ -119,6 +119,14 @@ node .next/standalone/server.js
    ```
    Или передайте `DEPLOYMENT_VERSION` в `next.config` через переменную окружения (уже настроено).
 
+### «Server Action … was not found» после Cmd+Shift+R
+
+Жёсткая перезагрузка сбрасывает кэш **браузера**, но не устраняет:
+
+- **Rolling deploy:** HTML и JS с одной версии, а следующий POST Server Action попадает на инстанс со **старой** сборкой (или наоборот). Нужны **один билд на всех нодах**, одинаковые **`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`** и **`DEPLOYMENT_VERSION`**, либо деплой без одновременной работы разных версий (blue-green).
+- **Кэш прокси/CDN на HTML или на `/_next/*`:** отключите кэширование ответов для путей админки. В `next.config.ts` для префикса админки (переменная **`ADMIN_SECRET_PATH`**, по умолчанию **`admin`**) выставляется **`Cache-Control: private, no-store`**; на nginx/Caddy не переопределяйте это на `public`/долгий `max-age`.
+- **Реальная причина digest в проде** смотрится в **логах сервера** в момент запроса (в браузере текст обрезан).
+
 ## Обратный прокси (nginx)
 
 Рекомендуется держать Next.js за reverse proxy (nginx, Caddy и т.п.) для ограничения размера тела запроса, rate limiting и TLS. Для стриминга отключите буферизацию, например в nginx:
