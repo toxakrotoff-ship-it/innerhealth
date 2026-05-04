@@ -27,7 +27,8 @@ import { getResolvedBlock } from '@/services/content-block.service'
 import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
 import { HydroCategoryBenefitsBento } from '@/components/site/hydro-category-benefits-bento'
-import { HYDRO_CATEGORY_BENTO_TILES } from '@/content/hydro-category-bento'
+import { HydroCategoryProductDescription } from '@/components/site/hydro-category-product-description'
+import { HYDRO_CATEGORY_BENTO_TILES, HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
 import { cn } from '@/lib/utils'
 
 function htmlToPlainText(html: string): string {
@@ -496,6 +497,10 @@ export default async function CategoryPage({ params }: PageProps) {
                 )
               )}
             </FluidGrid>
+          )}
+
+          {isSprintTheme && categorySlug === 'hydro' && (
+            <HydroCategoryProductDescription content={HYDRO_CATEGORY_PRODUCT_DESCRIPTION} />
           )}
 
           {isSprintTheme && categorySlug === 'hydro' && (
