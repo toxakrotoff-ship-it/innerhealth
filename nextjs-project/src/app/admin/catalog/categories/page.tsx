@@ -184,19 +184,26 @@ export default function AdminCategoriesPage() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newCategory = await createCategory({
-        title: formData.title,
-        slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
-        image: formData.image,
-        sortOrder: formData.sortOrder,
-        parentId: formData.parentId || null,
-        showInCategoriesBlock: formData.showInCategoriesBlock,
-        catalogTeaser: formData.catalogTeaser.trim() || null,
-        featuredProductId: formData.featuredProductId.trim() || null,
-        linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
-          ? undefined
-          : (formData.linePageBodyRichJson as Prisma.JsonValue),
-      }, { brandId: activeBrand });
+      const newCategory = await createCategory(
+        {
+          title: formData.title,
+          slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
+          image: formData.image,
+          sortOrder: formData.sortOrder,
+          parentId: formData.parentId || null,
+          showInCategoriesBlock: formData.showInCategoriesBlock,
+          ...(activeBrand === 'sprint-power'
+            ? {
+                catalogTeaser: formData.catalogTeaser.trim() || null,
+                featuredProductId: formData.featuredProductId.trim() || null,
+                linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+                  ? undefined
+                  : (formData.linePageBodyRichJson as Prisma.JsonValue),
+              }
+            : {}),
+        },
+        { brandId: activeBrand }
+      );
       
       setCategories([...categories, newCategory]);
       setFormData({
@@ -226,19 +233,27 @@ export default function AdminCategoriesPage() {
     if (!editingCategory) return;
     
     try {
-      const updatedCategory = await updateCategory(editingCategory.id, {
-        title: formData.title,
-        slug: formData.slug,
-        image: formData.image,
-        sortOrder: formData.sortOrder,
-        parentId: formData.parentId || null,
-        showInCategoriesBlock: formData.showInCategoriesBlock,
-        catalogTeaser: formData.catalogTeaser.trim() || null,
-        featuredProductId: formData.featuredProductId.trim() || null,
-        linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
-          ? null
-          : (formData.linePageBodyRichJson as Prisma.JsonValue),
-      }, { brandId: activeBrand });
+      const updatedCategory = await updateCategory(
+        editingCategory.id,
+        {
+          title: formData.title,
+          slug: formData.slug,
+          image: formData.image,
+          sortOrder: formData.sortOrder,
+          parentId: formData.parentId || null,
+          showInCategoriesBlock: formData.showInCategoriesBlock,
+          ...(activeBrand === 'sprint-power'
+            ? {
+                catalogTeaser: formData.catalogTeaser.trim() || null,
+                featuredProductId: formData.featuredProductId.trim() || null,
+                linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+                  ? null
+                  : (formData.linePageBodyRichJson as Prisma.JsonValue),
+              }
+            : {}),
+        },
+        { brandId: activeBrand }
+      );
       
       const updatedCategories = categories.map(cat =>
         cat.id === editingCategory.id ? updatedCategory : cat
@@ -508,47 +523,51 @@ export default function AdminCategoriesPage() {
                 </label>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Тизер для главной (блок «Вся линейка»)
-                </label>
-                <textarea
-                  value={formData.catalogTeaser}
-                  onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
-                  className="form-input min-h-[72px]"
-                  rows={3}
-                  placeholder="Короткий текст под названием на главной Sprint. Если пусто — показывается число товаров."
-                />
-              </div>
+              {activeBrand === 'sprint-power' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Тизер для главной (блок «Вся линейка»)
+                    </label>
+                    <textarea
+                      value={formData.catalogTeaser}
+                      onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
+                      className="form-input min-h-[72px]"
+                      rows={3}
+                      placeholder="Короткий текст под названием на главной Sprint. Если пусто — показывается число товаров."
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ID товара для блока «купить» на странице категории
-                </label>
-                <input
-                  type="text"
-                  value={formData.featuredProductId}
-                  onChange={(e) => setFormData({ ...formData, featuredProductId: e.target.value })}
-                  className="form-input font-mono text-sm"
-                  placeholder="cuid из админки товара"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Товар должен быть уже привязан к этой категории. Оставьте пустым, если блок не нужен.
-                </p>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ID товара для блока «купить» на странице категории
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.featuredProductId}
+                      onChange={(e) => setFormData({ ...formData, featuredProductId: e.target.value })}
+                      className="form-input font-mono text-sm"
+                      placeholder="cuid из админки товара"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Товар должен быть уже привязан к этой категории. Оставьте пустым, если блок не нужен.
+                    </p>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Текст под сеткой каталога (страница категории)
-                </label>
-                <RichTextEditor
-                  value={formData.linePageBodyRichJson}
-                  onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
-                  placeholder="Описание линейки, таблицы, юридические абзацы…"
-                  uploadedMedia={[]}
-                  onMediaUploaded={() => {}}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Текст под сеткой каталога (страница категории)
+                    </label>
+                    <RichTextEditor
+                      value={formData.linePageBodyRichJson}
+                      onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
+                      placeholder="Описание линейки, таблицы, юридические абзацы…"
+                      uploadedMedia={[]}
+                      onMediaUploaded={() => {}}
+                    />
+                  </div>
+                </>
+              ) : null}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

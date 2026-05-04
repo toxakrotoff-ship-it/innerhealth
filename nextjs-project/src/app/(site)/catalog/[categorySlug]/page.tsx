@@ -490,19 +490,11 @@ export default async function CategoryPage({ params }: PageProps) {
             </FluidGrid>
           )}
 
-          {hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
-            <div
-              className={`mt-12 max-w-4xl pt-10 ${
-                isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200'
-              }`}
-            >
+          {isSprintTheme && hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
+            <div className="mt-12 max-w-4xl border-t border-slate-700 pt-10">
               <TipTapDocRenderer
                 raw={category.linePageBodyRichJson}
-                className={
-                  isSprintTheme
-                    ? 'prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600'
-                    : 'text-gray-700 prose-headings:text-text'
-                }
+                className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600"
               />
             </div>
           )}
