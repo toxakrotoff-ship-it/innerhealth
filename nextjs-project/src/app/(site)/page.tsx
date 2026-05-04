@@ -35,6 +35,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveBrand } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 import {
@@ -341,27 +342,16 @@ type SprintHomeData = {
 
 async function getSprintHomeData(): Promise<SprintHomeData> {
   const dbTimeoutMs = 2500
-  const categoriesRaw =
-    (await withTimeout(
-      prisma.$queryRaw<Array<{ id: string; title: string; slug: string; productsCount: number }>>(
-        Prisma.sql`
-      SELECT
-        c.id,
-        c.title,
-        c.slug,
-        COUNT(pc."productId") FILTER (WHERE p."isDraft" = false)::int AS "productsCount"
-      FROM "Category" c
-      LEFT JOIN "ProductCategory" pc ON pc."categoryId" = c.id
-      LEFT JOIN "Product" p ON p.id = pc."productId"
-      WHERE c.brand = 'sprint-power'
-      GROUP BY c.id, c.title, c.slug, c."sortOrder"
-      ORDER BY c."sortOrder" ASC NULLS LAST, c.title ASC
-      LIMIT 6
-    `
-      ),
-      dbTimeoutMs,
-      []
-    )) ?? []
+  const dbBrand = resolveDbBrand('sprint-power')
+  const categoryInclude = {
+    _count: {
+      select: {
+        products: {
+          where: { product: { isDraft: false } },
+        },
+      },
+    },
+  } as const
 
   const [products, categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
     await Promise.all([
@@ -386,14 +376,65 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         dbTimeoutMs,
         []
       ),
-      Promise.resolve(
-        categoriesRaw.map((item) => ({
-          id: item.id,
-          title: item.title,
-          slug: item.slug,
-          _count: { products: item.productsCount },
-        }))
-      ),
+      (async (): Promise<SprintHomeData['categories']> => {
+        try {
+          let rows = await withTimeout(
+            prisma.category.findMany({
+              where: { showInCategoriesBlock: true, brand: dbBrand },
+              orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+              include: categoryInclude,
+            }),
+            dbTimeoutMs,
+            []
+          )
+          if (rows.length === 0) {
+            rows = await withTimeout(
+              prisma.category.findMany({
+                where: { brand: dbBrand },
+                orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+                include: categoryInclude,
+              }),
+              dbTimeoutMs,
+              []
+            )
+          }
+          if (rows.length === 0) {
+            rows = await withTimeout(
+              prisma.category.findMany({
+                where: {
+                  showInCategoriesBlock: true,
+                  brand: 'inner',
+                  slug: { startsWith: 'sp-' },
+                },
+                orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+                include: categoryInclude,
+              }),
+              dbTimeoutMs,
+              []
+            )
+          }
+          if (rows.length === 0) {
+            rows = await withTimeout(
+              prisma.category.findMany({
+                where: { brand: 'inner', slug: { startsWith: 'sp-' } },
+                orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+                include: categoryInclude,
+              }),
+              dbTimeoutMs,
+              []
+            )
+          }
+          const filtered = filterCatalogBlockCategories(rows)
+          return filtered.map((c) => ({
+            id: c.id,
+            title: c.title,
+            slug: c.slug,
+            _count: { products: c._count.products },
+          }))
+        } catch {
+          return []
+        }
+      })(),
       withTimeout(
         reviewService.getApprovedReviews('sprint-power').then((items) =>
           items.slice(0, 2).map((item) => ({
@@ -676,28 +717,45 @@ function SprintPowerHome({
           </div>
 
           <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
-            <h3 className="mb-4 text-2xl font-bold text-slate-100">
-              {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
-            </h3>
-            <div className="grid gap-3 md:grid-cols-3">
-              {data.categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/catalog/${category.slug}`}
-                  className="rounded-xl bg-[#1E293B] p-4"
-                >
-                  <p className="text-sm font-semibold text-slate-100">{category.title}</p>
-                  <p className="text-xs text-slate-400">
-                    {category.slug === 'aktsii'
-                      ? formatAktsiiCatalogBlockSubtitleRu(
-                          category._count.products,
-                          data.publicGiftPromotionCount
-                        )
-                      : formatProductsCountRu(category._count.products)}
-                  </p>
-                </Link>
-              ))}
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+              <h3 className="text-2xl font-bold text-slate-100">
+                {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
+              </h3>
+              <Link
+                href="/catalog"
+                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white"
+              >
+                Весь каталог
+              </Link>
             </div>
+            {data.categories.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {data.categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/catalog/${category.slug}`}
+                    className="rounded-xl bg-[#1E293B] p-4 transition-colors hover:bg-[#243447]"
+                  >
+                    <p className="text-sm font-semibold text-slate-100">{category.title}</p>
+                    <p className="text-xs text-slate-400">
+                      {category.slug === 'aktsii'
+                        ? formatAktsiiCatalogBlockSubtitleRu(
+                            category._count.products,
+                            data.publicGiftPromotionCount
+                          )
+                        : formatProductsCountRu(category._count.products)}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-600/70 bg-[#1E293B]/50 px-4 py-6 text-center">
+                <p className="text-sm leading-6 text-slate-400">
+                  Разделы каталога настраиваются в админке. Пока можно перейти в полный каталог и выбрать
+                  продукт там.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-3xl border border-[#1B2946] bg-[#0A1128] p-6 md:p-8">
@@ -831,8 +889,8 @@ function SprintPowerHome({
           </div>
 
           <div className="overflow-hidden rounded-3xl bg-[#111D3A]">
-            <div className="flex flex-col md:flex-row md:items-stretch">
-              <div className="flex flex-1 flex-col justify-center p-6 md:p-8">
+            <div className="flex flex-col gap-8 p-6 md:flex-row md:items-center md:gap-10 md:p-8">
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
                 <p className="text-2xl font-bold text-white">
                   {getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
                 </p>
@@ -852,18 +910,24 @@ function SprintPowerHome({
                   {getBlockTextForBrand(blocks, 'home', 'crossBrand.cta', 'sprint-power', 'На Inner Health')}
                 </a>
               </div>
-              <a
-                href={innerSiteUrl}
-                className="relative block aspect-[5/4] w-full shrink-0 overflow-hidden md:aspect-auto md:w-[min(44%,22rem)] md:max-w-[50%] md:self-stretch md:min-h-[12rem] lg:w-[min(40%,26rem)]"
-              >
-                <Image
-                  src="/images/sprint-power/cross-brand-inner-health.png"
-                  alt="Inner Health — нутрицевтика и превентивная медицина"
-                  fill
-                  className="object-cover object-center"
-                  sizes="(max-width: 768px) 100vw, min(44vw, 26rem)"
-                />
-              </a>
+              {/* Same mockup framing as SprintPowerBlock on Inner: slate frame + inset + object-contain */}
+              <div className="mx-auto w-full max-w-[min(100%,20rem)] shrink-0 md:mx-0 md:w-[min(42%,22rem)] lg:max-w-[min(100%,24rem)]">
+                <a href={innerSiteUrl} className="group block">
+                  <div className="relative aspect-square overflow-hidden rounded-[32px] bg-slate-100 md:rounded-[40px] 2xl:rounded-[48px]">
+                    <div className="absolute inset-[7%] sm:inset-[8%] md:inset-[9%]">
+                      <div className="relative h-full w-full">
+                        <Image
+                          src="/images/sprint-power/cross-brand-inner-health.png"
+                          alt="Inner Health — нутрицевтика и превентивная медицина"
+                          fill
+                          className="object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
+                          sizes="(max-width: 768px) 320px, 22rem"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
 
