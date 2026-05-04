@@ -3,7 +3,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { headers } from 'next/headers'
 import type { Metadata, ResolvingMetadata } from 'next'
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import * as reviewService from '@/services/review.service'
@@ -77,14 +76,10 @@ const ReviewCtaBlock = nextDynamic(
   { ssr: true }
 )
 
-function withTimeout<TValue, TFallback>(
-  promise: Promise<TValue>,
-  timeoutMs: number,
-  fallback: TFallback
-): Promise<TValue | TFallback> {
+function withTimeout<TValue>(promise: Promise<TValue>, timeoutMs: number, fallback: TValue): Promise<TValue> {
   return Promise.race([
     promise,
-    new Promise<TFallback>((resolve) => {
+    new Promise<TValue>((resolve) => {
       setTimeout(() => resolve(fallback), timeoutMs)
     }),
   ])
@@ -134,6 +129,60 @@ export async function generateMetadata(
 export const revalidate = 300
 export const dynamic = 'force-dynamic'
 
+const HOME_CATEGORY_CATALOG_INCLUDE = {
+  _count: {
+    select: {
+      products: {
+        where: { product: { isDraft: false } },
+      },
+    },
+  },
+} as const
+
+/** Type-only probe — не вызывать; нужен для вывода типа категории с `include` без импорта `Prisma`. */
+async function __typeProbeHomeCategoryWithCounts() {
+  return prisma.category.findMany({
+    include: HOME_CATEGORY_CATALOG_INCLUDE,
+    take: 0,
+  })
+}
+
+type HomeCategoryWithProductCount = Awaited<
+  ReturnType<typeof __typeProbeHomeCategoryWithCounts>
+>[number]
+
+/** Type-only probe для карточки Sprint на главной. */
+async function __typeProbeSprintHomeProductRow() {
+  return prisma.product.findMany({
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      photo: true,
+      slug: true,
+      brand: true,
+    },
+    take: 0,
+  })
+}
+
+type SprintHomeProductRow = Awaited<ReturnType<typeof __typeProbeSprintHomeProductRow>>[number]
+
+type CategoryWhereInput = NonNullable<Parameters<typeof prisma.category.findMany>[0]>['where']
+
+type PostWhereInput = NonNullable<Parameters<typeof prisma.post.findMany>[0]>['where']
+
+type HomePostTeaser = {
+  id: string
+  title: string
+  slug: string
+  previewImage: string | null
+}
+
+type HomeProductCardRow = Awaited<ReturnType<typeof productService.getProductsForHomeInBrandScope>>[number]
+
+type ApprovedReviewRow = Awaited<ReturnType<typeof reviewService.getApprovedReviews>>[number]
+
 type HomeReview = {
   id: string
   authorName: string
@@ -141,6 +190,15 @@ type HomeReview = {
   text: string
   imageUrl: string | null
   createdAt: string
+}
+
+type HomeDataPayload = {
+  categories: HomeCategoryWithProductCount[]
+  newProducts: HomeProductCardRow[]
+  newsPosts: HomePostTeaser[]
+  articlePosts: HomePostTeaser[]
+  reviews: HomeReview[]
+  publicGiftPromotionCount: number
 }
 
 function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBlockResolved | null {
@@ -208,35 +266,34 @@ function getHowToOrderContent(blocks: ContentBlockResolved[]) {
   return { title, steps }
 }
 
-async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
+async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeDataPayload> {
   const dbTimeoutMs = 2500
-  const categoryScopeWhere =
+  const dbBrand = resolveDbBrand(activeBrand)
+  const categoryScopeWhere: CategoryWhereInput = {
+    brand: dbBrand,
+    ...(activeBrand === 'sprint-power'
+      ? { slug: { startsWith: 'sp-' } }
+      : { slug: { not: { startsWith: 'sp-' } } }),
+  }
+  const postScopeWhere: PostWhereInput =
     activeBrand === 'sprint-power'
       ? { slug: { startsWith: 'sp-' } }
       : { slug: { not: { startsWith: 'sp-' } } }
-  const postScopeWhere: Prisma.PostWhereInput =
-    activeBrand === 'sprint-power'
-      ? { slug: { startsWith: 'sp-' } }
-      : { slug: { not: { startsWith: 'sp-' } } }
+  const emptyCategories = [] as HomeCategoryWithProductCount[]
+  const emptyHomeProducts = [] as HomeProductCardRow[]
+  const emptyHomePosts = [] as HomePostTeaser[]
+  const emptyApprovedReviews = [] as ApprovedReviewRow[]
   const [categories, publicGiftPromotionCount] = await Promise.all([
-    (async () => {
+    (async (): Promise<HomeCategoryWithProductCount[]> => {
       try {
         const categoriesForBlock = await withTimeout(
           prisma.category.findMany({
             where: { showInCategoriesBlock: true, ...categoryScopeWhere },
             orderBy: { sortOrder: 'asc' },
-            include: {
-              _count: {
-                select: {
-                  products: {
-                    where: { product: { isDraft: false } },
-                  },
-                },
-              },
-            },
+            include: HOME_CATEGORY_CATALOG_INCLUDE,
           }),
           dbTimeoutMs,
-          []
+          emptyCategories
         )
 
         if (categoriesForBlock.length > 0) return categoriesForBlock
@@ -246,21 +303,13 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
           prisma.category.findMany({
             where: categoryScopeWhere,
             orderBy: { sortOrder: 'asc' },
-            include: {
-              _count: {
-                select: {
-                  products: {
-                    where: { product: { isDraft: false } },
-                  },
-                },
-              },
-            },
+            include: HOME_CATEGORY_CATALOG_INCLUDE,
           }),
           dbTimeoutMs,
-          []
+          emptyCategories
         )
       } catch {
-        return []
+        return emptyCategories
       }
     })(),
     withTimeout(countPublicGiftPromotions(new Date(), activeBrand), dbTimeoutMs, 0),
@@ -268,28 +317,32 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power') {
 
   const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
     await Promise.allSettled([
-      withTimeout(productService.getProductsForHomeInBrandScope(8, activeBrand), dbTimeoutMs, []),
+      withTimeout(productService.getProductsForHomeInBrandScope(8, activeBrand), dbTimeoutMs, emptyHomeProducts),
       withTimeout(
         prisma.post.findMany({
-          where: { published: true, type: 'news', ...postScopeWhere } as Prisma.PostWhereInput,
+          where: { published: true, type: 'news', ...postScopeWhere } as PostWhereInput,
           orderBy: { createdAt: 'desc' },
           take: 3,
           select: { id: true, title: true, slug: true, previewImage: true },
         }),
         dbTimeoutMs,
-        []
+        emptyHomePosts
       ),
       withTimeout(
         prisma.post.findMany({
-          where: { published: true, type: 'article', ...postScopeWhere } as Prisma.PostWhereInput,
+          where: { published: true, type: 'article', ...postScopeWhere } as PostWhereInput,
           orderBy: { createdAt: 'desc' },
           take: 3,
           select: { id: true, title: true, slug: true, previewImage: true },
         }),
         dbTimeoutMs,
-        []
+        emptyHomePosts
       ),
-      withTimeout(reviewService.getApprovedReviews(activeBrand).then((items) => items.slice(0, 6)), dbTimeoutMs, []),
+      withTimeout(
+        reviewService.getApprovedReviews(activeBrand).then((items) => items.slice(0, 6)),
+        dbTimeoutMs,
+        emptyApprovedReviews
+      ),
     ])
 
   const newProducts =
@@ -361,15 +414,10 @@ type SprintHomeData = {
 async function getSprintHomeData(): Promise<SprintHomeData> {
   const dbTimeoutMs = 2500
   const dbBrand = resolveDbBrand('sprint-power')
-  const categoryInclude = {
-    _count: {
-      select: {
-        products: {
-          where: { product: { isDraft: false } },
-        },
-      },
-    },
-  } as const
+  const emptySprintProducts = [] as SprintHomeProductRow[]
+  const emptySprintCategoryRows = [] as HomeCategoryWithProductCount[]
+  const emptySprintReviews = [] as SprintHomeData['reviews']
+  const emptySprintPosts = [] as SprintHomeData['newsPosts']
 
   const [products, categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
     await Promise.all([
@@ -392,28 +440,28 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           },
         }),
         dbTimeoutMs,
-        []
+        emptySprintProducts
       ),
       (async (): Promise<SprintHomeData['categories']> => {
         try {
-          let rows = await withTimeout(
+          let rows: HomeCategoryWithProductCount[] = await withTimeout(
             prisma.category.findMany({
               where: { showInCategoriesBlock: true, brand: dbBrand },
               orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-              include: categoryInclude,
+              include: HOME_CATEGORY_CATALOG_INCLUDE,
             }),
             dbTimeoutMs,
-            []
+            emptySprintCategoryRows
           )
           if (rows.length === 0) {
             rows = await withTimeout(
               prisma.category.findMany({
                 where: { brand: dbBrand },
                 orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-                include: categoryInclude,
+                include: HOME_CATEGORY_CATALOG_INCLUDE,
               }),
               dbTimeoutMs,
-              []
+              emptySprintCategoryRows
             )
           }
           if (rows.length === 0) {
@@ -425,10 +473,10 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
                   slug: { startsWith: 'sp-' },
                 },
                 orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-                include: categoryInclude,
+                include: HOME_CATEGORY_CATALOG_INCLUDE,
               }),
               dbTimeoutMs,
-              []
+              emptySprintCategoryRows
             )
           }
           if (rows.length === 0) {
@@ -436,10 +484,10 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
               prisma.category.findMany({
                 where: { brand: 'inner', slug: { startsWith: 'sp-' } },
                 orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-                include: categoryInclude,
+                include: HOME_CATEGORY_CATALOG_INCLUDE,
               }),
               dbTimeoutMs,
-              []
+              emptySprintCategoryRows
             )
           }
           const filtered = filterCatalogBlockCategories(rows, { brandId: 'sprint-power' })
@@ -464,7 +512,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           }))
         ),
         dbTimeoutMs,
-        []
+        emptySprintReviews
       ),
       withTimeout(
         prisma.post.findMany({
@@ -478,7 +526,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           select: { id: true, title: true, slug: true, previewImage: true },
         }),
         dbTimeoutMs,
-        []
+        emptySprintPosts
       ),
       withTimeout(
         prisma.post.findMany({
@@ -492,7 +540,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           select: { id: true, title: true, slug: true, previewImage: true },
         }),
         dbTimeoutMs,
-        []
+        emptySprintPosts
       ),
       withTimeout(countPublicGiftPromotions(new Date(), 'sprint-power'), dbTimeoutMs, 0),
     ])
@@ -1007,19 +1055,22 @@ export default async function HomePage() {
       articlePosts: [],
       publicGiftPromotionCount: 0,
     }
+    const emptySprintContentBlocks = [] as ContentBlockResolved[]
+    const emptySprintFaqList = [] as Awaited<ReturnType<typeof faqService.getPublishedFaqItems>>
     const [sprintHomeData, sprintHomeBlocks, sprintFaqItems] = await Promise.all([
       withTimeout(getSprintHomeData(), dbTimeoutMs, emptySprintHomeData),
-      withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, []),
-      withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, []),
+      withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
+      withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, emptySprintFaqList),
     ])
     return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} faqItems={sprintFaqItems} />
   }
 
   const { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount } =
     await getHomeData(activeBrand)
+  const emptyInnerContentBlocks = [] as ContentBlockResolved[]
   const [homeBlocks, catalogBlocks, popup] = await Promise.all([
-    withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, []),
-    withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, []),
+    withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptyInnerContentBlocks),
+    withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptyInnerContentBlocks),
     withTimeout(getActiveSitePopup({ brandId: activeBrand }), dbTimeoutMs, null),
   ])
 
@@ -1058,7 +1109,7 @@ export default async function HomePage() {
                 id: popup.id,
                 title: popup.title,
                 isEnabled: popup.isEnabled,
-                richJson: (popup.richJson as Prisma.JsonValue | null) as any,
+                richJson: popup.richJson as any,
                 imageUrl: popup.imageUrl,
                 ctaLabel: popup.ctaLabel,
                 ctaUrl: popup.ctaUrl,

@@ -1,4 +1,5 @@
 import type { BrandId } from '@/lib/brand/brand'
+import { resolveDbBrand } from '@/lib/brand/brand-db'
 import {
   isSprintPowerBrand,
   SPRINT_POWER_CATEGORY_SLUG_PREFIX,
@@ -32,17 +33,32 @@ export function getCategoryImageObjectPosition(slug: string): string {
 }
 
 export interface FilterCatalogBlockCategoriesOptions {
-  /** When set to Inner (non–Sprint Power), excludes Sprint line categories (`sp-*` slugs). */
+  /** Storefront brand: Inner keeps only `brand === "inner"` (and slug fallback); Sprint allows sprint rows and legacy `inner` + `sp-*`. */
   brandId?: BrandId | null
 }
 
-/** Filter categories for the main catalog block on the storefront. Inner hides Sprint line slugs. */
-export function filterCatalogBlockCategories<T extends { slug: string }>(
+/**
+ * Filter categories for the main catalog block. Prefer DB `brand` when present — slug `sp-*`
+ * alone is not enough because Sprint rows may use non-prefixed slugs.
+ */
+export function filterCatalogBlockCategories<T extends { slug: string; brand?: string }>(
   categories: T[],
   options?: FilterCatalogBlockCategoriesOptions
 ): T[] {
-  if (options?.brandId != null && !isSprintPowerBrand(options.brandId)) {
-    return categories.filter((c) => !c.slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX))
+  if (options?.brandId == null) return categories
+
+  if (!isSprintPowerBrand(options.brandId)) {
+    const dbBrand = resolveDbBrand(options.brandId)
+    return categories.filter((c) => {
+      if (c.brand != null && c.brand !== '') return c.brand === dbBrand
+      return !c.slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX)
+    })
   }
-  return categories
+
+  return categories.filter((c) => {
+    if (c.brand === 'sprint-power') return true
+    if (c.brand === 'inner' && c.slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX)) return true
+    if (c.brand != null && c.brand !== '') return false
+    return true
+  })
 }
