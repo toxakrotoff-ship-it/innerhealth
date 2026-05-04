@@ -1,3 +1,9 @@
+import type { BrandId } from '@/lib/brand/brand'
+import {
+  isSprintPowerBrand,
+  SPRINT_POWER_CATEGORY_SLUG_PREFIX,
+} from '@/lib/brand/brand-scope'
+
 /** Local background image path for each category slug in the main catalog block */
 export const CATEGORY_BACKGROUND_IMAGES: Record<string, string> = {
   collagen: '/images/categories/collagen.png',
@@ -25,12 +31,18 @@ export function getCategoryImageObjectPosition(slug: string): string {
   return 'object-cover object-center'
 }
 
-/** Filter categories to only those shown in the main catalog block.
- * Сейчас возвращает все категории без фильтрации, чтобы новые категории
- * и изменения slug сразу появлялись на главной без пересборки.
- */
+export interface FilterCatalogBlockCategoriesOptions {
+  /** When set to Inner (non–Sprint Power), excludes Sprint line categories (`sp-*` slugs). */
+  brandId?: BrandId | null
+}
+
+/** Filter categories for the main catalog block on the storefront. Inner hides Sprint line slugs. */
 export function filterCatalogBlockCategories<T extends { slug: string }>(
-  categories: T[]
+  categories: T[],
+  options?: FilterCatalogBlockCategoriesOptions
 ): T[] {
+  if (options?.brandId != null && !isSprintPowerBrand(options.brandId)) {
+    return categories.filter((c) => !c.slug.startsWith(SPRINT_POWER_CATEGORY_SLUG_PREFIX))
+  }
   return categories
 }

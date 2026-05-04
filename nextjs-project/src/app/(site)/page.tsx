@@ -444,7 +444,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
               []
             )
           }
-          const filtered = filterCatalogBlockCategories(rows)
+          const filtered = filterCatalogBlockCategories(rows, { brandId: 'sprint-power' })
           return filtered.map((c) => ({
             id: c.id,
             title: c.title,
@@ -1205,7 +1205,7 @@ export default async function HomePage() {
               gap={4}
               adaptiveGap
             >
-            {filterCatalogBlockCategories(categories).map((cat) => {
+            {filterCatalogBlockCategories(categories, { brandId: activeBrand }).map((cat) => {
                 const bgImage = resolveCategoryImage(cat.slug, cat.image)
                 const imagePosition = getCategoryImageObjectPosition(cat.slug)
                 return (

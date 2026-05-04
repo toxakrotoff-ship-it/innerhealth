@@ -155,7 +155,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     countPublicGiftPromotions(now, brandId),
   ])
 
-  const catalogBlockCategories = filterCatalogBlockCategories(categories)
+  const catalogBlockCategories = filterCatalogBlockCategories(categories, { brandId })
   const hasNextPage = catalogResult.hasNextPage
   const products = catalogResult.items
   const listingItems = groupProductsForListing(products)

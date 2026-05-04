@@ -26,7 +26,6 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
 import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
-import { BoneBrothCategoryBenefitsBento } from '@/components/site/bonebroth-category-benefits-bento'
 import {
   BoneBrothCompositionAndBenefitsScreen,
   BoneBrothProductDescriptionScreen,
@@ -549,10 +548,6 @@ export default async function CategoryPage({ params }: PageProps) {
 
           {isSprintTheme && (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
             <BoneBrothProductDescriptionScreen />
-          )}
-
-          {isSprintTheme && (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-            <BoneBrothCategoryBenefitsBento />
           )}
 
           {isSprintTheme &&
