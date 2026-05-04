@@ -2,10 +2,10 @@
 
 Платформа e-commerce для двух брендов: **Inner Health** и **Sprint Power**.
 
-- две storefront-витрины
-- одна общая админка с переключателем бренда
-- общие модули каталога, заказов и интеграций
-- бренд-специфичные контент, SEO, контакты и bot tokens
+- **Один бэкенд**, **две изолированные витрины** (домены Inner и Sprint), одна админка с переключателем бренда
+- Общие модули каталога, заказов и интеграций; **разведение** товаров, заказов и brand-scoped настроек
+- **Объединённый ЛК** по email (сеть магазинов); вход/регистрация на **общих** URL
+- Целевая модель, интеграции и чеклист расхождений с кодом: **[docs/two-storefronts-architecture.md](docs/two-storefronts-architecture.md)**
 
 ---
 
@@ -104,6 +104,7 @@ npm run dev
 
 ### Функциональность и ТЗ
 
+- **[docs/two-storefronts-architecture.md](docs/two-storefronts-architecture.md)** — целевая архитектура двух витрин (учётки, заказы, ЮKassa, СДЭК, боты, отчёты)
 - **[docs/STATUS.md](docs/STATUS.md)** — текущий статус проекта (реализовано / в планах)
 - **[docs/adminv2.md](docs/adminv2.md)** — ТЗ админки
 - **[docs/tg_bot.md](docs/tg_bot.md)** — Telegram-бот: уведомления, вайтлист, промокоды
@@ -113,6 +114,7 @@ npm run dev
 ### Планы и roadmap
 
 - **[docs/plans/](docs/plans/)** — планы доработок (2FA, СДЭК, ЛК пользователя, партнёры, roadmap)
+- **[docs/plans/2026-05-04-second-brand-completion-plan.md](docs/plans/2026-05-04-second-brand-completion-plan.md)** — план доведения второго бренда (Sprint Power) до целевой модели
 - **[docs/plans/PROJECT-INDEX.md](docs/plans/PROJECT-INDEX.md)** — полный индекс проекта и навигация по коду
 - **[docs/plans/2026-02-24-2fa.md](docs/plans/2026-02-24-2fa.md)** — план внедрения 2FA (реализовано)
 - **[docs/plans/2026-02-28-partner-lk-implementation.md](docs/plans/2026-02-28-partner-lk-implementation.md)** — ЛК партнёра и управление партнёрами
