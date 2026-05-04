@@ -224,7 +224,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         <ScalableSpacing size="lg">
           <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
             {catalogBlockCategories.map((cat) => {
-              const bgImage = resolveCategoryImage(cat.slug, cat.image)
+              const bgImage = resolveCategoryImage(cat.slug, cat.image, {
+                sprintFallback: isSprintTheme,
+              })
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
               return (
                 <Link
@@ -234,7 +236,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     isSprintTheme ? 'hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]' : 'hover:shadow-md hover:border-action-blue'
                   }`}
                 >
-                  <TiltCard>
+                  <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
                       className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
                         !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
@@ -256,14 +258,18 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         </>
                       )}
                       <span
-                        className={`relative z-10 font-medium drop-shadow-md block ${categoryTitleFont} text-lg ${
-                          bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
+                        className={`relative z-10 block text-balance drop-shadow-md ${categoryTitleFont} ${
+                          isSprintTheme
+                            ? `text-base font-semibold uppercase leading-snug tracking-wide sm:text-lg ${
+                                bgImage ? 'text-white' : 'text-slate-100'
+                              }`
+                            : `font-medium text-lg ${bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'}`
                         }`}
                       >
                         {cat.title}
                       </span>
                       <span
-                        className={`relative z-10 mt-1 text-sm font-medium drop-shadow ${categoryTitleFont} ${
+                        className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
                           bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
                         }`}
                       >

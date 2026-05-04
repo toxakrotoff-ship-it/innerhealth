@@ -410,7 +410,7 @@ export default async function CategoryPage({ params }: PageProps) {
                             : 'hover:shadow-md hover:border-action-blue'
                         }`}
                       >
-                        <TiltCard>
+                        <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                           <div
                             className={`relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden ${
                               isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background'

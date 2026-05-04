@@ -794,14 +794,14 @@ function SprintPowerHome({
             </div>
           </div>
 
-          <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
+          <div className="rounded-3xl border border-slate-700/40 bg-[#060A14] p-6 md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
               <h3 className="text-2xl font-bold text-slate-100">
                 {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
               </h3>
               <Link
                 href="/catalog"
-                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white"
+                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white"
               >
                 Весь каталог
               </Link>
@@ -809,7 +809,9 @@ function SprintPowerHome({
             {data.categories.length > 0 ? (
               <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
                 {data.categories.map((category) => {
-                  const bgImage = resolveCategoryImage(category.slug, category.image)
+                  const bgImage = resolveCategoryImage(category.slug, category.image, {
+                    sprintFallback: true,
+                  })
                   const imagePosition = getCategoryImageObjectPosition(category.slug)
                   return (
                     <Link
@@ -817,7 +819,7 @@ function SprintPowerHome({
                       href={`/catalog/${category.slug}`}
                       className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
                     >
-                      <TiltCard>
+                      <TiltCard variant="dark">
                         <div
                           className={`relative flex min-h-[180px] flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center ${
                             !bgImage ? 'bg-[#0F172A]' : ''
@@ -839,14 +841,14 @@ function SprintPowerHome({
                             </>
                           ) : null}
                           <span
-                            className={`relative z-10 block font-medium drop-shadow-md ${categoryTitleFont} text-lg ${
+                            className={`relative z-10 block text-balance font-semibold uppercase leading-snug tracking-wide drop-shadow-md ${categoryTitleFont} text-base sm:text-lg ${
                               bgImage ? 'text-white' : 'text-slate-100'
                             }`}
                           >
                             {category.title}
                           </span>
                           <span
-                            className={`relative z-10 mt-1 text-sm font-medium drop-shadow ${categoryTitleFont} ${
+                            className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
                               bgImage ? 'text-white/90' : 'text-slate-400'
                             }`}
                           >

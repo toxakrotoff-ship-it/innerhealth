@@ -19,17 +19,64 @@ export const CATEGORY_BACKGROUND_IMAGES: Record<string, string> = {
   'sp-bonebroth': '/images/catalog/bonebroth-bento/01.png',
   'sp-hydro': '/images/catalog/hydro-bento/01-taste.png',
   'sp-collagen': '/images/categories/collagen.png',
+  /** Мультипротеин и др. линейки Sprint — если нет загрузки в админке */
+  multi: '/images/catalog/collagen-bento/08-performance.png',
+  'multi-protein': '/images/catalog/collagen-bento/08-performance.png',
+  'sp-multi': '/images/catalog/collagen-bento/08-performance.png',
+}
+
+/** Если slug не попал в карту и в БД нет картинки — всё равно показать обложку на Sprint (как в каталоге). */
+export const SPRINT_CATEGORY_FALLBACK_COVER = '/images/catalog/collagen-bento/08-performance.png'
+
+function normalizeUploadedCategoryImage(raw: string | null | undefined): string | undefined {
+  if (raw == null) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed.replace(/^\/+/, '')}`
+}
+
+/** Опечатки/альтернативные slug → ключ из {@link CATEGORY_BACKGROUND_IMAGES}. */
+const CATEGORY_IMAGE_SLUG_ALIASES: Record<string, string> = {
+  gidro: 'hydro',
+  gydro: 'hydro',
+  'hydro-protein': 'hydro',
+  'gidro-protein': 'hydro',
+}
+
+/** Варианты slug для поиска файла в {@link CATEGORY_BACKGROUND_IMAGES} (регистр, префикс sp-, алиасы). */
+function expandCategorySlugKeys(slug: string): readonly string[] {
+  const s = slug.trim().toLowerCase()
+  const keys: string[] = [s]
+  if (s.startsWith('sp-')) keys.push(s.slice(3))
+  const alias = CATEGORY_IMAGE_SLUG_ALIASES[s]
+  if (alias) keys.push(alias)
+  return [...new Set(keys)]
 }
 
 export function getCategoryBackgroundImage(slug: string): string | undefined {
-  return CATEGORY_BACKGROUND_IMAGES[slug]
+  for (const key of expandCategorySlugKeys(slug)) {
+    const img = CATEGORY_BACKGROUND_IMAGES[key]
+    if (img) return img
+  }
+  return undefined
+}
+
+export interface ResolveCategoryImageOptions {
+  /** Для Sprint: если и загрузка, и карта пусты — вернуть {@link SPRINT_CATEGORY_FALLBACK_COVER}. */
+  readonly sprintFallback?: boolean
 }
 
 export function resolveCategoryImage(
   slug: string,
-  uploadedImage?: string | null
+  uploadedImage?: string | null,
+  options?: ResolveCategoryImageOptions
 ): string | undefined {
-  return uploadedImage || getCategoryBackgroundImage(slug)
+  const normalizedUpload = normalizeUploadedCategoryImage(uploadedImage)
+  const local = getCategoryBackgroundImage(slug)
+  const resolved = normalizedUpload ?? local
+  if (options?.sprintFallback && !resolved) return SPRINT_CATEGORY_FALLBACK_COVER
+  return resolved
 }
 
 /** Object position for category card background (so key elements like dropper tip are visible). */

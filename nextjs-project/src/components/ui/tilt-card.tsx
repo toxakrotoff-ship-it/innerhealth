@@ -6,10 +6,16 @@ import { cn } from '@/lib/utils'
 interface TiltCardProps {
   children: React.ReactNode
   className?: string
+  /**
+   * Тёмная витрина (Sprint): рамка slate + акцент #7AA2FF, без серой «inner»-обводки.
+   * Для светлого каталога Inner оставляйте `default`.
+   */
+  variant?: 'default' | 'dark'
 }
 
 /** 3D tilt on pointer move; 30% dark overlay at rest, removed on hover. No foil/glare. */
-export function TiltCard({ children, className }: TiltCardProps) {
+export function TiltCard({ children, className, variant = 'default' }: TiltCardProps) {
+  const isDark = variant === 'dark'
   const ref = useRef<HTMLDivElement>(null)
   const state = useRef({ rotateX: 0, rotateY: 0 })
 
@@ -51,15 +57,23 @@ export function TiltCard({ children, className }: TiltCardProps) {
       }}
     >
       <div
-        className="relative h-full w-full rounded-2xl border border-gray-200 overflow-hidden transition-[transform,border-color] duration-200 ease-out group-hover:border-action-blue"
+        className={cn(
+          'relative h-full w-full overflow-hidden rounded-2xl border transition-[transform,border-color] duration-200 ease-out',
+          isDark
+            ? 'border-slate-600/85 group-hover:border-[#7AA2FF]/90'
+            : 'border-gray-200 group-hover:border-action-blue'
+        )}
         style={{
           transform: 'rotateX(var(--r-y)) rotateY(var(--r-x))',
         }}
       >
         {children}
-        {/* 30% dark at rest; removed on hover */}
+        {/* Dark overlay at rest; removed on hover so photo reads like catalog grid */}
         <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-black/12 md:bg-black/30 transition-opacity duration-300 group-hover:opacity-0"
+          className={cn(
+            'pointer-events-none absolute inset-0 rounded-2xl transition-opacity duration-300 group-hover:opacity-0',
+            isDark ? 'bg-black/15 md:bg-black/28' : 'bg-black/12 md:bg-black/30'
+          )}
           aria-hidden
         />
       </div>
