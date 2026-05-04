@@ -121,7 +121,7 @@ export default async function SiteLayout({
       <BackToTopButton />
       <SiteLayoutJsonLd />
       <CartDrawer />
-      <CookieConsent />
+      <CookieConsent brandId={activeBrand} />
     </div>
   )
 }

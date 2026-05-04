@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Button from '@/components/ui/button'
+import type { BrandId } from '@/lib/brand/brand'
 
 const COOKIE_CONSENT_KEY = 'cookie-consent-accepted'
 
-export function CookieConsent() {
+export function CookieConsent({ brandId }: { brandId: BrandId }) {
   const [isVisible, setIsVisible] = useState(false)
+  const isSprintTheme = brandId === 'sprint-power'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -23,12 +25,22 @@ export function CookieConsent() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] bg-white border-t border-gray-200"
+      className={
+        isSprintTheme
+          ? 'fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#060A14]/95 p-4 shadow-[0_-10px_30px_-28px_rgba(2,6,23,0.85)] backdrop-blur-md supports-backdrop-filter:bg-[#060A14]/90'
+          : 'fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]'
+      }
       role="dialog"
       aria-label="Уведомление об использовании cookies"
     >
-      <div className="max-w-[min(90rem,92vw)] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-sm text-gray-700 text-center sm:text-left">
+      <div className="mx-auto flex max-w-[min(90rem,92vw)] flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
+        <p
+          className={
+            isSprintTheme
+              ? 'text-center text-sm text-slate-300 sm:text-left'
+              : 'text-center text-sm text-gray-700 sm:text-left'
+          }
+        >
           Мы используем файлы cookie для обеспечения наилучшего взаимодействия с
           сайтом.
         </p>
