@@ -102,7 +102,7 @@ export function CategoryLineProductHighlight({
               discountPrice={discountPrice}
               size="sm"
               disabled={isUnavailable}
-              className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full bg-[#7AA2FF] px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-[#9AB8FF] disabled:cursor-not-allowed disabled:opacity-50"
             />
             <Link
               href={detailHref}

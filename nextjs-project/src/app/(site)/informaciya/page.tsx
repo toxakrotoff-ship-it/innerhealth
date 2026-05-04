@@ -100,7 +100,7 @@ export default async function InformaciyaPage() {
                     href={`/guides/${h.slug}`}
                     className={`inline-flex rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                       isSprintTheme
-                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#7AA2FF] hover:text-[#9AB8FF]'
                         : 'border-gray-300 bg-white text-text hover:border-action-blue hover:text-action-blue'
                     }`}
                   >

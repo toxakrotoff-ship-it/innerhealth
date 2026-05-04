@@ -38,7 +38,7 @@ export function BoneBrothProductDescriptionScreen({ className }: BoneBrothCatalo
           {introPoints.map((text, index) => (
             <div key={index} className="flex gap-4">
               <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7AA2FF] text-sm font-semibold text-slate-950 shadow-sm"
                 aria-hidden
               >
                 {index + 1}
@@ -84,7 +84,7 @@ export function BoneBrothCompositionAndBenefitsScreen({ className }: BoneBrothCa
           {BONE_BROTH_COMPOSITION_INGREDIENTS.map((item, index) => (
             <div key={item.term} className="flex gap-4">
               <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7AA2FF] text-sm font-semibold text-slate-950 shadow-sm"
                 aria-hidden
               >
                 {index + 1}
@@ -100,7 +100,7 @@ export function BoneBrothCompositionAndBenefitsScreen({ className }: BoneBrothCa
 
         <div className="mt-10 flex gap-4 rounded-xl border border-slate-300 bg-white/90 p-4 sm:p-5">
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-sm font-bold text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7AA2FF] text-sm font-bold text-slate-950"
             aria-hidden
           >
             i

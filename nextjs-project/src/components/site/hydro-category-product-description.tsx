@@ -25,7 +25,7 @@ export function HydroCategoryProductDescription({ content, className }: HydroCat
         {content.points.map((text, index) => (
           <div key={index} className="flex gap-4">
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white shadow-sm"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#7AA2FF] text-sm font-semibold text-slate-950 shadow-sm"
               aria-hidden
             >
               {index + 1}

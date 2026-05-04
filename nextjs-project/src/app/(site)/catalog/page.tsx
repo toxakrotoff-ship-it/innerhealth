@@ -231,7 +231,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                   key={cat.id}
                   href={`/catalog/${cat.slug}`}
                   className={`block transition-shadow rounded-2xl ${
-                    isSprintTheme ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]' : 'hover:shadow-md hover:border-action-blue'
+                    isSprintTheme ? 'hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]' : 'hover:shadow-md hover:border-action-blue'
                   }`}
                 >
                   <TiltCard>
@@ -360,7 +360,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     href={buildPageHref(page - 1)}
                     className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
                       isSprintTheme
-                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#7AA2FF] hover:text-[#9AB8FF]'
                         : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
                     }`}
                   >
@@ -375,7 +375,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                     href={buildPageHref(page + 1)}
                     className={`px-4 py-2 rounded-full border font-medium transition-colors min-h-[44px] inline-flex items-center justify-center ${
                       isSprintTheme
-                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        ? 'border-slate-600 bg-[#0F172A] text-slate-100 hover:border-[#7AA2FF] hover:text-[#9AB8FF]'
                         : 'border-gray-300 bg-white text-text hover:bg-gray-50 hover:border-action-blue'
                     }`}
                   >

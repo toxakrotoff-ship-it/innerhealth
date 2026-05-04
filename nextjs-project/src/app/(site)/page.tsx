@@ -387,6 +387,7 @@ type SprintHomeData = {
     id: string
     title: string
     slug: string
+    image: string | null
     catalogTeaser: string | null
     _count: { products: number }
   }>
@@ -495,6 +496,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
             id: c.id,
             title: c.title,
             slug: c.slug,
+            image: c.image ?? null,
             catalogTeaser: c.catalogTeaser ?? null,
             _count: { products: c._count.products },
           }))
@@ -582,10 +584,12 @@ function SprintPowerHome({
   data,
   blocks,
   faqItems,
+  categoryTitleFont,
 }: {
   data: SprintHomeData
   blocks: ContentBlockResolved[]
   faqItems: ReadonlyArray<{ id: string; question: string; answer: string }>
+  categoryTitleFont: string
 }) {
   const heroProduct = data.featuredProduct
   const heroImage = heroProduct?.photo ?? null
@@ -803,44 +807,62 @@ function SprintPowerHome({
               </Link>
             </div>
             {data.categories.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {data.categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={`/catalog/${category.slug}`}
-                    className="flex flex-col gap-3 rounded-xl bg-[#1E293B] p-4 transition-colors hover:bg-[#243447]"
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-sm font-semibold text-slate-100">{category.title}</p>
-                      {category.catalogTeaser ? (
-                        <>
-                          <p className="text-xs leading-relaxed text-slate-400 line-clamp-3">{category.catalogTeaser}</p>
-                          <p className="text-xs text-slate-500">
+              <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
+                {data.categories.map((category) => {
+                  const bgImage = resolveCategoryImage(category.slug, category.image)
+                  const imagePosition = getCategoryImageObjectPosition(category.slug)
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/catalog/${category.slug}`}
+                      className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
+                    >
+                      <TiltCard>
+                        <div
+                          className={`relative flex min-h-[180px] flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center ${
+                            !bgImage ? 'bg-[#0F172A]' : ''
+                          }`}
+                        >
+                          {bgImage ? (
+                            <>
+                              <Image
+                                src={bgImage}
+                                alt=""
+                                fill
+                                className={imagePosition}
+                                sizes="(max-width: 768px) 50vw, 33vw"
+                              />
+                              <div
+                                className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"
+                                aria-hidden
+                              />
+                            </>
+                          ) : null}
+                          <span
+                            className={`relative z-10 block font-medium drop-shadow-md ${categoryTitleFont} text-lg ${
+                              bgImage ? 'text-white' : 'text-slate-100'
+                            }`}
+                          >
+                            {category.title}
+                          </span>
+                          <span
+                            className={`relative z-10 mt-1 text-sm font-medium drop-shadow ${categoryTitleFont} ${
+                              bgImage ? 'text-white/90' : 'text-slate-400'
+                            }`}
+                          >
                             {category.slug === 'aktsii'
                               ? formatAktsiiCatalogBlockSubtitleRu(
                                   category._count.products,
                                   data.publicGiftPromotionCount
                                 )
                               : formatProductsCountRu(category._count.products)}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-xs text-slate-400">
-                          {category.slug === 'aktsii'
-                            ? formatAktsiiCatalogBlockSubtitleRu(
-                                category._count.products,
-                                data.publicGiftPromotionCount
-                              )
-                            : formatProductsCountRu(category._count.products)}
-                        </p>
-                      )}
-                    </div>
-                    <span className="mt-auto inline-flex w-fit items-center text-xs font-semibold text-[#7AA2FF]">
-                      Подробнее
-                    </span>
-                  </Link>
-                ))}
-              </div>
+                          </span>
+                        </div>
+                      </TiltCard>
+                    </Link>
+                  )
+                })}
+              </FluidGrid>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-600/70 bg-[#1E293B]/50 px-4 py-6 text-center">
                 <p className="text-sm leading-6 text-slate-400">
@@ -1057,12 +1079,27 @@ export default async function HomePage() {
     }
     const emptySprintContentBlocks = [] as ContentBlockResolved[]
     const emptySprintFaqList = [] as Awaited<ReturnType<typeof faqService.getPublishedFaqItems>>
-    const [sprintHomeData, sprintHomeBlocks, sprintFaqItems] = await Promise.all([
+    const [sprintHomeData, sprintHomeBlocks, sprintFaqItems, sprintCatalogBlocks] = await Promise.all([
       withTimeout(getSprintHomeData(), dbTimeoutMs, emptySprintHomeData),
       withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
       withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, emptySprintFaqList),
+      withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
     ])
-    return <SprintPowerHome data={sprintHomeData} blocks={sprintHomeBlocks} faqItems={sprintFaqItems} />
+    const categoriesFontBlock = getBlockByKey(sprintCatalogBlocks, 'categories.fontVariant')
+    const categoryTitleFont =
+      categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
+        ? 'font-sans'
+        : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
+          ? 'font-script'
+          : 'font-display'
+    return (
+      <SprintPowerHome
+        data={sprintHomeData}
+        blocks={sprintHomeBlocks}
+        faqItems={sprintFaqItems}
+        categoryTitleFont={categoryTitleFont}
+      />
+    )
   }
 
   const { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount } =

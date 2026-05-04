@@ -13,6 +13,12 @@ export const CATEGORY_BACKGROUND_IMAGES: Record<string, string> = {
   bulony: '/images/categories/bulony.png',
   aktsii: '/images/categories/aktsii.png',
   'podarkovye-nabory': '/images/categories/podarkovye-nabory.jpg',
+  // Sprint Power — если в БД нет Category.image, те же пути, что и у блока каталога
+  hydro: '/images/catalog/hydro-bento/01-taste.png',
+  bonebroth: '/images/catalog/bonebroth-bento/01.png',
+  'sp-bonebroth': '/images/catalog/bonebroth-bento/01.png',
+  'sp-hydro': '/images/catalog/hydro-bento/01-taste.png',
+  'sp-collagen': '/images/categories/collagen.png',
 }
 
 export function getCategoryBackgroundImage(slug: string): string | undefined {
@@ -29,6 +35,7 @@ export function resolveCategoryImage(
 /** Object position for category card background (so key elements like dropper tip are visible). */
 export function getCategoryImageObjectPosition(slug: string): string {
   if (slug === 'nutrienty') return 'object-cover object-[50%_28%]'
+  if (slug === 'hydro' || slug === 'sp-hydro') return 'object-cover object-[50%_45%]'
   return 'object-cover object-center'
 }
 

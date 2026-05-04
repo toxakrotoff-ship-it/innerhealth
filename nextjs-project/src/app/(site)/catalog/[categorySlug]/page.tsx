@@ -357,7 +357,7 @@ export default async function CategoryPage({ params }: PageProps) {
                     href={`/catalog/${child.slug}`}
                     className={`inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition-colors ${
                       isSprintTheme
-                        ? 'border-slate-600 bg-[#0B1222] text-slate-100 hover:border-[#3B82F6] hover:text-[#7AA2FF]'
+                        ? 'border-slate-600 bg-[#0B1222] text-slate-100 hover:border-[#7AA2FF] hover:text-[#9AB8FF]'
                         : 'border-gray-300 bg-white text-text hover:border-action-blue hover:text-action-blue'
                     }`}
                   >
@@ -406,7 +406,7 @@ export default async function CategoryPage({ params }: PageProps) {
                         key={promo.id}
                         className={`block transition-shadow rounded-2xl ${
                           isSprintTheme
-                            ? 'hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]'
+                            ? 'hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]'
                             : 'hover:shadow-md hover:border-action-blue'
                         }`}
                       >
