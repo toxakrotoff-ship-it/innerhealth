@@ -62,7 +62,12 @@ export default async function AboutPage() {
           <div className="order-2 lg:order-1">
             <TipTapDocRenderer
               raw={block1?.richJson}
-              className={isSprintTheme ? 'prose-invert text-slate-300 [&_p]:text-slate-300 [&_strong]:text-slate-100' : 'text-gray-700'}
+              tone={isSprintTheme ? 'dark' : 'light'}
+              className={
+                isSprintTheme
+                  ? 'prose-invert text-slate-300 [&_p]:text-slate-300 [&_strong]:text-slate-100 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline'
+                  : 'text-gray-700'
+              }
             />
           </div>
           <div
@@ -102,7 +107,12 @@ export default async function AboutPage() {
               </ResponsiveText>
               <TipTapDocRenderer
                 raw={block2Text?.richJson}
-                className={isSprintTheme ? 'prose-invert text-slate-300 [&_p]:text-slate-300 [&_strong]:text-slate-100' : 'text-gray-700'}
+                tone={isSprintTheme ? 'dark' : 'light'}
+                className={
+                  isSprintTheme
+                    ? 'prose-invert text-slate-300 [&_p]:text-slate-300 [&_strong]:text-slate-100 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline'
+                    : 'text-gray-700'
+                }
               />
             </div>
           </div>

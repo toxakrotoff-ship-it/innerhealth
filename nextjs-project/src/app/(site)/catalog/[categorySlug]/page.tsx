@@ -26,6 +26,8 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
 import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
+import { HydroCategoryBenefitsBento } from '@/components/site/hydro-category-benefits-bento'
+import { HYDRO_CATEGORY_BENTO_TILES } from '@/content/hydro-category-bento'
 import { cn } from '@/lib/utils'
 
 function htmlToPlainText(html: string): string {
@@ -496,11 +498,16 @@ export default async function CategoryPage({ params }: PageProps) {
             </FluidGrid>
           )}
 
+          {isSprintTheme && categorySlug === 'hydro' && (
+            <HydroCategoryBenefitsBento tiles={HYDRO_CATEGORY_BENTO_TILES} />
+          )}
+
           {isSprintTheme && hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
             <div className="mt-12 max-w-4xl border-t border-slate-700 pt-10">
               <TipTapDocRenderer
                 raw={category.linePageBodyRichJson}
-                className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600"
+                tone="dark"
+                className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline"
               />
             </div>
           )}

@@ -38,6 +38,32 @@ function parsePositiveInt(value: number | string | null | undefined): number | u
   return Math.round(n)
 }
 
+/** Светлый текст / границы таблицы и цитаты на тёмном фоне (Sprint). */
+type DocTone = 'light' | 'dark'
+
+function tableClasses(tone: DocTone): {
+  table: string
+  tr: string
+  th: string
+  td: string
+} {
+  if (tone === 'dark') {
+    return {
+      table:
+        'tiptap-table min-w-[70%] w-full border-collapse border border-slate-600 text-sm text-slate-200',
+      tr: 'even:bg-slate-800/60 odd:bg-slate-950/45',
+      th: 'border border-slate-600 bg-slate-700 px-3 py-2 text-left font-semibold text-slate-50 align-top',
+      td: 'border border-slate-600 px-3 py-2 align-top text-slate-200',
+    }
+  }
+  return {
+    table: 'tiptap-table min-w-[70%] w-full border-collapse border border-slate-300 text-sm',
+    tr: 'even:bg-slate-50/60',
+    th: 'border border-slate-300 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-900 align-top',
+    td: 'border border-slate-300 px-3 py-2 align-top text-slate-800',
+  }
+}
+
 function renderMarks(
   children: React.ReactNode,
   marks:
@@ -75,7 +101,7 @@ function renderMarks(
   return node
 }
 
-function renderNode(node: TipTapNode, key: number): React.ReactNode {
+function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): React.ReactNode {
   if (!node) return null
 
   const stableKey = `node-${key}-${node.type || 'unknown'}`
@@ -84,7 +110,7 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
     return <span key={stableKey}>{renderMarks(node.text ?? '', node.marks)}</span>
   }
 
-  const children = node.content?.map((n, i) => renderNode(n, i))
+  const children = node.content?.map((n, i) => renderNode(n, i, tone))
 
   switch (node.type) {
     case 'paragraph':
@@ -177,51 +203,59 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
       return (
         <blockquote
           key={stableKey}
-          className="border-l-4 border-gray-300 pl-4 my-4 italic text-gray-700"
+          className={
+            tone === 'dark'
+              ? 'border-l-4 border-slate-500 pl-4 my-4 italic text-slate-300'
+              : 'border-l-4 border-gray-300 pl-4 my-4 italic text-gray-700'
+          }
         >
           {children}
         </blockquote>
       )
-    case 'table':
+    case 'table': {
+      const tc = tableClasses(tone)
       return (
         <div key={stableKey} className="my-6 overflow-x-auto">
-          <table className="tiptap-table min-w-[70%] w-full border-collapse border border-slate-300 text-sm">
+          <table className={tc.table}>
             <tbody>{children}</tbody>
           </table>
         </div>
       )
-    case 'tableRow':
+    }
+    case 'tableRow': {
+      const tc = tableClasses(tone)
       return (
-        <tr key={stableKey} className="even:bg-slate-50/60">
+        <tr key={stableKey} className={tc.tr}>
           {children}
         </tr>
       )
-    case 'tableHeader':
+    }
+    case 'tableHeader': {
+      const tc = tableClasses(tone)
       return (
-        <th
-          key={stableKey}
-          scope="col"
-          className="border border-slate-300 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-900 align-top"
-        >
+        <th key={stableKey} scope="col" className={tc.th}>
           {children}
         </th>
       )
-    case 'tableCell':
+    }
+    case 'tableCell': {
+      const tc = tableClasses(tone)
       return (
-        <td key={stableKey} className="border border-slate-300 px-3 py-2 align-top text-slate-800">
+        <td key={stableKey} className={tc.td}>
           {children}
         </td>
       )
+    }
     default:
       return <Fragment key={stableKey}>{children}</Fragment>
   }
 }
 
-function renderTipTapDoc(content: TipTapNode | null): React.ReactNode {
+function renderTipTapDoc(content: TipTapNode | null, tone: DocTone): React.ReactNode {
   if (!content || content.type !== 'doc' || !Array.isArray(content.content)) {
     return null
   }
-  return content.content.map((node, i) => renderNode(node, i))
+  return content.content.map((node, i) => renderNode(node, i, tone))
 }
 
 const tiptapListStyles = `
@@ -244,12 +278,14 @@ const tiptapListStyles = `
 interface TipTapDocRendererProps {
   raw: unknown
   className?: string
+  /** Таблица и цитата: контрастные цвета на тёмном фоне (линейка Sprint и т.п.). */
+  tone?: DocTone
 }
 
 /**
  * Renders stored TipTap `doc` JSON (or JSON string / plain string fallback).
  */
-export function TipTapDocRenderer({ raw, className = '' }: TipTapDocRendererProps) {
+export function TipTapDocRenderer({ raw, className = '', tone = 'light' }: TipTapDocRendererProps) {
   let normalized: TipTapNode | string | null = raw as TipTapNode | string | null
   if (typeof raw === 'string') {
     try {
@@ -264,7 +300,7 @@ export function TipTapDocRenderer({ raw, className = '' }: TipTapDocRendererProp
     normalized && typeof normalized === 'object' && (normalized as TipTapNode).type === 'doc'
       ? (normalized as TipTapNode)
       : null
-  const tipTapContent = doc ? renderTipTapDoc(doc) : null
+  const tipTapContent = doc ? renderTipTapDoc(doc, tone) : null
   const fallback =
     typeof normalized === 'string' ? (
       <p>{normalized}</p>

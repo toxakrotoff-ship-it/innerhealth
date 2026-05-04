@@ -103,4 +103,44 @@ describe('TipTapDocRenderer', () => {
     expect(container.querySelector('th')?.textContent).toContain('Компонент')
     expect(container.querySelector('td')?.textContent).toContain('100%')
   })
+
+  it('uses high-contrast table cells when tone is dark', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                {
+                  type: 'tableHeader',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'A' }],
+                    },
+                  ],
+                },
+                {
+                  type: 'tableCell',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'B' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} tone="dark" />)
+    expect(container.querySelector('td')?.className).toMatch(/text-slate-200/)
+    expect(container.querySelector('th')?.className).toMatch(/text-slate-50/)
+  })
 })
