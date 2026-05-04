@@ -520,7 +520,10 @@ export async function createCategory(
         await assertFeaturedProductInCategory(cat.id, featuredProductId, effectiveBrandId, tx);
         return tx.category.update({
           where: { id: cat.id },
-          data: { featuredProductId, updatedAt: new Date() },
+          data: {
+            featuredProduct: { connect: { id: featuredProductId } },
+            updatedAt: new Date(),
+          },
         });
       }
       return cat;
@@ -634,9 +637,9 @@ export async function updateCategory(
       const v = normalizeOptionalId(parsed.featuredProductId);
       if (v) {
         await assertFeaturedProductInCategory(id, v, effectiveBrandId);
-        updateData.featuredProductId = v;
+        updateData.featuredProduct = { connect: { id: v } };
       } else {
-        updateData.featuredProductId = null;
+        updateData.featuredProduct = { disconnect: true };
       }
     }
 
