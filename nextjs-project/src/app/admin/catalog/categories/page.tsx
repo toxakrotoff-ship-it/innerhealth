@@ -139,7 +139,10 @@ export default function AdminCategoriesPage() {
     featuredProductId: '',
     linePageBodyRichJson: EMPTY_LINE_DOC,
   });
-  const [error, setError] = useState<string | null>(null);
+  /** Только ошибка первичной загрузки списка — полноэкранный блок */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Ошибки сохранения / удаления / порядка — баннер, список остаётся доступен */
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(
@@ -167,11 +170,19 @@ export default function AdminCategoriesPage() {
   const fetchCategories = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
+      setActionError(null);
       const cats = await getCategories({ brandId: activeBrand });
       setCategories(cats);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      setError('Ошибка загрузки категорий');
+      const hint =
+        error instanceof Error &&
+        (/column .+ does not exist|Unknown column|P2022/i.test(error.message) ||
+          /catalogTeaser|linePageBodyRichJson|featuredProductId/i.test(error.message))
+          ? ' Похоже, не применена миграция БД (поля категории Sprint). Выполните prisma migrate deploy.'
+          : '';
+      setLoadError(`Не удалось загрузить категории.${hint}`);
     } finally {
       setIsLoading(false);
     }
@@ -218,12 +229,13 @@ export default function AdminCategoriesPage() {
         linePageBodyRichJson: EMPTY_LINE_DOC,
       });
       setIsCreating(false);
+      setActionError(null);
     } catch (error) {
       console.error('Error creating category:', error);
       if (error instanceof Error) {
-        setError(`Ошибка при создании категории: ${error.message}`);
+        setActionError(`Ошибка при создании категории: ${error.message}`);
       } else {
-        setError('Ошибка при создании категории');
+        setActionError('Ошибка при создании категории');
       }
     }
   };
@@ -272,12 +284,13 @@ export default function AdminCategoriesPage() {
         featuredProductId: '',
         linePageBodyRichJson: EMPTY_LINE_DOC,
       });
+      setActionError(null);
     } catch (error) {
       console.error('Error updating category:', error);
       if (error instanceof Error) {
-        setError(`Ошибка при обновлении категории: ${error.message}`);
+        setActionError(`Ошибка при обновлении категории: ${error.message}`);
       } else {
-        setError('Ошибка при обновлении категории');
+        setActionError('Ошибка при обновлении категории');
       }
     }
   };
@@ -287,17 +300,19 @@ export default function AdminCategoriesPage() {
     try {
       await deleteCategory(id, { brandId: activeBrand });
       setCategories(categories.filter(cat => cat.id !== id));
+      setActionError(null);
     } catch (error) {
       console.error('Error deleting category:', error);
       if (error instanceof Error) {
-        setError(`Ошибка при удалении категории: ${error.message}`);
+        setActionError(`Ошибка при удалении категории: ${error.message}`);
       } else {
-        setError('Ошибка при удалении категории');
+        setActionError('Ошибка при удалении категории');
       }
     }
   };
 
   const handleEditCategory = (category: Category) => {
+    setActionError(null);
     setEditingCategory(category);
     const rawLine = category.linePageBodyRichJson;
     let lineDoc: JSONContent = EMPTY_LINE_DOC;
@@ -321,6 +336,7 @@ export default function AdminCategoriesPage() {
   };
 
   const handleCancelEdit = () => {
+    setActionError(null);
     setEditingCategory(null);
     setFormData({
       title: '',
@@ -368,7 +384,7 @@ export default function AdminCategoriesPage() {
         );
       } catch (err) {
         console.error('Error reordering categories:', err);
-        if (err instanceof Error) setError(`Ошибка сохранения порядка: ${err.message}`);
+        if (err instanceof Error) setActionError(`Ошибка сохранения порядка: ${err.message}`);
       }
     },
     [flattenedTree]
@@ -408,7 +424,7 @@ export default function AdminCategoriesPage() {
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="admin-container">
         <div className="admin-page-header">
@@ -422,8 +438,8 @@ export default function AdminCategoriesPage() {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
             <div>
-              <p className="font-medium">Ошибка загрузки данных</p>
-              <p className="text-sm">{error}</p>
+              <p className="font-medium">Не удалось загрузить категории</p>
+              <p className="text-sm">{loadError}</p>
             </div>
           </div>
         </div>
@@ -439,10 +455,26 @@ export default function AdminCategoriesPage() {
       </div>
 
       <div className="admin-content">
+        {actionError ? (
+          <div className="alert error mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <p className="text-sm">{actionError}</p>
+            <button
+              type="button"
+              className="shrink-0 text-sm font-medium text-red-800 underline hover:no-underline"
+              onClick={() => setActionError(null)}
+            >
+              Закрыть
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div></div>
           <Button variant="primary"
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setActionError(null);
+              setIsCreating(true);
+            }}
           >
             <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
