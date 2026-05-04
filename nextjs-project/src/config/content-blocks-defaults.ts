@@ -28,8 +28,18 @@ const INNER_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'home', key: 'hero.subtitle' },
   { page: 'home', key: 'home.new.subtitle' },
   { page: 'home', key: 'home.news.subtitle' },
+  {
+    page: 'home',
+    key: 'home.news.showWhenEmpty',
+    adminLabel: 'Новости на главной — показывать блок без постов (1 / да / on)',
+  },
   { page: 'home', key: 'home.catalog.subtitle' },
   { page: 'home', key: 'home.articles.subtitle' },
+  {
+    page: 'home',
+    key: 'home.articles.showWhenEmpty',
+    adminLabel: 'Статьи на главной — показывать блок без постов (1 / да / on)',
+  },
   { page: 'home', key: 'home.reviews.subtitle' },
 ] as const
 
@@ -40,9 +50,19 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'home', key: 'newsBlock.eyebrow' },
   { page: 'home', key: 'newsBlock.title' },
   { page: 'home', key: 'home.news.subtitle' },
+  {
+    page: 'home',
+    key: 'home.news.showWhenEmpty',
+    adminLabel: 'Новости на главной — показывать блок без постов (1 / да / on)',
+  },
   { page: 'home', key: 'articlesBlock.eyebrow' },
   { page: 'home', key: 'articlesBlock.title' },
   { page: 'home', key: 'home.articles.subtitle' },
+  {
+    page: 'home',
+    key: 'home.articles.showWhenEmpty',
+    adminLabel: 'Статьи на главной — показывать блок без постов (1 / да / on)',
+  },
   { page: 'home', key: 'hero.cta.primary' },
   { page: 'home', key: 'hero.cta.secondary' },
   { page: 'home', key: 'hero.featured' },
@@ -305,6 +325,12 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   },
   {
     page: 'home',
+    key: 'home.news.showWhenEmpty',
+    label: 'Новости на главной — показывать без постов',
+    type: 'short',
+  },
+  {
+    page: 'home',
     key: 'home.catalog.subtitle',
     label: 'Разделы каталога — подпись',
     type: 'short',
@@ -318,6 +344,12 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     type: 'short',
     text: 'Полезные материалы о здоровье и нутриентах',
     colorToken: 'text-slate-500',
+  },
+  {
+    page: 'home',
+    key: 'home.articles.showWhenEmpty',
+    label: 'Статьи на главной — показывать без постов',
+    type: 'short',
   },
   {
     page: 'home',
@@ -578,7 +610,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Кросс-бренд — заголовок',
     type: 'short',
     text: 'Inner Health',
-    colorToken: 'text-white',
+    colorToken: 'text-slate-900',
   },
   {
     brand: 'sprint-power',
@@ -586,8 +618,8 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'crossBrand.text',
     label: 'Кросс-бренд — текст',
     type: 'short',
-    text: 'Активное долголетие, превентивная медицина, нутрицевтика.',
-    colorToken: 'text-slate-300',
+    text: 'Inner Health поддерживает здоровье, красоту и молодость, активное долголетие. В ассортименте — инновационные формы пептидного коллагена и суперфуды из грибов: ежовик гребенчатый, рейши, кордицепс, лисичка, траметес и другие виды — с дозировками и схемами приёма, опирающимися на исследования и практику превентивной медицины.',
+    colorToken: 'text-slate-600',
   },
   {
     brand: 'sprint-power',
@@ -595,7 +627,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'crossBrand.cta',
     label: 'Кросс-бренд — CTA',
     type: 'short',
-    text: 'На Inner Health',
+    text: 'Перейти на сайт',
     colorToken: 'text-white',
   },
   {

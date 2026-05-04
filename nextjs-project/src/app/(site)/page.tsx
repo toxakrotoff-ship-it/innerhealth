@@ -54,6 +54,18 @@ const PartnersBlock = nextDynamic(
   { ssr: true }
 )
 
+const InnerHealthCrossBrandBlock = nextDynamic(
+  () =>
+    import('@/components/site/inner-health-cross-brand-block').then((m) => ({
+      default: m.InnerHealthCrossBrandBlock,
+    })),
+  { ssr: true }
+)
+
+/** Fallback when CMS + seed defaults are empty; keep in sync with `crossBrand.text` for sprint-power in content-blocks-defaults. */
+const INNER_HEALTH_SPRINT_CROSS_BRAND_BODY_FALLBACK =
+  'Inner Health поддерживает здоровье, красоту и молодость, активное долголетие. В ассортименте — инновационные формы пептидного коллагена и суперфуды из грибов: ежовик гребенчатый, рейши, кордицепс, лисичка, траметес и другие виды — с дозировками и схемами приёма, опирающимися на исследования и практику превентивной медицины.'
+
 const ReviewsCarousel = nextDynamic(
   () =>
     import('@/components/site/reviews-carousel').then((m) => ({ default: m.ReviewsCarousel })),
@@ -135,6 +147,13 @@ type HomeReview = {
 
 function getBlockByKey(blocks: ContentBlockResolved[], key: string): ContentBlockResolved | null {
   return blocks.find((block) => block.key === key) ?? null
+}
+
+function parseAffirmativeContentBlockFlag(raw: string | null | undefined): boolean {
+  if (raw == null) return false
+  const v = raw.trim().toLowerCase()
+  if (v.length === 0) return false
+  return v === '1' || v === 'true' || v === 'yes' || v === 'y' || v === 'on' || v === 'да'
 }
 
 function getBlockText(blocks: ContentBlockResolved[], key: string, fallback: string): string {
@@ -530,11 +549,18 @@ function SprintPowerHome({
     getBlockTextForBrand(blocks, 'home', 'markers.item3', 'sprint-power', 'Регулярные обзоры'),
   ]
   const reviewsCtaHref = getBlockTextForBrand(blocks, 'home', 'reviewsCta.href', 'sprint-power', '/otzyvy')
+  const showSprintHomeNewsBlock =
+    data.newsPosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(blocks, 'home.news.showWhenEmpty')?.text)
+  const showSprintHomeArticlesBlock =
+    data.articlePosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(blocks, 'home.articles.showWhenEmpty')?.text)
 
   return (
-    <section className="bg-[#060A14] py-10 md:py-12">
-      <AdaptiveContainer maxWidth="full">
-        <div className="space-y-6 rounded-2xl bg-[#060A14]">
+    <>
+      <section className="bg-[#060A14] py-10 md:py-12">
+        <AdaptiveContainer maxWidth="full">
+          <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
               <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">
@@ -758,179 +784,165 @@ function SprintPowerHome({
             )}
           </div>
 
-          <div className="rounded-3xl border border-[#1B2946] bg-[#0A1128] p-6 md:p-8">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7AA2FF]">
-                  {getBlockTextForBrand(blocks, 'home', 'newsBlock.eyebrow', 'sprint-power', 'Контент Sprint')}
-                </p>
-                <h3 className="text-2xl font-bold text-white">
-                  {getBlockTextForBrand(blocks, 'home', 'newsBlock.title', 'sprint-power', 'Новости')}
-                </h3>
-                <p className="max-w-2xl text-sm leading-6 text-slate-300">
-                  {getBlockTextForBrand(
-                    blocks,
-                    'home',
-                    'home.news.subtitle',
-                    'sprint-power',
-                    'Запуски продуктов, обновления линейки и события бренда Sprint Power.'
-                  )}
-                </p>
-              </div>
-              <Link
-                href="/news"
-                className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white md:inline-flex"
-              >
-                Все новости
-              </Link>
-            </div>
-            {data.newsPosts.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                {data.newsPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/news/${post.slug}`}
-                    className="group overflow-hidden rounded-2xl border border-[#1B2946] bg-[#0F172A] transition-all hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]"
-                  >
-                    <div className="relative aspect-[16/10] bg-slate-900">
-                      {post.previewImage ? (
-                        <Image
-                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                          alt={post.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-linear-to-br from-[#12203D] to-[#0B1327]" />
-                      )}
-                      <div className="absolute inset-0 bg-linear-to-t from-[#060A14] via-[#060A14]/40 to-transparent" />
-                      <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 backdrop-blur">
-                        Новость
-                      </span>
-                    </div>
-                    <div className="space-y-3 p-5">
-                      <p className="line-clamp-3 text-base font-semibold leading-6 text-white transition-colors group-hover:text-[#9CC0FF]">
-                        {post.title}
-                      </p>
-                      <p className="text-sm font-medium text-[#7AA2FF]">Открыть новость</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">Пока нет новостей.</p>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-[#D8E4FF] bg-[#EEF4FF] p-6 md:p-8">
-            <div className="mb-6 flex items-end justify-between gap-4">
-              <div className="space-y-2">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#335CFF]">
-                  {getBlockTextForBrand(blocks, 'home', 'articlesBlock.eyebrow', 'sprint-power', 'Материалы и гайды')}
-                </p>
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {getBlockTextForBrand(blocks, 'home', 'articlesBlock.title', 'sprint-power', 'Статьи')}
-                </h3>
-                <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                  {getBlockTextForBrand(
-                    blocks,
-                    'home',
-                    'home.articles.subtitle',
-                    'sprint-power',
-                    'Разборы составов, рекомендации по приёму и материалы про тренировки и восстановление.'
-                  )}
-                </p>
-              </div>
-              <Link
-                href="/informaciya"
-                className="hidden shrink-0 rounded-full border border-[#B5C9FF] px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-[#335CFF] hover:text-[#1D4ED8] md:inline-flex"
-              >
-                Все статьи
-              </Link>
-            </div>
-            {data.articlePosts.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-3">
-                {data.articlePosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/informaciya/${post.slug}`}
-                    className="group overflow-hidden rounded-2xl border border-[#D5E2FF] bg-white transition-all hover:border-[#7AA2FF] hover:shadow-[0_8px_30px_rgba(51,92,255,0.08)]"
-                  >
-                    <div className="relative aspect-[16/10] bg-slate-100">
-                      {post.previewImage ? (
-                        <Image
-                          src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                          alt={post.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                          sizes="(max-width: 768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-linear-to-br from-[#E8EEFF] to-[#D6E4FF]" />
-                      )}
-                      <div className="absolute inset-0 bg-linear-to-t from-[#0F172A]/20 via-transparent to-transparent" />
-                      <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
-                        Статья
-                      </span>
-                    </div>
-                    <div className="space-y-3 p-5">
-                      <p className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition-colors group-hover:text-[#1D4ED8]">
-                        {post.title}
-                      </p>
-                      <p className="text-sm font-medium text-slate-500">Читать материал</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">Пока нет статей.</p>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-3xl bg-[#111D3A]">
-            <div className="flex flex-col gap-8 p-6 md:flex-row md:items-center md:gap-10 md:p-8">
-              <div className="min-w-0 flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-white">
-                  {getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
-                </p>
-                <p className="mt-2 text-sm text-slate-300">
-                  {getBlockTextForBrand(
-                    blocks,
-                    'home',
-                    'crossBrand.text',
-                    'sprint-power',
-                    'Активное долголетие, превентивная медицина, нутрицевтика.'
-                  )}
-                </p>
-                <a
-                  href={innerSiteUrl}
-                  className="mt-4 inline-flex w-fit rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+          {showSprintHomeNewsBlock ? (
+            <div className="rounded-3xl border border-[#1B2946] bg-[#0A1128] p-6 md:p-8">
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7AA2FF]">
+                    {getBlockTextForBrand(blocks, 'home', 'newsBlock.eyebrow', 'sprint-power', 'Контент Sprint')}
+                  </p>
+                  <h3 className="text-2xl font-bold text-white">
+                    {getBlockTextForBrand(blocks, 'home', 'newsBlock.title', 'sprint-power', 'Новости')}
+                  </h3>
+                  <p className="max-w-2xl text-sm leading-6 text-slate-300">
+                    {getBlockTextForBrand(
+                      blocks,
+                      'home',
+                      'home.news.subtitle',
+                      'sprint-power',
+                      'Запуски продуктов, обновления линейки и события бренда Sprint Power.'
+                    )}
+                  </p>
+                </div>
+                <Link
+                  href="/news"
+                  className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white md:inline-flex"
                 >
-                  {getBlockTextForBrand(blocks, 'home', 'crossBrand.cta', 'sprint-power', 'На Inner Health')}
-                </a>
+                  Все новости
+                </Link>
               </div>
-              {/* Same mockup framing as SprintPowerBlock on Inner: slate frame + inset + object-contain */}
-              <div className="mx-auto w-full max-w-[min(100%,20rem)] shrink-0 md:mx-0 md:w-[min(42%,22rem)] lg:max-w-[min(100%,24rem)]">
-                <a href={innerSiteUrl} className="group block">
-                  <div className="relative aspect-square overflow-hidden rounded-[32px] bg-slate-100 md:rounded-[40px] 2xl:rounded-[48px]">
-                    <div className="absolute inset-[7%] sm:inset-[8%] md:inset-[9%]">
-                      <div className="relative h-full w-full">
-                        <Image
-                          src="/images/sprint-power/cross-brand-inner-health.png"
-                          alt="Inner Health — нутрицевтика и превентивная медицина"
-                          fill
-                          className="object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
-                          sizes="(max-width: 768px) 320px, 22rem"
-                        />
+              {data.newsPosts.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {data.newsPosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/news/${post.slug}`}
+                      className="group overflow-hidden rounded-2xl border border-[#1B2946] bg-[#0F172A] transition-all hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]"
+                    >
+                      <div className="relative aspect-[16/10] bg-slate-900">
+                        {post.previewImage ? (
+                          <Image
+                            src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                            alt={post.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-linear-to-br from-[#12203D] to-[#0B1327]" />
+                        )}
+                        <div className="absolute inset-0 bg-linear-to-t from-[#060A14] via-[#060A14]/40 to-transparent" />
+                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 backdrop-blur">
+                          Новость
+                        </span>
                       </div>
-                    </div>
-                  </div>
-                </a>
-              </div>
+                      <div className="space-y-3 p-5">
+                        <p className="line-clamp-3 text-base font-semibold leading-6 text-white transition-colors group-hover:text-[#9CC0FF]">
+                          {post.title}
+                        </p>
+                        <p className="text-sm font-medium text-[#7AA2FF]">Открыть новость</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">Пока нет новостей.</p>
+              )}
             </div>
-          </div>
+          ) : null}
 
+          {showSprintHomeArticlesBlock ? (
+            <div className="rounded-3xl border border-[#D8E4FF] bg-[#EEF4FF] p-6 md:p-8">
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#335CFF]">
+                    {getBlockTextForBrand(blocks, 'home', 'articlesBlock.eyebrow', 'sprint-power', 'Материалы и гайды')}
+                  </p>
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {getBlockTextForBrand(blocks, 'home', 'articlesBlock.title', 'sprint-power', 'Статьи')}
+                  </h3>
+                  <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                    {getBlockTextForBrand(
+                      blocks,
+                      'home',
+                      'home.articles.subtitle',
+                      'sprint-power',
+                      'Разборы составов, рекомендации по приёму и материалы про тренировки и восстановление.'
+                    )}
+                  </p>
+                </div>
+                <Link
+                  href="/informaciya"
+                  className="hidden shrink-0 rounded-full border border-[#B5C9FF] px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-[#335CFF] hover:text-[#1D4ED8] md:inline-flex"
+                >
+                  Все статьи
+                </Link>
+              </div>
+              {data.articlePosts.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {data.articlePosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/informaciya/${post.slug}`}
+                      className="group overflow-hidden rounded-2xl border border-[#D5E2FF] bg-white transition-all hover:border-[#7AA2FF] hover:shadow-[0_8px_30px_rgba(51,92,255,0.08)]"
+                    >
+                      <div className="relative aspect-[16/10] bg-slate-100">
+                        {post.previewImage ? (
+                          <Image
+                            src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
+                            alt={post.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-linear-to-br from-[#E8EEFF] to-[#D6E4FF]" />
+                        )}
+                        <div className="absolute inset-0 bg-linear-to-t from-[#0F172A]/20 via-transparent to-transparent" />
+                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
+                          Статья
+                        </span>
+                      </div>
+                      <div className="space-y-3 p-5">
+                        <p className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition-colors group-hover:text-[#1D4ED8]">
+                          {post.title}
+                        </p>
+                        <p className="text-sm font-medium text-slate-500">Читать материал</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">Пока нет статей.</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </AdaptiveContainer>
+    </section>
+
+    <InnerHealthCrossBrandBlock
+      title={getBlockTextForBrand(blocks, 'home', 'crossBrand.title', 'sprint-power', 'Inner Health')}
+      body={getBlockTextForBrand(
+        blocks,
+        'home',
+        'crossBrand.text',
+        'sprint-power',
+        INNER_HEALTH_SPRINT_CROSS_BRAND_BODY_FALLBACK
+      )}
+      ctaLabel={getBlockTextForBrand(
+        blocks,
+        'home',
+        'crossBrand.cta',
+        'sprint-power',
+        'Перейти на сайт'
+      )}
+      innerSiteUrl={innerSiteUrl}
+    />
+
+    <section className="bg-[#060A14] py-10 md:py-12">
+      <AdaptiveContainer maxWidth="full">
+        <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <PartnersBlock brand="sprint-power" useInnerStyling />
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
@@ -954,6 +966,7 @@ function SprintPowerHome({
         </div>
       </AdaptiveContainer>
     </section>
+    </>
   )
 }
 
@@ -1012,6 +1025,12 @@ export default async function HomePage() {
         : 'font-display'
 
   const howToOrder = getHowToOrderContent(homeBlocks)
+  const showHomeNewsSection =
+    newsPosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.news.showWhenEmpty')?.text)
+  const showHomeArticlesSection =
+    articlePosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.articles.showWhenEmpty')?.text)
 
   return (
     <div>
@@ -1232,153 +1251,155 @@ export default async function HomePage() {
         title={howToOrder.title}
         steps={howToOrder.steps}
       />
-      <SpacingVertical size="lg" />
+      {(showHomeNewsSection || showHomeArticlesSection) && <SpacingVertical size="lg" />}
 
-      {/* Новости — делаем карточки в стиле категорий */}
-      <section
-        id="news"
-        className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 scroll-mt-24"
-      >
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
-              </p>
+      {showHomeNewsSection ? (
+        <section
+          id="news"
+          className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 scroll-mt-24"
+        >
+          <AdaptiveContainer maxWidth="default">
+            <div className="flex justify-between items-end mb-10 sm:mb-12">
+              <div className="space-y-1">
+                <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
+                <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+                  {newsSubtitle?.text ?? 'Актуальные события и обновления'}
+                </p>
+              </div>
+              <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+                ВСЕ НОВОСТИ
+                <NavArrowRight className="w-4 h-4" aria-hidden />
+              </Link>
             </div>
-            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ НОВОСТИ
-              <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {newsPosts.length > 0 ? (
-            <ScrollReveal as="div" variant="fade-up">
-              <FluidGrid
-                cols={1}
-                colsTablet={2}
-                colsDesktop={3}
-                colsXl={3}
-                cols2xl={3}
-                cols3xl={3}
-                cols4xl={3}
-                gap={4}
-                adaptiveGap
-              >
-                {newsPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/news/${post.slug}`}
-                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                  >
-                    <TiltCard>
-                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                        {post.previewImage && (
-                          <>
-                            <Image
-                              src={post.previewImage}
-                              alt={post.title}
-                              fill
-                              className="object-cover object-center"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            />
-                            <div
-                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
-                              aria-hidden
-                            />
-                          </>
-                        )}
-                        <div className="relative z-10 space-y-2 max-w-xs">
-                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
-                            Новость
-                          </span>
-                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                            {post.title}
-                          </span>
+            {newsPosts.length > 0 ? (
+              <ScrollReveal as="div" variant="fade-up">
+                <FluidGrid
+                  cols={1}
+                  colsTablet={2}
+                  colsDesktop={3}
+                  colsXl={3}
+                  cols2xl={3}
+                  cols3xl={3}
+                  cols4xl={3}
+                  gap={4}
+                  adaptiveGap
+                >
+                  {newsPosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/news/${post.slug}`}
+                      className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                    >
+                      <TiltCard>
+                        <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                          {post.previewImage && (
+                            <>
+                              <Image
+                                src={post.previewImage}
+                                alt={post.title}
+                                fill
+                                className="object-cover object-center"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              />
+                              <div
+                                className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                                aria-hidden
+                              />
+                            </>
+                          )}
+                          <div className="relative z-10 space-y-2 max-w-xs">
+                            <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
+                              Новость
+                            </span>
+                            <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                              {post.title}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </TiltCard>
-                  </Link>
-                ))}
-              </FluidGrid>
-            </ScrollReveal>
-          ) : (
-            <p className="text-gray-500">Пока нет новостей.</p>
-          )}
-        </AdaptiveContainer>
-      </section>
-      <SpacingVertical size="lg" />
+                      </TiltCard>
+                    </Link>
+                  ))}
+                </FluidGrid>
+              </ScrollReveal>
+            ) : (
+              <p className="text-gray-500">Пока нет новостей.</p>
+            )}
+          </AdaptiveContainer>
+        </section>
+      ) : null}
+      {showHomeNewsSection && showHomeArticlesSection ? <SpacingVertical size="lg" /> : null}
 
-      {/* Статьи */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
-              </p>
+      {showHomeArticlesSection ? (
+        <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+          <AdaptiveContainer maxWidth="default">
+            <div className="flex justify-between items-end mb-10 sm:mb-12">
+              <div className="space-y-1">
+                <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
+                <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+                  {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
+                </p>
+              </div>
+              <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+                ВСЕ СТАТЬИ
+                <NavArrowRight className="w-4 h-4" aria-hidden />
+              </Link>
             </div>
-            <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ СТАТЬИ
-              <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {articlePosts.length > 0 ? (
-            <ScrollReveal as="div" variant="fade-up">
-              <FluidGrid
-                cols={1}
-                colsTablet={2}
-                colsDesktop={3}
-                colsXl={3}
-                cols2xl={3}
-                cols3xl={3}
-                cols4xl={3}
-                gap={4}
-                adaptiveGap
-              >
-                {articlePosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/informaciya/${post.slug}`}
-                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                  >
-                    <TiltCard>
-                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                        {post.previewImage && (
-                          <>
-                            <Image
-                              src={post.previewImage}
-                              alt={post.title}
-                              fill
-                              className="object-cover object-center"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            />
-                            <div
-                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
-                              aria-hidden
-                            />
-                          </>
-                        )}
-                        <div className="relative z-10 space-y-2 max-w-xs">
-                          <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
-                            Статья
-                          </span>
-                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                            {post.title}
-                          </span>
+            {articlePosts.length > 0 ? (
+              <ScrollReveal as="div" variant="fade-up">
+                <FluidGrid
+                  cols={1}
+                  colsTablet={2}
+                  colsDesktop={3}
+                  colsXl={3}
+                  cols2xl={3}
+                  cols3xl={3}
+                  cols4xl={3}
+                  gap={4}
+                  adaptiveGap
+                >
+                  {articlePosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      href={`/informaciya/${post.slug}`}
+                      className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                    >
+                      <TiltCard>
+                        <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                          {post.previewImage && (
+                            <>
+                              <Image
+                                src={post.previewImage}
+                                alt={post.title}
+                                fill
+                                className="object-cover object-center"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                              />
+                              <div
+                                className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                                aria-hidden
+                              />
+                            </>
+                          )}
+                          <div className="relative z-10 space-y-2 max-w-xs">
+                            <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
+                              Статья
+                            </span>
+                            <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                              {post.title}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </TiltCard>
-                  </Link>
-                ))}
-              </FluidGrid>
-            </ScrollReveal>
-          ) : (
-            <p className="text-gray-500">Пока нет статей.</p>
-          )}
-        </AdaptiveContainer>
-      </section>
+                      </TiltCard>
+                    </Link>
+                  ))}
+                </FluidGrid>
+              </ScrollReveal>
+            ) : (
+              <p className="text-gray-500">Пока нет статей.</p>
+            )}
+          </AdaptiveContainer>
+        </section>
+      ) : null}
       {/* No SpacingVertical here: margin would show main’s bg-white between two bg-slate-50 sections */}
 
       {/* Отзывы */}
