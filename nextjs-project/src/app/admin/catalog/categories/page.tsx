@@ -31,7 +31,7 @@ import {
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
-import { RichTextEditor } from '@/app/admin/news/components/RichTextEditor';
+import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
 
 const EMPTY_LINE_DOC: JSONContent = { type: 'doc', content: [] };
 
@@ -54,7 +54,7 @@ function formatCategoryActionError(context: string, error: unknown): string {
     return `${context} Устаревший кэш после обновления сервера. Жёсткое обновление страницы (Ctrl+Shift+R / Cmd+Shift+R).`;
   }
   if (/An error occurred in the Server Components render/i.test(raw)) {
-    return `${context} На сервере упал рендер (в production текст скрыт). Проверьте логи приложения по digest из ответа.`;
+    return `${context} Next.js скрыл детали (часто — сбой сериализации ответа Server Action или слишком большой payload). Список категорий после сохранения подгружается отдельным запросом; если ошибка повторяется — проверьте логи сервера по digest и лимит тела запроса (см. serverActions.bodySizeLimit в next.config).`;
   }
   return `${context} ${raw}`;
 }
@@ -187,6 +187,12 @@ export default function AdminCategoriesPage() {
     return descendants;
   }, [categoryTree, editingCategory]);
 
+  const migrationHint = (message: string): string =>
+    /column .+ does not exist|Unknown column|P2022/i.test(message) ||
+    /catalogTeaser|linePageBodyRichJson|featuredProductId/i.test(message)
+      ? ' Похоже, не применена миграция БД (поля категории Sprint). Выполните prisma migrate deploy.'
+      : '';
+
   const fetchCategories = async () => {
     try {
       setIsLoading(true);
@@ -196,15 +202,21 @@ export default function AdminCategoriesPage() {
       setCategories(cats);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      const hint =
-        error instanceof Error &&
-        (/column .+ does not exist|Unknown column|P2022/i.test(error.message) ||
-          /catalogTeaser|linePageBodyRichJson|featuredProductId/i.test(error.message))
-          ? ' Похоже, не применена миграция БД (поля категории Sprint). Выполните prisma migrate deploy.'
-          : '';
-      setLoadError(`Не удалось загрузить категории.${hint}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      setLoadError(`Не удалось загрузить категории.${migrationHint(msg)}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /** После create/update без тяжёлого ответа action — снижает риск ошибки сериализации Flight. */
+  const refetchCategoriesSilent = async (): Promise<void> => {
+    try {
+      const cats = await getCategories({ brandId: activeBrand });
+      setCategories(cats);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new Error(`Не удалось обновить список категорий.${migrationHint(msg)}`);
     }
   };
 
@@ -215,7 +227,7 @@ export default function AdminCategoriesPage() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newCategory = await createCategory(
+      await createCategory(
         {
           title: formData.title,
           slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
@@ -235,8 +247,8 @@ export default function AdminCategoriesPage() {
         },
         { brandId: activeBrand }
       );
-      
-      setCategories([...categories, newCategory]);
+
+      await refetchCategoriesSilent();
       setFormData({
         title: '',
         slug: '',
@@ -261,7 +273,7 @@ export default function AdminCategoriesPage() {
     if (!editingCategory) return;
     
     try {
-      const updatedCategory = await updateCategory(
+      await updateCategory(
         editingCategory.id,
         {
           title: formData.title,
@@ -282,12 +294,8 @@ export default function AdminCategoriesPage() {
         },
         { brandId: activeBrand }
       );
-      
-      const updatedCategories = categories.map(cat =>
-        cat.id === editingCategory.id ? updatedCategory : cat
-      );
-      
-      setCategories(updatedCategories);
+
+      await refetchCategoriesSilent();
       setEditingCategory(null);
       setFormData({
         title: '',
@@ -565,6 +573,9 @@ export default function AdminCategoriesPage() {
 
               {activeBrand === 'sprint-power' ? (
                 <>
+                  <p className="text-xs text-slate-700 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
+                    Ниже — только витрина Sprint Power (главная и страница категории). На Inner Health эти данные не показываются и при сохранении категорий Inner в БД не записываются.
+                  </p>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Тизер для главной (блок «Вся линейка»)
@@ -598,7 +609,8 @@ export default function AdminCategoriesPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Текст под сеткой каталога (страница категории)
                     </label>
-                    <RichTextEditor
+                    <SprintCategoryLineEditor
+                      key={editingCategory?.id ?? (isCreating ? 'create' : 'idle')}
                       value={formData.linePageBodyRichJson}
                       onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
                       placeholder="Описание линейки, таблицы, юридические абзацы…"

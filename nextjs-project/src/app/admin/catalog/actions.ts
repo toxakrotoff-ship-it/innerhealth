@@ -10,6 +10,7 @@ import type { BrandId } from '@/lib/brand/brand';
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
 import {
+  isSprintPowerBrand,
   productBelongsToBrandScope,
 } from '@/lib/brand/brand-scope';
 
@@ -24,8 +25,9 @@ export interface Category {
   catalogTeaser?: string | null;
   linePageBodyRichJson?: Prisma.JsonValue | null;
   featuredProductId?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  /** ISO-8601 из Server Actions / JSON (без объектов Date в ответе). */
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface CategoryInput {
@@ -70,6 +72,9 @@ const categoryInputSchema = z.object({
 
 const categoryUpdateSchema = categoryInputSchema.partial();
 
+/** ~450 KB JSON — защита прокси и Server Action от чрезмерного тела. */
+const MAX_LINE_PAGE_JSON_CHARS = 450_000;
+
 function formatZodCategoryError(err: ZodError): string {
   const parts = err.issues.map((issue) => `${issue.path.join('.') || 'данные'}: ${issue.message}`);
   return parts.length > 0 ? parts.join('; ') : 'Некорректные данные категории';
@@ -84,7 +89,54 @@ function linePageJsonForWrite(
   return value as Prisma.InputJsonValue;
 }
 
-function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
+/** Клиент не может подставить Sprint-поля при админке Inner — выкидываем до zod/Prisma. */
+function stripSprintOnlyCategoryFields<T extends Partial<CategoryInput> | CategoryInput>(
+  payload: T,
+  brandId: BrandId
+): T {
+  if (isSprintPowerBrand(brandId)) return payload;
+  const rest = { ...(payload as Record<string, unknown>) };
+  delete rest.catalogTeaser;
+  delete rest.linePageBodyRichJson;
+  delete rest.featuredProductId;
+  return rest as T;
+}
+
+function assertSprintLinePageBodyWithinLimit(value: unknown): void {
+  if (value === undefined || value === null) return;
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    throw new Error('Текст страницы категории содержит недопустимые данные.');
+  }
+  if (serialized.length > MAX_LINE_PAGE_JSON_CHARS) {
+    const kb = Math.round(serialized.length / 1024);
+    const limitKb = Math.round(MAX_LINE_PAGE_JSON_CHARS / 1024);
+    throw new Error(
+      `Текст под сеткой слишком большой (${kb} KB). Сократите объём или уберите лишние вставки (лимит ~${limitKb} KB).`
+    );
+  }
+}
+
+const innerCategoryAdminListSelect = {
+  id: true,
+  brand: true,
+  title: true,
+  slug: true,
+  image: true,
+  sortOrder: true,
+  parentId: true,
+  showInCategoriesBlock: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.CategorySelect;
+
+type InnerCategoryAdminListRow = Prisma.CategoryGetPayload<{
+  select: typeof innerCategoryAdminListSelect;
+}>;
+
+function mapInnerCategoryAdminListRow(row: InnerCategoryAdminListRow): Category {
   return {
     id: row.id,
     title: row.title,
@@ -93,14 +145,32 @@ function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
     sortOrder: row.sortOrder,
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
-    catalogTeaser: row.catalogTeaser ?? null,
+    catalogTeaser: null,
+    linePageBodyRichJson: null,
+    featuredProductId: null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
+  const sprintRow = isSprintPowerBrand(row.brand as BrandId);
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    image: row.image,
+    sortOrder: row.sortOrder,
+    parentId: row.parentId,
+    showInCategoriesBlock: row.showInCategoriesBlock,
+    catalogTeaser: sprintRow ? (row.catalogTeaser ?? null) : null,
     linePageBodyRichJson:
-      row.linePageBodyRichJson == null
-        ? null
-        : (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue),
-    featuredProductId: row.featuredProductId ?? null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+      sprintRow && row.linePageBodyRichJson != null
+        ? (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue)
+        : null,
+    featuredProductId: sprintRow ? (row.featuredProductId ?? null) : null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -208,22 +278,19 @@ export async function getCategoriesWithCounts(
     }
     
     // Используем Prisma для получения категорий с количеством товаров
+    const orderBy = [
+      { parentId: 'asc' as const },
+      { sortOrder: 'asc' as const },
+      { title: 'asc' as const },
+    ];
+
     const categories = await prisma.category.findMany({
       where: { brand: dbBrand },
       select: {
-        id: true,
-        brand: true,
-        title: true,
-        slug: true,
-        image: true,
-        sortOrder: true,
-        parentId: true,
-        showInCategoriesBlock: true,
-        catalogTeaser: true,
-        linePageBodyRichJson: true,
-        featuredProductId: true,
-        createdAt: true,
-        updatedAt: true,
+        ...innerCategoryAdminListSelect,
+        ...(isSprintPowerBrand(effectiveBrandId)
+          ? { catalogTeaser: true, linePageBodyRichJson: true, featuredProductId: true }
+          : {}),
         products: {
           select: {
             product: {
@@ -234,17 +301,16 @@ export async function getCategoriesWithCounts(
           },
         },
       },
-      orderBy: [
-        { parentId: 'asc' },
-        { sortOrder: 'asc' },
-        { title: 'asc' }
-      ]
+      orderBy,
     });
 
     return categories.map((row) => {
       const { products, ...cat } = row;
+      const base = isSprintPowerBrand(effectiveBrandId)
+        ? mapPrismaCategoryToAdmin(cat as PrismaCategory)
+        : mapInnerCategoryAdminListRow(cat as InnerCategoryAdminListRow);
       return {
-        ...mapPrismaCategoryToAdmin(cat as PrismaCategory),
+        ...base,
         productCount: products.filter((item) =>
           productBelongsToBrandScope(item.product.brand, effectiveBrandId)
         ).length,
@@ -343,16 +409,27 @@ export async function getCategories(options: BrandScopeOptions = {}): Promise<Ca
       throw new Error('Database connection is not initialized');
     }
     
+    const orderBy = [
+      { parentId: 'asc' as const },
+      { sortOrder: 'asc' as const },
+      { title: 'asc' as const },
+    ];
+
+    if (isSprintPowerBrand(effectiveBrandId)) {
+      const categories = await prisma.category.findMany({
+        where: { brand: dbBrand },
+        orderBy,
+      });
+      return categories.map(mapPrismaCategoryToAdmin);
+    }
+
     const categories = await prisma.category.findMany({
       where: { brand: dbBrand },
-      orderBy: [
-        { parentId: 'asc' },
-        { sortOrder: 'asc' },
-        { title: 'asc' }
-      ]
+      select: innerCategoryAdminListSelect,
+      orderBy,
     });
 
-    return categories.map(mapPrismaCategoryToAdmin);
+    return categories.map(mapInnerCategoryAdminListRow);
   } catch (error) {
     console.error('Error fetching categories:', error);
     // Возвращаем пустой массив вместо выброса ошибки для устойчивости
@@ -383,7 +460,7 @@ export async function getCategory(id: string): Promise<Category | null> {
 export async function createCategory(
   data: CategoryInput,
   options: BrandScopeOptions = {}
-): Promise<Category> {
+): Promise<void> {
   const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
   const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
@@ -400,17 +477,22 @@ export async function createCategory(
       throw new Error('Category model is not available in database connection');
     }
     
+    const dataScoped = stripSprintOnlyCategoryFields(data, effectiveBrandId);
     const parsed = categoryInputSchema.parse({
-      ...data,
-      slug: data.slug.trim().toLowerCase(),
-      image: data.image?.trim() ? data.image.trim() : null,
-      parentId: data.parentId?.trim() ? data.parentId.trim() : null,
-      sortOrder: data.sortOrder ?? null,
-      showInCategoriesBlock: data.showInCategoriesBlock ?? true,
-      catalogTeaser: data.catalogTeaser?.trim() ? data.catalogTeaser.trim() : null,
-      linePageBodyRichJson: data.linePageBodyRichJson,
-      featuredProductId: data.featuredProductId,
+      ...dataScoped,
+      slug: dataScoped.slug.trim().toLowerCase(),
+      image: dataScoped.image?.trim() ? dataScoped.image.trim() : null,
+      parentId: dataScoped.parentId?.trim() ? dataScoped.parentId.trim() : null,
+      sortOrder: dataScoped.sortOrder ?? null,
+      showInCategoriesBlock: dataScoped.showInCategoriesBlock ?? true,
+      catalogTeaser: dataScoped.catalogTeaser?.trim() ? dataScoped.catalogTeaser.trim() : null,
+      linePageBodyRichJson: dataScoped.linePageBodyRichJson,
+      featuredProductId: dataScoped.featuredProductId,
     });
+
+    if (isSprintPowerBrand(effectiveBrandId)) {
+      assertSprintLinePageBodyWithinLimit(parsed.linePageBodyRichJson);
+    }
 
     await ensureCategoryParentExists(parsed.parentId, effectiveBrandId);
     await ensureNoCategoryCycle(null, parsed.parentId);
@@ -446,7 +528,6 @@ export async function createCategory(
 
     revalidateCategoryPaths([category.slug]);
     revalidatePath('/admin/catalog');
-    return mapPrismaCategoryToAdmin(category);
   } catch (error) {
     console.error('Error creating category:', error);
     if (error instanceof ZodError) {
@@ -473,7 +554,7 @@ export async function updateCategory(
   id: string,
   data: Partial<CategoryInput>,
   options: BrandScopeOptions = {}
-): Promise<Category> {
+): Promise<void> {
   const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
   const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
@@ -490,25 +571,35 @@ export async function updateCategory(
       throw new Error('Категория не найдена в выбранном бренде');
     }
 
+    const dataScoped = stripSprintOnlyCategoryFields(data, effectiveBrandId);
     const parsed = categoryUpdateSchema.parse({
-      ...data,
+      ...dataScoped,
       slug:
-        data.slug === undefined
+        dataScoped.slug === undefined
           ? undefined
-          : data.slug.trim().toLowerCase(),
-      image: data.image === undefined ? undefined : data.image?.trim() ? data.image.trim() : null,
-      parentId: data.parentId === undefined ? undefined : data.parentId?.trim() ? data.parentId.trim() : null,
-      sortOrder: data.sortOrder ?? null,
-      showInCategoriesBlock: data.showInCategoriesBlock,
-      catalogTeaser:
-        data.catalogTeaser === undefined
+          : dataScoped.slug.trim().toLowerCase(),
+      image: dataScoped.image === undefined ? undefined : dataScoped.image?.trim() ? dataScoped.image.trim() : null,
+      parentId:
+        dataScoped.parentId === undefined
           ? undefined
-          : data.catalogTeaser?.trim()
-            ? data.catalogTeaser.trim()
+          : dataScoped.parentId?.trim()
+            ? dataScoped.parentId.trim()
             : null,
-      linePageBodyRichJson: data.linePageBodyRichJson,
-      featuredProductId: data.featuredProductId,
+      sortOrder: dataScoped.sortOrder ?? null,
+      showInCategoriesBlock: dataScoped.showInCategoriesBlock,
+      catalogTeaser:
+        dataScoped.catalogTeaser === undefined
+          ? undefined
+          : dataScoped.catalogTeaser?.trim()
+            ? dataScoped.catalogTeaser.trim()
+            : null,
+      linePageBodyRichJson: dataScoped.linePageBodyRichJson,
+      featuredProductId: dataScoped.featuredProductId,
     });
+
+    if (isSprintPowerBrand(effectiveBrandId) && parsed.linePageBodyRichJson !== undefined) {
+      assertSprintLinePageBodyWithinLimit(parsed.linePageBodyRichJson);
+    }
 
     if (parsed.parentId !== undefined) {
       await ensureCategoryParentExists(parsed.parentId, effectiveBrandId);
@@ -549,7 +640,7 @@ export async function updateCategory(
       }
     }
 
-    const category = await prisma.category.update({
+    await prisma.category.update({
       where: { id },
       data: updateData as Parameters<typeof prisma.category.update>[0]['data'],
     });
@@ -561,7 +652,6 @@ export async function updateCategory(
     }
     revalidateCategoryPaths(Array.from(slugsToRevalidate));
     revalidatePath('/admin/catalog');
-    return mapPrismaCategoryToAdmin(category);
   } catch (error) {
     console.error('Error updating category:', error);
     if (error instanceof ZodError) {

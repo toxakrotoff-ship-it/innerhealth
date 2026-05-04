@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
       static: 300, // 5 min for static/prefetched (e.g. catalog with revalidate)
       dynamic: 30, // 30 s for dynamic segments
     },
+    /** Длинный TipTap JSON в Server Actions категорий */
+    serverActions: {
+      bodySizeLimit: '4mb',
+    },
   },
   /** Редиректы со старых URL (Tilda, смена путей) на текущий сайт. Добавляйте пары source → destination. */
   async redirects() {
