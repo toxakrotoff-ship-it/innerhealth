@@ -65,7 +65,7 @@ const categoryInputSchema = z.object({
   showInCategoriesBlock: z.boolean().optional(),
   catalogTeaser: z.string().max(20000).nullable().optional(),
   linePageBodyRichJson: z.unknown().optional(),
-  featuredProductId: z.string().optional(),
+  featuredProductId: z.string().nullable().optional(),
 });
 
 const categoryUpdateSchema = categoryInputSchema.partial();
