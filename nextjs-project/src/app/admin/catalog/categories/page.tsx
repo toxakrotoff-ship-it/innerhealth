@@ -39,6 +39,11 @@ function isEmptyLineDoc(doc: JSONContent): boolean {
   return !doc.content || doc.content.length === 0;
 }
 
+/** Убирает вложенные `undefined` — иначе аргументы Server Action могут не сериализоваться. */
+function lineDocToJsonValue(doc: JSONContent): Prisma.JsonValue {
+  return JSON.parse(JSON.stringify(doc)) as Prisma.JsonValue;
+}
+
 /** Человекочитаемое сообщение для типичных ошибок Next.js после деплоя / skew версий */
 function formatCategoryActionError(context: string, error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -224,7 +229,7 @@ export default function AdminCategoriesPage() {
                 featuredProductId: formData.featuredProductId.trim() || null,
                 linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
                   ? undefined
-                  : (formData.linePageBodyRichJson as Prisma.JsonValue),
+                  : lineDocToJsonValue(formData.linePageBodyRichJson),
               }
             : {}),
         },
@@ -271,7 +276,7 @@ export default function AdminCategoriesPage() {
                 featuredProductId: formData.featuredProductId.trim() || null,
                 linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
                   ? null
-                  : (formData.linePageBodyRichJson as Prisma.JsonValue),
+                  : lineDocToJsonValue(formData.linePageBodyRichJson),
               }
             : {}),
         },

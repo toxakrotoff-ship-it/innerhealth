@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { buildCatalogRevalidationPaths, revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
 import { cookies, headers } from 'next/headers';
-import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import { z, ZodError } from 'zod';
+import { Prisma, type Category as PrismaCategory } from '@prisma/client';
 import type { BrandId } from '@/lib/brand/brand';
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
@@ -69,6 +69,40 @@ const categoryInputSchema = z.object({
 });
 
 const categoryUpdateSchema = categoryInputSchema.partial();
+
+function formatZodCategoryError(err: ZodError): string {
+  const parts = err.issues.map((issue) => `${issue.path.join('.') || 'данные'}: ${issue.message}`);
+  return parts.length > 0 ? parts.join('; ') : 'Некорректные данные категории';
+}
+
+/** JSONB: `null` в JS — не то же самое, что NULL в БД; для очистки поля нужен `DbNull`. */
+function linePageJsonForWrite(
+  value: unknown | null | undefined
+): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return Prisma.DbNull;
+  return value as Prisma.InputJsonValue;
+}
+
+function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    image: row.image,
+    sortOrder: row.sortOrder,
+    parentId: row.parentId,
+    showInCategoriesBlock: row.showInCategoriesBlock,
+    catalogTeaser: row.catalogTeaser ?? null,
+    linePageBodyRichJson:
+      row.linePageBodyRichJson == null
+        ? null
+        : (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue),
+    featuredProductId: row.featuredProductId ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
 
 function normalizeOptionalId(value: string | null | undefined): string | null {
   if (value == null) return null;
@@ -178,12 +212,16 @@ export async function getCategoriesWithCounts(
       where: { brand: dbBrand },
       select: {
         id: true,
+        brand: true,
         title: true,
         slug: true,
         image: true,
         sortOrder: true,
         parentId: true,
         showInCategoriesBlock: true,
+        catalogTeaser: true,
+        linePageBodyRichJson: true,
+        featuredProductId: true,
         createdAt: true,
         updatedAt: true,
         products: {
@@ -202,14 +240,16 @@ export async function getCategoriesWithCounts(
         { title: 'asc' }
       ]
     });
-    
-    // Преобразуем результат в нужный формат
-    return categories.map(category => ({
-      ...category,
-      productCount: category.products.filter((item) =>
-        productBelongsToBrandScope(item.product.brand, effectiveBrandId)
-      ).length
-    }));
+
+    return categories.map((row) => {
+      const { products, ...cat } = row;
+      return {
+        ...mapPrismaCategoryToAdmin(cat as PrismaCategory),
+        productCount: products.filter((item) =>
+          productBelongsToBrandScope(item.product.brand, effectiveBrandId)
+        ).length,
+      };
+    });
   } catch (error) {
     console.error('Error fetching categories with counts:', error);
     return [];
@@ -237,8 +277,7 @@ export async function getProductCategories(productId: string): Promise<Category[
       }
     });
     
-    // Возвращаем только категории без промежуточных данных
-    return productCategories.map(pc => pc.category);
+    return productCategories.map((pc) => mapPrismaCategoryToAdmin(pc.category));
   } catch (error) {
     console.error('Error fetching product categories:', error);
     return [];
@@ -304,8 +343,6 @@ export async function getCategories(options: BrandScopeOptions = {}): Promise<Ca
       throw new Error('Database connection is not initialized');
     }
     
-    console.log('Fetching categories from DB...');
-    // Используем Prisma напрямую для получения категорий
     const categories = await prisma.category.findMany({
       where: { brand: dbBrand },
       orderBy: [
@@ -314,9 +351,8 @@ export async function getCategories(options: BrandScopeOptions = {}): Promise<Ca
         { title: 'asc' }
       ]
     });
-    
-    console.log('Categories from DB:', categories);
-    return categories;
+
+    return categories.map(mapPrismaCategoryToAdmin);
   } catch (error) {
     console.error('Error fetching categories:', error);
     // Возвращаем пустой массив вместо выброса ошибки для устойчивости
@@ -335,8 +371,8 @@ export async function getCategory(id: string): Promise<Category | null> {
     const category = await prisma.category.findUnique({
       where: { id }
     });
-    
-    return category;
+
+    return category ? mapPrismaCategoryToAdmin(category) : null;
   } catch (error) {
     console.error('Error fetching category:', error);
     return null;
@@ -380,10 +416,7 @@ export async function createCategory(
     await ensureNoCategoryCycle(null, parsed.parentId);
 
     const featuredProductId = normalizeOptionalId(parsed.featuredProductId);
-    const lineJson =
-      parsed.linePageBodyRichJson === undefined
-        ? undefined
-        : (parsed.linePageBodyRichJson as Prisma.InputJsonValue | typeof Prisma.JsonNull);
+    const lineJson = linePageJsonForWrite(parsed.linePageBodyRichJson);
 
     const category = await prisma.$transaction(async (tx) => {
       const cat = await tx.category.create({
@@ -413,10 +446,21 @@ export async function createCategory(
 
     revalidateCategoryPaths([category.slug]);
     revalidatePath('/admin/catalog');
-    return category;
+    return mapPrismaCategoryToAdmin(category);
   } catch (error) {
     console.error('Error creating category:', error);
-    console.error('Error type:', typeof error);
+    if (error instanceof ZodError) {
+      throw new Error(formatZodCategoryError(error));
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new Error('Категория с таким slug уже существует для этого бренда.');
+      }
+      if (error.code === 'P2022') {
+        throw new Error('Схема БД устарела: выполните миграции Prisma для таблицы категорий.');
+      }
+      throw new Error(`Ошибка БД (${error.code}): ${error.message}`);
+    }
     if (error instanceof Error) {
       throw new Error(`Failed to create category: ${error.message}`);
     }
@@ -490,7 +534,10 @@ export async function updateCategory(
       updateData.catalogTeaser = parsed.catalogTeaser;
     }
     if (parsed.linePageBodyRichJson !== undefined) {
-      updateData.linePageBodyRichJson = parsed.linePageBodyRichJson as Prisma.InputJsonValue;
+      const lineJson = linePageJsonForWrite(parsed.linePageBodyRichJson);
+      if (lineJson !== undefined) {
+        updateData.linePageBodyRichJson = lineJson;
+      }
     }
     if (parsed.featuredProductId !== undefined) {
       const v = normalizeOptionalId(parsed.featuredProductId);
@@ -514,9 +561,21 @@ export async function updateCategory(
     }
     revalidateCategoryPaths(Array.from(slugsToRevalidate));
     revalidatePath('/admin/catalog');
-    return category;
+    return mapPrismaCategoryToAdmin(category);
   } catch (error) {
     console.error('Error updating category:', error);
+    if (error instanceof ZodError) {
+      throw new Error(formatZodCategoryError(error));
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        throw new Error('Категория с таким slug уже существует для этого бренда.');
+      }
+      if (error.code === 'P2022') {
+        throw new Error('Схема БД устарела: выполните миграции Prisma для таблицы категорий.');
+      }
+      throw new Error(`Ошибка БД (${error.code}): ${error.message}`);
+    }
     if (error instanceof Error) {
       throw new Error(`Failed to update category: ${error.message}`);
     }
