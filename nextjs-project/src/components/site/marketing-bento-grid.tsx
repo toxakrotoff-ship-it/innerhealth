@@ -56,7 +56,13 @@ function MarketingBentoTileView({
             src={tile.imageSrc}
             alt=""
             fill
-            className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
+            className={cn(
+              'object-cover transition-transform duration-500 group-hover:scale-[1.03]',
+              !tile.imageObjectPosition && 'object-center'
+            )}
+            style={
+              tile.imageObjectPosition ? { objectPosition: tile.imageObjectPosition } : undefined
+            }
             sizes="(max-width: 1024px) 100vw, 25vw"
           />
           <div

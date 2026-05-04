@@ -58,54 +58,65 @@ export const COLLAGEN_MARKETING_BENTO_TILE_LAYOUT_CLASSES: readonly string[] = [
   'lg:col-start-3 lg:row-start-4 lg:col-span-1 lg:row-span-1 min-h-[130px]',
 ]
 
-/** Файлы: `public/images/catalog/collagen-bento/01-…08-*.png` (порядок совпадает с плитками ниже). */
+/**
+ * Файлы: `public/images/catalog/collagen-bento/01-…08-*.png`.
+ * `imageObjectPosition` — подгонка фокуса под `object-cover`, чтобы не резало фигуры в плитках.
+ */
 export const COLLAGEN_CATEGORY_BENTO_TILES: readonly MarketingBentoTile[] = [
   {
     id: 'joints',
     title: 'Уменьшают боль в суставах (особенно боль, связанную с физической активностью)',
     body: 'Коллаген улучшает состояние хрящей и соединительной ткани (сухожилий и связок), снижает дискомфорт в суставах и повышает подвижность; способствует умеренному противовоспалительному эффекту.',
     imageSrc: '/images/catalog/collagen-bento/01-joints.png',
+    imageObjectPosition: '50% 28%',
   },
   {
     id: 'connective',
     title: 'Поддерживают соединительную ткань и помогают снизить риск травм',
     body: 'Достаточный уровень коллагена важен для прочности связок и сухожилий. Коллаген также участвует в процессах заживления без избыточного рубцового фиброза.',
     imageSrc: '/images/catalog/collagen-bento/02-connective.png',
+    imageObjectPosition: '62% 45%',
   },
   {
     id: 'amino',
     title: 'Незаменимый источник аминокислот',
     body: 'Содержит 19 аминокислот и восемь из девяти незаменимых, которые организм получает из пищи. Высокое содержание пролина, аланина, глицина, гидроксипролина и аргинина связано с синтезом креатина и может поддерживать силу и выносливость при сокращении мышц.',
     imageSrc: '/images/catalog/collagen-bento/03-amino.png',
+    imageObjectPosition: '50% 38%',
   },
   {
     id: 'nitrogen',
     title: 'Помогают поддерживать положительный баланс азота',
     body: 'Сбалансированный азотный баланс способствует анаболическому фону, который важен для роста и восстановления мышечной ткани.',
     imageSrc: '/images/catalog/collagen-bento/04-nitrogen.png',
+    imageObjectPosition: '50% 48%',
   },
   {
     id: 'mass',
     title: 'Помогают увеличить мышечную массу',
     body: 'Пептиды коллагена участвуют в оптимизации синтеза креатина, что может ускорять набор сухой мышечной массы после нагрузок. Добавки с коллагеном в ряде исследований ассоциировались с улучшением силы и объёма мышц и с защитой от возрастной утраты мышечной ткани.',
     imageSrc: '/images/catalog/collagen-bento/05-mass.png',
+    imageObjectPosition: '48% 52%',
   },
   {
     id: 'recovery',
     title: 'Помогут ускорить восстановление мышц',
     body: 'Белок коллагена даёт аминокислоты — строительный материал для мышц и фактор восстановления после стресса, вызванного тренировкой.',
     imageSrc: '/images/catalog/collagen-bento/06-recovery.png',
+    imageObjectPosition: '50% 40%',
   },
   {
     id: 'metabolism',
     title: 'Помогут ускорить метаболизм',
     body: 'Глутамин, глицин, аргинин и другие аминокислоты из коллагена участвуют в синтезе белка мышц и могут поддерживать более активный расход энергии.',
     imageSrc: '/images/catalog/collagen-bento/07-metabolism.png',
+    imageObjectPosition: '48% 42%',
   },
   {
     id: 'performance',
     title: 'Улучшают спортивные результаты',
     body: 'Сокращение мышц в тренировке опирается на креатин из аргинина, метионина и глицина. В коллагене много глицина и заметная доля аргинина — это поддерживает естественный синтез креатина в организме.',
     imageSrc: '/images/catalog/collagen-bento/08-performance.png',
+    imageObjectPosition: '44% 46%',
   },
 ]
