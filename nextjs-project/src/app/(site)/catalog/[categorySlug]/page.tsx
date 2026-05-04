@@ -106,7 +106,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {}
   }
 
-  const content = getCategoryPageContent(categorySlug)
+  const content = getCategoryPageContent(categorySlug, activeBrand)
   const brandSite = getBrandSiteConfig(activeBrand)
   let description = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
   if (content?.paragraphs?.length) {
@@ -274,7 +274,7 @@ export default async function CategoryPage({ params }: PageProps) {
   const products = filterVisibleProducts(category.products.map((pc) => pc.product))
   const listingItems = groupProductsForListing(products)
   const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
-  const content = getCategoryPageContent(categorySlug)
+  const content = getCategoryPageContent(categorySlug, activeBrand)
   const hasHero = Boolean(content?.heroImage)
   const hasDescription =
     content &&

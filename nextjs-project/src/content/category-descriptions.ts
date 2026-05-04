@@ -1,7 +1,12 @@
 /**
  * Hero and description content for catalog category pages.
  * Keys are category slugs. Local image paths are under /images/categories/
+ *
+ * Записи с копирайтом Inner Health не показываются на витрине Sprint Power — см. `getCategoryPageContent`.
  */
+
+import type { BrandId } from '@/lib/brand/brand'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 export interface CategoryPageContent {
   /** Local path for hero image (e.g. /images/categories/gribnaya-kollekciya.jpg) */
@@ -103,6 +108,22 @@ export const CATEGORY_PAGE_CONTENT: Record<string, CategoryPageContent> = {
   },
 }
 
-export function getCategoryPageContent(slug: string): CategoryPageContent | undefined {
-  return CATEGORY_PAGE_CONTENT[slug]
+/** Slugs, для которых текст/герой в этом файле — про Inner Health; на Sprint не подмешиваем. */
+const INNER_MARKETING_CATEGORY_SLUGS = new Set<string>([
+  'collagen',
+  'gribnaya-kollekciya',
+  'bulony',
+  'nutrienty',
+])
+
+export function getCategoryPageContent(
+  slug: string,
+  brandId?: BrandId | null
+): CategoryPageContent | undefined {
+  const entry = CATEGORY_PAGE_CONTENT[slug]
+  if (!entry) return undefined
+  if (brandId != null && isSprintPowerBrand(brandId) && INNER_MARKETING_CATEGORY_SLUGS.has(slug)) {
+    return undefined
+  }
+  return entry
 }
