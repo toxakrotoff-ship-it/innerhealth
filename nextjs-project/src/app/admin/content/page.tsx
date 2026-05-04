@@ -491,8 +491,6 @@ export default function AdminContentPage() {
                         updateBlock(selectedBlock.key, { richJson: value })
                       }
                       placeholder="Введите текст..."
-                      uploadedMedia={[]}
-                      onMediaUploaded={() => {}}
                     />
                   </div>
                 )}

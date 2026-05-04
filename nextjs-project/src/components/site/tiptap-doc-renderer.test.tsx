@@ -62,4 +62,45 @@ describe('TipTapDocRenderer', () => {
     expect(img?.className).toMatch(/max-h-\[min\(85vh,56rem\)\]/)
     expect(img?.className).toMatch(/h-auto/)
   })
+
+  it('renders TipTap table nodes', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                {
+                  type: 'tableHeader',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'Компонент' }],
+                    },
+                  ],
+                },
+                {
+                  type: 'tableCell',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: '100%' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} />)
+    expect(container.querySelector('table')).not.toBeNull()
+    expect(container.querySelector('th')?.textContent).toContain('Компонент')
+    expect(container.querySelector('td')?.textContent).toContain('100%')
+  })
 })

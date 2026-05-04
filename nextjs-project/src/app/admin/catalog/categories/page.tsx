@@ -614,8 +614,6 @@ export default function AdminCategoriesPage() {
                       value={formData.linePageBodyRichJson}
                       onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
                       placeholder="Описание линейки, таблицы, юридические абзацы…"
-                      uploadedMedia={[]}
-                      onMediaUploaded={() => {}}
                     />
                   </div>
                 </>

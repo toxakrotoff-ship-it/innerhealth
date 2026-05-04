@@ -138,8 +138,6 @@ export function SitePopupForm({ initialValue }: SitePopupFormProps) {
               }))
             }
             placeholder="Введите текст попапа: заголовок, описание, форматирование…"
-            uploadedMedia={[]}
-            onMediaUploaded={() => {}}
           />
         </div>
 

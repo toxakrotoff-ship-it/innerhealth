@@ -7,6 +7,7 @@ import Underline from '@tiptap/extension-underline';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
+import { TableKit } from '@tiptap/extension-table';
 import type { JSONContent } from '@tiptap/core';
 import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
@@ -325,6 +326,81 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
       <span className="w-px h-5 bg-gray-300 mx-1" />
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() =>
+          editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+        }
+        className={`px-2 py-1 rounded text-sm ${editor.isActive('table') ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+        title="Вставить таблицу 3×3 с шапкой (удобно для состава)"
+      >
+        Таблица
+      </button>
+      {editor.isActive('table') ? (
+        <>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            className="px-2 py-1 rounded text-sm hover:bg-gray-200 disabled:opacity-40"
+            disabled={!editor.can().addColumnAfter()}
+            title="Колонка справа"
+          >
+            +кол
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            className="px-2 py-1 rounded text-sm hover:bg-gray-200 disabled:opacity-40"
+            disabled={!editor.can().addRowAfter()}
+            title="Строка ниже"
+          >
+            +стр
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+            className="px-2 py-1 rounded text-sm hover:bg-gray-200 disabled:opacity-40"
+            disabled={!editor.can().deleteColumn()}
+            title="Удалить колонку"
+          >
+            −кол
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().deleteRow().run()}
+            className="px-2 py-1 rounded text-sm hover:bg-gray-200 disabled:opacity-40"
+            disabled={!editor.can().deleteRow()}
+            title="Удалить строку"
+          >
+            −стр
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+            className="px-2 py-1 rounded text-sm hover:bg-gray-200"
+            title="Переключить строку шапки"
+          >
+            Шапка
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            className="px-2 py-1 rounded text-sm text-red-700 hover:bg-red-50"
+            title="Удалить таблицу"
+          >
+            Удалить табл.
+          </button>
+        </>
+      ) : null}
+
+      <span className="w-px h-5 bg-gray-300 mx-1" />
+      <button
+        type="button"
         onClick={() => setMediaPanelOpen((o) => !o)}
         className={`px-2 py-1 rounded text-sm ${mediaPanelOpen ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
         title="Вставить изображение"
@@ -366,6 +442,11 @@ const LIST_STYLES = `
   .rich-text-editor-content ul ul, .rich-text-editor-content ol ul { margin: 0.2em 0; padding-left: 1.25rem; }
   .rich-text-editor-content ol ol, .rich-text-editor-content ul ol { margin: 0.2em 0; padding-left: 1.25rem; }
   .rich-text-editor-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; margin: 0.75em 0; color: #374151; font-style: italic; }
+  .rich-text-editor-content .tableWrapper { margin: 0.75rem 0; overflow-x: auto; }
+  .rich-text-editor-content table { border-collapse: collapse; width: 100%; table-layout: auto; }
+  .rich-text-editor-content th, .rich-text-editor-content td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; vertical-align: top; min-width: 4rem; }
+  .rich-text-editor-content th { background: #f3f4f6; font-weight: 600; }
+  .rich-text-editor-content td p, .rich-text-editor-content th p { margin: 0; }
 `;
 
 export function RichTextEditor({
@@ -435,6 +516,9 @@ export function RichTextEditor({
           },
         },
       }),
+      TableKit.configure({
+        table: { resizable: false },
+      }),
     ],
     content: value ?? undefined,
     editable: !disabled,
@@ -477,6 +561,11 @@ export function RichTextEditor({
         .rich-text-editor-content a:hover {
           color: #1e40af;
         }
+        .rich-text-editor-content .tableWrapper { margin: 0.75rem 0; overflow-x: auto; }
+        .rich-text-editor-content table { border-collapse: collapse; width: 100%; }
+        .rich-text-editor-content th, .rich-text-editor-content td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; vertical-align: top; }
+        .rich-text-editor-content th { background: #f3f4f6; font-weight: 600; }
+        .rich-text-editor-content td p, .rich-text-editor-content th p { margin: 0; }
         ${LIST_STYLES}
       `}} />
       <MenuBar

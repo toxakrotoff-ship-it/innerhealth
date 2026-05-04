@@ -182,6 +182,36 @@ function renderNode(node: TipTapNode, key: number): React.ReactNode {
           {children}
         </blockquote>
       )
+    case 'table':
+      return (
+        <div key={stableKey} className="my-6 overflow-x-auto">
+          <table className="tiptap-table min-w-[70%] w-full border-collapse border border-slate-300 text-sm">
+            <tbody>{children}</tbody>
+          </table>
+        </div>
+      )
+    case 'tableRow':
+      return (
+        <tr key={stableKey} className="even:bg-slate-50/60">
+          {children}
+        </tr>
+      )
+    case 'tableHeader':
+      return (
+        <th
+          key={stableKey}
+          scope="col"
+          className="border border-slate-300 bg-slate-100 px-3 py-2 text-left font-semibold text-slate-900 align-top"
+        >
+          {children}
+        </th>
+      )
+    case 'tableCell':
+      return (
+        <td key={stableKey} className="border border-slate-300 px-3 py-2 align-top text-slate-800">
+          {children}
+        </td>
+      )
     default:
       return <Fragment key={stableKey}>{children}</Fragment>
   }
@@ -207,6 +237,8 @@ const tiptapListStyles = `
   .tiptap-list-ordered[data-marker-style="decimal"] li::before { content: counters(item, ".") ". "; margin-right: 0.35rem; }
   .tiptap-list-ordered[data-marker-style="decimal-paren"] li::before { content: counters(item, ".") ") "; margin-right: 0.35rem; }
   .tiptap-list-bullet ul, .tiptap-list-bullet ol, .tiptap-list-ordered ul, .tiptap-list-ordered ol { margin-top: 0.25em; padding-left: 1.25rem; }
+  .tiptap-table td p, .tiptap-table th p { margin: 0 0 0.35rem 0; }
+  .tiptap-table td p:last-child, .tiptap-table th p:last-child { margin-bottom: 0; }
 `
 
 interface TipTapDocRendererProps {
