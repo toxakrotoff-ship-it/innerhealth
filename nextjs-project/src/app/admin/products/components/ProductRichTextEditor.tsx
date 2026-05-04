@@ -2,26 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { generateJSON, generateHTML, type JSONContent } from '@tiptap/core'
-import StarterKit from '@tiptap/starter-kit'
-import Underline from '@tiptap/extension-underline'
-import Image from '@tiptap/extension-image'
-import Placeholder from '@tiptap/extension-placeholder'
-import { CustomBulletList } from '@/app/admin/news/components/editor-extensions/custom-bullet-list'
-import { CustomOrderedList } from '@/app/admin/news/components/editor-extensions/custom-ordered-list'
 import { RichTextEditor } from '@/app/admin/news/components/RichTextEditor'
-
-const EDITOR_EXTENSIONS = [
-  StarterKit.configure({
-    heading: { levels: [1, 2, 3] },
-    bulletList: false,
-    orderedList: false,
-  }),
-  CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
-  CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),
-  Underline,
-  Image.configure({ inline: false }),
-  Placeholder.configure({ placeholder: 'Введите текст...' }),
-]
+import { buildRichTextEditorExtensions } from '@/app/admin/news/components/rich-text-editor-extensions'
+import type { UploadedImage } from '@/app/admin/news/components/EditorMediaPanel'
 
 interface ProductRichTextEditorProps {
   value: string
@@ -42,8 +25,9 @@ export function ProductRichTextEditor({
   disabled,
   className,
 }: ProductRichTextEditorProps) {
-  const extensions = useMemo(() => EDITOR_EXTENSIONS, [])
+  const extensions = useMemo(() => buildRichTextEditorExtensions(placeholder), [placeholder])
   const lastEmittedRef = useRef<string | null>(null)
+  const [sessionUploadedMedia, setSessionUploadedMedia] = useState<UploadedImage[]>([])
   const [localJson, setLocalJson] = useState<JSONContent | null>(() => {
     if (typeof value !== 'string' || !value.trim()) return null
     try {
@@ -81,6 +65,8 @@ export function ProductRichTextEditor({
       placeholder={placeholder}
       disabled={disabled}
       className={className}
+      uploadedMedia={sessionUploadedMedia}
+      onMediaUploaded={(img) => setSessionUploadedMedia((prev) => [...prev, img])}
     />
   )
 }

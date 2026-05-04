@@ -26,6 +26,7 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
 import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
+import { cn } from '@/lib/utils'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -254,6 +255,7 @@ export default async function CategoryPage({ params }: PageProps) {
 
   const products = filterVisibleProducts(category.products.map((pc) => pc.product))
   const listingItems = groupProductsForListing(products)
+  const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
   const content = getCategoryPageContent(categorySlug)
   const hasHero = Boolean(content?.heroImage)
   const hasDescription =
@@ -451,16 +453,20 @@ export default async function CategoryPage({ params }: PageProps) {
             </p>
           ) : (
             <FluidGrid
-              cols={2}
-              colsTablet={3}
-              colsDesktop={4}
-              colsXl={5}
-              cols2xl={5}
-              cols3xl={6}
-              cols4xl={6}
+              cols={sprintSingleProductListing ? 1 : 2}
+              colsTablet={sprintSingleProductListing ? 1 : 3}
+              colsDesktop={sprintSingleProductListing ? 1 : 4}
+              colsXl={sprintSingleProductListing ? 1 : 5}
+              cols2xl={sprintSingleProductListing ? 1 : 5}
+              cols3xl={sprintSingleProductListing ? 1 : 6}
+              cols4xl={sprintSingleProductListing ? 1 : 6}
               gap="6"
               adaptiveGap={false}
-              className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+              className={cn(
+                sprintSingleProductListing
+                  ? 'mx-auto w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,24rem)] md:max-w-[min(100%,26rem)] lg:max-w-[min(100%,28rem)] xl:max-w-[min(100%,30rem)] 2xl:max-w-[min(100%,32rem)] 3xl:max-w-[min(100%,34rem)] 4xl:max-w-[min(100%,36rem)] 5xl:max-w-[min(100%,38rem)] 6xl:max-w-[min(100%,40rem)] gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24'
+                  : 'max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24'
+              )}
             >
               {listingItems.map((item, index) =>
                 item.kind === 'single' ? (

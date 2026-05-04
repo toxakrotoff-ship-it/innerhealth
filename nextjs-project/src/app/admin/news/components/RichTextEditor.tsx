@@ -1,17 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Image from '@tiptap/extension-image';
-import Placeholder from '@tiptap/extension-placeholder';
-import Link from '@tiptap/extension-link';
-import { TableKit } from '@tiptap/extension-table';
 import type { JSONContent } from '@tiptap/core';
-import { CustomBulletList, BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
-import { CustomOrderedList, ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
-import { ProductLink } from './editor-extensions/product-link-suggestion';
+import { BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
+import { ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
+import { buildRichTextEditorExtensions } from './rich-text-editor-extensions';
 import { EditorMediaPanel, type UploadedImage } from './EditorMediaPanel';
 import { EditorLinkPopover } from './editor-link-popover';
 
@@ -463,63 +457,11 @@ export function RichTextEditor({
   const onMediaUploaded =
     onMediaUploadedProp ?? ((img: UploadedImage) => setUploadedMediaInternal((prev) => [...prev, img]));
 
+  const extensions = useMemo(() => buildRichTextEditorExtensions(placeholder), [placeholder]);
+
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        bulletList: false,
-        orderedList: false,
-      }),
-      CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
-      CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),
-      Underline,
-      Image.configure({ inline: false }),
-      Placeholder.configure({ placeholder }),
-      Link.configure({
-        openOnClick: false,
-        autolink: false,
-        linkOnPaste: false,
-        HTMLAttributes: {
-          target: '_blank',
-          rel: 'noopener noreferrer',
-        },
-      }),
-      ProductLink.configure({
-        HTMLAttributes: {
-          class: 'text-blue-700 underline decoration-blue-300 hover:text-blue-800',
-          target: '_blank',
-          rel: 'noopener noreferrer',
-        },
-        suggestion: {
-          char: '@',
-          items: async ({ query }) => {
-            const trimmed = query.trim();
-            if (!trimmed) return [];
-            try {
-              const controller = new AbortController();
-              const res = await fetch(`/api/catalog/suggest?q=${encodeURIComponent(trimmed)}&limit=8`, {
-                signal: controller.signal,
-                credentials: 'include',
-              });
-              if (!res.ok) return [];
-              const data = (await res.json()) as {
-                id: string;
-                title: string;
-                slug: string | null;
-                sku: string | null;
-              }[];
-              return data;
-            } catch {
-              return [];
-            }
-          },
-        },
-      }),
-      TableKit.configure({
-        table: { resizable: false },
-      }),
-    ],
+    extensions,
     content: value ?? undefined,
     editable: !disabled,
     onUpdate: ({ editor }) => {
