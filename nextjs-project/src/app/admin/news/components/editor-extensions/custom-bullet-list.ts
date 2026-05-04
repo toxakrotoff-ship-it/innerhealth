@@ -20,15 +20,6 @@ export interface CustomBulletListOptions {
   keepAttributes: boolean;
 }
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    bulletList: {
-      toggleBulletList: () => ReturnType;
-      updateBulletListMarker: (marker: BulletMarkerType) => ReturnType;
-    };
-  }
-}
-
 export const bulletListInputRegex = /^\s*([-+*])\s$/;
 
 export const CustomBulletList = Node.create<CustomBulletListOptions>({

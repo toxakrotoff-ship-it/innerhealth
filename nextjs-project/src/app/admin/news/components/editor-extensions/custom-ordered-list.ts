@@ -19,15 +19,6 @@ export interface CustomOrderedListOptions {
   keepAttributes: boolean;
 }
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    orderedList: {
-      toggleOrderedList: () => ReturnType;
-      updateOrderedListMarker: (marker: OrderedMarkerType) => ReturnType;
-    };
-  }
-}
-
 export const CustomOrderedList = Node.create<CustomOrderedListOptions>({
   name: 'orderedList',
 

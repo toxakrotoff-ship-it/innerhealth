@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import type { JSONContent } from '@tiptap/core';
+import type { Editor, JSONContent } from '@tiptap/core';
 import { BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
 import { buildRichTextEditorExtensions } from './rich-text-editor-extensions';
@@ -25,6 +25,25 @@ interface MenuBarProps {
   editor: ReturnType<typeof useEditor>;
   uploadedMedia: UploadedImage[];
   onMediaUploaded: (img: UploadedImage) => void;
+}
+
+/**
+ * CustomBulletList / CustomOrderedList register these on the editor at runtime.
+ * StarterKit's `ChainedCommands` typings only expose `toggleBulletList` / `toggleOrderedList`, so
+ * `next build` tsc fails on `.updateBulletListMarker` unless we narrow here.
+ */
+function runUpdateBulletListMarker(editor: Editor, marker: BulletMarkerType): void {
+  const chain = editor.chain().focus() as unknown as {
+    updateBulletListMarker: (m: BulletMarkerType) => { run: () => boolean };
+  };
+  chain.updateBulletListMarker(marker).run();
+}
+
+function runUpdateOrderedListMarker(editor: Editor, marker: OrderedMarkerType): void {
+  const chain = editor.chain().focus() as unknown as {
+    updateOrderedListMarker: (m: OrderedMarkerType) => { run: () => boolean };
+  };
+  chain.updateOrderedListMarker(marker).run();
 }
 
 function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
@@ -222,10 +241,10 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
                 type="button"
                 onClick={() => {
                   if (editor.isActive('bulletList')) {
-                    editor.chain().focus().updateBulletListMarker(value as BulletMarkerType).run();
+                    runUpdateBulletListMarker(editor, value as BulletMarkerType);
                   } else {
                     editor.chain().focus().toggleList('bulletList', 'listItem').run();
-                    editor.chain().focus().updateBulletListMarker(value as BulletMarkerType).run();
+                    runUpdateBulletListMarker(editor, value as BulletMarkerType);
                   }
                   setBulletOpen(false);
                 }}
@@ -264,10 +283,10 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
                 type="button"
                 onClick={() => {
                   if (editor.isActive('orderedList')) {
-                    editor.chain().focus().updateOrderedListMarker(value as OrderedMarkerType).run();
+                    runUpdateOrderedListMarker(editor, value as OrderedMarkerType);
                   } else {
                     editor.chain().focus().toggleList('orderedList', 'listItem').run();
-                    editor.chain().focus().updateOrderedListMarker(value as OrderedMarkerType).run();
+                    runUpdateOrderedListMarker(editor, value as OrderedMarkerType);
                   }
                   setOrderedOpen(false);
                 }}
