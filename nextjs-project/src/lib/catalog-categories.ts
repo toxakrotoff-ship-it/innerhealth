@@ -44,6 +44,18 @@ const CATEGORY_IMAGE_SLUG_ALIASES: Record<string, string> = {
   'gidro-protein': 'hydro',
 }
 
+function dedupeKeys(keys: readonly string[]): string[] {
+  const seen: Record<string, true> = {}
+  const out: string[] = []
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i]
+    if (seen[k]) continue
+    seen[k] = true
+    out.push(k)
+  }
+  return out
+}
+
 /** Варианты slug для поиска файла в {@link CATEGORY_BACKGROUND_IMAGES} (регистр, префикс sp-, алиасы). */
 function expandCategorySlugKeys(slug: string): readonly string[] {
   const s = slug.trim().toLowerCase()
@@ -51,7 +63,7 @@ function expandCategorySlugKeys(slug: string): readonly string[] {
   if (s.startsWith('sp-')) keys.push(s.slice(3))
   const alias = CATEGORY_IMAGE_SLUG_ALIASES[s]
   if (alias) keys.push(alias)
-  return [...new Set(keys)]
+  return dedupeKeys(keys)
 }
 
 export function getCategoryBackgroundImage(slug: string): string | undefined {
