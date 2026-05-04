@@ -80,6 +80,8 @@ model Product {
   categories                           ProductCategory[]
   quickOrders                          QuickOrder[]
   giftPromotions                       GiftPromotion[]
+  /// Категории, где этот товар показан как «главный» в блоке линейки
+  categoriesFeaturedFor                Category[]        @relation("CategoryFeaturedProduct")
 
   @@index([slug])
   @@index([createdAt])
@@ -102,6 +104,13 @@ model Category {
   sortOrder             Int?
   /// Показывать категорию в блоке «Разделы каталога» на главной и в каталоге
   showInCategoriesBlock Boolean           @default(true)
+  /// Короткий тизер в блоке «Вся линейка» на главной Sprint (опционально)
+  catalogTeaser         String?
+  /// Длинный контент страницы категории (TipTap JSON), под сеткой товаров
+  linePageBodyRichJson  Json?
+  /// Товар для верхнего блока «купить» на странице линейки (должен входить в эту категорию)
+  featuredProductId     String?
+  featuredProduct       Product?          @relation("CategoryFeaturedProduct", fields: [featuredProductId], references: [id], onDelete: SetNull)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   parentId              String?
@@ -110,6 +119,7 @@ model Category {
   products              ProductCategory[]
 
   @@index([parentId])
+  @@index([featuredProductId])
   @@unique([brand, slug])
   @@index([brand, parentId])
   @@index([brand, showInCategoriesBlock, sortOrder])

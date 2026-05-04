@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
+import { buildCatalogRevalidationPaths, revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
 import { cookies, headers } from 'next/headers';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
@@ -21,6 +21,9 @@ export interface Category {
   sortOrder?: number | null;
   parentId?: string | null;
   showInCategoriesBlock: boolean;
+  catalogTeaser?: string | null;
+  linePageBodyRichJson?: Prisma.JsonValue | null;
+  featuredProductId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +35,9 @@ interface CategoryInput {
   sortOrder?: number | null;
   parentId?: string | null;
   showInCategoriesBlock?: boolean;
+  catalogTeaser?: string | null;
+  linePageBodyRichJson?: Prisma.JsonValue | null;
+  featuredProductId?: string | null;
 }
 
 interface BrandScopeOptions {
@@ -57,9 +63,49 @@ const categoryInputSchema = z.object({
   sortOrder: z.number().int().nullable().optional(),
   parentId: z.string().trim().nullable().optional(),
   showInCategoriesBlock: z.boolean().optional(),
+  catalogTeaser: z.string().max(20000).nullable().optional(),
+  linePageBodyRichJson: z.unknown().optional(),
+  featuredProductId: z.string().optional(),
 });
 
 const categoryUpdateSchema = categoryInputSchema.partial();
+
+function normalizeOptionalId(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const t = value.trim();
+  return t.length > 0 ? t : null;
+}
+
+type ProductCategoryDelegate = Pick<typeof prisma, 'productCategory'>;
+
+async function assertFeaturedProductInCategory(
+  categoryId: string,
+  productId: string,
+  brandId: BrandId,
+  db: ProductCategoryDelegate = prisma
+): Promise<void> {
+  const link = await db.productCategory.findFirst({
+    where: { categoryId, productId },
+    include: {
+      product: { select: { brand: true, isDraft: true } },
+    },
+  });
+  if (!link) {
+    throw new Error('Товар для блока линейки должен быть привязан к этой категории (карточка товара → категории).');
+  }
+  if (link.product.isDraft) {
+    throw new Error('Нельзя выбрать черновик как товар линейки.');
+  }
+  if (!productBelongsToBrandScope(link.product.brand, brandId)) {
+    throw new Error('Товар не относится к бренду этой витрины.');
+  }
+}
+
+function revalidateCategoryPaths(slugs: string[]): void {
+  for (const path of buildCatalogRevalidationPaths(slugs)) {
+    revalidatePath(path);
+  }
+}
 
 async function ensureCategoryParentExists(
   parentId: string | null | undefined,
@@ -325,29 +371,48 @@ export async function createCategory(
       parentId: data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
       showInCategoriesBlock: data.showInCategoriesBlock ?? true,
+      catalogTeaser: data.catalogTeaser?.trim() ? data.catalogTeaser.trim() : null,
+      linePageBodyRichJson: data.linePageBodyRichJson,
+      featuredProductId: data.featuredProductId,
     });
 
     await ensureCategoryParentExists(parsed.parentId, effectiveBrandId);
     await ensureNoCategoryCycle(null, parsed.parentId);
 
-    // Используем Prisma напрямую для создания категории, чтобы избежать проблем с генерацией ID
-    const category = await prisma.category.create({
-      data: {
-        brand: dbBrand,
-        title: parsed.title,
-        slug: parsed.slug,
-        image: parsed.image,
-        sortOrder: parsed.sortOrder,
-        parentId: parsed.parentId,
-        showInCategoriesBlock: parsed.showInCategoriesBlock ?? true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+    const featuredProductId = normalizeOptionalId(parsed.featuredProductId);
+    const lineJson =
+      parsed.linePageBodyRichJson === undefined
+        ? undefined
+        : (parsed.linePageBodyRichJson as Prisma.InputJsonValue | typeof Prisma.JsonNull);
+
+    const category = await prisma.$transaction(async (tx) => {
+      const cat = await tx.category.create({
+        data: {
+          brand: dbBrand,
+          title: parsed.title,
+          slug: parsed.slug,
+          image: parsed.image,
+          sortOrder: parsed.sortOrder,
+          parentId: parsed.parentId,
+          showInCategoriesBlock: parsed.showInCategoriesBlock ?? true,
+          catalogTeaser: parsed.catalogTeaser ?? null,
+          ...(lineJson !== undefined ? { linePageBodyRichJson: lineJson } : {}),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      if (featuredProductId) {
+        await assertFeaturedProductInCategory(cat.id, featuredProductId, effectiveBrandId, tx);
+        return tx.category.update({
+          where: { id: cat.id },
+          data: { featuredProductId, updatedAt: new Date() },
+        });
       }
+      return cat;
     });
-    
+
+    revalidateCategoryPaths([category.slug]);
     revalidatePath('/admin/catalog');
-    revalidatePath('/');
-    revalidatePath('/catalog');
     return category;
   } catch (error) {
     console.error('Error creating category:', error);
@@ -375,7 +440,7 @@ export async function updateCategory(
     
     const existingCategory = await prisma.category.findUnique({
       where: { id },
-      select: { brand: true },
+      select: { brand: true, slug: true },
     });
     if (!existingCategory || existingCategory.brand !== dbBrand) {
       throw new Error('Категория не найдена в выбранном бренде');
@@ -391,6 +456,14 @@ export async function updateCategory(
       parentId: data.parentId === undefined ? undefined : data.parentId?.trim() ? data.parentId.trim() : null,
       sortOrder: data.sortOrder ?? null,
       showInCategoriesBlock: data.showInCategoriesBlock,
+      catalogTeaser:
+        data.catalogTeaser === undefined
+          ? undefined
+          : data.catalogTeaser?.trim()
+            ? data.catalogTeaser.trim()
+            : null,
+      linePageBodyRichJson: data.linePageBodyRichJson,
+      featuredProductId: data.featuredProductId,
     });
 
     if (parsed.parentId !== undefined) {
@@ -413,15 +486,34 @@ export async function updateCategory(
         ? { connect: { id: parsed.parentId } }
         : { disconnect: true };
     }
+    if (parsed.catalogTeaser !== undefined) {
+      updateData.catalogTeaser = parsed.catalogTeaser;
+    }
+    if (parsed.linePageBodyRichJson !== undefined) {
+      updateData.linePageBodyRichJson = parsed.linePageBodyRichJson as Prisma.InputJsonValue;
+    }
+    if (parsed.featuredProductId !== undefined) {
+      const v = normalizeOptionalId(parsed.featuredProductId);
+      if (v) {
+        await assertFeaturedProductInCategory(id, v, effectiveBrandId);
+        updateData.featuredProductId = v;
+      } else {
+        updateData.featuredProductId = null;
+      }
+    }
 
     const category = await prisma.category.update({
       where: { id },
       data: updateData as Parameters<typeof prisma.category.update>[0]['data'],
     });
-    
+
+    const slugsToRevalidate = new Set<string>();
+    if (existingCategory.slug) slugsToRevalidate.add(existingCategory.slug);
+    if (parsed.slug !== undefined && parsed.slug !== existingCategory.slug) {
+      slugsToRevalidate.add(parsed.slug);
+    }
+    revalidateCategoryPaths(Array.from(slugsToRevalidate));
     revalidatePath('/admin/catalog');
-    revalidatePath('/');
-    revalidatePath('/catalog');
     return category;
   } catch (error) {
     console.error('Error updating category:', error);
@@ -477,7 +569,7 @@ export async function deleteCategory(
     const dbBrand = resolveDbBrand(effectiveBrandId);
     const existingCategory = await prisma.category.findUnique({
       where: { id },
-      select: { brand: true },
+      select: { brand: true, slug: true },
     });
     if (!existingCategory || existingCategory.brand !== dbBrand) {
       throw new Error('Категория не найдена в выбранном бренде');
@@ -498,10 +590,11 @@ export async function deleteCategory(
     await prisma.category.delete({
       where: { id }
     });
-    
+
+    if (existingCategory.slug) {
+      revalidateCategoryPaths([existingCategory.slug]);
+    }
     revalidatePath('/admin/catalog');
-    revalidatePath('/');
-    revalidatePath('/catalog');
   } catch (error) {
     console.error('Error deleting category:', error);
     if (error instanceof Error) {

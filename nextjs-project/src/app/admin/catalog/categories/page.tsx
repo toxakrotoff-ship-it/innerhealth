@@ -1,5 +1,7 @@
 'use client';
 
+import type { JSONContent } from '@tiptap/core';
+import type { Prisma } from '@prisma/client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
@@ -29,6 +31,13 @@ import {
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
+import { RichTextEditor } from '@/app/admin/news/components/RichTextEditor';
+
+const EMPTY_LINE_DOC: JSONContent = { type: 'doc', content: [] };
+
+function isEmptyLineDoc(doc: JSONContent): boolean {
+  return !doc.content || doc.content.length === 0;
+}
 
 interface CategoryFormState {
   title: string;
@@ -37,6 +46,9 @@ interface CategoryFormState {
   sortOrder: number;
   parentId: string;
   showInCategoriesBlock: boolean;
+  catalogTeaser: string;
+  featuredProductId: string;
+  linePageBodyRichJson: JSONContent;
 }
 
 interface CategoryRowProps {
@@ -123,6 +135,9 @@ export default function AdminCategoriesPage() {
     sortOrder: 0,
     parentId: '',
     showInCategoriesBlock: true,
+    catalogTeaser: '',
+    featuredProductId: '',
+    linePageBodyRichJson: EMPTY_LINE_DOC,
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -176,10 +191,25 @@ export default function AdminCategoriesPage() {
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
         showInCategoriesBlock: formData.showInCategoriesBlock,
+        catalogTeaser: formData.catalogTeaser.trim() || null,
+        featuredProductId: formData.featuredProductId.trim() || null,
+        linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+          ? undefined
+          : (formData.linePageBodyRichJson as Prisma.JsonValue),
       }, { brandId: activeBrand });
       
       setCategories([...categories, newCategory]);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
+      setFormData({
+        title: '',
+        slug: '',
+        image: '',
+        sortOrder: 0,
+        parentId: '',
+        showInCategoriesBlock: true,
+        catalogTeaser: '',
+        featuredProductId: '',
+        linePageBodyRichJson: EMPTY_LINE_DOC,
+      });
       setIsCreating(false);
     } catch (error) {
       console.error('Error creating category:', error);
@@ -203,6 +233,11 @@ export default function AdminCategoriesPage() {
         sortOrder: formData.sortOrder,
         parentId: formData.parentId || null,
         showInCategoriesBlock: formData.showInCategoriesBlock,
+        catalogTeaser: formData.catalogTeaser.trim() || null,
+        featuredProductId: formData.featuredProductId.trim() || null,
+        linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+          ? null
+          : (formData.linePageBodyRichJson as Prisma.JsonValue),
       }, { brandId: activeBrand });
       
       const updatedCategories = categories.map(cat =>
@@ -211,7 +246,17 @@ export default function AdminCategoriesPage() {
       
       setCategories(updatedCategories);
       setEditingCategory(null);
-      setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
+      setFormData({
+        title: '',
+        slug: '',
+        image: '',
+        sortOrder: 0,
+        parentId: '',
+        showInCategoriesBlock: true,
+        catalogTeaser: '',
+        featuredProductId: '',
+        linePageBodyRichJson: EMPTY_LINE_DOC,
+      });
     } catch (error) {
       console.error('Error updating category:', error);
       if (error instanceof Error) {
@@ -239,6 +284,14 @@ export default function AdminCategoriesPage() {
 
   const handleEditCategory = (category: Category) => {
     setEditingCategory(category);
+    const rawLine = category.linePageBodyRichJson;
+    let lineDoc: JSONContent = EMPTY_LINE_DOC;
+    if (rawLine && typeof rawLine === 'object' && !Array.isArray(rawLine)) {
+      const obj = rawLine as { type?: string; content?: JSONContent[] };
+      if (obj.type === 'doc' && Array.isArray(obj.content)) {
+        lineDoc = rawLine as JSONContent;
+      }
+    }
     setFormData({
       title: category.title,
       slug: category.slug,
@@ -246,12 +299,25 @@ export default function AdminCategoriesPage() {
       sortOrder: category.sortOrder || 0,
       parentId: category.parentId || '',
       showInCategoriesBlock: category.showInCategoriesBlock ?? true,
+      catalogTeaser: category.catalogTeaser ?? '',
+      featuredProductId: category.featuredProductId ?? '',
+      linePageBodyRichJson: lineDoc,
     });
   };
 
   const handleCancelEdit = () => {
     setEditingCategory(null);
-    setFormData({ title: '', slug: '', image: '', sortOrder: 0, parentId: '', showInCategoriesBlock: true });
+    setFormData({
+      title: '',
+      slug: '',
+      image: '',
+      sortOrder: 0,
+      parentId: '',
+      showInCategoriesBlock: true,
+      catalogTeaser: '',
+      featuredProductId: '',
+      linePageBodyRichJson: EMPTY_LINE_DOC,
+    });
   };
 
   const handleDragEnd = useCallback(
@@ -441,6 +507,49 @@ export default function AdminCategoriesPage() {
                   Показывать в блоке «Разделы каталога» на главной
                 </label>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Тизер для главной (блок «Вся линейка»)
+                </label>
+                <textarea
+                  value={formData.catalogTeaser}
+                  onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
+                  className="form-input min-h-[72px]"
+                  rows={3}
+                  placeholder="Короткий текст под названием на главной Sprint. Если пусто — показывается число товаров."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ID товара для блока «купить» на странице категории
+                </label>
+                <input
+                  type="text"
+                  value={formData.featuredProductId}
+                  onChange={(e) => setFormData({ ...formData, featuredProductId: e.target.value })}
+                  className="form-input font-mono text-sm"
+                  placeholder="cuid из админки товара"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Товар должен быть уже привязан к этой категории. Оставьте пустым, если блок не нужен.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Текст под сеткой каталога (страница категории)
+                </label>
+                <RichTextEditor
+                  value={formData.linePageBodyRichJson}
+                  onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
+                  placeholder="Описание линейки, таблицы, юридические абзацы…"
+                  uploadedMedia={[]}
+                  onMediaUploaded={() => {}}
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Родительская категория

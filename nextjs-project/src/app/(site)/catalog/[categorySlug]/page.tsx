@@ -21,9 +21,11 @@ import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveBrand } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
-import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
+import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
+import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -39,6 +41,25 @@ function htmlToPlainText(html: string): string {
     .replace(/\s+/g, ' ')
     .trim()
   return stripped
+}
+
+function hasNonEmptyTipTapDoc(raw: unknown): boolean {
+  if (raw == null) return false
+  if (typeof raw === 'string') {
+    const t = raw.trim()
+    if (!t) return false
+    try {
+      const parsed = JSON.parse(t) as { type?: string; content?: unknown[] }
+      return parsed?.type === 'doc' && Array.isArray(parsed.content) && parsed.content.length > 0
+    } catch {
+      return t.length > 0
+    }
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const doc = raw as { type?: string; content?: unknown[] }
+    return doc.type === 'doc' && Array.isArray(doc.content) && doc.content.length > 0
+  }
+  return false
 }
 
 /** Статический рендер категории, ревалидация раз в 10 минут. */
@@ -152,6 +173,61 @@ export default async function CategoryPage({ params }: PageProps) {
   })
 
   if (!category) notFound()
+
+  let featuredProductForLine: {
+    id: string
+    title: string
+    price: number
+    priceOld: number | null
+    photo: string | null
+    photos: unknown
+    slug: string | null
+    isPromoEligible: boolean
+    discountPrice: number | null
+    quantity: number | null
+    isPreorderEnabled: boolean
+  } | null = null
+
+  if (isSprintTheme && category.featuredProductId) {
+    const fp = await prisma.product.findUnique({
+      where: { id: category.featuredProductId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        priceOld: true,
+        photo: true,
+        photos: true,
+        slug: true,
+        isPromoEligible: true,
+        discountPrice: true,
+        quantity: true,
+        isPreorderEnabled: true,
+        brand: true,
+        isDraft: true,
+      },
+    })
+    if (
+      fp &&
+      !fp.isDraft &&
+      productBelongsToBrandScope(fp.brand, activeBrand) &&
+      category.products.some((pc) => pc.product.id === fp.id)
+    ) {
+      featuredProductForLine = {
+        id: fp.id,
+        title: fp.title,
+        price: fp.price,
+        priceOld: fp.priceOld,
+        photo: fp.photo,
+        photos: fp.photos,
+        slug: fp.slug,
+        isPromoEligible: fp.isPromoEligible,
+        discountPrice: fp.discountPrice,
+        quantity: fp.quantity,
+        isPreorderEnabled: fp.isPreorderEnabled,
+      }
+    }
+  }
 
   const allCategories = await prisma.category.findMany({
     where: { brand: dbBrand },
@@ -270,6 +346,21 @@ export default async function CategoryPage({ params }: PageProps) {
                 ))}
               </div>
             </div>
+          )}
+          {featuredProductForLine && (
+            <CategoryLineProductHighlight
+              id={featuredProductForLine.id}
+              title={featuredProductForLine.title}
+              price={featuredProductForLine.price}
+              priceOld={featuredProductForLine.priceOld}
+              photo={featuredProductForLine.photo}
+              photos={featuredProductForLine.photos}
+              slug={featuredProductForLine.slug}
+              isPromoEligible={featuredProductForLine.isPromoEligible}
+              discountPrice={featuredProductForLine.discountPrice}
+              quantity={featuredProductForLine.quantity}
+              isPreorderEnabled={featuredProductForLine.isPreorderEnabled}
+            />
           )}
           {categorySlug === 'aktsii' && giftPromos.length > 0 && (
             <div className="mb-10">
@@ -397,6 +488,23 @@ export default async function CategoryPage({ params }: PageProps) {
                 )
               )}
             </FluidGrid>
+          )}
+
+          {hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
+            <div
+              className={`mt-12 max-w-4xl pt-10 ${
+                isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200'
+              }`}
+            >
+              <TipTapDocRenderer
+                raw={category.linePageBodyRichJson}
+                className={
+                  isSprintTheme
+                    ? 'prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600'
+                    : 'text-gray-700 prose-headings:text-text'
+                }
+              />
+            </div>
           )}
 
           {/* Описание раздела под каталогом */}

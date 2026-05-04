@@ -24,7 +24,7 @@ type PartnersBlockProps = {
   brand: 'inner' | 'sprint-power'
   /**
    * When true, use the same light layout as the Inner storefront (shared PARTNERS copy and assets).
-   * Used on Sprint home under the Inner Health promo so the block matches Inner 1:1.
+   * Omit on Sprint so the block uses the dark Sprint shell (#060A14) and glass cards.
    */
   useInnerStyling?: boolean
 }
@@ -37,7 +37,7 @@ export function PartnersBlock({ brand, useInnerStyling = false }: PartnersBlockP
     <section
       className={
         isDarkPartnerTheme
-          ? 'border-t border-white/10 bg-slate-950 py-16 sm:py-24'
+          ? 'border-t border-white/10 bg-[#060A14] py-16 sm:py-24'
           : 'border-t border-slate-100 bg-white py-16 sm:py-24'
       }
       aria-labelledby="partners-heading"

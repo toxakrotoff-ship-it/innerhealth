@@ -336,6 +336,7 @@ type SprintHomeData = {
     id: string
     title: string
     slug: string
+    catalogTeaser: string | null
     _count: { products: number }
   }>
   reviews: Array<{
@@ -448,6 +449,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
             id: c.id,
             title: c.title,
             slug: c.slug,
+            catalogTeaser: c.catalogTeaser ?? null,
             _count: { products: c._count.products },
           }))
         } catch {
@@ -760,17 +762,36 @@ function SprintPowerHome({
                   <Link
                     key={category.id}
                     href={`/catalog/${category.slug}`}
-                    className="rounded-xl bg-[#1E293B] p-4 transition-colors hover:bg-[#243447]"
+                    className="flex flex-col gap-3 rounded-xl bg-[#1E293B] p-4 transition-colors hover:bg-[#243447]"
                   >
-                    <p className="text-sm font-semibold text-slate-100">{category.title}</p>
-                    <p className="text-xs text-slate-400">
-                      {category.slug === 'aktsii'
-                        ? formatAktsiiCatalogBlockSubtitleRu(
-                            category._count.products,
-                            data.publicGiftPromotionCount
-                          )
-                        : formatProductsCountRu(category._count.products)}
-                    </p>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-sm font-semibold text-slate-100">{category.title}</p>
+                      {category.catalogTeaser ? (
+                        <>
+                          <p className="text-xs leading-relaxed text-slate-400 line-clamp-3">{category.catalogTeaser}</p>
+                          <p className="text-xs text-slate-500">
+                            {category.slug === 'aktsii'
+                              ? formatAktsiiCatalogBlockSubtitleRu(
+                                  category._count.products,
+                                  data.publicGiftPromotionCount
+                                )
+                              : formatProductsCountRu(category._count.products)}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-slate-400">
+                          {category.slug === 'aktsii'
+                            ? formatAktsiiCatalogBlockSubtitleRu(
+                                category._count.products,
+                                data.publicGiftPromotionCount
+                              )
+                            : formatProductsCountRu(category._count.products)}
+                        </p>
+                      )}
+                    </div>
+                    <span className="mt-auto inline-flex w-fit items-center text-xs font-semibold text-[#7AA2FF]">
+                      Подробнее
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -943,7 +964,7 @@ function SprintPowerHome({
     <section className="bg-[#060A14] py-10 md:py-12">
       <AdaptiveContainer maxWidth="full">
         <div className="space-y-6 rounded-2xl bg-[#060A14]">
-          <PartnersBlock brand="sprint-power" useInnerStyling />
+          <PartnersBlock brand="sprint-power" />
 
           <div className="rounded-3xl bg-white p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-900">
