@@ -1,9 +1,11 @@
+import type { MarketingBentoTile } from '@/types/marketing-bento-tile'
+
 /**
  * Статический контент блоков категории `/catalog/hydro` (Sprint Power).
  *
  * **Описание продукта** (над bento и TipTap) — `HYDRO_CATEGORY_PRODUCT_DESCRIPTION`.
  *
- * **Bento:** заголовок плитки — `title`, абзац под ним — `body`, картинка — `imageSrc` (`/images/...` = `public/images/...`).
+ * **Bento:** плитки — `HYDRO_CATEGORY_BENTO_TILES`, сетка — `HYDRO_MARKETING_BENTO_*` (передайте в `MarketingBentoGrid` на других страницах).
  */
 export interface HydroCategoryProductDescription {
   readonly heading: string
@@ -18,16 +20,22 @@ export const HYDRO_CATEGORY_PRODUCT_DESCRIPTION: HydroCategoryProductDescription
     'Протеин, гидролизованный под действием ферментов, лучше, чем белок, сохраняет аминокислотный профиль продукта. Размер одной порции 10 г (мерная ложка)',
   ],
 }
-export interface HydroCategoryBentoTile {
-  readonly id: string
-  readonly title: string
-  /** Длинное описание под заголовком; на сайте рендерится мелким текстом под `title`. */
-  readonly body?: string
-  /** Путь от корня сайта, например `/images/catalog/hydro-bento/01-taste.png`. */
-  readonly imageSrc?: string
-}
 
-export const HYDRO_CATEGORY_BENTO_TILES: readonly HydroCategoryBentoTile[] = [
+export const HYDRO_MARKETING_BENTO_GRID_CLASS =
+  'grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-4 lg:grid-rows-5 lg:gap-4'
+
+export const HYDRO_MARKETING_BENTO_TILE_LAYOUT_CLASSES: readonly string[] = [
+  'lg:col-span-2 lg:row-span-3 lg:col-start-1 lg:row-start-1 min-h-[220px] lg:min-h-0',
+  'lg:col-start-3 lg:row-start-1 lg:col-span-1 lg:row-span-1 min-h-[140px]',
+  'lg:col-start-3 lg:row-start-2 lg:col-span-1 lg:row-span-2 min-h-[180px]',
+  'lg:col-start-4 lg:row-start-1 lg:col-span-1 lg:row-span-3 min-h-[200px]',
+  'lg:col-start-1 lg:row-start-4 lg:col-span-2 lg:row-span-1 min-h-[140px]',
+  'lg:col-start-1 lg:row-start-5 lg:col-span-3 lg:row-span-1 min-h-[160px]',
+  'lg:col-start-3 lg:row-start-4 lg:col-span-1 lg:row-span-1 min-h-[130px]',
+  'lg:col-start-4 lg:row-start-4 lg:col-span-1 lg:row-span-2 min-h-[160px]',
+]
+
+export const HYDRO_CATEGORY_BENTO_TILES: readonly MarketingBentoTile[] = [
   {
     id: 'taste',
     title: 'Приятный вкус',

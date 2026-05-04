@@ -26,9 +26,12 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
 import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
+import { CollagenCategoryBenefitsBento } from '@/components/site/collagen-category-benefits-bento'
+import { CollagenCategorySpecGrid } from '@/components/site/collagen-category-spec-grid'
 import { HydroCategoryBenefitsBento } from '@/components/site/hydro-category-benefits-bento'
 import { HydroCategoryProductDescription } from '@/components/site/hydro-category-product-description'
-import { HYDRO_CATEGORY_BENTO_TILES, HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
+import { COLLAGEN_SPEC_CELLS } from '@/content/collagen-category-line'
+import { HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
 import { cn } from '@/lib/utils'
 
 function htmlToPlainText(html: string): string {
@@ -45,6 +48,18 @@ function htmlToPlainText(html: string): string {
     .replace(/\s+/g, ' ')
     .trim()
   return stripped
+}
+
+function SprintLineTipTapBlock({ raw }: { raw: unknown }) {
+  return (
+    <div className="mt-12 max-w-4xl border-t border-slate-700 pt-10">
+      <TipTapDocRenderer
+        raw={raw}
+        tone="dark"
+        className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline"
+      />
+    </div>
+  )
 }
 
 function hasNonEmptyTipTapDoc(raw: unknown): boolean {
@@ -504,18 +519,35 @@ export default async function CategoryPage({ params }: PageProps) {
           )}
 
           {isSprintTheme && categorySlug === 'hydro' && (
-            <HydroCategoryBenefitsBento tiles={HYDRO_CATEGORY_BENTO_TILES} />
+            <HydroCategoryBenefitsBento />
           )}
 
-          {isSprintTheme && hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
-            <div className="mt-12 max-w-4xl border-t border-slate-700 pt-10">
-              <TipTapDocRenderer
-                raw={category.linePageBodyRichJson}
-                tone="dark"
-                className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline"
-              />
-            </div>
+          {isSprintTheme &&
+            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
+            categorySlug === 'hydro' && (
+              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
+            )}
+
+          {isSprintTheme && categorySlug === 'collagen' && (
+            <CollagenCategorySpecGrid cells={COLLAGEN_SPEC_CELLS} />
           )}
+
+          {isSprintTheme &&
+            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
+            categorySlug === 'collagen' && (
+              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
+            )}
+
+          {isSprintTheme && categorySlug === 'collagen' && (
+            <CollagenCategoryBenefitsBento />
+          )}
+
+          {isSprintTheme &&
+            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
+            categorySlug !== 'hydro' &&
+            categorySlug !== 'collagen' && (
+              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
+            )}
 
           {/* Описание раздела под каталогом */}
           {hasDescription && content && (
