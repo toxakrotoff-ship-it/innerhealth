@@ -1,7 +1,7 @@
 import nextDynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import type { Metadata, ResolvingMetadata } from 'next'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -34,7 +34,7 @@ import { SpacingVertical } from '@/components/ui/scalable-spacing'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { FaqAccordion } from '@/components/site/faq-accordion'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
@@ -95,10 +95,8 @@ export async function generateMetadata(
   _parent: ResolvingMetadata
 ): Promise<Metadata> {
   const headerStore = await headers()
-  const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const siteConfig = getBrandSiteConfig(activeBrand)
@@ -993,11 +991,9 @@ function SprintPowerHome({
 
 export default async function HomePage() {
   const headerStore = await headers()
-  const cookieStore = await cookies()
   const dbTimeoutMs = 2500
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
 

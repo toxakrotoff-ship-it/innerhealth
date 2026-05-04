@@ -7,12 +7,12 @@ import { revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 import * as productService from '@/services/product.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
@@ -125,7 +125,7 @@ const putProductSchema = z.object({
 export async function PUT(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   let parsed: z.infer<typeof putProductSchema>;
   try {
@@ -221,7 +221,7 @@ const patchProductSchema = z.object({
 export async function PATCH(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   let parsed: z.infer<typeof patchProductSchema>;
   try {
@@ -269,7 +269,7 @@ const postProductSchema = z.object({
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   let parsed: z.infer<typeof postProductSchema>;
   try {
@@ -331,7 +331,7 @@ const deleteProductSchema = z.object({ id: z.string().min(1, 'Product ID is requ
 export async function DELETE(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   let parsed: z.infer<typeof deleteProductSchema>;
   try {

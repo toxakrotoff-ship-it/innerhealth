@@ -1,7 +1,13 @@
 import type { BrandId } from '@/lib/brand/brand';
-import { normalizeBrandId, resolveBrand } from '@/lib/brand/brand';
-
-const ACTIVE_BRAND_COOKIE_NAME = 'ih_active_brand';
+import {
+  hostHasBrandDomainHint,
+  normalizeBrandId,
+  resolveBrandByHost,
+} from '@/lib/brand/brand';
+import {
+  ACTIVE_BRAND_COOKIE_NAME,
+  ADMIN_BRAND_COOKIE_NAME,
+} from '@/lib/brand/brand-context';
 
 function getCookieValue(rawCookieHeader: string | null, key: string): string | null {
   if (!rawCookieHeader) return null;
@@ -18,30 +24,45 @@ function getCookieValue(rawCookieHeader: string | null, key: string): string | n
   return null;
 }
 
-export function resolveBrandFromRequest(request: Request): BrandId | null {
+/** Admin panel HTTP APIs: `?brand`, `x-brand`, then admin/active cookies, then host. */
+export function resolveAdminBrandFromRequest(request: Request): BrandId {
   const url = new URL(request.url);
   const fromQuery = normalizeBrandId(url.searchParams.get('brand'));
   if (fromQuery) return fromQuery;
 
-  const fromCookie = normalizeBrandId(
-    getCookieValue(request.headers.get('cookie'), ACTIVE_BRAND_COOKIE_NAME)
-  );
-  if (fromCookie) return fromCookie;
+  const fromForwarded = normalizeBrandId(request.headers.get('x-brand'));
+  if (fromForwarded) return fromForwarded;
 
-  return null;
+  const cookieHeader = request.headers.get('cookie');
+  const fromAdminCookie = normalizeBrandId(getCookieValue(cookieHeader, ADMIN_BRAND_COOKIE_NAME));
+  if (fromAdminCookie) return fromAdminCookie;
+  const fromActiveCookie = normalizeBrandId(getCookieValue(cookieHeader, ACTIVE_BRAND_COOKIE_NAME));
+  if (fromActiveCookie) return fromActiveCookie;
+
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  return resolveBrandByHost(host);
 }
 
+/**
+ * Public / storefront APIs: on real branded domains, brand follows Host only (no cookie;
+ * `?brand` / `x-brand` cannot override a conflicting domain).
+ */
 export function resolveBrandOrDefaultFromRequest(request: Request): BrandId {
-  const fromExplicitScope = resolveBrandFromRequest(request);
-  if (fromExplicitScope) return fromExplicitScope;
+  const host =
+    (request.headers.get('x-forwarded-host') || request.headers.get('host')) ?? '';
+  const hostBrand = resolveBrandByHost(host);
 
-  const fromForwardedBrand = normalizeBrandId(request.headers.get('x-brand'));
-  if (fromForwardedBrand) return fromForwardedBrand;
+  if (hostHasBrandDomainHint(host)) {
+    return hostBrand;
+  }
 
-  return resolveBrand({
-    forwardedBrand: request.headers.get('x-brand'),
-    cookieBrand: getCookieValue(request.headers.get('cookie'), ACTIVE_BRAND_COOKIE_NAME),
-    host: request.headers.get('x-forwarded-host') || request.headers.get('host'),
-  });
+  const url = new URL(request.url);
+  const fromQuery = normalizeBrandId(url.searchParams.get('brand'));
+  if (fromQuery) return fromQuery;
+
+  const fromForwarded = normalizeBrandId(request.headers.get('x-brand'));
+  if (fromForwarded) return fromForwarded;
+
+  return hostBrand;
 }
 

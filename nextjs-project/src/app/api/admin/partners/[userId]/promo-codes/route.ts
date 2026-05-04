@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
 import * as promoService from '@/services/promo.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 const dateOptional = z
   .union([z.string(), z.date()])
@@ -35,7 +35,7 @@ export async function GET(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const { userId } = await params;
 
@@ -65,7 +65,7 @@ export async function POST(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const { userId } = await params;
 

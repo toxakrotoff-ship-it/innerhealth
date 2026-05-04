@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { detectAnalyticsDeviceType } from '@/lib/analytics/device-type'
-import { normalizeBrandId, resolveBrandByHost } from '@/lib/brand/brand'
+import { resolveClientSiteBrandFromWindow } from '@/lib/brand/client-site-brand'
 
 function getAnonId(): string {
   if (typeof window === 'undefined') return ''
@@ -64,14 +64,7 @@ export function PageViewTracker() {
     lastPathRef.current = fullPath
 
     const anonId = getAnonId()
-    const cookieBrand = normalizeBrandId(
-      document.cookie
-        .split(';')
-        .map((entry) => entry.trim())
-        .find((entry) => entry.startsWith('ih_active_brand='))
-        ?.split('=')[1] ?? null
-    )
-    const activeBrand = cookieBrand ?? resolveBrandByHost(window.location.host)
+    const activeBrand = resolveClientSiteBrandFromWindow()
     const width = window.innerWidth
     const deviceType = detectAnalyticsDeviceType({
       userAgent: navigator.userAgent,

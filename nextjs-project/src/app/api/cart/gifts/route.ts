@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service'
 import * as productService from '@/services/product.service'
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 interface GiftCalcItemInput {
   productId: string
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { items, hasPromoCode } = parseGiftCalcBody(body)
-    const brandId = resolveBrandFromRequest(req)
+    const brandId = resolveBrandOrDefaultFromRequest(req)
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = productIds.length > 0 ? await productService.getProductsForCart(productIds, brandId) : []

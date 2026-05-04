@@ -28,7 +28,7 @@ function buildBrandHref(adminBasePath: string, pathname: string, targetBrand: Br
 }
 
 function setActiveBrandCookie(brandId: BrandId): void {
-  // API routes resolve brand from cookie `ih_active_brand`.
+  // Admin API resolves brand via `resolveAdminBrandFromRequest`: query, x-brand, admin/active cookies, host.
   // We keep it non-HttpOnly so client-side brand switching works.
   const encoded = encodeURIComponent(brandId);
   document.cookie = `${ACTIVE_BRAND_COOKIE_NAME}=${encoded}; Path=/; Max-Age=31536000; SameSite=Lax`;

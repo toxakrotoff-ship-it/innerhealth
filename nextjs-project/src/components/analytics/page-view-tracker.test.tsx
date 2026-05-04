@@ -27,6 +27,7 @@ vi.mock('@/lib/analytics/device-type', () => ({
 vi.mock('@/lib/brand/brand', () => ({
   normalizeBrandId: (value: string | null) => value,
   resolveBrandByHost: (...args: unknown[]) => resolveBrandByHostMock(...args),
+  hostHasBrandDomainHint: () => false,
 }))
 
 describe('PageViewTracker', () => {

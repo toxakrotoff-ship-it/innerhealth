@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import { syncCdekTrackNumbersForOrderIds } from '@/lib/cdek';
 import * as orderService from '@/services/order.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 const querySchema = z.object({
   mode: z.enum(['active', 'trash']).optional(),
@@ -12,7 +12,7 @@ const querySchema = z.object({
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   try {
     const url = new URL(request.url);

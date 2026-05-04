@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as partnerService from '@/services/partner.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 export async function GET(
   request: Request,
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const { userId } = await params;
 

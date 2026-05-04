@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as postService from '@/services/post.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 const putPostSchema = z.object({
   title: z.string().min(1).transform((s) => s.trim()).optional(),
@@ -20,7 +20,7 @@ export async function GET(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   try {
     const { id } = await context.params;
@@ -44,7 +44,7 @@ export async function PUT(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const { id } = await context.params;
 
@@ -85,7 +85,7 @@ export async function DELETE(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   try {
     const { id } = await context.params;

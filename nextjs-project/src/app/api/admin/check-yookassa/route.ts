@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import { checkYookassaConnection } from '@/lib/yookassa'
 import * as settingsService from '@/services/settings.service'
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 
 /**
  * GET /api/admin/check-yookassa
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
-  const brandId = resolveBrandFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
   const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
   const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
   const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()

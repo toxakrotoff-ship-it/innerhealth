@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import * as postService from '@/services/post.service';
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 const postPostSchema = z.object({
   title: z.string().min(1, 'Title is required').transform((s) => s.trim()),
@@ -19,7 +19,7 @@ const postPostSchema = z.object({
 export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   try {
     const posts = await postService.getPostsForAdmin(brandId);
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   let body: z.infer<typeof postPostSchema>;
   try {

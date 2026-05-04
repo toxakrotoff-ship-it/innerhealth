@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
@@ -18,7 +18,7 @@ import { TiltCard } from '@/components/ui/tilt-card'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
@@ -96,10 +96,8 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { categorySlug } = await params
   const headerStore = await headers()
-  const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const category = await prisma.category.findUnique({
@@ -136,10 +134,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function CategoryPage({ params }: PageProps) {
   const { categorySlug } = await params
   const headerStore = await headers()
-  const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const dbBrand = resolveDbBrand(activeBrand)

@@ -1,5 +1,5 @@
 import nextDynamic from 'next/dynamic'
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
@@ -9,7 +9,7 @@ import { CartGiftSync } from '@/components/site/cart-gift-sync'
 import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { getRedirectMap } from '@/services/redirect.service'
-import { resolveSiteBrand, ACTIVE_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
+import { resolveSiteBrand } from '@/lib/brand/brand-context'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -24,10 +24,8 @@ export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
   const headerStore = await headers()
-  const cookieStore = await cookies()
   const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
 
@@ -88,10 +86,8 @@ export default async function SiteLayout({
   children: React.ReactNode
 }) {
   const headerStore = await headers()
-  const cookieStore = await cookies()
   const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    activeBrandCookie: cookieStore.get(ACTIVE_BRAND_COOKIE_NAME)?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const redirects = await getRedirectMap({ brandId: activeBrand })

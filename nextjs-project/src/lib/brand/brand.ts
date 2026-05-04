@@ -47,21 +47,40 @@ export function resolveBrandByHost(host: string | null | undefined): BrandId {
   return match?.id ?? 'inner';
 }
 
-export function resolveBrand({
-  host,
-  forwardedBrand,
-  cookieBrand,
-}: {
+/** Hostname contains a configured substring (e.g. innerhealth, sprint) — brand is locked to {@link resolveBrandByHost}. */
+export function hostHasBrandDomainHint(host: string | null | undefined): boolean {
+  const normalizedHost = (host ?? '').trim().toLowerCase();
+  if (!normalizedHost) return false;
+  return BRAND_DEFINITIONS.some((brand) =>
+    brand.hostHints.some((hint) => normalizedHost.includes(hint))
+  );
+}
+
+/**
+ * Public SSR: on domains with a brand hint, host wins over `x-brand`.
+ * On ambiguous hosts (preview, docker service name), `x-brand` may disambiguate.
+ */
+export function resolveBrandFromForwardedAndHost(
+  forwardedBrand: string | null | undefined,
+  host: string | null | undefined
+): BrandId {
+  if (hostHasBrandDomainHint(host)) {
+    return resolveBrandByHost(host);
+  }
+  const normalizedForwardedBrand = normalizeBrandId(forwardedBrand);
+  if (normalizedForwardedBrand) return normalizedForwardedBrand;
+  return resolveBrandByHost(host);
+}
+
+/**
+ * Legacy three-arg helper for server components. `cookieBrand` is ignored — use {@link resolveBrandFromForwardedAndHost}
+ * or `resolveSiteBrand` / `resolveAdminBrand` from `brand-context`.
+ */
+export function resolveBrand(input: {
   host?: string | null;
   forwardedBrand?: string | null;
   cookieBrand?: string | null;
 }): BrandId {
-  const normalizedForwardedBrand = normalizeBrandId(forwardedBrand);
-  if (normalizedForwardedBrand) return normalizedForwardedBrand;
-
-  const normalizedCookieBrand = normalizeBrandId(cookieBrand);
-  if (normalizedCookieBrand) return normalizedCookieBrand;
-
-  return resolveBrandByHost(host);
+  return resolveBrandFromForwardedAndHost(input.forwardedBrand, input.host);
 }
 

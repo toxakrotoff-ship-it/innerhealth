@@ -1,7 +1,7 @@
-import { cookies, headers } from 'next/headers'
+import { headers } from 'next/headers'
 import { getSettingsMap } from '@/services/settings.service'
 import { buildOrganizationJsonLd, buildWebSiteJsonLdWithOverrides } from '@/lib/schema-org'
-import { resolveBrand } from '@/lib/brand/brand'
+import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
 /**
@@ -11,10 +11,8 @@ import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
  */
 export async function SiteLayoutJsonLd() {
   const headerStore = await headers()
-  const cookieStore = await cookies()
-  const activeBrand = resolveBrand({
+  const activeBrand = resolveSiteBrand({
     forwardedBrand: headerStore.get('x-brand'),
-    cookieBrand: cookieStore.get('ih_active_brand')?.value ?? null,
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const brandConfig = getBrandSiteConfig(activeBrand)

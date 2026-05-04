@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import { checkCdekConnection } from '@/lib/cdek'
 import * as settingsService from '@/services/settings.service'
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 
 /**
  * GET /api/admin/check-cdek
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
-  const brandId = resolveBrandFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
   const creds = await settingsService.getCdekCredentials({ brandId })
   if (!creds) {
     const credentialsStatus = await settingsService.getCdekCredentialsStatus({ brandId })

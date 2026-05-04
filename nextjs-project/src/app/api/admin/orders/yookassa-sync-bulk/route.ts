@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
 import type { BrandId } from '@/lib/brand/brand'
-import { resolveBrandFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const { days, take } = parsed.data
-  const brandId = resolveBrandFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
   const candidates = await orderService.getPendingOrdersWithYookassaPayment({
