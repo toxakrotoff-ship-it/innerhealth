@@ -275,15 +275,20 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       >
                         {cat.title}
                       </span>
-                      <span
-                        className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
-                          bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
-                        }`}
-                      >
-                        {cat.slug === 'aktsii'
-                          ? formatAktsiiCatalogBlockSubtitleRu(cat._count.products, publicGiftPromotionCount)
-                          : formatProductsCountRu(cat._count.products)}
-                      </span>
+                      {isSprintTheme ? null : (
+                        <span
+                          className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
+                            bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
+                          }`}
+                        >
+                          {cat.slug === 'aktsii'
+                            ? formatAktsiiCatalogBlockSubtitleRu(
+                                cat._count.products,
+                                publicGiftPromotionCount
+                              )
+                            : formatProductsCountRu(cat._count.products)}
+                        </span>
+                      )}
                     </div>
                   </TiltCard>
                 </Link>

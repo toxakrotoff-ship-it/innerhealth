@@ -854,18 +854,6 @@ function SprintPowerHome({
                           >
                             {category.title}
                           </span>
-                          <span
-                            className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
-                              bgImage ? 'text-white/90' : 'text-slate-400'
-                            }`}
-                          >
-                            {category.slug === 'aktsii'
-                              ? formatAktsiiCatalogBlockSubtitleRu(
-                                  category._count.products,
-                                  data.publicGiftPromotionCount
-                                )
-                              : formatProductsCountRu(category._count.products)}
-                          </span>
                         </div>
                       </TiltCard>
                     </Link>
