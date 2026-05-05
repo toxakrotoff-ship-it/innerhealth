@@ -24,35 +24,12 @@ function isTelegramServiceRequest(request: Request): boolean {
   return false
 }
 
-function isAllowedIframeReferrer(request: Request): boolean {
-  const referrer = request.headers.get('referer')
-  if (!referrer) return false
-  const trimmed = referrer.trim()
-  if (!trimmed) return false
-
-  const host = new URL(request.url).host.replace(/\./g, '\\.')
-
-  // Yandex Metrika + Webvisor embed the site inside an iframe for session replays and page analytics.
-  // We allow framing only for those referrers; otherwise we keep strict anti-clickjacking headers.
-  // Ref regex from docs:
-  // ^https?:\/\/([^\/]+\.)?(yourdomain\.com|webvisor\.com|metri[ck]a\.yandex\.(com|ru|by|com\.tr))\/
-  const allowed = new RegExp(
-    `^https?:\\/\\/([^/]+\\.)?(${host}|webvisor\\.com|metri[ck]a\\.yandex\\.(com|ru|by|com\\.tr))\\/`,
-    'i'
-  )
-  return allowed.test(trimmed)
-}
-
 /** Security headers for all responses (payment-ready, PCI-aware). */
 function addSecurityHeaders(request: Request, response: NextResponse): NextResponse {
-  const isMetrikaFrameAllowed = isAllowedIframeReferrer(request)
-
-  if (isMetrikaFrameAllowed) {
-    // Use CSP for modern browsers. Do not emit X-Frame-Options here to avoid blocking iframe embed.
-    response.headers.delete('X-Frame-Options')
-  } else {
-    response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-  }
+  // Webvisor and click maps embed the site in an iframe (metrika/webvisor UI).
+  // `X-Frame-Options` is too limited (and can conflict with allowed embeddings),
+  // so we rely on `Content-Security-Policy: frame-ancestors ...` allowlist below.
+  response.headers.delete('X-Frame-Options')
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('X-XSS-Protection', '1; mode=block')
@@ -60,9 +37,8 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
     response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
   }
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
-  const frameAncestors = isMetrikaFrameAllowed
-    ? "frame-ancestors 'self' https://metrika.yandex.ru https://*.metrika.yandex.ru https://metrika.yandex.by https://*.metrika.yandex.by https://metrica.yandex.com https://*.metrica.yandex.com https://metrica.yandex.com.tr https://*.metrica.yandex.com.tr https://webvisor.com https://*.webvisor.com"
-    : "frame-ancestors 'none'"
+  const frameAncestors =
+    "frame-ancestors 'self' https://metrika.yandex.ru https://*.metrika.yandex.ru https://metrika.yandex.by https://*.metrika.yandex.by https://metrica.yandex.com https://*.metrica.yandex.com https://metrica.yandex.com.tr https://*.metrica.yandex.com.tr https://webvisor.com https://*.webvisor.com"
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net https://mc.yandex.ru", // Yandex Maps JS API + Yandex Metrika
