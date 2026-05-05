@@ -244,7 +244,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 >
                   <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
-                      className={`relative flex ${isSprintTheme ? 'aspect-square' : 'min-h-[180px]'} flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
+                      className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'min-h-[180px] p-6'} flex-col justify-center items-center text-center rounded-2xl overflow-hidden ${
                         !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
                       }`}
                     >

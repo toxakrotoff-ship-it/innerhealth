@@ -427,7 +427,7 @@ export default async function CategoryPage({ params }: PageProps) {
                       >
                         <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                           <div
-                            className={`relative flex ${isSprintTheme ? 'aspect-square' : 'min-h-[180px]'} flex-col justify-center p-6 rounded-2xl overflow-hidden ${
+                            className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'min-h-[180px] p-6'} flex-col justify-center rounded-2xl overflow-hidden ${
                               isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background'
                             }`}
                           >

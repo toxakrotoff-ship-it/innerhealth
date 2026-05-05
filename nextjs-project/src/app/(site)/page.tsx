@@ -821,7 +821,7 @@ function SprintPowerHome({
                     >
                       <TiltCard variant="dark">
                         <div
-                          className={`relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center ${
+                          className={`relative flex aspect-[16/12] flex-col items-center justify-center overflow-hidden rounded-2xl p-5 text-center ${
                             !bgImage ? 'bg-[#0F172A]' : ''
                           }`}
                         >
