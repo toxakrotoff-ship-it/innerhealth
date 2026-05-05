@@ -38,7 +38,7 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
   }
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
   const frameAncestors =
-    "frame-ancestors 'self' https://metrika.yandex.ru https://*.metrika.yandex.ru https://metrika.yandex.by https://*.metrika.yandex.by https://metrica.yandex.com https://*.metrica.yandex.com https://metrica.yandex.com.tr https://*.metrica.yandex.com.tr https://webvisor.com https://*.webvisor.com"
+    "frame-ancestors 'self' https://metrika.yandex.ru https://*.metrika.yandex.ru http://metrika.yandex.ru http://*.metrika.yandex.ru https://metrika.yandex.by https://*.metrika.yandex.by http://metrika.yandex.by http://*.metrika.yandex.by https://metrica.yandex.com https://*.metrica.yandex.com http://metrica.yandex.com http://*.metrica.yandex.com https://metrica.yandex.com.tr https://*.metrica.yandex.com.tr http://metrica.yandex.com.tr http://*.metrica.yandex.com.tr https://webvisor.com https://*.webvisor.com http://webvisor.com http://*.webvisor.com"
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net https://mc.yandex.ru", // Yandex Maps JS API + Yandex Metrika
