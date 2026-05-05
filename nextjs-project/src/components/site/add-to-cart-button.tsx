@@ -3,6 +3,9 @@
 import { useCartStore } from '@/store/cart-store'
 import { cn } from '@/lib/utils'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
+import { pushMetrikaEcommerceEvent } from '@/lib/analytics/metrika-ecommerce'
+import { resolveClientSiteBrandFromWindow } from '@/lib/brand/client-site-brand'
+import { reachMetrikaGoal } from '@/lib/analytics/metrika'
 
 interface AddToCartButtonProps {
   productId: string
@@ -61,6 +64,25 @@ export function AddToCartButton({
     openDrawer()
 
     const path = getCurrentPath()
+    const activeBrand = resolveClientSiteBrandFromWindow()
+    if (activeBrand === 'inner') {
+      reachMetrikaGoal('add_to_cart', { productId, slug: slug ?? undefined })
+      pushMetrikaEcommerceEvent({
+        event: 'add_to_cart',
+        ecommerce: {
+          currency: 'RUB',
+          value: price,
+          items: [
+            {
+              item_id: productId,
+              item_name: title,
+              price,
+              quantity: 1,
+            },
+          ],
+        },
+      })
+    }
 
     logAnalyticsEvent({
       type: 'CLICK',

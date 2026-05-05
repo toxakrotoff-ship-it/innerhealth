@@ -25,6 +25,8 @@ import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
 import { usePromoStore } from '@/store/promo-store'
+import { pushMetrikaEcommerceEvent } from '@/lib/analytics/metrika-ecommerce'
+import { reachMetrikaGoal } from '@/lib/analytics/metrika'
 
 interface PromoResult {
   valid: boolean
@@ -487,6 +489,28 @@ export function CartPageContent({
     if (comment.trim()) address = `${address}\nКомментарий: ${comment.trim()}`
     setSubmitting(true)
     try {
+      if (brandId !== 'sprint-power') {
+        const nonGiftItems = items.filter((i) => i.isGift !== true)
+        reachMetrikaGoal('begin_checkout', {
+          deliveryMethod,
+          itemCount: nonGiftItems.length,
+          totalWithDelivery,
+        })
+        pushMetrikaEcommerceEvent({
+          event: 'begin_checkout',
+          ecommerce: {
+            currency: 'RUB',
+            value: totalWithDelivery,
+            shipping: deliverySum,
+            items: nonGiftItems.map((i) => ({
+              item_id: i.productId,
+              item_name: i.title,
+              price: i.price ?? 0,
+              quantity: i.quantity,
+            })),
+          },
+        })
+      }
       const orderEndpoint = brandId
         ? `/api/orders?brand=${encodeURIComponent(brandId)}`
         : '/api/orders'
@@ -538,6 +562,29 @@ export function CartPageContent({
       }
       const data = await res.json()
       if (data.confirmationUrl) {
+        try {
+          const nonGiftItems = items
+            .filter((i) => i.isGift !== true)
+            .map((i) => ({
+              productId: i.productId,
+              title: i.title ?? '',
+              price: i.price ?? 0,
+              quantity: i.quantity,
+            }))
+          window.localStorage.setItem(
+            'ih_pending_yookassa_payment',
+            JSON.stringify({
+              orderId: data.id,
+              paymentId: data.paymentId,
+              value: totalWithDelivery,
+              deliveryMethod,
+              items: nonGiftItems,
+              createdAt: new Date().toISOString(),
+            })
+          )
+        } catch {
+          // ignore
+        }
         useCartStore.getState().clearCart()
         logAnalyticsEvent({
           type: 'CHECKOUT_START',
@@ -552,6 +599,9 @@ export function CartPageContent({
       }
       setOrderSuccess(true)
       useCartStore.getState().clearCart()
+      if (brandId !== 'sprint-power') {
+        reachMetrikaGoal('order_created', { totalWithDelivery, deliveryMethod })
+      }
       logAnalyticsEvent({
         type: 'ORDER_CREATED',
         path: '/cart',

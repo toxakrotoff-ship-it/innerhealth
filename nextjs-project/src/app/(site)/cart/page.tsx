@@ -6,6 +6,7 @@ import { RecentlyViewedProducts } from '@/components/site/recently-viewed-produc
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
+import { MetrikaPurchaseTracker } from '@/components/analytics/metrika-purchase-tracker'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { getResolvedBlock, getResolvedBlocksForPage } from '@/services/content-block.service'
@@ -42,6 +43,7 @@ export default async function CartPage({ searchParams }: CartPageProps) {
       <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'py-0 text-slate-100' : 'py-10'}>
       <Heading1 className={isSprintTheme ? 'mb-6 text-slate-100' : 'mb-6'}>Корзина</Heading1>
       <CheckoutTrustStrip isSprintTheme={isSprintTheme} />
+      {brandId === 'inner' ? <MetrikaPurchaseTracker payment={payment} /> : null}
       <CartReturnMessage payment={payment} paymentSuccessMessage={paymentSuccessMessageBlock?.richJson ?? null} />
       <ScalableSpacing size="lg" />
       <CartPageContent

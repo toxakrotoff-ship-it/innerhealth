@@ -151,6 +151,6 @@ export const config = {
     '/api/promo/:path*',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
-    '/:segment/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
+    '/:path*', // custom ADMIN_SECRET_PATH + любые пути для редиректов (Tilda)
   ],
 }
