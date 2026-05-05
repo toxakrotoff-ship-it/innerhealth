@@ -412,13 +412,24 @@ type SprintHomeData = {
   publicGiftPromotionCount: number
 }
 
-async function getSprintHomeData(): Promise<SprintHomeData> {
+interface GetSprintHomeDataOptions {
+  readonly featuredProductId?: string | null
+}
+
+function normalizeOptionalContentId(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promise<SprintHomeData> {
   const dbTimeoutMs = 2500
   const dbBrand = resolveDbBrand('sprint-power')
   const emptySprintProducts = [] as SprintHomeProductRow[]
   const emptySprintCategoryRows = [] as HomeCategoryWithProductCount[]
   const emptySprintReviews = [] as SprintHomeData['reviews']
   const emptySprintPosts = [] as SprintHomeData['newsPosts']
+  const explicitFeaturedProductId = normalizeOptionalContentId(options.featuredProductId)
 
   const [products, categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
     await Promise.all([
@@ -547,7 +558,30 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       withTimeout(countPublicGiftPromotions(new Date(), 'sprint-power'), dbTimeoutMs, 0),
     ])
 
-  const featuredProduct =
+  const featuredProductFromContent =
+    explicitFeaturedProductId == null
+      ? null
+      : ((await withTimeout(
+          prisma.product.findFirst({
+            where: {
+              id: explicitFeaturedProductId,
+              isDraft: false,
+              brand: SPRINT_POWER_PRODUCT_BRAND,
+            },
+            select: {
+              id: true,
+              title: true,
+              price: true,
+              photo: true,
+              slug: true,
+              brand: true,
+            },
+          }),
+          dbTimeoutMs,
+          null
+        )) as SprintHomeData['featuredProduct'])
+
+  const fallbackFeaturedProduct =
     products[0] ??
     ((await withTimeout(
       prisma.product.findFirst({
@@ -568,6 +602,8 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
       dbTimeoutMs,
       null
     )) as SprintHomeData['featuredProduct'])
+
+  const featuredProduct = featuredProductFromContent ?? fallbackFeaturedProduct
 
   return {
     products,
@@ -1076,12 +1112,18 @@ export default async function HomePage() {
     }
     const emptySprintContentBlocks = [] as ContentBlockResolved[]
     const emptySprintFaqList = [] as Awaited<ReturnType<typeof faqService.getPublishedFaqItems>>
-    const [sprintHomeData, sprintHomeBlocks, sprintFaqItems, sprintCatalogBlocks] = await Promise.all([
-      withTimeout(getSprintHomeData(), dbTimeoutMs, emptySprintHomeData),
+    const [sprintHomeBlocks, sprintFaqItems, sprintCatalogBlocks] = await Promise.all([
       withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
       withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, emptySprintFaqList),
       withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
     ])
+
+    const sprintFeaturedProductId = getBlockByKey(sprintHomeBlocks, 'hero.featuredProductId')?.text ?? null
+    const sprintHomeData = await withTimeout(
+      getSprintHomeData({ featuredProductId: sprintFeaturedProductId }),
+      dbTimeoutMs,
+      emptySprintHomeData
+    )
     const categoriesFontBlock = getBlockByKey(sprintCatalogBlocks, 'categories.fontVariant')
     const categoryTitleFont =
       categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'

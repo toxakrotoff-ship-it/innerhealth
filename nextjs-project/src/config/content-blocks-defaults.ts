@@ -47,6 +47,11 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'home', key: 'hero.badge' },
   { page: 'home', key: 'hero.title' },
   { page: 'home', key: 'hero.subtitle' },
+  {
+    page: 'home',
+    key: 'hero.featuredProductId',
+    adminLabel: 'Hero — ID товара для карточки справа (если пусто — берём по флагу isFeaturedInNewArrivals)',
+  },
   { page: 'home', key: 'newsBlock.eyebrow' },
   { page: 'home', key: 'newsBlock.title' },
   { page: 'home', key: 'home.news.subtitle' },
@@ -503,6 +508,14 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     type: 'short',
     text: 'Hydro Protein - флагман линейки',
     colorToken: 'text-slate-100',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'home',
+    key: 'hero.featuredProductId',
+    label: 'Hero — ID товара для карточки справа',
+    type: 'short',
+    text: '',
   },
   {
     brand: 'sprint-power',
