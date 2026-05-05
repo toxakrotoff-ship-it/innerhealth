@@ -176,18 +176,42 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
   const skip = (page - 1) * pageSize;
   const where = buildCatalogWhere(options);
   const orderBy = buildCatalogOrderBy(options.sort);
+  const isSprintTheme = isSprintPowerBrand(options.brandId);
+  const select = isSprintTheme
+    ? ({
+        ...productCardSelect,
+        categories: {
+          orderBy: [{ sortOrder: 'asc' as const }],
+          take: 1,
+          select: { category: { select: { slug: true } } },
+        },
+      } as const)
+    : productCardSelect;
+
+  function attachPrimaryCategorySlug<
+    T extends { categories?: Array<{ category: { slug: string } }> }
+  >(rows: readonly T[]): Array<Omit<T, 'categories'> & { primaryCategorySlug?: string | null }> {
+    return rows.map((row) => {
+      const primaryCategorySlug = row.categories?.[0]?.category?.slug ?? null;
+      // Keep payload lean: we don't need nested categories on the client.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { categories, ...rest } = row;
+      return { ...rest, primaryCategorySlug };
+    });
+  }
 
   if (options.sort === 'newest') {
     const [allItems, total, persistedOrderIds] = await Promise.all([
       prisma.product.findMany({
         where,
         orderBy: [{ createdAt: 'desc' }],
-        select: productCardSelect,
+        select,
       }),
       prisma.product.count({ where }),
       getPersistedGlobalCatalogOrderIds(options.brandId),
     ]);
-    const ordered = applyPersistedCatalogOrder(allItems, persistedOrderIds);
+    const normalizedItems = isSprintTheme ? attachPrimaryCategorySlug(allItems as any) : allItems;
+    const ordered = applyPersistedCatalogOrder(normalizedItems as any, persistedOrderIds);
     const pageItems = ordered.slice(skip, skip + pageSize);
     return {
       items: pageItems,
@@ -202,13 +226,13 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
       orderBy,
       skip,
       take: pageSize,
-      select: productCardSelect,
+      select,
     }),
     prisma.product.count({ where }),
   ]);
 
   return {
-    items,
+    items: isSprintTheme ? attachPrimaryCategorySlug(items as any) : items,
     total,
     hasNextPage: skip + items.length < total,
   };

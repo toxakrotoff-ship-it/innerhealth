@@ -22,6 +22,10 @@ interface ProductCardProps {
   photo?: string | null
   photos?: unknown
   slug?: string | null
+  /** Optional override for the "Подробнее" link (Sprint Power uses category pages). */
+  detailsHref?: string
+  /** Hide the "Подробнее" button (e.g., Sprint category single-product landing). */
+  showDetailsButton?: boolean
   isPromoEligible?: boolean
   discountPrice?: number | null
   quantity?: number | null
@@ -44,6 +48,8 @@ export function ProductCard({
   photo,
   photos,
   slug,
+  detailsHref,
+  showDetailsButton = true,
   isPromoEligible = true,
   discountPrice = null,
   quantity = null,
@@ -53,7 +59,8 @@ export function ProductCard({
 }: ProductCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const state = useRef({ rotateX: 0, rotateY: 0 })
-  const detailHref = slug ? `/product/${slug}` : `/product/id/${id}`
+  const defaultDetailHref = slug ? `/product/${slug}` : `/product/id/${id}`
+  const detailHref = detailsHref ?? defaultDetailHref
   const isUnavailable = quantity != null && quantity <= 0 && !isPreorderEnabled
   const normalizedBrand = (brand ?? '').trim().toLowerCase()
   const isSprintTheme = normalizedBrand === 'sprint-power' || normalizedBrand.includes('sprint')
@@ -219,17 +226,19 @@ export function ProductCard({
                 isSprintTheme && 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
               )}
             />
-            <Link
-              href={detailHref}
-              className={cn(
-                'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm leading-tight font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
-                isSprintTheme
-                  ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
-                  : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
-              )}
-            >
-              Подробнее
-            </Link>
+            {showDetailsButton ? (
+              <Link
+                href={detailHref}
+                className={cn(
+                  'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm leading-tight font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
+                  isSprintTheme
+                    ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
+                    : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
+                )}
+              >
+                Подробнее
+              </Link>
+            ) : null}
           </div>
         </div>
         {/* Weak overlay: lighter than TiltCard, removed on hover */}

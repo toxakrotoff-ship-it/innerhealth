@@ -807,7 +807,7 @@ function SprintPowerHome({
               </Link>
             </div>
             {data.categories.length > 0 ? (
-              <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
+              <FluidGrid cols={1} colsTablet={2} colsDesktop={2} gap={4} adaptiveGap>
                 {data.categories.map((category) => {
                   const bgImage = resolveCategoryImage(category.slug, category.image, {
                     sprintFallback: true,
@@ -821,7 +821,7 @@ function SprintPowerHome({
                     >
                       <TiltCard variant="dark">
                         <div
-                          className={`relative flex min-h-[180px] flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center ${
+                          className={`relative flex aspect-square flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center ${
                             !bgImage ? 'bg-[#0F172A]' : ''
                           }`}
                         >
@@ -832,7 +832,7 @@ function SprintPowerHome({
                                 alt=""
                                 fill
                                 className={imagePosition}
-                                sizes="(max-width: 768px) 50vw, 33vw"
+                                sizes="(max-width: 768px) 100vw, 50vw"
                               />
                               <div
                                 className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"

@@ -222,7 +222,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           view={view}
         />
         <ScalableSpacing size="lg">
-          <FluidGrid cols={2} colsTablet={3} colsDesktop={3} gap={4} adaptiveGap>
+          <FluidGrid
+            cols={isSprintTheme ? 1 : 2}
+            colsTablet={isSprintTheme ? 2 : 3}
+            colsDesktop={isSprintTheme ? 2 : 3}
+            gap={4}
+            adaptiveGap
+          >
             {catalogBlockCategories.map((cat) => {
               const bgImage = resolveCategoryImage(cat.slug, cat.image, {
                 sprintFallback: isSprintTheme,
@@ -238,7 +244,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 >
                   <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
-                      className={`relative flex min-h-[180px] flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
+                      className={`relative flex ${isSprintTheme ? 'aspect-square' : 'min-h-[180px]'} flex-col justify-center items-center p-6 text-center rounded-2xl overflow-hidden ${
                         !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
                       }`}
                     >
@@ -249,7 +255,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             alt=""
                             fill
                             className={imagePosition}
-                            sizes="(max-width: 768px) 50vw, 33vw"
+                            sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}
                           />
                           <div
                             className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
@@ -323,6 +329,11 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       photo={item.product.photo}
                       photos={'photos' in item.product ? item.product.photos : undefined}
                       slug={item.product.slug}
+                      detailsHref={
+                        isSprintTheme && item.product.primaryCategorySlug
+                          ? `/catalog/${item.product.primaryCategorySlug}`
+                          : undefined
+                      }
                       isPromoEligible={item.product.isPromoEligible}
                       discountPrice={item.product.discountPrice}
                       quantity={item.product.quantity}

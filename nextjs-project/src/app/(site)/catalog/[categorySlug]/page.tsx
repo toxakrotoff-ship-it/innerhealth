@@ -271,7 +271,13 @@ export default async function CategoryPage({ params }: PageProps) {
     }),
   ]
 
-  const products = filterVisibleProducts(category.products.map((pc) => pc.product))
+  const productRows = category.products.map((pc) => pc.product) as Array<
+    (typeof category.products)[number]['product'] & { isDraft: boolean }
+  >
+  const visible = filterVisibleProducts(productRows)
+  const products = isSprintTheme
+    ? visible.map((p) => ({ ...p, primaryCategorySlug: categorySlug }))
+    : visible
   const listingItems = groupProductsForListing(products)
   const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
   const content = getCategoryPageContent(categorySlug, activeBrand)
@@ -385,7 +391,13 @@ export default async function CategoryPage({ params }: PageProps) {
           {categorySlug === 'aktsii' && giftPromos.length > 0 && (
             <div className="mb-10">
               <ScrollReveal as="div" variant="fade-up">
-                <FluidGrid cols={1} colsTablet={2} colsDesktop={3} gap={4} adaptiveGap>
+                <FluidGrid
+                  cols={1}
+                  colsTablet={2}
+                  colsDesktop={isSprintTheme ? 2 : 3}
+                  gap={4}
+                  adaptiveGap
+                >
                   {giftPromos.map((promo) => {
                     const title = promo.siteTitle || promo.title
                     const descriptionPlain = promo.siteDescription
@@ -412,7 +424,7 @@ export default async function CategoryPage({ params }: PageProps) {
                       >
                         <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                           <div
-                            className={`relative flex min-h-[180px] flex-col justify-center p-6 rounded-2xl overflow-hidden ${
+                            className={`relative flex ${isSprintTheme ? 'aspect-square' : 'min-h-[180px]'} flex-col justify-center p-6 rounded-2xl overflow-hidden ${
                               isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background'
                             }`}
                           >
@@ -423,7 +435,11 @@ export default async function CategoryPage({ params }: PageProps) {
                                   alt={title}
                                   fill
                                   className="object-cover object-center"
-                                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                  sizes={
+                                    isSprintTheme
+                                      ? '(max-width: 768px) 100vw, 50vw'
+                                      : '(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw'
+                                  }
                                 />
                                 <div
                                   className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
@@ -500,6 +516,7 @@ export default async function CategoryPage({ params }: PageProps) {
                     photo={item.product.photo}
                     photos={'photos' in item.product ? item.product.photos : undefined}
                     slug={item.product.slug}
+                    showDetailsButton={!(isSprintTheme && sprintSingleProductListing)}
                     isPromoEligible={item.product.isPromoEligible}
                     discountPrice={item.product.discountPrice}
                     quantity={item.product.quantity}
@@ -508,7 +525,13 @@ export default async function CategoryPage({ params }: PageProps) {
                     blurDataURL={'photos' in item.product ? getFirstPhotoBlurDataURL(item.product.photos) : undefined}
                   />
                 ) : (
-                  <GroupedProductCard key={item.parentUid} group={item} priority={index < 2} showSku={false} />
+                  <GroupedProductCard
+                    key={item.parentUid}
+                    group={item}
+                    priority={index < 2}
+                    showSku={false}
+                    showDetailsButton={!(isSprintTheme && sprintSingleProductListing)}
+                  />
                 )
               )}
             </FluidGrid>

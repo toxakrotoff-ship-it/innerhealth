@@ -41,7 +41,14 @@ export function CoverImageDropzone({
           credentials: 'include',
           body: formData,
         });
-        const data = await res.json();
+        let data: { error?: string; url?: string } = {};
+        try {
+          data = (await res.json()) as { error?: string; url?: string };
+        } catch {
+          throw new Error(
+            `Сервер вернул не JSON (${res.status}). Проверьте nginx client_max_body_size и логи приложения.`
+          );
+        }
         if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
         onChange(data.url ?? '');
       } catch (e) {
@@ -50,7 +57,7 @@ export function CoverImageDropzone({
         setUploading(false);
       }
     },
-    [onChange]
+    [folder, onChange]
   );
 
   const handleDrop = useCallback(

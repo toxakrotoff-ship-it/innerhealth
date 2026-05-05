@@ -10,6 +10,8 @@ export interface ProductVariantForListing {
   photo: string | null
   photos?: unknown
   slug: string | null
+  /** Sprint Power: "details" should open the category page instead of PDP. */
+  primaryCategorySlug?: string | null
   isPromoEligible: boolean
   discountPrice: number | null
   isPreorderEnabled?: boolean

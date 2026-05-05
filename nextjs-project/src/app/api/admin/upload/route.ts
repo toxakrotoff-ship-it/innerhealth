@@ -48,6 +48,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ url });
   } catch (error) {
     console.error('Upload error:', error);
+    const code =
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as NodeJS.ErrnoException).code === 'string'
+        ? (error as NodeJS.ErrnoException).code
+        : undefined;
+    if (code === 'EACCES' || code === 'EPERM') {
+      return NextResponse.json(
+        {
+          error:
+            'Нет прав на запись в каталог загрузок. На сервере выдайте контейнеру/пользователю запись в public/uploads (и подпапки) или см. docker-compose volume.',
+        },
+        { status: 500 }
+      );
+    }
+    if (code === 'ENOSPC') {
+      return NextResponse.json({ error: 'Недостаточно места на диске для загрузки.' }, { status: 507 });
+    }
     return NextResponse.json({ error: 'Ошибка загрузки' }, { status: 500 });
   }
 }

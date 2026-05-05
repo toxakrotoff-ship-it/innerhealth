@@ -16,9 +16,16 @@ interface GroupedProductCardProps {
   group: ProductListingGroup
   priority?: boolean
   showSku?: boolean
+  /** Hide the "Подробнее" button (e.g., Sprint category single-product landing). */
+  showDetailsButton?: boolean
 }
 
-export function GroupedProductCard({ group, priority = false, showSku = true }: GroupedProductCardProps) {
+export function GroupedProductCard({
+  group,
+  priority = false,
+  showSku = true,
+  showDetailsButton = true,
+}: GroupedProductCardProps) {
   const [selectedId, setSelectedId] = useState<string>(group.defaultVariantId)
 
   const activeVariant = useMemo(
@@ -27,8 +34,12 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
   )
   const isUnavailable =
     activeVariant.quantity != null && activeVariant.quantity <= 0 && !activeVariant.isPreorderEnabled
-  const detailHref = activeVariant.slug ? `/product/${activeVariant.slug}` : `/product/id/${activeVariant.id}`
+  const defaultDetailHref = activeVariant.slug ? `/product/${activeVariant.slug}` : `/product/id/${activeVariant.id}`
   const isSprintTheme = activeVariant.brand === 'sprint-power'
+  const detailHref =
+    isSprintTheme && activeVariant.primaryCategorySlug
+      ? `/catalog/${activeVariant.primaryCategorySlug}`
+      : defaultDetailHref
   const activePhotoSrc = activeVariant.photo
     ? activeVariant.photo.startsWith('http://') || activeVariant.photo.startsWith('https://')
       ? activeVariant.photo
@@ -178,17 +189,19 @@ export function GroupedProductCard({ group, priority = false, showSku = true }: 
                 isSprintTheme && 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
               )}
             />
-            <Link
-              href={detailHref}
-              className={cn(
-                'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm leading-tight font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
-                isSprintTheme
-                  ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
-                  : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
-              )}
-            >
-              Подробнее
-            </Link>
+            {showDetailsButton ? (
+              <Link
+                href={detailHref}
+                className={cn(
+                  'desktop-button-scale inline-flex min-h-[40px] w-full shrink-0 items-center justify-center rounded-full border px-3 py-2 text-center text-sm leading-tight font-medium transition-colors sm:min-h-[36px] 2xl:min-h-[40px] 2xl:text-[0.95rem] 3xl:min-h-[44px] 3xl:text-base',
+                  isSprintTheme
+                    ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700 hover:text-[#9AB8FF]'
+                    : 'border-gray-300 bg-white text-text hover:border-action-blue hover:bg-gray-50 hover:text-action-blue'
+                )}
+              >
+                Подробнее
+              </Link>
+            ) : null}
           </div>
         </div>
       </article>
