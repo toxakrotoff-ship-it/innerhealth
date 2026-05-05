@@ -40,6 +40,8 @@ import { COLLAGEN_SPEC_CELLS } from '@/content/collagen-category-line'
 import { HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
 import { BCAA6000_INFO_CELLS } from '@/content/bcaa6000-category-info'
 import { cn } from '@/lib/utils'
+import { NutrientCategoryUsageComposition } from '@/components/site/nutrient-category-usage-composition'
+import { NutrientCategoryBenefitsBento } from '@/components/site/nutrient-category-benefits-bento'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -407,7 +409,8 @@ export default async function CategoryPage({ params }: PageProps) {
                     const descriptionPlain = promo.siteDescription
                       ? htmlToPlainText(promo.siteDescription)
                       : ''
-                    const cover = (promo as any).coverImage as string | undefined
+                    const cover =
+                      (promo as unknown as { coverImage?: string | null }).coverImage ?? undefined
                     const fallbackPhoto = promo.giftProduct?.photo ?? null
                     const imageSrc =
                       cover ??
@@ -541,6 +544,10 @@ export default async function CategoryPage({ params }: PageProps) {
             </FluidGrid>
           )}
 
+          {isSprintTheme && (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
+            <NutrientCategoryUsageComposition />
+          )}
+
           {isSprintTheme && (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
             <Bcaa6000CategoryInfoGrid cells={BCAA6000_INFO_CELLS} />
           )}
@@ -607,6 +614,10 @@ export default async function CategoryPage({ params }: PageProps) {
             categorySlug !== 'sp-bonebroth' && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
+
+          {isSprintTheme && (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
+            <NutrientCategoryBenefitsBento />
+          )}
 
           {/* Описание раздела под каталогом */}
           {hasDescription && content && (
