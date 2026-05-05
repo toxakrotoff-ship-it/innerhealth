@@ -82,7 +82,6 @@ export function PageViewTracker() {
     if (activeBrand === 'inner' && typeof window.ym === 'function') {
       const fullUrl = `${window.location.origin}${fullPath}`
       window.ym(92621260, 'hit', fullUrl, { title: document.title, referer: document.referrer })
-      window.ym(94297848, 'hit', fullUrl, { title: document.title, referer: document.referrer })
     }
 
     logAnalyticsEvent({
