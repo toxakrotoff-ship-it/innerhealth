@@ -36,11 +36,11 @@ export const NUTRIENT_CATEGORY_BENTO_TILES: readonly MarketingBentoTile[] = [
 ] as const
 
 export const NUTRIENT_MARKETING_BENTO_GRID_CLASS =
-  'grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3 lg:grid-rows-4 lg:gap-4'
+  'grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3 lg:auto-rows-[11rem] lg:gap-4'
 
 export const NUTRIENT_MARKETING_BENTO_TILE_LAYOUT_CLASSES: readonly string[] = [
   // Left tall
-  'lg:col-start-1 lg:row-start-1 lg:col-span-1 lg:row-span-2 min-h-[220px] lg:min-h-0',
+  'lg:col-start-1 lg:row-start-1 lg:col-span-1 lg:row-span-2 min-h-[220px]',
   // Center top small
   'lg:col-start-2 lg:row-start-1 lg:col-span-1 lg:row-span-1 min-h-[150px]',
   // Right tall (dominant)
