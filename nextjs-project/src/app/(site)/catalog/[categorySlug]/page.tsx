@@ -34,8 +34,11 @@ import { CollagenCategoryBenefitsBento } from '@/components/site/collagen-catego
 import { CollagenCategorySpecGrid } from '@/components/site/collagen-category-spec-grid'
 import { HydroCategoryBenefitsBento } from '@/components/site/hydro-category-benefits-bento'
 import { HydroCategoryProductDescription } from '@/components/site/hydro-category-product-description'
+import { Bcaa6000CategoryInfoGrid } from '@/components/site/bcaa6000-category-info-grid'
+import { Bcaa6000CategoryBenefitsBento } from '@/components/site/bcaa6000-category-benefits-bento'
 import { COLLAGEN_SPEC_CELLS } from '@/content/collagen-category-line'
 import { HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
+import { BCAA6000_INFO_CELLS } from '@/content/bcaa6000-category-info'
 import { cn } from '@/lib/utils'
 
 function htmlToPlainText(html: string): string {
@@ -537,6 +540,20 @@ export default async function CategoryPage({ params }: PageProps) {
             </FluidGrid>
           )}
 
+          {isSprintTheme && (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
+            <Bcaa6000CategoryInfoGrid cells={BCAA6000_INFO_CELLS} />
+          )}
+
+          {isSprintTheme &&
+            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
+            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
+              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
+            )}
+
+          {isSprintTheme && (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
+            <Bcaa6000CategoryBenefitsBento />
+          )}
+
           {isSprintTheme && categorySlug === 'hydro' && (
             <HydroCategoryProductDescription content={HYDRO_CATEGORY_PRODUCT_DESCRIPTION} />
           )}
@@ -584,6 +601,8 @@ export default async function CategoryPage({ params }: PageProps) {
             categorySlug !== 'hydro' &&
             categorySlug !== 'collagen' &&
             categorySlug !== 'bonebroth' &&
+            categorySlug !== 'bcaa6000' &&
+            categorySlug !== 'sp-bcaa6000' &&
             categorySlug !== 'sp-bonebroth' && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
