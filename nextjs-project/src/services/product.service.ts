@@ -13,6 +13,7 @@ import {
   applyPersistedCatalogOrder,
   parsePersistedCatalogOrder,
 } from '@/lib/persisted-catalog-order';
+import type { ProductVariantForListing } from '@/lib/product-grouping';
 
 /** Select only fields needed for admin list — do NOT fetch photos Json or long text. */
 const adminListSelect = {
@@ -124,6 +125,30 @@ export interface CatalogQueryOptions {
   brandId?: BrandId | null;
 }
 
+const sprintCatalogProductSelect = Prisma.validator<Prisma.ProductSelect>()({
+  ...productCardSelect,
+  categories: {
+    orderBy: [{ sortOrder: 'asc' }],
+    take: 1,
+    select: { category: { select: { slug: true } } },
+  },
+});
+
+type CatalogProductRow = ProductVariantForListing & {
+  readonly isFeaturedInNewArrivals: boolean;
+};
+
+type CatalogProductDbRow = Prisma.ProductGetPayload<{ select: typeof productCardSelect }>;
+type SprintCatalogProductDbRow = Prisma.ProductGetPayload<{ select: typeof sprintCatalogProductSelect }>;
+
+function attachPrimaryCategorySlug(rows: readonly SprintCatalogProductDbRow[]): CatalogProductRow[] {
+  return rows.map((row) => {
+    const primaryCategorySlug = row.categories[0]?.category?.slug ?? null;
+    const { categories: _categories, ...rest } = row;
+    return { ...(rest as CatalogProductDbRow), primaryCategorySlug };
+  });
+}
+
 function buildCatalogOrderBy(sort: CatalogQueryOptions['sort']): Prisma.ProductOrderByWithRelationInput[] {
   if (sort === 'price_asc') return [{ price: 'asc' }, { createdAt: 'desc' }];
   if (sort === 'price_desc') return [{ price: 'desc' }, { createdAt: 'desc' }];
@@ -170,49 +195,31 @@ function buildCatalogWhere(options: CatalogQueryOptions): Prisma.ProductWhereInp
   return { isDraft: false, AND: andClauses };
 }
 
-export async function getCatalogProducts(options: CatalogQueryOptions) {
+export async function getCatalogProducts(
+  options: CatalogQueryOptions
+): Promise<{ items: CatalogProductRow[]; total: number; hasNextPage: boolean }> {
   const page = Math.max(1, options.page);
   const pageSize = Math.max(1, options.pageSize);
   const skip = (page - 1) * pageSize;
   const where = buildCatalogWhere(options);
   const orderBy = buildCatalogOrderBy(options.sort);
   const isSprintTheme = isSprintPowerBrand(options.brandId);
-  const select = isSprintTheme
-    ? ({
-        ...productCardSelect,
-        categories: {
-          orderBy: [{ sortOrder: 'asc' as const }],
-          take: 1,
-          select: { category: { select: { slug: true } } },
-        },
-      } as const)
-    : productCardSelect;
-
-  function attachPrimaryCategorySlug<
-    T extends { categories?: Array<{ category: { slug: string } }> }
-  >(rows: readonly T[]): Array<Omit<T, 'categories'> & { primaryCategorySlug?: string | null }> {
-    return rows.map((row) => {
-      const primaryCategorySlug = row.categories?.[0]?.category?.slug ?? null;
-      // Keep payload lean: we don't need nested categories on the client.
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { categories, ...rest } = row;
-      return { ...rest, primaryCategorySlug };
-    });
-  }
 
   if (options.sort === 'newest') {
     const [allItems, total, persistedOrderIds] = await Promise.all([
       prisma.product.findMany({
         where,
         orderBy: [{ createdAt: 'desc' }],
-        select,
+        select: isSprintTheme ? sprintCatalogProductSelect : productCardSelect,
       }),
       prisma.product.count({ where }),
       getPersistedGlobalCatalogOrderIds(options.brandId),
     ]);
-    const normalizedItems = isSprintTheme ? attachPrimaryCategorySlug(allItems as any) : allItems;
-    const ordered = applyPersistedCatalogOrder(normalizedItems as any, persistedOrderIds);
-    const pageItems = ordered.slice(skip, skip + pageSize);
+    const normalizedItems: CatalogProductRow[] = isSprintTheme
+      ? attachPrimaryCategorySlug(allItems as SprintCatalogProductDbRow[])
+      : (allItems as CatalogProductDbRow[]);
+    const ordered = applyPersistedCatalogOrder<CatalogProductRow>(normalizedItems, persistedOrderIds);
+    const pageItems = ordered.slice(skip, skip + pageSize) as CatalogProductRow[];
     return {
       items: pageItems,
       total,
@@ -226,13 +233,15 @@ export async function getCatalogProducts(options: CatalogQueryOptions) {
       orderBy,
       skip,
       take: pageSize,
-      select,
+      select: isSprintTheme ? sprintCatalogProductSelect : productCardSelect,
     }),
     prisma.product.count({ where }),
   ]);
 
   return {
-    items: isSprintTheme ? attachPrimaryCategorySlug(items as any) : items,
+    items: isSprintTheme
+      ? attachPrimaryCategorySlug(items as SprintCatalogProductDbRow[])
+      : (items as CatalogProductDbRow[]),
     total,
     hasNextPage: skip + items.length < total,
   };
