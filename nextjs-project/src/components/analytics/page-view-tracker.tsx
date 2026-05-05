@@ -6,6 +6,13 @@ import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { detectAnalyticsDeviceType } from '@/lib/analytics/device-type'
 import { resolveClientSiteBrandFromWindow } from '@/lib/brand/client-site-brand'
 
+declare global {
+  interface Window {
+    ym?: (counterId: number, method: string, ...args: unknown[]) => void
+    dataLayer?: unknown[]
+  }
+}
+
 function getAnonId(): string {
   if (typeof window === 'undefined') return ''
   const key = 'ih_anon_id'
@@ -71,6 +78,12 @@ export function PageViewTracker() {
       maxTouchPoints: navigator.maxTouchPoints,
       innerWidth: width,
     })
+
+    if (activeBrand === 'inner' && typeof window.ym === 'function') {
+      const fullUrl = `${window.location.origin}${fullPath}`
+      window.ym(92621260, 'hit', fullUrl, { title: document.title, referer: document.referrer })
+      window.ym(94297848, 'hit', fullUrl, { title: document.title, referer: document.referrer })
+    }
 
     logAnalyticsEvent({
       brand: activeBrand,

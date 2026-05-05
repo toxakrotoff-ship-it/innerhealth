@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import { Unbounded } from 'next/font/google'
+import Script from 'next/script'
 import { IconoirProvider } from 'iconoir-react'
 import { Preloader } from '@/components/site/preloader'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
@@ -130,36 +131,48 @@ export default async function RootLayout({
   const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
   const hostBrandId = resolveBrandByHost(host)
   const shouldRenderMetrika = hostBrandId === 'inner'
+  const metrikaBootstrapScriptInner = `
+(function (m, e, t, r, i, k, a) {
+  m[i] =
+    m[i] ||
+    function () {
+      (m[i].a = m[i].a || []).push(arguments);
+    };
+  m[i].l = 1 * new Date();
+  for (var j = 0; j < document.scripts.length; j++) {
+    if (document.scripts[j].src === r) return;
+  }
+  k = e.createElement(t);
+  a = e.getElementsByTagName(t)[0];
+  k.async = 1;
+  k.src = r;
+  a.parentNode.insertBefore(k, a);
+})(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
 
-  const metrikaHeadScriptInner = `
-(function(m,e,t,r,i,k,a){
-    m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-    m[i].l=1*new Date();
-    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-})(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
+window.dataLayer = window.dataLayer || [];
 
-ym(92621260, 'init', {webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-`.trim()
+ym(92621260, 'init', {
+  webvisor: true,
+  clickmap: true,
+  trackLinks: true,
+  accurateTrackBounce: true,
+  ecommerce: 'dataLayer',
+});
 
-  const metrikaHeadNoscriptInner = `<div><img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" /></div>`
-
-  const metrikaBodyScriptInner = `
-(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-m[i].l=1*new Date();
-for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-
-ym(92621260, "init", {
-     clickmap:true,
-     trackLinks:true,
-     accurateTrackBounce:true,
-     webvisor:true
+ym(94297848, 'init', {
+  webvisor: true,
+  clickmap: true,
+  trackLinks: true,
+  accurateTrackBounce: true,
 });
 `.trim()
 
-  const metrikaBodyNoscriptInner = `<div><img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" /></div>`
+  const metrikaNoscriptInner = `
+<div>
+  <img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" />
+  <img src="https://mc.yandex.ru/watch/94297848" style="position:absolute; left:-9999px;" alt="" />
+</div>
+`.trim()
 
   const bodySurfaceClass =
     brandId === 'sprint-power'
@@ -180,32 +193,16 @@ ym(92621260, "init", {
               'html.preloader-skip .preloader-overlay,html[data-preloader-skip="1"] .preloader-overlay{display:none!important}',
           }}
         />
-        {shouldRenderMetrika ? (
-          <script
-            type="text/javascript"
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: metrikaHeadScriptInner }}
-          />
-        ) : null}
-        {shouldRenderMetrika ? (
-          <noscript
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: metrikaHeadNoscriptInner }}
-          />
-        ) : null}
       </head>
       <body className={bodySurfaceClass}>
         {shouldRenderMetrika ? (
           <>
-            <script
-              type="text/javascript"
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{ __html: metrikaBodyScriptInner }}
+            <Script
+              id="yandex-metrika-inner"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{ __html: metrikaBootstrapScriptInner }}
             />
-            <noscript
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{ __html: metrikaBodyNoscriptInner }}
-            />
+            <noscript suppressHydrationWarning dangerouslySetInnerHTML={{ __html: metrikaNoscriptInner }} />
           </>
         ) : null}
         <IconoirProvider
