@@ -807,7 +807,14 @@ function SprintPowerHome({
               </Link>
             </div>
             {data.categories.length > 0 ? (
-              <FluidGrid cols={1} colsTablet={2} colsDesktop={2} gap={4} adaptiveGap>
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={2}
+                gap={4}
+                adaptiveGap
+                className="mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]"
+              >
                 {data.categories.map((category) => {
                   const bgImage = resolveCategoryImage(category.slug, category.image, {
                     sprintFallback: true,

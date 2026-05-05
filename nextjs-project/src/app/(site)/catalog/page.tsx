@@ -228,6 +228,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             colsDesktop={isSprintTheme ? 2 : 3}
             gap={4}
             adaptiveGap
+            className={isSprintTheme ? 'mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]' : undefined}
           >
             {catalogBlockCategories.map((cat) => {
               const bgImage = resolveCategoryImage(cat.slug, cat.image, {
