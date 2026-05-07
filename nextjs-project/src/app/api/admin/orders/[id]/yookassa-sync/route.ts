@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
-import { getYookassaPayment } from '@/lib/yookassa'
+import { syncOnePendingOrder } from '@/lib/yookassa-sync-service'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
-import { scheduleNotifyAllChannelsAfterOrderPaid } from '@/lib/order-paid-notifications'
 
 interface YookassaSyncResponse {
   ok: boolean
@@ -41,45 +40,50 @@ export async function POST(
   }
 
   const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
-  const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: orderBrandId })
-  const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
-  const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
-  const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
-  const credentials = hasFromAdmin ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin } : undefined
 
-  const payment = await getYookassaPayment(paymentId, credentials)
-  if (!payment) {
+  const result = await syncOnePendingOrder(
+    {
+      id: orderId,
+      status: order.status,
+      // createdAt/yookassaCheckedAt не используются single-sync (без throttle).
+      createdAt: new Date(),
+      yookassaPaymentId: paymentId,
+      yookassaCheckedAt: null,
+      brand: orderBrandId,
+    },
+    'admin-sync',
+    async (brandId) => {
+      const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
+      const shopId = (yookassaSettings.yookassa_shop_id ?? '').trim()
+      const secretKey = (yookassaSettings.yookassa_secret_key ?? '').trim()
+      if (!shopId || !secretKey) return undefined
+      return { shopId, secretKey }
+    }
+  )
+
+  if (result.error) {
     return NextResponse.json<YookassaSyncResponse>(
-      { ok: false, orderId, paymentId, error: 'Не удалось получить статус платежа в ЮKassa' },
+      {
+        ok: false,
+        orderId,
+        paymentId,
+        previousOrderStatus: result.previousOrderStatus,
+        orderStatus: result.orderStatus,
+        paymentStatus: result.paymentStatus ?? undefined,
+        updated: result.updated,
+        error: result.error,
+      },
       { status: 502 }
     )
-  }
-
-  const previousOrderStatus = order.status
-  const paymentStatus = payment.status
-
-  let updated = false
-  let orderStatus = previousOrderStatus
-
-  if (paymentStatus === 'succeeded' && previousOrderStatus !== 'paid') {
-    await orderService.updateOrderStatus(orderId, 'paid')
-    updated = true
-    orderStatus = 'paid'
-    scheduleNotifyAllChannelsAfterOrderPaid(orderId)
-  } else if (paymentStatus === 'canceled' && previousOrderStatus === 'pending') {
-    await orderService.updateOrderStatus(orderId, 'canceled')
-    updated = true
-    orderStatus = 'canceled'
   }
 
   return NextResponse.json<YookassaSyncResponse>({
     ok: true,
     orderId,
     paymentId,
-    paymentStatus,
-    previousOrderStatus,
-    orderStatus,
-    updated,
+    paymentStatus: result.paymentStatus ?? undefined,
+    previousOrderStatus: result.previousOrderStatus,
+    orderStatus: result.orderStatus,
+    updated: result.updated,
   })
 }
-

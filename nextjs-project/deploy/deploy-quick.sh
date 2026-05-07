@@ -47,6 +47,49 @@ require_free_disk_mb() {
 MIN_FREE_MB="${MIN_FREE_MB:-3072}"
 POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-1536}"
 NO_CACHE="${NO_CACHE:-0}"
+SKIP_VPS_SAFEGUARDS="${SKIP_VPS_SAFEGUARDS:-0}"
+
+# Идемпотентно обеспечивает наличие фоновых секретов в .env.
+# См. deploy/ops/setup-secrets.sh.
+ensure_app_secrets() {
+  if [ -x "./deploy/ops/setup-secrets.sh" ]; then
+    log "Ensuring app .env secrets (idempotent)..."
+    ./deploy/ops/setup-secrets.sh
+  else
+    log "WARN: deploy/ops/setup-secrets.sh missing or not executable; skipping secrets bootstrap."
+  fi
+}
+
+# Ставит/обновляет VPS-крон. Best-effort: при отсутствии sudo/crontab
+# просто пишем предупреждение и не валим деплой.
+ensure_vps_safeguards() {
+  if [ "${SKIP_VPS_SAFEGUARDS}" = "1" ]; then
+    log "SKIP_VPS_SAFEGUARDS=1, пропускаю установку cron'а."
+    return 0
+  fi
+  if [ ! -x "./deploy/ops/install-vps-safeguards.sh" ]; then
+    log "WARN: deploy/ops/install-vps-safeguards.sh missing or not executable; skipping cron setup."
+    return 0
+  fi
+  if ! command -v crontab >/dev/null 2>&1; then
+    log "WARN: crontab not available on host; skipping cron setup."
+    return 0
+  fi
+  log "Refreshing VPS safeguards (cron + ops scripts)..."
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    ./deploy/ops/install-vps-safeguards.sh --non-interactive || \
+      log "WARN: install-vps-safeguards.sh failed; cron not refreshed."
+  else
+    if sudo -n true 2>/dev/null; then
+      sudo -E ./deploy/ops/install-vps-safeguards.sh --non-interactive || \
+        log "WARN: install-vps-safeguards.sh failed; cron not refreshed."
+    else
+      log "WARN: sudo требует пароль и стандартный ввод не интерактивный; пропускаю установку cron."
+      log "      Запустите вручную: sudo -E ./deploy/ops/install-vps-safeguards.sh --non-interactive"
+    fi
+  fi
+}
+
 # Каталог с docker-compose (nextjs-project) — сюда вернёмся для сборки
 DEPLOY_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$DEPLOY_DIR"
@@ -68,6 +111,8 @@ fi
 git pull --ff-only origin "${CURRENT_BRANCH}"
 
 cd "$DEPLOY_DIR"
+
+ensure_app_secrets
 
 cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
 require_free_disk_mb "${MIN_FREE_MB}"
@@ -109,6 +154,8 @@ log "Removing old telegram-bot image (if still present)..."
 docker image rm nextjs-project-telegram-bot:latest || true
 
 cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
+
+ensure_vps_safeguards
 
 log "Done."
 docker_compose ps

@@ -176,6 +176,9 @@ model Order {
   promoCodeId         String?
   /// * ID платежа ЮKassa (для связки с webhook и return_url)
   yookassaPaymentId   String?       @unique
+  /// Последняя попытка фоновой проверки статуса платежа в ЮKassa (cron-поллер).
+  /// Используется как throttle: чем старше заказ, тем реже опрос.
+  yookassaCheckedAt   DateTime?
   /// UUID заказа в СДЭК после успешного создания
   cdekOrderUuid       String?       @unique
   /// Последнее сообщение об ошибке СДЭК (для админки и повтора)
@@ -195,6 +198,7 @@ model Order {
   @@index([userId, createdAt])
   @@index([deletedAt, createdAt])
   @@index([brand, createdAt])
+  @@index([status, yookassaPaymentId, yookassaCheckedAt])
 }
 
 model User {

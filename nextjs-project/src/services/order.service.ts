@@ -308,6 +308,7 @@ export interface PendingYookassaSyncOrderCandidate {
   status: string;
   createdAt: Date;
   yookassaPaymentId: string;
+  yookassaCheckedAt: Date | null;
   brand: BrandId;
 }
 
@@ -329,21 +330,41 @@ export async function getPendingOrdersWithYookassaPayment(options: {
       status: true,
       createdAt: true,
       yookassaPaymentId: true,
+      yookassaCheckedAt: true,
       brand: true,
-    },
+    } as Prisma.OrderSelect,
     orderBy: { createdAt: 'desc' },
     take: options.take,
   });
 
-  return rows
+  return (rows as unknown as Array<{
+    id: string;
+    status: string;
+    createdAt: Date;
+    yookassaPaymentId: string | null;
+    yookassaCheckedAt: Date | null;
+    brand: string;
+  }>)
     .filter((row) => typeof row.yookassaPaymentId === 'string' && row.yookassaPaymentId.length > 0)
     .map((row) => ({
       id: row.id,
       status: row.status,
       createdAt: row.createdAt,
       yookassaPaymentId: row.yookassaPaymentId as string,
+      yookassaCheckedAt: row.yookassaCheckedAt ?? null,
       brand: normalizeBrandId(row.brand) ?? 'inner',
     }));
+}
+
+/** Зафиксировать факт фоновой проверки статуса в ЮKassa (для throttling-логики). */
+export async function markYookassaChecked(
+  orderId: string,
+  checkedAt: Date = new Date()
+): Promise<void> {
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { yookassaCheckedAt: checkedAt } as Prisma.OrderUpdateInput,
+  });
 }
 
 export async function findOrderForCdekTrackSync(

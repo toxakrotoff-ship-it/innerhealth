@@ -48,6 +48,50 @@ require_free_disk_mb() {
 MIN_FREE_MB="${MIN_FREE_MB:-4096}"
 POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-2048}"
 NO_CACHE="${NO_CACHE:-0}"
+SKIP_VPS_SAFEGUARDS="${SKIP_VPS_SAFEGUARDS:-0}"
+
+# Идемпотентно обеспечивает наличие фоновых секретов в .env (генерирует
+# отсутствующие YOOKASSA_POLL_TOKEN / INFRA_ALERT_TOKEN). Существующие значения
+# не трогает, безопасно вызывать на каждом деплое.
+ensure_app_secrets() {
+  if [ -x "./deploy/ops/setup-secrets.sh" ]; then
+    log "Ensuring app .env secrets (idempotent)..."
+    ./deploy/ops/setup-secrets.sh
+  else
+    log "WARN: deploy/ops/setup-secrets.sh missing or not executable; skipping secrets bootstrap."
+  fi
+}
+
+# Ставит/обновляет VPS-крон для docker-maintenance, vps-monitor и yookassa-poll.
+# Best-effort: если sudo не настроен или crontab недоступен, только пишем
+# предупреждение и не валим деплой.
+ensure_vps_safeguards() {
+  if [ "${SKIP_VPS_SAFEGUARDS}" = "1" ]; then
+    log "SKIP_VPS_SAFEGUARDS=1, пропускаю установку cron'а."
+    return 0
+  fi
+  if [ ! -x "./deploy/ops/install-vps-safeguards.sh" ]; then
+    log "WARN: deploy/ops/install-vps-safeguards.sh missing or not executable; skipping cron setup."
+    return 0
+  fi
+  if ! command -v crontab >/dev/null 2>&1; then
+    log "WARN: crontab not available on host; skipping cron setup."
+    return 0
+  fi
+  log "Refreshing VPS safeguards (cron + ops scripts)..."
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then
+    ./deploy/ops/install-vps-safeguards.sh --non-interactive || \
+      log "WARN: install-vps-safeguards.sh failed; cron not refreshed."
+  else
+    if sudo -n true 2>/dev/null; then
+      sudo -E ./deploy/ops/install-vps-safeguards.sh --non-interactive || \
+        log "WARN: install-vps-safeguards.sh failed; cron not refreshed."
+    else
+      log "WARN: sudo requires password and stdin не интерактивный; пропускаю установку cron."
+      log "      Запустите вручную: sudo -E ./deploy/ops/install-vps-safeguards.sh --non-interactive"
+    fi
+  fi
+}
 
 log "Pulling latest code..."
 git fetch --prune origin
@@ -61,6 +105,8 @@ if ! git merge-base --is-ancestor "HEAD" "origin/${CURRENT_BRANCH}"; then
   exit 1
 fi
 git pull --ff-only origin "${CURRENT_BRANCH}"
+
+ensure_app_secrets
 
 cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
 require_free_disk_mb "${MIN_FREE_MB}"
@@ -134,6 +180,8 @@ cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
 log "Waiting for app to be up..."
 sleep 5
 docker_compose ps
+
+ensure_vps_safeguards
 
 log "Done. App: http://$(hostname -I 2>/dev/null | awk '{print $1}'):80 (or your domain)"
 log "Set RUN_MIGRATE=1 in .env if you want migrations to run on every container start (optional)."

@@ -133,6 +133,8 @@ const proxyWithAuth = withAuth(proxyHandler, {
       const pathname = new URL(req.url).pathname
       // Token-protected infra alerts endpoint must be callable without NextAuth session.
       if (pathname === '/api/admin/infra-alert') return true
+      // Token-protected cron endpoints (background pollers) must be callable without NextAuth.
+      if (pathname.startsWith('/api/cron/')) return true
       const isAdminPath = pathname.startsWith(`/${adminSecretPath}`)
       const isAdminApi = pathname.startsWith('/api/admin')
       if (!isAdminPath && !isAdminApi) return true
