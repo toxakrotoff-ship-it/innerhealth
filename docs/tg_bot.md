@@ -27,7 +27,7 @@
 - Получить токен: [@BotFather](https://t.me/BotFather) → /newbot или /token.
 - Для отдельного сервиса бота: тот же `TELEGRAM_BOT_TOKEN` передаётся в процесс бота (env при запуске или общий `.env` в корне монорепозитория).
 - **TELEGRAM_SITE_URL** — URL сайта, по которому бот вызывает API (confirm, whitelist, promo-stats). Если бот и сайт в **разных Docker-контейнерах** на одной машине, задайте `http://app:3000` (имя сервиса приложения из docker-compose). В `nextjs-project/docker-compose.yml` для сервиса `telegram-bot` это уже прописано в `environment`.
-- **SOCKS5 к Telegram API** (если с сервера недоступен `api.telegram.org`): одна и та же переменная для процесса сайта и для бота — `TELEGRAM_SOCKS_PROXY_URL` (или `TELEGRAM_PROXY_SOCKS_URL`). Можно вставить ссылку из Telegram целиком, в том числе `https://t.me/socks?server=...&port=...&user=...&pass=...`, либо `tg://socks?...`, либо `socks5://user:pass@host:port`. Значение задаётся в `.env` на сервере (в репозиторий не коммитить).
+- **SOCKS5 к Telegram API** (если с сервера недоступен `api.telegram.org`): одна и та же переменная для процесса сайта и для бота — `TELEGRAM_SOCKS_PROXY_URL` (или `TELEGRAM_PROXY_SOCKS_URL`). Можно вставить ссылку из Telegram целиком, в том числе `https://t.me/socks?server=...&port=...&user=...&pass=...`, либо `tg://socks?...`, либо `socks5://user:pass@host:port`. Значение задаётся в `.env` на сервере (в репозиторий не коммитить). Пошагово для прода: [telegram-socks-proxy-production.md](./telegram-socks-proxy-production.md).
 
 ---
 

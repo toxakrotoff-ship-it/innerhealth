@@ -45,7 +45,7 @@ cd innerhealth/nextjs-project
 - `NEXTAUTH_SECRET`, ключи YooKassa, CDEK, Telegram, SMTP и т.д.
 - **Карта СДЭК и контакты:** `NEXT_PUBLIC_YANDEX_MAPS_API_KEY` — ключ из [Яндекс.Разработки](https://developer.tech.yandex.ru/) (JavaScript API карт). Добавьте в `.env` на сервере одну строку, затем пересоберите образ: `docker compose build app && docker compose up -d app`. После этого при любом `git pull` и `./deploy/deploy-quick.sh` ключ подхватится из уже существующего `.env` (файл не коммитится в git).
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — если нужны не дефолтные; `DATABASE_URL` в docker-compose подставляется из них, в .env можно не дублировать.
-- **Telegram-бот:** в `docker-compose.yml` для сервиса `telegram-bot` уже задано `TELEGRAM_SITE_URL: http://app:3000` — так бот из своего контейнера ходит в контейнер приложения по имени сервиса `app`. Переопределять в `.env` не нужно.
+- **Telegram-бот:** в `docker-compose.yml` для сервиса `telegram-bot` уже задано `TELEGRAM_SITE_URL: http://app:3000` — так бот из своего контейнера ходит в контейнер приложения по имени сервиса `app`. Переопределять в `.env` не нужно. Если с VPS нужен SOCKS к `api.telegram.org`, см. [telegram-socks-proxy-production.md](./telegram-socks-proxy-production.md).
 
 ```bash
 nano .env   # или vim
