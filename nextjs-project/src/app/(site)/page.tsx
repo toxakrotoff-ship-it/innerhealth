@@ -42,6 +42,7 @@ import {
   formatProductsCountRu,
 } from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
+import { buildHomeMetadata } from './home-metadata'
 
 const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -97,33 +98,7 @@ export async function generateMetadata(
   const siteConfig = getBrandSiteConfig(activeBrand)
   const siteUrl = getBrandSiteUrl(activeBrand)
 
-  if (activeBrand === 'sprint-power') {
-    return {
-      title: 'Главная',
-      description:
-        'Sprint Power: спортивное питание и нутриенты для силы, восстановления и результата.',
-      alternates: { canonical: `${siteUrl}/` },
-      openGraph: {
-        title: 'Sprint Power — спортивное питание',
-        description:
-          'Линейка спортивного питания Sprint Power: протеин, восстановление, продукты для активной формы.',
-        url: `${siteUrl}/`,
-      },
-    }
-  }
-
-  return {
-    title: 'Главная',
-    description:
-      'Inner Health: нутриенты, коллаген, грибные комплексы и здоровое питание. Акции, доставка по России, сертифицированная продукция.',
-    alternates: { canonical: `${siteUrl}/` },
-    openGraph: {
-      title: `${siteConfig.title} — нутриенты и здоровое питание`,
-      description:
-        'Интернет-магазин нутриентов и продуктов для здоровья: каталог, новости и выгодные предложения.',
-      url: `${siteUrl}/`,
-    },
-  }
+  return buildHomeMetadata({ activeBrand, siteConfig, siteUrl })
 }
 
 export const revalidate = 300
