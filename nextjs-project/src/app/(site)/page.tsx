@@ -594,7 +594,7 @@ async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promis
 function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[] }) {
   const title = getBlockTextForBrand(blocks, 'home', 'about.title', 'sprint-power', 'О нас')
   return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 md:p-8">
+    <div className="rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 shadow-sm ring-1 ring-slate-200/80 md:p-8">
       <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{title}</h2>
       <div className="mt-6 max-w-3xl space-y-4 text-[15px] leading-relaxed text-slate-700 md:text-base md:leading-relaxed">
         <p>
@@ -616,7 +616,7 @@ function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[
           любительского спорта, так и спорта высоких достижений.
         </p>
         <p className="font-semibold text-slate-900">Линейка включает в себя:</p>
-        <ul className="list-none space-y-3 border-l-2 border-[#3B82F6]/35 pl-4">
+        <ul className="list-none space-y-3 border-l-2 border-[#7AA2FF]/40 pl-4">
           <li>
             <span className="font-semibold text-slate-900">Мультипротеин. </span>
             Сывороточный белок дополнили гидролизатом куриного белка в ди-и трипептидной форме, усилили пребиотиком
@@ -719,13 +719,13 @@ function SprintPowerHome({
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/catalog"
-                  className="rounded-full bg-[#3B82F6] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+                  className="rounded-full bg-[#7AA2FF] px-5 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
                 >
                   {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
                 </Link>
                 <Link
                   href="/otzyvy"
-                  className="rounded-full border border-slate-600 px-5 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-slate-400 hover:bg-slate-800"
+                  className="rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/15"
                 >
                   {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
                 </Link>
@@ -773,7 +773,7 @@ function SprintPowerHome({
                         <span className="text-sm font-bold text-[#7AA2FF]">{product.price} ₽</span>
                         <Link
                           href={product.slug ? `/product/${product.slug}` : '/catalog'}
-                          className="rounded-full bg-[#3B82F6] px-4 py-1.5 text-xs font-semibold text-white"
+                          className="rounded-full bg-[#7AA2FF] px-4 py-1.5 text-xs font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
                         >
                           Купить
                         </Link>
@@ -861,7 +861,7 @@ function SprintPowerHome({
             )}
           </div>
 
-          <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
+          <div className="grid gap-4 rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 md:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
                 {getBlockTextForBrand(blocks, 'home', 'reviews.title', 'sprint-power', 'Отзывы спортсменов')}
@@ -901,7 +901,7 @@ function SprintPowerHome({
                   key={item}
                   className="flex items-center gap-3 rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700"
                 >
-                  <CheckCircle className="h-5 w-5 shrink-0 text-[#3B82F6]" aria-hidden />
+                  <CheckCircle className="h-5 w-5 shrink-0 text-[#7AA2FF]" aria-hidden />
                   <span>{item}</span>
                 </div>
               ))}
@@ -910,7 +910,7 @@ function SprintPowerHome({
 
           <div className="relative overflow-hidden rounded-3xl border border-[#22304F] bg-[#0C1730] p-6 md:p-8">
             <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[#3B82F6]/10 blur-3xl"
+              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[#7AA2FF]/12 blur-3xl"
               aria-hidden
             />
             <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -939,7 +939,7 @@ function SprintPowerHome({
               </div>
               <Link
                 href={reviewsCtaHref}
-                className="inline-flex items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB] md:shrink-0"
+                className="inline-flex items-center justify-center rounded-full bg-[#7AA2FF] px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF] md:shrink-0"
               >
                 {getBlockTextForBrand(
                   blocks,
@@ -974,7 +974,7 @@ function SprintPowerHome({
                 </div>
                 <Link
                   href="/news"
-                  className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#3B82F6] hover:text-white md:inline-flex"
+                  className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white md:inline-flex"
                 >
                   Все новости
                 </Link>
@@ -985,7 +985,7 @@ function SprintPowerHome({
                     <Link
                       key={post.id}
                       href={`/news/${post.slug}`}
-                      className="group overflow-hidden rounded-2xl border border-[#1B2946] bg-[#0F172A] transition-all hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]"
+                      className="group overflow-hidden rounded-2xl border border-[#1B2946] bg-[#0F172A] transition-all hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.28)]"
                     >
                       <div className="relative aspect-[16/10] bg-slate-900">
                         {post.previewImage ? (
@@ -1113,14 +1113,14 @@ function SprintPowerHome({
         <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <PartnersBlock brand="sprint-power" />
 
-          <div className="rounded-3xl bg-white p-6 md:p-8">
+          <div className="rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 md:p-8">
             <h3 className="mb-4 text-2xl font-bold text-slate-900">
               {getBlockTextForBrand(blocks, 'home', 'faq.title', 'sprint-power', 'Частые вопросы')}
             </h3>
             <FaqAccordion items={faqItems.slice(0, 3)} variant="compact" />
             <Link
               href="/faq"
-              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#3B82F6] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#7AA2FF] px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
             >
               {getBlockTextForBrand(
                 blocks,

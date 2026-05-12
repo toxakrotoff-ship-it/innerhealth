@@ -37,10 +37,10 @@ export function SprintPowerBanner() {
         href={BANNER_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex w-max min-h-[2.75rem] items-center whitespace-nowrap hover:[&_span]:text-white/60"
+        className="flex w-max min-h-[2.75rem] items-center whitespace-nowrap hover:[&_span]:text-white/60 motion-reduce:max-w-full motion-reduce:w-full motion-reduce:whitespace-normal motion-reduce:justify-center"
       >
         {/* Анимация только на треке: без transition на том же слое, что и transform */}
-        <span className="flex w-max animate-marquee-sprint">
+        <span className="flex w-max animate-marquee-sprint motion-reduce:justify-center">
           <MarqueeStrip />
           <MarqueeStrip aria-hidden />
         </span>

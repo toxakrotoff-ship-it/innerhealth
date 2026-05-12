@@ -137,12 +137,15 @@ html.preloader-skip .preloader-overlay {
     --desktop-ui-scale: 1;
   }
 
-  /** Sprint Power storefront: акценты и фон ближе к тёмному хедеру, без смены всей палитры @theme */
+  /**
+   * Sprint Power: единый акцент с карточками и ховерами (#7AA2FF), мягкие светлые поверхности под острова контента.
+   * Утилиты `*-action-blue` в v4 читают `--color-action-blue` с предка — значение задаётся на `html`.
+   */
   html[data-brand='sprint-power'] {
-    --color-action-blue: #3b82f6;
-    --color-ring: #3b82f6;
-    --color-highlight-blue: #dbeafe;
-    --color-soft-background: #f1f5f9;
+    --color-action-blue: #7aa2ff;
+    --color-ring: #7aa2ff;
+    --color-highlight-blue: #e8eefc;
+    --color-soft-background: #eef2f7;
   }
 
   @media (min-width: 1440px) {
@@ -881,7 +884,19 @@ html.preloader-skip .preloader-overlay {
   }
   @media (prefers-reduced-motion: reduce) {
     .animate-marquee-sprint {
-      animation-duration: 45s;
+      animation: none;
+      transform: none !important;
+      width: 100%;
+      max-width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+      row-gap: 0.75rem;
+      column-gap: 3rem;
+    }
+
+    /* Вторая копия полосы нужна только для бесшовного цикла анимации */
+    .animate-marquee-sprint > div:last-child {
+      display: none;
     }
   }
 

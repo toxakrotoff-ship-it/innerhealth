@@ -95,11 +95,11 @@ export function InnerHealthCrossBrandBlock({
             <p className="font-light leading-relaxed text-slate-300 2xl:text-xl">{body}</p>
             <ul className="space-y-4 2xl:space-y-5" role="list">
               <li className="flex items-center gap-3 text-sm font-medium text-slate-200 2xl:text-base">
-                <CheckCircle className="h-5 w-5 shrink-0 text-[#3B82F6]" aria-hidden />
+                <CheckCircle className="h-5 w-5 shrink-0 text-[#7AA2FF]" aria-hidden />
                 {BULLET_1}
               </li>
               <li className="flex items-center gap-3 text-sm font-medium text-slate-200 2xl:text-base">
-                <CheckCircle className="h-5 w-5 shrink-0 text-[#3B82F6]" aria-hidden />
+                <CheckCircle className="h-5 w-5 shrink-0 text-[#7AA2FF]" aria-hidden />
                 {BULLET_2}
               </li>
             </ul>
@@ -108,7 +108,7 @@ export function InnerHealthCrossBrandBlock({
                 href={innerSiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-[#3B82F6] px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+                className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-[#7AA2FF] px-8 py-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
               >
                 {ctaLabel}
                 <NavArrowRight className="h-4 w-4 shrink-0" aria-hidden />

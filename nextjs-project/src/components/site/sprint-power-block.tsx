@@ -9,7 +9,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 export function SprintPowerBlock() {
   return (
     <section
-      className="border-t border-slate-100 py-20 sm:py-24 2xl:py-28 3xl:py-32"
+      className="border-t border-slate-100 bg-linear-to-b from-slate-50/90 via-white to-white py-20 sm:py-24 2xl:py-28 3xl:py-32"
       aria-labelledby="sprint-power-heading"
     >
       <AdaptiveContainer maxWidth="default">
