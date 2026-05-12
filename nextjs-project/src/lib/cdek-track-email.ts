@@ -4,6 +4,7 @@ import {
   sendAdminCdekTrackNotification,
   sendCustomerCdekTrackNotification,
 } from '@/lib/email'
+import { resolveShippingCostForOrderNotify } from '@/lib/order-shipping-cost'
 import * as orderService from '@/services/order.service'
 import * as userService from '@/services/user.service'
 
@@ -17,8 +18,7 @@ export async function sendCdekTrackEmailsForOrder(
   const order = await orderService.findOrderForPaidEmail(orderId)
   if (!order?.shippingInfo) return
 
-  const itemsSubtotal = order.items.reduce((sum, oi) => sum + oi.quantity * oi.price, 0)
-  const shippingCost = Math.max(0, order.total - itemsSubtotal)
+  const shippingCost = resolveShippingCostForOrderNotify(order)
 
   const payload = {
     orderId: order.id,

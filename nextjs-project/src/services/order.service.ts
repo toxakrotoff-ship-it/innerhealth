@@ -67,6 +67,7 @@ export async function findOrderForPaidEmail(orderId: string) {
       id: true,
       orderNumber: true,
       total: true,
+      deliverySum: true,
       status: true,
       userId: true,
       promoCodeId: true,
@@ -440,6 +441,8 @@ export interface CreateOrderShippingParams {
 /** Create order with items and shipping in a transaction. */
 export async function createOrderWithItemsAndShipping(params: {
   total: number;
+  /** Стоимость доставки при оформлении (как в ЮKassa и корзине). */
+  deliverySum?: number | null;
   promoCodeId: string | null;
   /** Сумма скидки по промокоду (для расчёта дохода партнёра от скидок). */
   promoDiscountAmount?: number | null;
@@ -465,6 +468,10 @@ export async function createOrderWithItemsAndShipping(params: {
       data: {
         brand: resolveDbBrand(params.brandId),
         total: params.total,
+        deliverySum:
+          params.deliverySum != null && Number.isFinite(params.deliverySum) && params.deliverySum >= 0
+            ? params.deliverySum
+            : undefined,
         status: 'pending',
         promoCodeId: params.promoCodeId || undefined,
         promoDiscountAmount: params.promoDiscountAmount ?? undefined,

@@ -168,6 +168,8 @@ model Order {
   brand               String        @default("inner")
   userId              String?
   total               Float
+  /// Стоимость доставки на момент оформления (СДЭК и т.п.); для корректных писем при промо/скидках на товары
+  deliverySum         Float?
   /// Сумма скидки по промокоду (для расчёта дохода партнёра от скидок)
   promoDiscountAmount Float?
   status              String        @default("pending")

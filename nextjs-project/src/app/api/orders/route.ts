@@ -138,6 +138,7 @@ export async function POST(request: Request) {
 
     const order = await orderService.createOrderWithItemsAndShipping({
       total,
+      deliverySum,
       promoCodeId: promoCodeId || null,
       promoDiscountAmount: promoDiscountAmount > 0 ? promoDiscountAmount : null,
       userId,

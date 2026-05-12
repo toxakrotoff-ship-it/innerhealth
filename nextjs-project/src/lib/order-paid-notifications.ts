@@ -6,6 +6,7 @@ import * as userService from '@/services/user.service'
 import { notifyTelegramOrder } from '@/lib/telegram-notify'
 import { notifyMaxOrder } from '@/lib/max-notify'
 import { sendPaidOrderEmailsWithDelay } from '@/lib/email'
+import { resolveShippingCostForOrderNotify } from '@/lib/order-shipping-cost'
 
 /**
  * Полные уведомления о заказе (админы: Telegram, MAX, почта; клиент: письмо об оплате; партнёр по промокоду).
@@ -26,8 +27,7 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
     }
 
     const brandId = await orderService.findOrderBrandIdForNotify(orderId)
-    const itemsSubtotal = order.items.reduce((sum, oi) => sum + oi.quantity * oi.price, 0)
-    const shippingCost = Math.max(0, order.total - itemsSubtotal)
+    const shippingCost = resolveShippingCostForOrderNotify(order)
 
     const items = order.items.map((oi) => ({
       title: oi.product.title,
