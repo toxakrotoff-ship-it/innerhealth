@@ -35,7 +35,6 @@ import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
-import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 import {
   formatAktsiiCatalogBlockSubtitleRu,
@@ -325,14 +324,6 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
 }
 
 type SprintHomeData = {
-  featuredProduct: {
-    id: string
-    title: string
-    price: number
-    photo: string | null
-    slug: string | null
-    brand: string | null
-  } | null
   categories: Array<{
     id: string
     title: string
@@ -362,23 +353,12 @@ type SprintHomeData = {
   publicGiftPromotionCount: number
 }
 
-interface GetSprintHomeDataOptions {
-  readonly featuredProductId?: string | null
-}
-
-function normalizeOptionalContentId(value: string | null | undefined): string | null {
-  if (!value) return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promise<SprintHomeData> {
+async function getSprintHomeData(): Promise<SprintHomeData> {
   const dbTimeoutMs = 2500
   const dbBrand = resolveDbBrand('sprint-power')
   const emptySprintCategoryRows = [] as HomeCategoryWithProductCount[]
   const emptySprintReviews = [] as SprintHomeData['reviews']
   const emptySprintPosts = [] as SprintHomeData['newsPosts']
-  const explicitFeaturedProductId = normalizeOptionalContentId(options.featuredProductId)
 
   const [categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
     await Promise.all([
@@ -486,53 +466,7 @@ async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promis
       withTimeout(countPublicGiftPromotions(new Date(), 'sprint-power'), dbTimeoutMs, 0),
     ])
 
-  const featuredProductFromContent =
-    explicitFeaturedProductId == null
-      ? null
-      : ((await withTimeout(
-          prisma.product.findFirst({
-            where: {
-              id: explicitFeaturedProductId,
-              isDraft: false,
-              brand: SPRINT_POWER_PRODUCT_BRAND,
-            },
-            select: {
-              id: true,
-              title: true,
-              price: true,
-              photo: true,
-              slug: true,
-              brand: true,
-            },
-          }),
-          dbTimeoutMs,
-          null
-        )) as SprintHomeData['featuredProduct'])
-
-  const fallbackFeaturedProduct = (await withTimeout(
-    prisma.product.findFirst({
-      where: {
-        isDraft: false,
-        brand: SPRINT_POWER_PRODUCT_BRAND,
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        photo: true,
-        slug: true,
-        brand: true,
-      },
-    }),
-    dbTimeoutMs,
-    null
-  )) as SprintHomeData['featuredProduct']
-
-  const featuredProduct = featuredProductFromContent ?? fallbackFeaturedProduct
-
   return {
-    featuredProduct,
     categories,
     reviews,
     newsPosts,
@@ -612,9 +546,6 @@ function SprintPowerHome({
   faqItems: ReadonlyArray<{ id: string; question: string; answer: string }>
   categoryTitleFont: string
 }) {
-  const heroProduct = data.featuredProduct
-  const heroImage = heroProduct?.photo ?? null
-  const heroFeaturedHref = heroProduct?.slug ? `/product/${heroProduct.slug}` : '/catalog'
   const innerSiteUrl = getBrandSiteUrl('inner')
   const markers = [
     getBlockTextForBrand(blocks, 'home', 'markers.item1', 'sprint-power', 'GMP и HACCP стандарты'),
@@ -682,54 +613,23 @@ function SprintPowerHome({
               </div>
             </div>
             <Link
-              href={heroFeaturedHref}
-              className="group flex min-h-[clamp(11.5rem,48vw,15.5rem)] rounded-2xl border border-slate-700 bg-cover bg-center p-[clamp(1rem,2.5vw,1.35rem)] transition-colors hover:border-slate-500 md:min-h-[260px] md:p-5"
-              style={
-                heroImage
-                  ? { backgroundImage: `url('${heroImage}')` }
-                  : { backgroundImage: 'linear-gradient(135deg, #0b132b 0%, #1c2541 100%)' }
-              }
+              href="/catalog"
+              className="group relative block min-h-[clamp(11.5rem,48vw,15.5rem)] overflow-hidden rounded-2xl border border-slate-700 transition-colors hover:border-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A1128] md:min-h-[260px]"
+              aria-label="Перейти в каталог"
             >
-              <div className="mt-auto rounded-xl bg-black/40 p-3 text-xs text-slate-100 transition-colors group-hover:bg-black/50">
-                {getBlockTextForBrand(
-                  blocks,
-                  'home',
-                  'hero.featured',
-                  'sprint-power',
-                  'Hydro Protein - флагман линейки'
-                )}
-              </div>
+              <Image
+                src="/images/sprint-power/sprint-power-promo-hero.jpg"
+                alt=""
+                fill
+                priority
+                className="object-cover object-[center_22%] transition-transform duration-500 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                sizes="(max-width: 768px) 92vw, 40vw"
+                quality={90}
+              />
             </Link>
           </div>
 
           <SprintPowerHomeAboutSection blocks={blocks} />
-
-          <div className="overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/50 bg-[#0A1128] shadow-[0_24px_80px_-40px_rgba(0,0,0,0.75)] ring-1 ring-white/5 md:rounded-3xl">
-            <Link href="/catalog" className="group relative block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060A14]">
-              <div className="relative aspect-[16/11] w-full sm:aspect-[2/1] md:aspect-[21/9]">
-                <Image
-                  src="/images/sprint-power/home-lifestyle-banner.png"
-                  alt="Спортсмены на тренировке с гантелями"
-                  fill
-                  className="object-cover object-[center_22%] transition-transform duration-700 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 92vw, min(120rem, 100vw)"
-                  quality={90}
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#060A14]/90 via-[#060A14]/20 to-transparent sm:via-transparent"
-                  aria-hidden
-                />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 px-5 pb-5 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:pb-6 md:px-10 md:pb-8">
-                  <p className="max-w-xl text-pretty text-lg font-semibold tracking-tight text-white drop-shadow-md sm:text-xl md:text-2xl">
-                    {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Сила и восстановление')}
-                  </p>
-                  <span className="mt-2 inline-flex w-fit shrink-0 items-center rounded-full bg-[#7AA2FF] px-4 py-2 text-xs font-semibold text-slate-950 transition-colors group-hover:bg-[#9AB8FF] sm:mt-0 sm:text-sm">
-                    В каталог
-                  </span>
-                </div>
-              </div>
-            </Link>
-          </div>
 
           <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -1094,7 +994,6 @@ export default async function HomePage() {
 
   if (activeBrand === 'sprint-power') {
     const emptySprintHomeData: SprintHomeData = {
-      featuredProduct: null,
       categories: [],
       reviews: [],
       newsPosts: [],
@@ -1109,9 +1008,8 @@ export default async function HomePage() {
       withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
     ])
 
-    const sprintFeaturedProductId = getBlockByKey(sprintHomeBlocks, 'hero.featuredProductId')?.text ?? null
     const sprintHomeData = await withTimeout(
-      getSprintHomeData({ featuredProductId: sprintFeaturedProductId }),
+      getSprintHomeData(),
       dbTimeoutMs,
       emptySprintHomeData
     )
