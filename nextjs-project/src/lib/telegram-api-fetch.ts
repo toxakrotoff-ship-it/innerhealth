@@ -128,5 +128,9 @@ export function telegramApiFetch(
     return fetch(input, init);
   }
   const dispatcher = getTelegramApiDispatcher();
-  return fetch(input, { ...init, dispatcher });
+  /** Node/undici accept `dispatcher`; DOM `RequestInit` typings omit it — cast for `next build` tsc. */
+  return fetch(input, {
+    ...init,
+    dispatcher,
+  } as RequestInit & { dispatcher: Dispatcher });
 }
