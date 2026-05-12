@@ -12,15 +12,15 @@ const MARQUEE_ITEMS = [
 
 /**
  * Одна полоса: одинаковая для двух копий в ряд (для translate3d(-50%) без скачка).
- * `pr-12` замыкает визуальный зазор между последней звездой и началом второй копии (= gap-12).
+ * На узких экранах меньше `gap`/`pr`, на sm+ — как у двойной полосы (-50% без скачка).
  */
 function MarqueeStrip() {
   return (
-    <div className="flex shrink-0 items-center gap-12 pr-12 text-sm font-medium uppercase tracking-widest text-white/40 transition-colors duration-300">
+    <div className="flex shrink-0 items-center gap-6 pr-6 text-[clamp(0.625rem,1.15vw+0.5rem,0.875rem)] font-medium uppercase tracking-[0.12em] text-white/40 transition-colors duration-300 sm:gap-12 sm:pr-12 sm:tracking-widest">
       {MARQUEE_ITEMS.map((text, i) => (
-        <span key={`${i}-${text}`} className="flex shrink-0 items-center gap-12">
-          <span>{text}</span>
-          <Star className="h-4 w-4 shrink-0 text-action-blue" aria-hidden />
+        <span key={`${i}-${text}`} className="flex shrink-0 items-center gap-6 sm:gap-12">
+          <span className="whitespace-nowrap">{text}</span>
+          <Star className="h-3.5 w-3.5 shrink-0 text-action-blue sm:h-4 sm:w-4" aria-hidden />
         </span>
       ))}
     </div>
@@ -30,7 +30,7 @@ function MarqueeStrip() {
 export function SprintPowerBanner() {
   return (
     <section
-      className="flex min-h-[3.25rem] items-center overflow-hidden border-y border-white/5 bg-slate-900 py-6"
+      className="flex min-h-[2.75rem] items-center overflow-hidden border-y border-white/5 bg-slate-900 py-3.5 sm:min-h-[3.25rem] sm:py-6"
       aria-label="Баннер Sprint Power"
     >
       <Link

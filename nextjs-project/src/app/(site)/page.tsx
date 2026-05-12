@@ -594,9 +594,9 @@ async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promis
 function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[] }) {
   const title = getBlockTextForBrand(blocks, 'home', 'about.title', 'sprint-power', 'О нас')
   return (
-    <div className="rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 shadow-sm ring-1 ring-slate-200/80 md:p-8">
-      <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{title}</h2>
-      <div className="mt-6 max-w-3xl space-y-4 text-[15px] leading-relaxed text-slate-700 md:text-base md:leading-relaxed">
+    <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] shadow-sm ring-1 ring-slate-200/80 md:rounded-3xl md:p-8">
+      <h2 className="text-balance text-[clamp(1.25rem,2.5vw+0.75rem,1.75rem)] font-bold tracking-tight text-slate-900 md:text-3xl">{title}</h2>
+      <div className="mt-5 max-w-3xl space-y-4 text-[clamp(0.9rem,0.45vw+0.82rem,1rem)] leading-relaxed text-slate-700 sm:mt-6 md:text-base md:leading-relaxed">
         <p>
           Мы гордимся тем, что являемся отечественным производителем спортивного питания нового поколения. Все
           этапы, начиная с разработки уникальных формул продуктов для питания спортсменов, контроля сырья и
@@ -682,12 +682,12 @@ function SprintPowerHome({
 
   return (
     <>
-      <section className="bg-[#060A14] py-10 md:py-12">
+      <section className="bg-[#060A14] py-8 sm:py-10 md:py-12">
         <AdaptiveContainer maxWidth="full">
           <div className="space-y-6 rounded-2xl bg-[#060A14]">
-          <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
-            <div className="space-y-4">
-              <div className="max-w-[min(100%,360px)]">
+          <div className="grid gap-5 rounded-[clamp(1rem,2.5vw,1.75rem)] bg-[#0A1128] p-[clamp(1rem,3vw,2.5rem)] sm:gap-6 md:grid-cols-[1.2fr_0.8fr] md:rounded-3xl md:p-10">
+            <div className="min-w-0 space-y-4">
+              <div className="max-w-[min(360px,92vw)]">
                 <Image
                   src="/images/sprint-power/sprint-power-hero-logo.png"
                   alt={heroBrandLabel}
@@ -695,10 +695,10 @@ function SprintPowerHome({
                   height={845}
                   priority
                   className="h-auto w-full object-contain"
-                  sizes="(max-width: 768px) 100vw, 360px"
+                  sizes="(max-width: 640px) 92vw, 360px"
                 />
               </div>
-              <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
+              <h1 className="max-w-xl text-balance text-[clamp(1.55rem,4.8vw+0.45rem,2.875rem)] font-extrabold leading-[1.12] text-white md:text-5xl">
                 {getBlockTextForBrand(
                   blocks,
                   'home',
@@ -707,7 +707,7 @@ function SprintPowerHome({
                   'Почувствуй разницу с первой тренировки'
                 )}
               </h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
+              <p className="max-w-fluid text-fluid-subtitle font-light text-slate-300">
                 {getBlockTextForBrand(
                   blocks,
                   'home',
@@ -716,16 +716,16 @@ function SprintPowerHome({
                   'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
                 )}
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/catalog"
-                  className="rounded-full bg-[#7AA2FF] px-5 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#7AA2FF] px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF] sm:w-auto sm:py-2"
                 >
                   {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
                 </Link>
                 <Link
                   href="/otzyvy"
-                  className="rounded-full border border-white/10 bg-white/10 px-5 py-2 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/15"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-white/10 bg-white/10 px-5 py-2.5 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/15 sm:w-auto sm:py-2"
                 >
                   {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
                 </Link>
@@ -733,7 +733,7 @@ function SprintPowerHome({
             </div>
             <Link
               href={heroFeaturedHref}
-              className="group flex min-h-[240px] rounded-2xl border border-slate-700 bg-cover bg-center p-5 transition-colors hover:border-slate-500"
+              className="group flex min-h-[clamp(11.5rem,48vw,15.5rem)] rounded-2xl border border-slate-700 bg-cover bg-center p-[clamp(1rem,2.5vw,1.35rem)] transition-colors hover:border-slate-500 md:min-h-[260px] md:p-5"
               style={
                 heroImage
                   ? { backgroundImage: `url('${heroImage}')` }
@@ -755,7 +755,7 @@ function SprintPowerHome({
           <SprintPowerHomeAboutSection blocks={blocks} />
 
           {data.products.length > 0 && (
-            <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
+            <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] bg-[#0F172A] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
               <h2 className="mb-4 text-2xl font-bold text-slate-100">
                 {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Хиты продаж')}
               </h2>
@@ -763,7 +763,7 @@ function SprintPowerHome({
                 {data.products.map((product) => (
                   <div key={product.id} className="rounded-2xl bg-[#1E293B] p-3">
                     {product.photo ? (
-                      <div className="relative mb-3 h-24 overflow-hidden rounded-lg">
+                      <div className="relative mb-3 h-[clamp(5rem,28vw,6.5rem)] overflow-hidden rounded-lg">
                         <Image src={product.photo} alt={product.title} fill className="object-cover" />
                       </div>
                     ) : null}
@@ -785,7 +785,7 @@ function SprintPowerHome({
             </div>
           )}
 
-          <div className="rounded-3xl border border-slate-700/40 bg-[#060A14] p-6 md:p-8">
+          <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
               <h3 className="text-2xl font-bold text-slate-100">
                 {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
@@ -804,7 +804,7 @@ function SprintPowerHome({
                 colsDesktop={2}
                 gap={4}
                 adaptiveGap
-                className="mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]"
+                className="mx-auto w-full max-w-full sm:max-w-[min(100%,36rem)] md:max-w-[min(100%,40rem)] lg:max-w-[45rem]"
               >
                 {data.categories.map((category) => {
                   const bgImage = resolveCategoryImage(category.slug, category.image, {
@@ -830,7 +830,7 @@ function SprintPowerHome({
                                 alt=""
                                 fill
                                 className={imagePosition}
-                                sizes="(max-width: 768px) 100vw, 50vw"
+                                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 40vw"
                               />
                               <div
                                 className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"
@@ -861,7 +861,7 @@ function SprintPowerHome({
             )}
           </div>
 
-          <div className="grid gap-4 rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 md:grid-cols-[1fr_360px] md:p-8">
+          <div className="grid gap-4 rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] md:grid-cols-[1fr_360px] md:rounded-3xl md:p-8">
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">
                 {getBlockTextForBrand(blocks, 'home', 'reviews.title', 'sprint-power', 'Отзывы спортсменов')}
@@ -908,7 +908,7 @@ function SprintPowerHome({
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-3xl border border-[#22304F] bg-[#0C1730] p-6 md:p-8">
+          <div className="relative overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#22304F] bg-[#0C1730] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div
               className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[#7AA2FF]/12 blur-3xl"
               aria-hidden
@@ -953,16 +953,16 @@ function SprintPowerHome({
           </div>
 
           {showSprintHomeNewsBlock ? (
-            <div className="rounded-3xl border border-[#1B2946] bg-[#0A1128] p-6 md:p-8">
-              <div className="mb-6 flex items-end justify-between gap-4">
-                <div className="space-y-2">
+            <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#1B2946] bg-[#0A1128] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0 space-y-2">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#7AA2FF]">
                     {getBlockTextForBrand(blocks, 'home', 'newsBlock.eyebrow', 'sprint-power', 'Контент Sprint')}
                   </p>
-                  <h3 className="text-2xl font-bold text-white">
+                  <h3 className="text-balance text-[clamp(1.25rem,2.2vw+0.85rem,1.5rem)] font-bold text-white md:text-2xl">
                     {getBlockTextForBrand(blocks, 'home', 'newsBlock.title', 'sprint-power', 'Новости')}
                   </h3>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-300">
+                  <p className="max-w-2xl text-[clamp(0.8125rem,0.35vw+0.75rem,0.875rem)] leading-relaxed text-slate-300 sm:text-sm sm:leading-6">
                     {getBlockTextForBrand(
                       blocks,
                       'home',
@@ -974,7 +974,7 @@ function SprintPowerHome({
                 </div>
                 <Link
                   href="/news"
-                  className="hidden shrink-0 rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white md:inline-flex"
+                  className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-[#355188] px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white md:w-auto md:justify-center"
                 >
                   Все новости
                 </Link>
@@ -994,7 +994,7 @@ function SprintPowerHome({
                             alt={post.title}
                             fill
                             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                            sizes="(max-width: 768px) 100vw, 33vw"
+                            sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 33vw"
                           />
                         ) : (
                           <div className="absolute inset-0 bg-linear-to-br from-[#12203D] to-[#0B1327]" />
@@ -1020,16 +1020,16 @@ function SprintPowerHome({
           ) : null}
 
           {showSprintHomeArticlesBlock ? (
-            <div className="rounded-3xl border border-[#D8E4FF] bg-[#EEF4FF] p-6 md:p-8">
-              <div className="mb-6 flex items-end justify-between gap-4">
-                <div className="space-y-2">
+            <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#D8E4FF] bg-[#EEF4FF] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0 space-y-2">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#335CFF]">
                     {getBlockTextForBrand(blocks, 'home', 'articlesBlock.eyebrow', 'sprint-power', 'Материалы и гайды')}
                   </p>
-                  <h3 className="text-2xl font-bold text-slate-900">
+                  <h3 className="text-balance text-[clamp(1.25rem,2.2vw+0.85rem,1.5rem)] font-bold text-slate-900 md:text-2xl">
                     {getBlockTextForBrand(blocks, 'home', 'articlesBlock.title', 'sprint-power', 'Статьи')}
                   </h3>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  <p className="max-w-2xl text-[clamp(0.8125rem,0.35vw+0.75rem,0.875rem)] leading-relaxed text-slate-600 sm:text-sm sm:leading-6">
                     {getBlockTextForBrand(
                       blocks,
                       'home',
@@ -1041,7 +1041,7 @@ function SprintPowerHome({
                 </div>
                 <Link
                   href="/informaciya"
-                  className="hidden shrink-0 rounded-full border border-[#B5C9FF] px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-[#335CFF] hover:text-[#1D4ED8] md:inline-flex"
+                  className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-[#B5C9FF] px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-[#335CFF] hover:text-[#1D4ED8] md:w-auto"
                 >
                   Все статьи
                 </Link>
@@ -1061,7 +1061,7 @@ function SprintPowerHome({
                             alt={post.title}
                             fill
                             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                            sizes="(max-width: 768px) 100vw, 33vw"
+                            sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 33vw"
                           />
                         ) : (
                           <div className="absolute inset-0 bg-linear-to-br from-[#E8EEFF] to-[#D6E4FF]" />
@@ -1108,13 +1108,13 @@ function SprintPowerHome({
       innerSiteUrl={innerSiteUrl}
     />
 
-    <section className="bg-[#060A14] py-10 md:py-12">
+    <section className="bg-[#060A14] py-8 sm:py-10 md:py-12">
       <AdaptiveContainer maxWidth="full">
         <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <PartnersBlock brand="sprint-power" />
 
-          <div className="rounded-3xl bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-6 md:p-8">
-            <h3 className="mb-4 text-2xl font-bold text-slate-900">
+          <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
+            <h3 className="mb-4 text-balance text-[clamp(1.25rem,2.2vw+0.85rem,1.5rem)] font-bold text-slate-900 md:text-2xl">
               {getBlockTextForBrand(blocks, 'home', 'faq.title', 'sprint-power', 'Частые вопросы')}
             </h3>
             <FaqAccordion items={faqItems.slice(0, 3)} variant="compact" />

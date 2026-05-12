@@ -31,11 +31,11 @@ export function InnerHealthCrossBrandBlock({
 }: InnerHealthCrossBrandBlockProps) {
   return (
     <section
-      className="border-t border-[#1B2946] bg-[#060A14] py-20 sm:py-24 2xl:py-28 3xl:py-32"
+      className="border-t border-[#1B2946] bg-[#060A14] py-14 sm:py-20 md:py-24 2xl:py-28 3xl:py-32"
       aria-labelledby="inner-health-cross-brand-heading"
     >
       <AdaptiveContainer maxWidth="default">
-        <p className="mb-10 text-xs font-bold uppercase tracking-[0.2em] text-[#7AA2FF] sm:text-sm sm:tracking-[0.24em]">
+        <p className="mb-8 text-xs font-bold uppercase tracking-[0.14em] text-[#7AA2FF] sm:mb-10 sm:text-sm sm:tracking-[0.24em]">
           INNER HEALTH
         </p>
         <FluidGrid
@@ -53,7 +53,7 @@ export function InnerHealthCrossBrandBlock({
           adaptiveGap
           className="md:gap-16 2xl:gap-20 3xl:gap-24"
         >
-          <div className="relative">
+          <div className="relative min-w-0">
             <a
               href={innerSiteUrl}
               target="_blank"
@@ -61,38 +61,40 @@ export function InnerHealthCrossBrandBlock({
               className="group block"
               aria-label="Перейти на сайт Inner Health"
             >
-              <div className="relative aspect-square overflow-hidden rounded-[40px] border border-[#1B2946] bg-[#0F172A] 2xl:rounded-[48px]">
-                <div className="absolute inset-[7%] sm:inset-[8%] md:inset-[9%]">
+              <div className="relative aspect-square overflow-hidden rounded-[clamp(1.25rem,4vw+0.5rem,2.5rem)] border border-[#1B2946] bg-[#0F172A] 2xl:rounded-[clamp(2.5rem,1.5vw+2rem,3rem)]">
+                <div className="absolute inset-[6%] sm:inset-[8%] md:inset-[9%]">
                   <div className="relative h-full w-full">
                     <Image
                       src="/images/sprint-power/cross-brand-inner-health.png"
                       alt=""
                       fill
                       className="object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
-                      sizes="(max-width: 768px) 100vw, 50vw"
+                      sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 40vw"
                     />
                   </div>
                 </div>
               </div>
             </a>
-            <div className="pointer-events-none absolute bottom-4 right-4 z-10 max-w-[240px] rounded-3xl border border-[#1B2946] bg-[#0F172A] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] md:-bottom-6 md:-right-6 2xl:max-w-[320px] 2xl:p-8">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-tight text-slate-100 2xl:text-base 3xl:text-lg">
+            <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-10 mx-auto max-w-[min(15.5rem,calc(100%-1.5rem))] rounded-2xl border border-[#1B2946] bg-[#0F172A] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.35)] sm:bottom-4 sm:left-auto sm:right-4 sm:mx-0 sm:max-w-[240px] sm:rounded-3xl sm:p-6 md:-bottom-6 md:-right-6 2xl:max-w-[320px] 2xl:p-8">
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-tight text-slate-100 sm:mb-2 sm:text-sm 2xl:text-base 3xl:text-lg">
                 Inner Health
               </h3>
-              <p className="text-xs font-light leading-relaxed text-slate-400 2xl:text-base">
+              <p className="text-[clamp(0.6875rem,0.35vw+0.62rem,0.75rem)] font-light leading-relaxed text-slate-400 sm:text-xs 2xl:text-base">
                 Активное долголетие, превентивная медицина, нутрицевтика.
               </p>
             </div>
           </div>
 
-          <div className="space-y-8 2xl:space-y-10">
+          <div className="min-w-0 space-y-6 sm:space-y-8 2xl:space-y-10">
             <h2
               id="inner-health-cross-brand-heading"
-              className="text-3xl font-semibold tracking-tighter text-white sm:text-4xl 2xl:text-5xl 3xl:text-6xl"
+              className="text-balance text-[clamp(1.5rem,3.6vw+0.85rem,2.25rem)] font-semibold tracking-tighter text-white sm:text-4xl 2xl:text-5xl 3xl:text-6xl"
             >
               {title}
             </h2>
-            <p className="font-light leading-relaxed text-slate-300 2xl:text-xl">{body}</p>
+            <p className="max-w-prose font-light leading-relaxed text-slate-300 text-[clamp(0.9375rem,0.5vw+0.82rem,1.125rem)] 2xl:text-xl">
+              {body}
+            </p>
             <ul className="space-y-4 2xl:space-y-5" role="list">
               <li className="flex items-center gap-3 text-sm font-medium text-slate-200 2xl:text-base">
                 <CheckCircle className="h-5 w-5 shrink-0 text-[#7AA2FF]" aria-hidden />
@@ -108,7 +110,7 @@ export function InnerHealthCrossBrandBlock({
                 href={innerSiteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-[#7AA2FF] px-8 py-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
+                className="desktop-button-scale inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#7AA2FF] px-8 py-4 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF] sm:w-auto"
               >
                 {ctaLabel}
                 <NavArrowRight className="h-4 w-4 shrink-0" aria-hidden />
