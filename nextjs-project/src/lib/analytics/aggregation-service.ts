@@ -55,6 +55,21 @@ export async function aggregateTrafficForDate(date: Date): Promise<void> {
     },
   })
 
+  const sessionsByPathRaw = await prisma.$queryRaw<
+    Array<{ brand: string; path: string | null; cnt: bigint }>
+  >(
+    Prisma.sql`
+      SELECT
+        "brand",
+        "path",
+        COUNT(DISTINCT COALESCE("sessionId", "anonId", "id"))::bigint AS cnt
+      FROM "AnalyticsEvent"
+      WHERE "occurredAt" >= ${start} AND "occurredAt" < ${end}
+        AND type = 'PAGE_VIEW'::"AnalyticsEventType"
+      GROUP BY "brand", "path"
+    `
+  )
+
   const pageViewMap = new Map<string, number>()
   for (const row of pageViewsByPath) {
     pageViewMap.set(`${row.brand}:${row.path ?? ''}`, row._count._all)
@@ -65,9 +80,15 @@ export async function aggregateTrafficForDate(date: Date): Promise<void> {
     clickMap.set(`${row.brand}:${row.path ?? ''}`, row._count._all)
   }
 
+  const sessionsMap = new Map<string, number>()
+  for (const row of sessionsByPathRaw) {
+    sessionsMap.set(`${row.brand}:${row.path ?? ''}`, Number(row.cnt))
+  }
+
   const upsertKeys = new Set<string>([
     ...Array.from(pageViewMap.keys()),
     ...Array.from(clickMap.keys()),
+    ...Array.from(sessionsMap.keys()),
   ])
 
   await prisma.$transaction(
@@ -77,6 +98,10 @@ export async function aggregateTrafficForDate(date: Date): Promise<void> {
       const normalizedPath = path.length > 0 ? path : null
       const pageViews = pageViewMap.get(key) ?? 0
       const clicks = clickMap.get(key) ?? 0
+      // Сессии считаем как количество уникальных sessionId / anonId среди PAGE_VIEW.
+      // Fallback на id события не должен срабатывать на нормальных данных,
+      // но защищает от ситуации, когда событие пришло без идентификаторов.
+      const sessions = sessionsMap.get(key) ?? pageViews
 
       return prisma.dailyTrafficStats.upsert({
         where: {
@@ -91,12 +116,12 @@ export async function aggregateTrafficForDate(date: Date): Promise<void> {
           date: start,
           path: normalizedPath,
           pageViews,
-          sessions: pageViews,
+          sessions,
           clicks,
         },
         update: {
           pageViews,
-          sessions: pageViews,
+          sessions,
           clicks,
         },
       })

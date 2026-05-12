@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cookies, headers } from 'next/headers'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { AdminDatePicker } from './components/AdminDatePicker'
 import { AdminStatsPeriodPresets } from './components/AdminStatsPeriodPresets'
@@ -280,101 +281,135 @@ async function getSummary(
   let funnelTotal = funnelAggregate
   let trafficRows = trafficRowsFromAggregate
 
-  const shouldUseRawFallback =
-    Boolean(anyPrisma.analyticsEvent) &&
-    (!aggregateHasTrafficData || !aggregateHasFunnelData || !hasTrafficRowsFromAggregate)
+  // Каждая часть статистики имеет независимый fallback на сырые события.
+  // Это важно: иначе пустая воронка перекрывает уже агрегированный трафик и
+  // длинный период (90 дней) показывает меньше, чем короткий (30 дней),
+  // потому что сырые события хранятся ограниченное время (ANALYTICS_EVENT_KEEP_LAST_DAYS).
+  const needTrafficTotalFallback = !aggregateHasTrafficData
+  const needFunnelFallback = !aggregateHasFunnelData
+  const needPathRowsFallback = !hasTrafficRowsFromAggregate
 
-  if (shouldUseRawFallback && anyPrisma.analyticsEvent) {
-    const [totalPageViewsRaw, totalClicksRaw, pageViewByPathRaw, clickByPathRaw, funnelByTypeRaw] =
-      await Promise.all([
-        anyPrisma.analyticsEvent.count({
-          where: {
-            type: 'PAGE_VIEW',
-            brand: activeBrand,
-            occurredAt: dateWhere,
-          },
-        }),
-        anyPrisma.analyticsEvent.count({
-          where: {
-            type: 'CLICK',
-            brand: activeBrand,
-            occurredAt: dateWhere,
-          },
-        }),
-        anyPrisma.analyticsEvent.groupBy({
-          by: ['path'],
-          where: {
-            type: 'PAGE_VIEW',
-            brand: activeBrand,
-            occurredAt: dateWhere,
-          },
-          _count: {
-            _all: true,
-          },
-        }),
-        anyPrisma.analyticsEvent.groupBy({
-          by: ['path'],
-          where: {
-            type: 'CLICK',
-            brand: activeBrand,
-            occurredAt: dateWhere,
-          },
-          _count: {
-            _all: true,
-          },
-        }),
-        anyPrisma.analyticsEvent.groupBy({
-          by: ['type'],
-          where: {
-            type: { in: ['PAGE_VIEW', 'CART_ADD', 'CHECKOUT_START', 'ORDER_CREATED'] },
-            brand: activeBrand,
-            occurredAt: dateWhere,
-          },
-          _count: {
-            _all: true,
-          },
-        }),
-      ])
+  if (
+    anyPrisma.analyticsEvent &&
+    (needTrafficTotalFallback || needFunnelFallback || needPathRowsFallback)
+  ) {
+    const [
+      totalPageViewsRaw,
+      totalClicksRaw,
+      pageViewByPathRaw,
+      clickByPathRaw,
+      funnelByTypeRaw,
+    ] = await Promise.all([
+      needTrafficTotalFallback
+        ? anyPrisma.analyticsEvent.count({
+            where: {
+              type: 'PAGE_VIEW',
+              brand: activeBrand,
+              occurredAt: dateWhere,
+            },
+          })
+        : Promise.resolve(0),
+      needTrafficTotalFallback
+        ? anyPrisma.analyticsEvent.count({
+            where: {
+              type: 'CLICK',
+              brand: activeBrand,
+              occurredAt: dateWhere,
+            },
+          })
+        : Promise.resolve(0),
+      needPathRowsFallback
+        ? anyPrisma.analyticsEvent.groupBy({
+            by: ['path'],
+            where: {
+              type: 'PAGE_VIEW',
+              brand: activeBrand,
+              occurredAt: dateWhere,
+            },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as Array<{ path?: string | null; _count: { _all: number } }>),
+      needPathRowsFallback
+        ? anyPrisma.analyticsEvent.groupBy({
+            by: ['path'],
+            where: {
+              type: 'CLICK',
+              brand: activeBrand,
+              occurredAt: dateWhere,
+            },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as Array<{ path?: string | null; _count: { _all: number } }>),
+      needFunnelFallback
+        ? anyPrisma.analyticsEvent.groupBy({
+            by: ['type'],
+            where: {
+              type: { in: ['PAGE_VIEW', 'CART_ADD', 'CHECKOUT_START', 'ORDER_CREATED'] },
+              brand: activeBrand,
+              occurredAt: dateWhere,
+            },
+            _count: { _all: true },
+          })
+        : Promise.resolve([] as Array<{ type?: string; _count: { _all: number } }>),
+    ])
 
-    trafficTotal = {
-      _sum: {
-        pageViews: totalPageViewsRaw,
-        sessions: totalPageViewsRaw,
-        clicks: totalClicksRaw,
-      },
-    }
-
-    trafficRows = buildFallbackTrafficRowsByPath({
-      from,
-      pageViewByPathRows: pageViewByPathRaw,
-      clickByPathRows: clickByPathRaw,
-    })
-
-    const funnelMap = new Map<string, number>()
-    for (const row of funnelByTypeRaw) {
-      if (!row.type) continue
-      funnelMap.set(row.type, row._count._all)
-    }
-
-    const funnelSteps: Array<'PAGE_VIEW' | 'CART_ADD' | 'CHECKOUT_START' | 'ORDER_CREATED'> = [
-      'PAGE_VIEW',
-      'CART_ADD',
-      'CHECKOUT_START',
-      'ORDER_CREATED',
-    ]
-
-    funnelTotal = funnelSteps.map((step, index) => {
-      const count = funnelMap.get(step) ?? 0
-      const next = funnelSteps[index + 1]
-      const nextCount = next ? funnelMap.get(next) ?? 0 : 0
-      const conversionToNext = next && count > 0 ? Math.min(1, nextCount / count) : null
-      return {
-        date: from ?? new Date(),
-        step,
-        count,
-        conversionToNext,
+    if (needTrafficTotalFallback) {
+      // Уникальные сессии: count(distinct sessionId|anonId) среди PAGE_VIEW.
+      // Если идентификаторов нет — fallback к самому событию (id), чтобы не нулить колонку.
+      const sessionsRows = await prisma.$queryRaw<Array<{ cnt: bigint }>>(
+        Prisma.sql`
+          SELECT COUNT(DISTINCT COALESCE("sessionId", "anonId", "id"))::bigint AS cnt
+          FROM "AnalyticsEvent"
+          WHERE type = 'PAGE_VIEW'::"AnalyticsEventType"
+            AND "brand" = ${activeBrand}
+            ${dateWhere ? Prisma.sql`AND "occurredAt" >= ${dateWhere.gte} AND "occurredAt" <= ${dateWhere.lte}` : Prisma.empty}
+        `
+      )
+      const sessionsRaw = sessionsRows.length > 0 ? Number(sessionsRows[0].cnt) : 0
+      trafficTotal = {
+        _sum: {
+          pageViews: totalPageViewsRaw,
+          sessions: sessionsRaw,
+          clicks: totalClicksRaw,
+        },
       }
-    })
+    }
+
+    if (needPathRowsFallback) {
+      trafficRows = buildFallbackTrafficRowsByPath({
+        from,
+        pageViewByPathRows: pageViewByPathRaw,
+        clickByPathRows: clickByPathRaw,
+      })
+    }
+
+    if (needFunnelFallback) {
+      const funnelMap = new Map<string, number>()
+      for (const row of funnelByTypeRaw) {
+        if (!row.type) continue
+        funnelMap.set(row.type, row._count._all)
+      }
+
+      const funnelSteps: Array<'PAGE_VIEW' | 'CART_ADD' | 'CHECKOUT_START' | 'ORDER_CREATED'> = [
+        'PAGE_VIEW',
+        'CART_ADD',
+        'CHECKOUT_START',
+        'ORDER_CREATED',
+      ]
+
+      funnelTotal = funnelSteps.map((step, index) => {
+        const count = funnelMap.get(step) ?? 0
+        const next = funnelSteps[index + 1]
+        const nextCount = next ? funnelMap.get(next) ?? 0 : 0
+        const conversionToNext = next && count > 0 ? Math.min(1, nextCount / count) : null
+        return {
+          date: from ?? new Date(),
+          step,
+          count,
+          conversionToNext,
+        }
+      })
+    }
   }
 
   const pageMap = new Map<string, PageStat>()
@@ -624,7 +659,7 @@ export default async function AdminPage({
         </div>
 
         <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-          <div className="card">
+          <div className="card min-w-0">
             <h2 className="text-lg font-semibold mb-3">Топ страниц по просмотрам</h2>
             <div className="space-y-3.5 md:hidden">
               {visiblePageStats.map((row) => {
@@ -652,8 +687,14 @@ export default async function AdminPage({
                 </div>
               )}
             </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="table table-horizontal min-w-[500px]">
+            <div className="hidden w-full max-w-full overflow-hidden md:block">
+              <table className="table table-horizontal w-full table-fixed">
+                <colgroup>
+                  <col className="w-auto" />
+                  <col className="w-[110px]" />
+                  <col className="w-[90px]" />
+                  <col className="w-[80px]" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
@@ -674,16 +715,16 @@ export default async function AdminPage({
                   {visiblePageStats.map((row) => {
                     return (
                       <tr key={row.path} className="border-b border-gray-100">
-                        <td className="px-4 py-2 text-sm text-gray-700">
+                        <td className="px-4 py-2 text-sm text-gray-700 break-all">
                           {row.path}
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
+                        <td className="px-4 py-2 text-sm text-gray-700 tabular-nums">
                           {row.pageViews}
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
+                        <td className="px-4 py-2 text-sm text-gray-700 tabular-nums">
                           {row.clicks}
                         </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">
+                        <td className="px-4 py-2 text-sm text-gray-700 tabular-nums">
                           {row.ctr != null ? `${row.ctr}%` : '—'}
                         </td>
                       </tr>
@@ -714,7 +755,7 @@ export default async function AdminPage({
               </div>
             )}
           </div>
-          <div className="card">
+          <div className="card min-w-0">
             <h2 className="text-lg font-semibold mb-3">Устройства</h2>
             {(() => {
               const total =
@@ -819,8 +860,14 @@ export default async function AdminPage({
               </div>
             )}
           </div>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="table table-horizontal min-w-[500px]">
+          <div className="hidden w-full max-w-full overflow-hidden md:block">
+            <table className="table table-horizontal w-full table-fixed">
+              <colgroup>
+                <col className="w-[120px]" />
+                <col className="w-auto" />
+                <col className="w-[100px]" />
+                <col className="w-[200px]" />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
@@ -848,10 +895,10 @@ export default async function AdminPage({
                   ),
                   ...group.rows.map((row) => (
                     <tr key={`${group.dateKey}-${row.step}`} className="border-b border-gray-100">
-                      <td className="px-4 py-2 text-sm text-gray-500">—</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{getFunnelStepLabel(row.step)}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{row.count}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">
+                      <td className="px-4 py-2 text-sm text-gray-400">—</td>
+                      <td className="px-4 py-2 text-sm text-gray-700 break-words">{getFunnelStepLabel(row.step)}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700 tabular-nums">{row.count}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700 tabular-nums">
                         {row.conversionToNext != null
                           ? `${Math.round(row.conversionToNext * 100)}%`
                           : '—'}

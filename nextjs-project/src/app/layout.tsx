@@ -161,6 +161,9 @@ ym(92621260, 'init', {webvisor:true, clickmap:true, ecommerce:"dataLayer", refer
       suppressHydrationWarning
     >
       <head>
+        {hostBrandId === 'inner' ? (
+          <meta name="yandex-verification" content="870f8651339fd2ca" />
+        ) : null}
         <style
           dangerouslySetInnerHTML={{
             __html:
