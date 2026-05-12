@@ -4,6 +4,7 @@ import { requireAdminSession } from '@/lib/require-admin';
 import * as telegramService from '@/services/telegram.service';
 import * as settingsService from '@/services/settings.service';
 import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
+import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
 const CODE_BYTES = 12; // 24 hex chars
 const EXPIRES_MINUTES = 10;
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
     let botUsername: string;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const res = await telegramApiFetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = (await res.json()) as { ok?: boolean; result?: { username?: string } };
       if (!data.ok || !data.result?.username) {
         return NextResponse.json(

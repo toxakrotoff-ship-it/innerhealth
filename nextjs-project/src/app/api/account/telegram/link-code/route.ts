@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import * as telegramService from '@/services/telegram.service';
 import * as settingsService from '@/services/settings.service';
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
+import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
 const CODE_BYTES = 12;
 const EXPIRES_MINUTES = 10;
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
 
     let botUsername: string;
     try {
-      const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const res = await telegramApiFetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = (await res.json()) as { ok?: boolean; result?: { username?: string } };
       if (!data.ok || !data.result?.username) {
         return NextResponse.json(

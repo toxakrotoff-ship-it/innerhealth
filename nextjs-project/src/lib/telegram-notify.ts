@@ -4,6 +4,7 @@ import * as settingsService from '@/services/settings.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
 import { formatOrderLabel } from '@/lib/order-label';
+import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -30,7 +31,7 @@ async function sendMessage(
   if (options?.replyMarkup) {
     body.reply_markup = options.replyMarkup;
   }
-  const res = await fetch(url, {
+  const res = await telegramApiFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

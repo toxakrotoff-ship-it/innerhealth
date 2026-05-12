@@ -4,6 +4,7 @@ import * as reviewService from '@/services/review.service';
 import * as reviewModerationMessageService from '@/bot/runtime/review-moderation-messages';
 import { getMaxBotConfig } from '@/bot/runtime/max-config';
 import type { BrandId } from '@/lib/brand/brand';
+import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
 interface SyncInput {
   reviewId: string;
@@ -34,7 +35,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = EXTE
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await telegramApiFetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timeoutId);
   }

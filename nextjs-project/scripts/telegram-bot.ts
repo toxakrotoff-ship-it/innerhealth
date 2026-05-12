@@ -7,8 +7,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { Agent } from 'undici';
-import { socksDispatcher } from 'fetch-socks';
+import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 import { normalizeBrandId, type BrandId } from '@/lib/brand/brand';
 import {
   getTelegramBotUserCapabilities,
@@ -30,7 +29,6 @@ const TELEGRAM_SITE_URL =
 let telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
 
 const TELEGRAM_API = 'https://api.telegram.org';
-const TELEGRAM_API_HOST = 'api.telegram.org';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const TELEGRAM_LONG_POLL_TIMEOUT_MS = 35_000;
@@ -45,66 +43,7 @@ if (!TELEGRAM_SERVICE_SECRET) {
   process.exit(1);
 }
 
-function parseTelegramSocksProxyUrl(raw: string): {
-  host: string;
-  port: number;
-  userId?: string;
-  password?: string;
-} | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  if (trimmed.startsWith('tg://socks?')) {
-    const url = new URL(trimmed);
-    const host = url.searchParams.get('server')?.trim() ?? '';
-    const port = Number(url.searchParams.get('port') ?? '');
-    if (!host || !Number.isFinite(port) || port <= 0) return null;
-    const userId = url.searchParams.get('user')?.trim() || undefined;
-    const password = url.searchParams.get('pass')?.trim() || undefined;
-    return { host, port, userId, password };
-  }
-  if (trimmed.startsWith('socks5://') || trimmed.startsWith('socks://')) {
-    const url = new URL(trimmed);
-    const host = url.hostname.trim();
-    const port = Number(url.port);
-    if (!host || !Number.isFinite(port) || port <= 0) return null;
-    const userId = url.username ? decodeURIComponent(url.username) : undefined;
-    const password = url.password ? decodeURIComponent(url.password) : undefined;
-    return { host, port, userId, password };
-  }
-  return null;
-}
-
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const telegramSocksProxyRaw =
-  process.env.TELEGRAM_SOCKS_PROXY_URL?.trim() ||
-  process.env.TELEGRAM_PROXY_SOCKS_URL?.trim() ||
-  '';
-const telegramSocksProxy = telegramSocksProxyRaw
-  ? parseTelegramSocksProxyUrl(telegramSocksProxyRaw)
-  : null;
-
-const telegramApiDispatcher = telegramSocksProxy
-  ? socksDispatcher(
-      {
-        type: 5,
-        host: telegramSocksProxy.host,
-        port: telegramSocksProxy.port,
-        ...(telegramSocksProxy.userId ? { userId: telegramSocksProxy.userId } : {}),
-        ...(telegramSocksProxy.password ? { password: telegramSocksProxy.password } : {}),
-      },
-      {
-        connect: {
-          timeout: 30_000,
-        },
-      },
-    )
-  : new Agent({
-      connect: {
-        timeout: 30_000,
-      },
-      // Helps in environments where one Telegram IP family/address intermittently stalls.
-      autoSelectFamily: true,
-    });
 
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
@@ -125,11 +64,9 @@ function checkRateLimit(userId: string): boolean {
 function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const dispatcher = url.includes(TELEGRAM_API_HOST) ? telegramApiDispatcher : undefined;
-  const requestOptions = { ...options, signal: controller.signal, dispatcher } as RequestInit & {
-    dispatcher?: Agent;
-  };
-  return fetch(url, requestOptions).finally(() => clearTimeout(timeoutId));
+  return telegramApiFetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId)
+  );
 }
 
 async function confirmLink(code: string, telegramUserId: string): Promise<{ success?: boolean; error?: string }> {
