@@ -1,5 +1,3 @@
-import 'server-only';
-
 import { Agent } from 'undici';
 import type { Dispatcher } from 'undici';
 import { socksDispatcher } from 'fetch-socks';
