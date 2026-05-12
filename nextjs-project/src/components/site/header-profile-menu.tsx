@@ -81,7 +81,7 @@ export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role }: 
           {isAdminUser ? (
             <>
               <Link
-                href="https://innerhealth.ru/admin"
+                href="/admin"
                 className="mt-1 block rounded-xl px-3 py-2 2xl:px-4 2xl:py-2.5 text-sm 2xl:text-base text-gray-800 hover:bg-gray-100"
                 role="menuitem"
                 onClick={() => setIsOpen(false)}

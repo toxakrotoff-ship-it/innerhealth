@@ -107,7 +107,7 @@ export function HeaderNavMobile({
               {isAuthenticated ? (
                 <>
                   <Link
-                    href={role === 'ADMIN' || role === 'WRITER' ? '/admin-panel' : '/account'}
+                    href={role === 'ADMIN' || role === 'WRITER' ? '/admin' : '/account'}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${variant === 'dark' ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                     onClick={() => setOpen(false)}
                   >
