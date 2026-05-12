@@ -220,6 +220,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           promoOnly={promoOnly}
           sort={sort}
           view={view}
+          isSprintTheme={isSprintTheme}
         />
         <ScalableSpacing size="lg">
           <FluidGrid

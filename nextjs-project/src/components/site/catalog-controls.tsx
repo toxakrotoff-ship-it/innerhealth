@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface SuggestionItem {
   id: string;
@@ -21,6 +22,8 @@ interface CatalogControlsProps {
   promoOnly?: boolean;
   sort: 'newest' | 'price_asc' | 'price_desc' | 'name_asc';
   view: 'grid' | 'list';
+  /** Тёмная витрина Sprint Power — панель и акценты в фирменных тонах */
+  isSprintTheme?: boolean;
 }
 
 function useDebouncedValue<T>(value: T, delayMs = 300): T {
@@ -41,6 +44,7 @@ export function CatalogControls({
   promoOnly = false,
   sort,
   view,
+  isSprintTheme = false,
 }: CatalogControlsProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -118,13 +122,24 @@ export function CatalogControls({
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [isOpen]);
 
+  const inputClass = cn(
+    'form-input w-full',
+    isSprintTheme &&
+      'border-slate-600 bg-slate-950 text-slate-100 placeholder:text-slate-500 focus:outline-[#7AA2FF]',
+  );
+
   return (
     <div className="mb-8" ref={panelRef}>
       <div className="mb-3 flex justify-end">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-text hover:border-action-blue hover:text-action-blue"
+          className={cn(
+            'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+            isSprintTheme
+              ? 'border-slate-600 bg-slate-900/90 text-slate-100 hover:border-[#7AA2FF] hover:text-[#7AA2FF]'
+              : 'border-gray-300 bg-white text-text hover:border-action-blue hover:text-action-blue',
+          )}
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
             <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.5" />
@@ -135,10 +150,21 @@ export function CatalogControls({
       </div>
 
       {isOpen && (
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <section
+          className={cn(
+            'rounded-2xl p-4 shadow-sm',
+            isSprintTheme
+              ? 'border border-slate-700 bg-[#0F172A] shadow-[0_20px_50px_rgba(0,0,0,0.35)]'
+              : 'bg-white',
+          )}
+        >
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr,1fr,1fr,1fr,auto]">
         <div className="relative">
-          <label className="mb-1 block text-xs font-medium text-gray-600">Поиск по названию и SKU</label>
+          <label
+            className={cn('mb-1 block text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}
+          >
+            Поиск по названию и SKU
+          </label>
           <input
             type="text"
             value={q}
@@ -155,13 +181,26 @@ export function CatalogControls({
             }}
             onFocus={() => setShowSuggestions(true)}
             placeholder="Например, collagen или SKU"
-            className="form-input w-full"
+            className={inputClass}
           />
           {showSuggestions && (q.trim().length > 0 || loadingSuggest) && (
-            <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-gray-200 bg-white p-2 shadow-lg">
-              {loadingSuggest && <p className="px-2 py-2 text-sm text-gray-500">Поиск...</p>}
+            <div
+              className={cn(
+                'absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border p-2 shadow-lg',
+                isSprintTheme
+                  ? 'border-slate-600 bg-slate-900 text-slate-100'
+                  : 'border-gray-200 bg-white',
+              )}
+            >
+              {loadingSuggest && (
+                <p className={cn('px-2 py-2 text-sm', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
+                  Поиск...
+                </p>
+              )}
               {!loadingSuggest && suggestions.length === 0 && (
-                <p className="px-2 py-2 text-sm text-gray-500">Подсказки не найдены</p>
+                <p className={cn('px-2 py-2 text-sm', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
+                  Подсказки не найдены
+                </p>
               )}
               {!loadingSuggest &&
                 suggestions.map((item) => {
@@ -170,11 +209,18 @@ export function CatalogControls({
                     <Link
                       key={item.id}
                       href={href}
-                      className="block rounded-lg px-2 py-2 hover:bg-gray-100"
+                      className={cn(
+                        'block rounded-lg px-2 py-2',
+                        isSprintTheme ? 'hover:bg-slate-800' : 'hover:bg-gray-100',
+                      )}
                       onClick={() => setShowSuggestions(false)}
                     >
-                      <p className="text-sm font-medium text-text">{item.title}</p>
-                      <p className="text-xs text-gray-500">
+                      <p
+                        className={cn('text-sm font-medium', isSprintTheme ? 'text-slate-100' : 'text-text')}
+                      >
+                        {item.title}
+                      </p>
+                      <p className={cn('text-xs', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
                         {item.sku ? `SKU: ${item.sku} • ` : ''}
                         {item.price.toLocaleString('ru-RU')} ₽
                       </p>
@@ -186,33 +232,45 @@ export function CatalogControls({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Цена от</label>
+          <label
+            className={cn('mb-1 block text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}
+          >
+            Цена от
+          </label>
           <input
             type="number"
             value={draftMinPrice}
             onChange={(e) => setDraftMinPrice(e.target.value)}
             onBlur={() => updateParams({ minPrice: draftMinPrice || null })}
             placeholder="0"
-            className="form-input w-full"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Цена до</label>
+          <label
+            className={cn('mb-1 block text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}
+          >
+            Цена до
+          </label>
           <input
             type="number"
             value={draftMaxPrice}
             onChange={(e) => setDraftMaxPrice(e.target.value)}
             onBlur={() => updateParams({ maxPrice: draftMaxPrice || null })}
             placeholder="99999"
-            className="form-input w-full"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Сортировка</label>
+          <label
+            className={cn('mb-1 block text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}
+          >
+            Сортировка
+          </label>
           <select
             value={sort}
             onChange={(e) => updateParams({ sort: e.target.value })}
-            className="form-input w-full"
+            className={inputClass}
           >
             <option value="newest">Как в каталоге</option>
             <option value="price_asc">Цена: по возрастанию</option>
@@ -221,19 +279,43 @@ export function CatalogControls({
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Вид</label>
-          <div className="inline-flex rounded-xl bg-gray-100 p-1">
+          <label
+            className={cn('mb-1 block text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}
+          >
+            Вид
+          </label>
+          <div
+            className={cn('inline-flex rounded-xl p-1', isSprintTheme ? 'bg-slate-800/90' : 'bg-gray-100')}
+          >
             <button
               type="button"
               onClick={() => updateParams({ view: 'grid' })}
-              className={`rounded-lg px-3 py-1.5 text-sm ${view === 'grid' ? 'bg-highlight-blue font-medium' : 'text-gray-600'}`}
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-sm transition-colors',
+                view === 'grid'
+                  ? isSprintTheme
+                    ? 'bg-[#7AA2FF] font-medium text-slate-950'
+                    : 'bg-highlight-blue font-medium'
+                  : isSprintTheme
+                    ? 'text-slate-400'
+                    : 'text-gray-600',
+              )}
             >
               Плитка
             </button>
             <button
               type="button"
               onClick={() => updateParams({ view: 'list' })}
-              className={`rounded-lg px-3 py-1.5 text-sm ${view === 'list' ? 'bg-highlight-blue font-medium' : 'text-gray-600'}`}
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-sm transition-colors',
+                view === 'list'
+                  ? isSprintTheme
+                    ? 'bg-[#7AA2FF] font-medium text-slate-950'
+                    : 'bg-highlight-blue font-medium'
+                  : isSprintTheme
+                    ? 'text-slate-400'
+                    : 'text-gray-600',
+              )}
             >
               Список
             </button>
@@ -243,18 +325,25 @@ export function CatalogControls({
 
       {visibleBrandOptions.length > 0 && (
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-gray-600">Бренд</p>
+          <p className={cn('mb-2 text-xs font-medium', isSprintTheme ? 'text-slate-400' : 'text-gray-600')}>
+            Бренд
+          </p>
           <div className="flex flex-wrap gap-2">
             {visibleBrandOptions.map((brand) => (
               <button
                 key={brand}
                 type="button"
                 onClick={() => toggleBrand(brand)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-sm transition-colors',
                   selectedBrandSet.has(brand)
-                    ? 'border-action-blue bg-highlight-blue text-text'
-                    : 'border-gray-300 text-gray-700 hover:border-action-blue hover:text-action-blue'
-                }`}
+                    ? isSprintTheme
+                      ? 'border-[#7AA2FF] bg-[#7AA2FF]/15 text-slate-100'
+                      : 'border-action-blue bg-highlight-blue text-text'
+                    : isSprintTheme
+                      ? 'border-slate-600 text-slate-300 hover:border-[#7AA2FF] hover:text-[#7AA2FF]'
+                      : 'border-gray-300 text-gray-700 hover:border-action-blue hover:text-action-blue',
+                )}
               >
                 {brand}
               </button>
@@ -264,11 +353,14 @@ export function CatalogControls({
       )}
 
       <div className="mt-4">
-        <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+        <label
+          className={cn('inline-flex items-center gap-2 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-700')}
+        >
           <input
             type="checkbox"
             checked={promoOnly}
             onChange={(e) => updateParams({ promo: e.target.checked ? '1' : null })}
+            className={cn(isSprintTheme && 'accent-[#7AA2FF]')}
           />
           Только товары со скидкой
         </label>
@@ -288,7 +380,12 @@ export function CatalogControls({
               view: 'grid',
             })
           }
-          className="rounded-full border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:border-action-blue hover:text-action-blue"
+          className={cn(
+            'rounded-full border px-4 py-2 text-sm transition-colors',
+            isSprintTheme
+              ? 'border-slate-600 text-slate-200 hover:border-[#7AA2FF] hover:text-[#7AA2FF]'
+              : 'border-gray-300 text-gray-700 hover:border-action-blue hover:text-action-blue',
+          )}
         >
           Сбросить фильтры
         </button>
@@ -298,7 +395,12 @@ export function CatalogControls({
             updateParams({ q: q.trim() || null, minPrice: draftMinPrice || null, maxPrice: draftMaxPrice || null });
             setShowSuggestions(false);
           }}
-          className="rounded-full bg-action-blue px-4 py-2 text-sm font-medium text-gray-800 hover:bg-action-blue/90"
+          className={cn(
+            'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+            isSprintTheme
+              ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
+              : 'bg-action-blue text-gray-800 hover:bg-action-blue/90',
+          )}
         >
           Применить
         </button>
