@@ -75,14 +75,12 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     logoText: 'SPRINT POWER',
     navLinks: [
       { label: 'Каталог', href: '/catalog' },
-      { label: 'Хиты', href: '/catalog?sort=newest' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },
     ],
     mobileNavLinks: [
       { label: 'Каталог', href: '/catalog' },
-      { label: 'Хиты продаж', href: '/catalog?sort=newest' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },

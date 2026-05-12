@@ -126,23 +126,6 @@ type HomeCategoryWithProductCount = Awaited<
   ReturnType<typeof __typeProbeHomeCategoryWithCounts>
 >[number]
 
-/** Type-only probe для карточки Sprint на главной. */
-async function __typeProbeSprintHomeProductRow() {
-  return prisma.product.findMany({
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      photo: true,
-      slug: true,
-      brand: true,
-    },
-    take: 0,
-  })
-}
-
-type SprintHomeProductRow = Awaited<ReturnType<typeof __typeProbeSprintHomeProductRow>>[number]
-
 type CategoryWhereInput = NonNullable<Parameters<typeof prisma.category.findMany>[0]>['where']
 
 type PostWhereInput = NonNullable<Parameters<typeof prisma.post.findMany>[0]>['where']
@@ -342,14 +325,6 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
 }
 
 type SprintHomeData = {
-  products: Array<{
-    id: string
-    title: string
-    price: number
-    photo: string | null
-    slug: string | null
-    brand: string | null
-  }>
   featuredProduct: {
     id: string
     title: string
@@ -400,35 +375,13 @@ function normalizeOptionalContentId(value: string | null | undefined): string | 
 async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promise<SprintHomeData> {
   const dbTimeoutMs = 2500
   const dbBrand = resolveDbBrand('sprint-power')
-  const emptySprintProducts = [] as SprintHomeProductRow[]
   const emptySprintCategoryRows = [] as HomeCategoryWithProductCount[]
   const emptySprintReviews = [] as SprintHomeData['reviews']
   const emptySprintPosts = [] as SprintHomeData['newsPosts']
   const explicitFeaturedProductId = normalizeOptionalContentId(options.featuredProductId)
 
-  const [products, categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
+  const [categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
     await Promise.all([
-      withTimeout(
-        prisma.product.findMany({
-          where: {
-            isDraft: false,
-            brand: SPRINT_POWER_PRODUCT_BRAND,
-            isFeaturedInNewArrivals: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 2,
-          select: {
-            id: true,
-            title: true,
-            price: true,
-            photo: true,
-            slug: true,
-            brand: true,
-          },
-        }),
-        dbTimeoutMs,
-        emptySprintProducts
-      ),
       (async (): Promise<SprintHomeData['categories']> => {
         try {
           let rows: HomeCategoryWithProductCount[] = await withTimeout(
@@ -556,32 +509,29 @@ async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promis
           null
         )) as SprintHomeData['featuredProduct'])
 
-  const fallbackFeaturedProduct =
-    products[0] ??
-    ((await withTimeout(
-      prisma.product.findFirst({
-        where: {
-          isDraft: false,
-          brand: SPRINT_POWER_PRODUCT_BRAND,
-        },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          title: true,
-          price: true,
-          photo: true,
-          slug: true,
-          brand: true,
-        },
-      }),
-      dbTimeoutMs,
-      null
-    )) as SprintHomeData['featuredProduct'])
+  const fallbackFeaturedProduct = (await withTimeout(
+    prisma.product.findFirst({
+      where: {
+        isDraft: false,
+        brand: SPRINT_POWER_PRODUCT_BRAND,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        photo: true,
+        slug: true,
+        brand: true,
+      },
+    }),
+    dbTimeoutMs,
+    null
+  )) as SprintHomeData['featuredProduct']
 
   const featuredProduct = featuredProductFromContent ?? fallbackFeaturedProduct
 
   return {
-    products,
     featuredProduct,
     categories,
     reviews,
@@ -754,36 +704,32 @@ function SprintPowerHome({
 
           <SprintPowerHomeAboutSection blocks={blocks} />
 
-          {data.products.length > 0 && (
-            <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] bg-[#0F172A] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
-              <h2 className="mb-4 text-2xl font-bold text-slate-100">
-                {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Хиты продаж')}
-              </h2>
-              <div className="grid gap-3 md:grid-cols-2">
-                {data.products.map((product) => (
-                  <div key={product.id} className="rounded-2xl bg-[#1E293B] p-3">
-                    {product.photo ? (
-                      <div className="relative mb-3 h-[clamp(5rem,28vw,6.5rem)] overflow-hidden rounded-lg">
-                        <Image src={product.photo} alt={product.title} fill className="object-cover" />
-                      </div>
-                    ) : null}
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-slate-100">{product.title}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-[#7AA2FF]">{product.price} ₽</span>
-                        <Link
-                          href={product.slug ? `/product/${product.slug}` : '/catalog'}
-                          className="rounded-full bg-[#7AA2FF] px-4 py-1.5 text-xs font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF]"
-                        >
-                          Купить
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <div className="overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/50 bg-[#0A1128] shadow-[0_24px_80px_-40px_rgba(0,0,0,0.75)] ring-1 ring-white/5 md:rounded-3xl">
+            <Link href="/catalog" className="group relative block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060A14]">
+              <div className="relative aspect-[16/11] w-full sm:aspect-[2/1] md:aspect-[21/9]">
+                <Image
+                  src="/images/sprint-power/home-lifestyle-banner.png"
+                  alt="Спортсмены на тренировке с гантелями"
+                  fill
+                  className="object-cover object-[center_22%] transition-transform duration-700 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 92vw, min(120rem, 100vw)"
+                  quality={90}
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-linear-to-t from-[#060A14]/90 via-[#060A14]/20 to-transparent sm:via-transparent"
+                  aria-hidden
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1 px-5 pb-5 pt-16 sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:pb-6 md:px-10 md:pb-8">
+                  <p className="max-w-xl text-pretty text-lg font-semibold tracking-tight text-white drop-shadow-md sm:text-xl md:text-2xl">
+                    {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Сила и восстановление')}
+                  </p>
+                  <span className="mt-2 inline-flex w-fit shrink-0 items-center rounded-full bg-[#7AA2FF] px-4 py-2 text-xs font-semibold text-slate-950 transition-colors group-hover:bg-[#9AB8FF] sm:mt-0 sm:text-sm">
+                    В каталог
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            </Link>
+          </div>
 
           <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -1148,7 +1094,6 @@ export default async function HomePage() {
 
   if (activeBrand === 'sprint-power') {
     const emptySprintHomeData: SprintHomeData = {
-      products: [],
       featuredProduct: null,
       categories: [],
       reviews: [],
