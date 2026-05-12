@@ -785,7 +785,7 @@ export async function sendCustomerOrderPaidEmail(
     connectionTimeout: 15000,
     greetingTimeout: 15000,
   })
-  const { orderId, total, shippingCost, items, cdekTrackNumber, promoCode, promoDiscountAmount } = payload
+  const { total, shippingCost, items, cdekTrackNumber, promoCode, promoDiscountAmount } = payload
   const orderLabel = formatOrderLabel(payload)
   const orderSummary = items
     .map(
@@ -930,7 +930,7 @@ export async function sendAdminCdekTrackNotification(
     greetingTimeout: 15000,
   })
 
-  const { orderId, total, shipping } = payload
+  const { total, shipping } = payload
   const orderLabel = formatOrderLabel(payload)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =
@@ -1041,7 +1041,6 @@ export async function sendCustomerCdekTrackNotification(
     greetingTimeout: 15000,
   })
 
-  const { orderId } = payload
   const orderLabel = formatOrderLabel(payload)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =

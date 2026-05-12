@@ -66,7 +66,7 @@ function ensureManifests() {
     if (!fs.existsSync(routesPath)) {
       fs.writeFileSync(routesPath, JSON.stringify(MINIMAL_ROUTES_MANIFEST, null, 2));
     }
-  } catch (err) {
+  } catch {
     // ignore
   }
 }

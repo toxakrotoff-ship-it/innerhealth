@@ -1,18 +1,6 @@
-/* eslint-disable no-console */
 import 'dotenv/config'
 import { parseArgs } from 'node:util'
-import path from 'node:path'
-
-// Важно: путь к корню Next.js-проекта
-const projectRoot = path.join(__dirname, '..')
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { aggregateForDateRange } = require(path.join(
-  projectRoot,
-  'src/lib/analytics/aggregation-service'
-)) as {
-  aggregateForDateRange: (from: Date, to: Date) => Promise<void>
-}
+import { aggregateForDateRange } from '../src/lib/analytics/aggregation-service'
 
 function parseDate(value: string | undefined, fallback: Date): Date {
   if (!value) return fallback

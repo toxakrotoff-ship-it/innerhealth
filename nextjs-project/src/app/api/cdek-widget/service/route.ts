@@ -33,18 +33,6 @@ function json(data: unknown, init?: ResponseInit) {
   })
 }
 
-function normalizeCalculateResponse(text: string): string {
-  try {
-    const parsed = JSON.parse(text) as unknown
-    if (Array.isArray(parsed)) {
-      return JSON.stringify({ tariff_codes: parsed })
-    }
-    return text
-  } catch {
-    return text
-  }
-}
-
 const calculatorPayloadSchema = z.object({
   to_location: z.record(z.string(), z.unknown()),
   packages: z.array(z.object({

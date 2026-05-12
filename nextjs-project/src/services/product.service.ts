@@ -144,7 +144,8 @@ type SprintCatalogProductDbRow = Prisma.ProductGetPayload<{ select: typeof sprin
 function attachPrimaryCategorySlug(rows: readonly SprintCatalogProductDbRow[]): CatalogProductRow[] {
   return rows.map((row) => {
     const primaryCategorySlug = row.categories[0]?.category?.slug ?? null;
-    const { categories: _categories, ...rest } = row;
+    const { categories, ...rest } = row;
+    void categories;
     return { ...(rest as CatalogProductDbRow), primaryCategorySlug };
   });
 }

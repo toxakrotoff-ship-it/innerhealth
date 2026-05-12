@@ -43,7 +43,7 @@
 
 **Результат:** одно поле истины; старые запросы по `items` удалены или оставлены только как fallback на период релиза (лучше без fallback после бэкфила).
 
-**Ориентир по файлам:** `nextjs-project/prisma/schema.prisma`, `src/app/api/orders/route.ts`, `src/services/order.service.ts`, миграции в `prisma/migrations/`.
+**Ориентир по файлам:** `nextjs-project/prisma/schema.prisma`, `nextjs-project/src/app/api/orders/route.ts`, `nextjs-project/src/services/order.service.ts`, миграции в `nextjs-project/prisma/migrations/`.
 
 ---
 

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
-import { updateSitePopup } from '@/app/admin/site-popup/actions'
+import { updateSitePopup, type SitePopupFormInput } from '@/app/admin/site-popup/actions'
 
 export async function PUT(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
 
   try {
-    const body = (await request.json()) as unknown
-    const result = await updateSitePopup(body as any)
+    const body = (await request.json()) as SitePopupFormInput
+    const result = await updateSitePopup(body)
     if (!result.success) {
       return NextResponse.json({ success: false, error: result.error ?? 'Validation failed' }, { status: 400 })
     }

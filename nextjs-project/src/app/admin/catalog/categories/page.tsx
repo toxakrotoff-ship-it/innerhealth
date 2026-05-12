@@ -29,7 +29,6 @@ import {
   type FlatCategoryTreeNode,
 } from '@/lib/category-tree';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
-import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
 import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
 
@@ -142,7 +141,6 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
 }
 
 export default function AdminCategoriesPage() {
-  const adminBasePath = useAdminBasePath();
   const activeBrand = useAdminBrand();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);

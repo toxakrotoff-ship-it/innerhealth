@@ -42,11 +42,12 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
           let listElement: HTMLUListElement | null = null
           let items: ProductSuggestionItem[] = []
           let selectedIndex = 0
+          let props: { command: (item: ProductSuggestionItem) => void } | null = null
 
           const selectItem = (index: number) => {
             const item = items[index]
             if (!item) return
-            ;(props as any).command(item)
+            props?.command(item)
           }
 
           const updateSelected = () => {
@@ -56,8 +57,6 @@ export const ProductLink = Mark.create<ProductLinkOptions>({
               child.classList.toggle('bg-gray-100', idx === selectedIndex)
             })
           }
-
-          let props: { command: (item: ProductSuggestionItem) => void } | null = null
 
           return {
             onStart(startProps) {

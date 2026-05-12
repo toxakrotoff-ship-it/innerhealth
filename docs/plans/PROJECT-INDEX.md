@@ -11,7 +11,6 @@ innerhealth/
 ├── nextjs-project/     # Next.js приложение (Prisma, API, UI); см. nextjs-project/docs/
 ├── docs/               # документация репозитория
 ├── docs/plans/         # ТЗ, roadmap, архивные планы (auth, catalog, animation…)
-├── prisma/             # дублирующая схема в корне — ориентир: nextjs-project/prisma/
 ├── tests/              # Playwright (adaptive, user-scenarios)
 ├── deploy/             # деплой VPS / Docker
 ├── README.md

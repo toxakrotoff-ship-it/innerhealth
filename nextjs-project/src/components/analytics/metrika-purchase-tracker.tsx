@@ -10,6 +10,18 @@ interface PendingPaymentSnapshot {
   createdAt: string
 }
 
+interface MetrikaPurchaseApiPayload {
+  ok?: boolean
+  eligible?: boolean
+  order?: {
+    id?: string
+    status?: string
+    currency?: string
+    value?: unknown
+    items?: unknown
+  }
+}
+
 interface MetrikaPurchaseTrackerProps {
   payment?: string
 }
@@ -45,7 +57,7 @@ export function MetrikaPurchaseTracker({ payment }: MetrikaPurchaseTrackerProps)
 
     void fetch(url, { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
-      .then((payload: any) => {
+      .then((payload: MetrikaPurchaseApiPayload | null) => {
         if (!payload?.ok || payload?.eligible !== true) return
         const order = payload.order
         if (!order?.id || order?.status !== 'paid') return

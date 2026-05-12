@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { headers } from 'next/headers'
 import type { Metadata, ResolvingMetadata } from 'next'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import * as productService from '@/services/product.service'
 import * as reviewService from '@/services/review.service'
 import * as faqService from '@/services/faq.service'
@@ -12,7 +13,6 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
 import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
 import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
-import { PostCard } from '@/components/site/post-card'
 import {
   filterCatalogBlockCategories,
   getCategoryImageObjectPosition,
@@ -42,6 +42,7 @@ import {
 } from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { buildHomeMetadata } from './home-metadata'
+import type { JSONContent } from '@tiptap/core'
 
 const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -113,17 +114,9 @@ const HOME_CATEGORY_CATALOG_INCLUDE = {
   },
 } as const
 
-/** Type-only probe — не вызывать; нужен для вывода типа категории с `include` без импорта `Prisma`. */
-async function __typeProbeHomeCategoryWithCounts() {
-  return prisma.category.findMany({
-    include: HOME_CATEGORY_CATALOG_INCLUDE,
-    take: 0,
-  })
-}
-
-type HomeCategoryWithProductCount = Awaited<
-  ReturnType<typeof __typeProbeHomeCategoryWithCounts>
->[number]
+type HomeCategoryWithProductCount = Prisma.CategoryGetPayload<{
+  include: typeof HOME_CATEGORY_CATALOG_INCLUDE
+}>
 
 type CategoryWhereInput = NonNullable<Parameters<typeof prisma.category.findMany>[0]>['where']
 
@@ -1074,7 +1067,7 @@ export default async function HomePage() {
                 id: popup.id,
                 title: popup.title,
                 isEnabled: popup.isEnabled,
-                richJson: popup.richJson as any,
+                richJson: popup.richJson as JSONContent | null,
                 imageUrl: popup.imageUrl,
                 ctaLabel: popup.ctaLabel,
                 ctaUrl: popup.ctaUrl,

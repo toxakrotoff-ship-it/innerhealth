@@ -1359,6 +1359,14 @@ export default function AdminSettingsPage() {
             <p className="text-sm text-gray-600 mb-4">
               После изменений нажмите «Сохранить настройки» внизу страницы.
             </p>
+            {cdekTariffsLoading ? (
+              <p className="text-sm text-gray-500 mb-3">Загрузка списка тарифов СДЭК…</p>
+            ) : null}
+            {cdekTariffsError ? (
+              <p className="text-sm text-red-600 mb-3" role="alert">
+                {cdekTariffsError}
+              </p>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
               {FIELDS.filter((f) => f.group === 'cdek').map((field) => (
                 <div key={field.key}>

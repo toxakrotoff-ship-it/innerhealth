@@ -82,7 +82,7 @@ Expected: No matches (or only type-only imports like `import type { Prisma } fro
 ## Optional follow-ups (Sprint 4 / later)
 
 - **Explicit return types:** Add explicit return types to all service methods using Prisma-generated types (e.g. `Promise<Product | null>`, `Promise<Order[]>`). Current code relies on inference; no `any` in services.
-- **Selective querying:** In services, use `select` to fetch only required fields (see refactoring_plans.md Sprint 4).
+- **Selective querying:** In services, use `select` to fetch only required fields (see [refactoring-cursor-sprints-archive.md](../refactoring-cursor-sprints-archive.md) Sprint 4).
 
 ---
 

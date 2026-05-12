@@ -39,7 +39,6 @@ async function flushQueue() {
     })
   } catch (err) {
     // Не шумим в консоли в проде, только debug.
-    // eslint-disable-next-line no-console
     console.debug('Analytics flush failed', err)
   }
 }

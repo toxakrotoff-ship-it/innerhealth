@@ -25,6 +25,7 @@ interface GiftPromotion {
   showOnSite: boolean
   siteTitle: string | null
   siteDescription: string | null
+  coverImage: string | null
   createdAt: string
 }
 
@@ -172,7 +173,7 @@ export default function GiftPromotionsPage() {
       showOnSite: p.showOnSite,
       siteTitle: p.siteTitle ?? '',
       siteDescription: p.siteDescription ?? '',
-      coverImage: (p as any).coverImage ?? '',
+      coverImage: p.coverImage ?? '',
     })
     setShowForm(true)
   }

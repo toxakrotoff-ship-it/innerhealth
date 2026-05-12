@@ -187,9 +187,6 @@ export function CartPageContent({
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
   const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
-  const [deliveryPoints, setDeliveryPoints] = useState<CdekPvzOption[]>([])
-  const [deliveryPointsLoading, setDeliveryPointsLoading] = useState(false)
-  const [deliveryPointsError, setDeliveryPointsError] = useState<string | null>(null)
   const [selectedPvz, setSelectedPvz] = useState<CdekPvzOption | null>(null)
   const [doorAddress, setDoorAddress] = useState({
     street: '',
@@ -199,7 +196,7 @@ export function CartPageContent({
     floor: '',
     intercom: '',
   })
-  const [comment, setComment] = useState('')
+  const [comment] = useState('')
   const [deliveryError, setDeliveryError] = useState<string | null>(null)
   const [phoneError, setPhoneError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
@@ -392,26 +389,8 @@ export function CartPageContent({
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
 
   useEffect(() => {
-    if (cityCode != null && deliveryMethod === 'cdek_pvz') {
-      setDeliveryPointsLoading(true)
-      setDeliveryPoints([])
-      setDeliveryPointsError(null)
-      fetch(`/api/cdek/deliverypoints?cityCode=${cityCode}&type=PVZ&size=50`)
-        .then(async (r) => {
-          const data = await r.json()
-          if (!r.ok) {
-            setDeliveryPointsError(data?.error ?? 'Не удалось загрузить пункты выдачи')
-            return
-          }
-          setDeliveryPoints(data.deliveryPoints ?? [])
-        })
-        .catch(() => {
-          setDeliveryPointsError('Не удалось загрузить пункты выдачи. Попробуйте позже.')
-        })
-        .finally(() => setDeliveryPointsLoading(false))
-    } else {
-      setDeliveryPoints([])
-      setDeliveryPointsError(null)
+    const keepPvzSelection = cityCode != null && deliveryMethod === 'cdek_pvz'
+    if (!keepPvzSelection) {
       setSelectedPvz(null)
     }
   }, [cityCode, deliveryMethod])

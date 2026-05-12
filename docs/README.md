@@ -363,7 +363,7 @@ npm run dev
 
 - **Папка `plans/`** — планы доработок и технические решения
 - **Папка `scripts/`** — вспомогательные скрипты для администрирования
-- **`nextjs-project/src/services/refactoring_plans.md`** — черновые промпты для рефакторинга (история; актуальные планы — в `docs/plans/`)
+- **[`refactoring-cursor-sprints-archive.md`](refactoring-cursor-sprints-archive.md)** — черновые промпты для рефакторинга (история; актуальные планы — в `docs/plans/`)
 - **`nextjs-project/docs/plans/2026-03-18-product-photo-normalization-design.md`** — нормализация URL изображений товаров
 
 ---
