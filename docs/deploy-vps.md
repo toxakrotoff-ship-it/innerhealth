@@ -177,6 +177,28 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
+### Кэш сборки Docker (BuildKit / buildx)
+
+На VPS кэш слоёв сборки часто занимает гигабайты в `/var/lib/docker`. Это **не** данные Postgres и **не** пользовательские `uploads` — только артефакты ускорения `docker compose build`.
+
+**Полная очистка кэша сборки** (рекомендуется, если диск заполнен в основном «кэшем докера»):
+
+```bash
+cd /opt/innerhealth/nextjs-project   # или ваш путь к репозиторию
+chmod +x deploy/ops/prune-docker-build-cache.sh
+./deploy/ops/prune-docker-build-cache.sh
+```
+
+Скрипт выполняет `docker builder prune -af` и при наличии CLI — `docker buildx prune -af`. Запущенные контейнеры, используемые образы и **volumes не удаляются**. После очистки первая сборка образов займёт больше времени.
+
+**Регулярная мягкая очистка** (по возрасту кэша) уже заложена в `deploy/ops/docker-maintenance.sh` и при успешной установке safeguard’ов может вызываться из cron; для разового «вынести весь builder cache» удобнее скрипт выше.
+
+Проверить, что съело место:
+
+```bash
+docker system df
+```
+
 ### Права на каталог загрузок (uploads)
 
 Контейнер `app` работает от пользователя `nextjs` (uid 1001). Чтобы загрузка изображений в админке (новости/статьи) не падала с **EACCES**, на сервере каталог `public/uploads` должен быть доступен на запись для uid 1001:

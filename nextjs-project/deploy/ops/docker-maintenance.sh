@@ -5,6 +5,8 @@ set -euo pipefail
 # - Removes unused images, build cache, and networks.
 # - Does NOT remove volumes (to avoid deleting Postgres data).
 # - Keeps recent cache so repeated deploys stay fast.
+#
+# To drop ALL build cache immediately (e.g. disk full): run deploy/ops/prune-docker-build-cache.sh
 
 log() {
   if command -v logger >/dev/null 2>&1; then
