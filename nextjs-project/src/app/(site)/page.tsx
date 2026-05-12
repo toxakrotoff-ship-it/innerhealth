@@ -591,6 +591,66 @@ async function getSprintHomeData(options: GetSprintHomeDataOptions = {}): Promis
   }
 }
 
+function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[] }) {
+  const title = getBlockTextForBrand(blocks, 'home', 'about.title', 'sprint-power', 'О нас')
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200/80 md:p-8">
+      <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{title}</h2>
+      <div className="mt-6 max-w-3xl space-y-4 text-[15px] leading-relaxed text-slate-700 md:text-base md:leading-relaxed">
+        <p>
+          Мы гордимся тем, что являемся отечественным производителем спортивного питания нового поколения. Все
+          этапы, начиная с разработки уникальных формул продуктов для питания спортсменов, контроля сырья и
+          заканчивая производством высококачественного товара, проходят в России. Мы амбициозны и стремимся
+          переосмыслить рынок, бросив вызов импортным аналогам протеина, коллагена, аминокислот, креатина,
+          обезжиренного бульона и значительно превзойдя их по качеству.
+        </p>
+        <p>
+          Наша команда состоит из высококвалифицированных специалистов в области спортивного питания: биологов,
+          спортивных врачей, врачей превентивной медицины, технологов, тренеров и профессиональных спортсменов.
+          Мы уверены, что каждый этап разработки продукта требует тщательной работы и внимания к деталям. В основе
+          нашего спортивного питания лежит принцип синергии: активные компоненты в наших составах взаимно усиливают
+          действие друг друга, что позволяет многократно увеличить их эффективность.
+        </p>
+        <p>
+          Каждый продукт обладает еще и выраженным хондропротекторным действием, что принципиально важно как для
+          любительского спорта, так и спорта высоких достижений.
+        </p>
+        <p className="font-semibold text-slate-900">Линейка включает в себя:</p>
+        <ul className="list-none space-y-3 border-l-2 border-[#3B82F6]/35 pl-4">
+          <li>
+            <span className="font-semibold text-slate-900">Мультипротеин. </span>
+            Сывороточный белок дополнили гидролизатом куриного белка в ди-и трипептидной форме, усилили пребиотиком
+            Floracia™, снизили содержание сахара. 4 вкуса на выбор.
+          </li>
+          <li>
+            <span className="font-semibold text-slate-900">Гидропротеин. </span>
+            Первый протеин без казеина и лактозы, в котором 95% белка ди-и трипептидной формы, 19 аминокислот.
+            Аналога на российском рынке нет.
+          </li>
+          <li>
+            <span className="font-semibold text-slate-900">ВСАА. </span>
+            Усилили пребиотиком Floracia™ и аргинином, получили эффективное мышцеобразующее и восстанавливающее
+            средство.
+          </li>
+          <li>
+            <span className="font-semibold text-slate-900">Пептиды коллагена II типа. </span>
+            Те самые с противоспалительным и хондропротекторным действием для защиты опорно-двигательного аппарата.
+          </li>
+          <li>
+            <span className="font-semibold text-slate-900">Пептидный костный куриный бульон. </span>
+            Нутрицевтическое белковое питание для восполнения белка, восстановления ЖКТ, поддержки активности.
+          </li>
+        </ul>
+        <p>
+          Sprint Power – это всегда нужное количество белка, активация синтеза внутреннего коллагена, набор
+          мышечной массы, красивое, рельефное тело, здоровые суставы и связки, продуктивные тренировки, сила,
+          выносливость, работоспособность. Побеждайте с нами, покоряйте новые высоты.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function SprintPowerHome({
   data,
   blocks,
@@ -612,6 +672,7 @@ function SprintPowerHome({
     getBlockTextForBrand(blocks, 'home', 'markers.item3', 'sprint-power', 'Регулярные обзоры'),
   ]
   const reviewsCtaHref = getBlockTextForBrand(blocks, 'home', 'reviewsCta.href', 'sprint-power', '/otzyvy')
+  const heroBrandLabel = getBlockTextForBrand(blocks, 'home', 'hero.badge', 'sprint-power', 'SPRINT POWER')
   const showSprintHomeNewsBlock =
     data.newsPosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(blocks, 'home.news.showWhenEmpty')?.text)
@@ -626,9 +687,17 @@ function SprintPowerHome({
           <div className="space-y-6 rounded-2xl bg-[#060A14]">
           <div className="grid gap-6 rounded-3xl bg-[#0A1128] p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
             <div className="space-y-4">
-              <p className="text-xs font-bold tracking-[0.16em] text-[#7AA2FF]">
-                {getBlockTextForBrand(blocks, 'home', 'hero.badge', 'sprint-power', 'SPRINT POWER')}
-              </p>
+              <div className="max-w-[min(100%,360px)]">
+                <Image
+                  src="/images/sprint-power/sprint-power-hero-logo.png"
+                  alt={heroBrandLabel}
+                  width={1680}
+                  height={845}
+                  priority
+                  className="h-auto w-full object-contain"
+                  sizes="(max-width: 768px) 100vw, 360px"
+                />
+              </div>
               <h1 className="max-w-xl text-3xl font-extrabold leading-tight text-white md:text-5xl">
                 {getBlockTextForBrand(
                   blocks,
@@ -683,6 +752,8 @@ function SprintPowerHome({
             </Link>
           </div>
 
+          <SprintPowerHomeAboutSection blocks={blocks} />
+
           {data.products.length > 0 && (
             <div className="rounded-3xl bg-[#0F172A] p-6 md:p-8">
               <h2 className="mb-4 text-2xl font-bold text-slate-100">
@@ -713,6 +784,82 @@ function SprintPowerHome({
               </div>
             </div>
           )}
+
+          <div className="rounded-3xl border border-slate-700/40 bg-[#060A14] p-6 md:p-8">
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+              <h3 className="text-2xl font-bold text-slate-100">
+                {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
+              </h3>
+              <Link
+                href="/catalog"
+                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white"
+              >
+                Весь каталог
+              </Link>
+            </div>
+            {data.categories.length > 0 ? (
+              <FluidGrid
+                cols={1}
+                colsTablet={2}
+                colsDesktop={2}
+                gap={4}
+                adaptiveGap
+                className="mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]"
+              >
+                {data.categories.map((category) => {
+                  const bgImage = resolveCategoryImage(category.slug, category.image, {
+                    sprintFallback: true,
+                  })
+                  const imagePosition = getCategoryImageObjectPosition(category.slug)
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/catalog/${category.slug}`}
+                      className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
+                    >
+                      <TiltCard variant="dark">
+                        <div
+                          className={`relative flex aspect-[16/12] flex-col items-center justify-center overflow-hidden rounded-2xl p-5 text-center ${
+                            !bgImage ? 'bg-[#0F172A]' : ''
+                          }`}
+                        >
+                          {bgImage ? (
+                            <>
+                              <Image
+                                src={bgImage}
+                                alt=""
+                                fill
+                                className={imagePosition}
+                                sizes="(max-width: 768px) 100vw, 50vw"
+                              />
+                              <div
+                                className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"
+                                aria-hidden
+                              />
+                            </>
+                          ) : null}
+                          <span
+                            className={`relative z-10 block text-balance font-semibold uppercase leading-snug tracking-wide drop-shadow-md ${categoryTitleFont} text-base sm:text-lg ${
+                              bgImage ? 'text-white' : 'text-slate-100'
+                            }`}
+                          >
+                            {category.title}
+                          </span>
+                        </div>
+                      </TiltCard>
+                    </Link>
+                  )
+                })}
+              </FluidGrid>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-600/70 bg-[#1E293B]/50 px-4 py-6 text-center">
+                <p className="text-sm leading-6 text-slate-400">
+                  Разделы каталога настраиваются в админке. Пока можно перейти в полный каталог и выбрать
+                  продукт там.
+                </p>
+              </div>
+            )}
+          </div>
 
           <div className="grid gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1fr_360px] md:p-8">
             <div className="space-y-3">
@@ -803,82 +950,6 @@ function SprintPowerHome({
                 )}
               </Link>
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-700/40 bg-[#060A14] p-6 md:p-8">
-            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-              <h3 className="text-2xl font-bold text-slate-100">
-                {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
-              </h3>
-              <Link
-                href="/catalog"
-                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white"
-              >
-                Весь каталог
-              </Link>
-            </div>
-            {data.categories.length > 0 ? (
-              <FluidGrid
-                cols={1}
-                colsTablet={2}
-                colsDesktop={2}
-                gap={4}
-                adaptiveGap
-                className="mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]"
-              >
-                {data.categories.map((category) => {
-                  const bgImage = resolveCategoryImage(category.slug, category.image, {
-                    sprintFallback: true,
-                  })
-                  const imagePosition = getCategoryImageObjectPosition(category.slug)
-                  return (
-                    <Link
-                      key={category.id}
-                      href={`/catalog/${category.slug}`}
-                      className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
-                    >
-                      <TiltCard variant="dark">
-                        <div
-                          className={`relative flex aspect-[16/12] flex-col items-center justify-center overflow-hidden rounded-2xl p-5 text-center ${
-                            !bgImage ? 'bg-[#0F172A]' : ''
-                          }`}
-                        >
-                          {bgImage ? (
-                            <>
-                              <Image
-                                src={bgImage}
-                                alt=""
-                                fill
-                                className={imagePosition}
-                                sizes="(max-width: 768px) 100vw, 50vw"
-                              />
-                              <div
-                                className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"
-                                aria-hidden
-                              />
-                            </>
-                          ) : null}
-                          <span
-                            className={`relative z-10 block text-balance font-semibold uppercase leading-snug tracking-wide drop-shadow-md ${categoryTitleFont} text-base sm:text-lg ${
-                              bgImage ? 'text-white' : 'text-slate-100'
-                            }`}
-                          >
-                            {category.title}
-                          </span>
-                        </div>
-                      </TiltCard>
-                    </Link>
-                  )
-                })}
-              </FluidGrid>
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-600/70 bg-[#1E293B]/50 px-4 py-6 text-center">
-                <p className="text-sm leading-6 text-slate-400">
-                  Разделы каталога настраиваются в админке. Пока можно перейти в полный каталог и выбрать
-                  продукт там.
-                </p>
-              </div>
-            )}
           </div>
 
           {showSprintHomeNewsBlock ? (

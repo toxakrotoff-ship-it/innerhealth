@@ -107,15 +107,17 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
-                    }`}
+                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                        isSprintTheme
+                          ? 'text-slate-400 hover:text-white'
+                          : 'hover:text-action-blue'
+                      }`}
                     >
                       <ResponsiveText
                         as="span"
                         variant="sm"
                         weight="light"
-                        color="secondary"
+                        color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
                         {label}
@@ -145,15 +147,17 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
-                    }`}
+                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                        isSprintTheme
+                          ? 'text-slate-400 hover:text-white'
+                          : 'hover:text-action-blue'
+                      }`}
                     >
                       <ResponsiveText
                         as="span"
                         variant="sm"
                         weight="light"
-                        color="secondary"
+                        color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
                         {label}
@@ -183,15 +187,17 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   <li key={href}>
                     <Link
                       href={href}
-                    className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                      isSprintTheme ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
-                    }`}
+                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                        isSprintTheme
+                          ? 'text-slate-400 hover:text-white'
+                          : 'hover:text-action-blue'
+                      }`}
                     >
                       <ResponsiveText
                         as="span"
                         variant="sm"
                         weight="light"
-                        color="secondary"
+                        color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
                         {label}

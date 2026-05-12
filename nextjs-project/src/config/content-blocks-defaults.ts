@@ -71,6 +71,7 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'home', key: 'hero.cta.primary' },
   { page: 'home', key: 'hero.cta.secondary' },
   { page: 'home', key: 'hero.featured' },
+  { page: 'home', key: 'about.title', adminLabel: 'Главная — блок «О нас» заголовок' },
   { page: 'home', key: 'hits.title' },
   { page: 'home', key: 'reviews.title' },
   { page: 'home', key: 'markers.title' },
@@ -516,6 +517,15 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Hero — ID товара для карточки справа',
     type: 'short',
     text: '',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'home',
+    key: 'about.title',
+    label: 'Главная — О нас заголовок',
+    type: 'short',
+    text: 'О нас',
+    colorToken: 'text-slate-900',
   },
   {
     brand: 'sprint-power',
