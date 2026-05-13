@@ -33,9 +33,13 @@ vi.mock('@/lib/max-notify', () => ({
 vi.mock('@/lib/cdek-shipment-action', () => ({
   createCdekShipmentForOrder: vi.fn(),
 }));
+vi.mock('@/bot/runtime/max-links', () => ({
+  confirmMaxLinkAndReturnUserId: vi.fn(),
+}));
 
 import { moderateReviewAndSync } from '@/lib/review-moderation-action';
 import { createCdekShipmentForOrder } from '@/lib/cdek-shipment-action';
+import { confirmMaxLinkAndReturnUserId } from '@/bot/runtime/max-links';
 import { POST } from '@/app/api/webhooks/max/route';
 
 const originalNodeEnv = process.env.NODE_ENV;
@@ -102,6 +106,32 @@ describe('POST /api/webhooks/max moderation callback', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(createCdekShipmentForOrder).toHaveBeenCalledWith('order-1');
+  });
+
+  it('confirms link when bot_started sends start_payload (not payload)', async () => {
+    vi.mocked(confirmMaxLinkAndReturnUserId).mockResolvedValue({
+      userId: 'user-1',
+      brandId: 'inner',
+    });
+
+    const request = new Request('https://localhost/api/webhooks/max?brand=inner', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-proto': 'https',
+        'x-max-bot-api-secret': 'webhook-secret',
+      },
+      body: JSON.stringify({
+        update_type: 'bot_started',
+        start_payload: 'abc123deadbeef',
+        user: { user_id: '99' },
+      }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(confirmMaxLinkAndReturnUserId).toHaveBeenCalledWith('abc123deadbeef', '99');
   });
 });
 

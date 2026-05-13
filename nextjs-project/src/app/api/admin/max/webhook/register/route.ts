@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as settingsService from '@/services/settings.service';
 import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
+import { extractMaxSubscriptionWebhookUrls } from '@/lib/max/normalize-max-subscriptions-payload';
 
 const MAX_PLATFORM_API = 'https://platform-api.max.ru/subscriptions';
 
@@ -35,6 +36,32 @@ export async function POST(request: Request) {
 
   try {
     const webhookUrl = buildWebhookUrl(settings.webhookUrl, brandId);
+    const authHeaders = { Authorization: settings.token };
+    let removedPreviousSubscriptions = 0;
+
+    const listResponse = await fetch(MAX_PLATFORM_API, { method: 'GET', headers: authHeaders });
+    if (listResponse.ok) {
+      const listRaw = await listResponse.text();
+      let listParsed: unknown = null;
+      try {
+        listParsed = listRaw ? JSON.parse(listRaw) : null;
+      } catch {
+        listParsed = null;
+      }
+      const existingUrls = extractMaxSubscriptionWebhookUrls(listParsed);
+      removedPreviousSubscriptions = existingUrls.length;
+      for (const oldUrl of existingUrls) {
+        const delUrl = `${MAX_PLATFORM_API}?url=${encodeURIComponent(oldUrl)}`;
+        const delRes = await fetch(delUrl, { method: 'DELETE', headers: authHeaders });
+        if (!delRes.ok) {
+          const delBody = await delRes.text().catch(() => '');
+          console.warn('[max webhook register] DELETE old subscription failed:', oldUrl, delRes.status, delBody);
+        }
+      }
+    } else {
+      console.warn('[max webhook register] GET subscriptions failed:', listResponse.status);
+    }
+
     const body: Record<string, unknown> = {
       url: webhookUrl,
       update_types: ['bot_started', 'message_created', 'message_callback'],
@@ -46,7 +73,7 @@ export async function POST(request: Request) {
     const response = await fetch(MAX_PLATFORM_API, {
       method: 'POST',
       headers: {
-        Authorization: settings.token,
+        ...authHeaders,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -73,7 +100,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      message: 'Webhook зарегистрирован в MAX',
+      message:
+        removedPreviousSubscriptions > 0
+          ? 'Предыдущие webhook-подписки сняты, новая зарегистрирована в MAX'
+          : 'Webhook зарегистрирован в MAX',
+      removedPreviousSubscriptions,
       data,
     });
   } catch (error) {

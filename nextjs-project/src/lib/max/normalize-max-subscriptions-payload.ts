@@ -34,3 +34,32 @@ export function normalizeMaxSubscriptionsPayload(parsed: unknown): Record<string
     ...(update_types !== undefined ? { update_types } : {}),
   };
 }
+
+/**
+ * Все URL webhook-подписок из ответа GET /subscriptions.
+ * Перед POST новой подписки MAX требует отписать старые URL (DELETE /subscriptions?url=...).
+ */
+export function extractMaxSubscriptionWebhookUrls(parsed: unknown): string[] {
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return [];
+  }
+  const rec = parsed as Record<string, unknown>;
+  const subs = rec.subscriptions;
+  if (!Array.isArray(subs)) {
+    if (typeof rec.url === 'string' && rec.url.length > 0) return [rec.url];
+    return [];
+  }
+  const urls: string[] = [];
+  for (const item of subs) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const u =
+      typeof row.url === 'string'
+        ? row.url
+        : typeof row.webhook_url === 'string'
+          ? row.webhook_url
+          : null;
+    if (u && u.length > 0) urls.push(u);
+  }
+  return [...new Set(urls)];
+}

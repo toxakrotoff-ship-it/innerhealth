@@ -16,13 +16,18 @@ import {
   resolveMaxMenuCommand,
   type MaxMenuCommand,
 } from '@/lib/max-bot-menu';
+import {
+  MAX_LINK_CODE_MAX_LENGTH,
+  MAX_LINK_CODE_REGEX,
+  parseSimpleMaxSlashCommand,
+  parseSlashStart,
+  isSlashHelp,
+} from '@/lib/max-message-slash';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_PER_USER = 20;
 const MAX_MESSAGE_LENGTH = 500;
-const MAX_START_CODE_LENGTH = 64;
-const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
 const MAX_SERVICE_SECRET = process.env.MAX_SERVICE_SECRET;
 const MAX_BOT_BRAND_ID: BrandId = normalizeBrandId(process.env.MAX_BOT_BRAND_ID) ?? 'inner';
 const MAX_SITE_URL =
@@ -62,33 +67,6 @@ function checkRateLimit(userId: string): boolean {
   return entry.count <= RATE_LIMIT_MAX_PER_USER;
 }
 
-/**
- * MAX (как Telegram) присылает не только `/start`, но и `/start@BotUsername`.
- * Раньше проверяли только точное равенство `/start`, из‑за чего бот молчал.
- * Опционально: второй токен после пробела — код привязки (как в Telegram).
- */
-function parseSlashStart(text: string): { code: string | null } | null {
-  const t = text.trim();
-  const match = t.match(/^\/start(?:@[^\s]+)?(?:\s+(.+))?$/i);
-  if (!match) return null;
-  const raw = match[1]?.trim();
-  if (!raw) return { code: null };
-  return { code: raw.slice(0, MAX_START_CODE_LENGTH) };
-}
-
-function isSlashHelp(text: string): boolean {
-  return /^\/help(?:@[^\s]+)?$/i.test(text.trim());
-}
-
-/** Команды без аргументов в том же формате `/cmd@Bot`. */
-function parseSimpleMaxSlashCommand(text: string): MaxMenuCommand | null {
-  const t = text.trim();
-  if (/^\/status(?:@[^\s]+)?$/i.test(t)) return 'status';
-  if (/^\/promo(?:@[^\s]+)?$/i.test(t)) return 'promo';
-  if (/^\/stats(?:@[^\s]+)?$/i.test(t)) return 'stats';
-  return null;
-}
-
 async function confirmLink(code: string, maxUserId: string): Promise<{ success?: boolean; error?: string }> {
   if (!MAX_SERVICE_SECRET) return { error: 'MAX_SERVICE_SECRET is missing' };
   try {
@@ -101,7 +79,7 @@ async function confirmLink(code: string, maxUserId: string): Promise<{ success?:
         'X-Service-Key': MAX_SERVICE_SECRET,
       },
       body: JSON.stringify({
-        code: String(code).slice(0, MAX_START_CODE_LENGTH),
+        code: String(code).slice(0, MAX_LINK_CODE_MAX_LENGTH),
         maxUserId: String(maxUserId),
       }),
     });
@@ -181,19 +159,23 @@ async function bootstrap(): Promise<void> {
   }
 
   if (config.mode !== 'polling') {
-    console.log('[max-bot] MAX_BOT_MODE is not polling. Runner exits.');
+    console.log(
+      `[max-bot] mode=${config.mode} — long polling не используется. Привязка и сообщения обрабатывает HTTPS webhook приложения (/api/webhooks/max?brand=${MAX_BOT_BRAND_ID}). Контейнер max-bot можно отключить или оставить только при max_bot_mode=polling.`
+    );
     return;
   }
 
   const bot = new Bot(config.token);
+
+  console.log(`[max-bot] long polling старт (brand=${MAX_BOT_BRAND_ID})`);
 
   bot.on('bot_started', (ctx) => {
     const botStartedContext = ctx as MaxBotContextLike & { startPayload?: unknown };
     const startPayload =
       typeof botStartedContext.startPayload === 'string' ? botStartedContext.startPayload : null;
     if (startPayload) {
-      const safeCode = startPayload.slice(0, MAX_START_CODE_LENGTH);
-      if (!VALID_CODE_REGEX.test(safeCode)) {
+      const safeCode = startPayload.slice(0, MAX_LINK_CODE_MAX_LENGTH);
+      if (!MAX_LINK_CODE_REGEX.test(safeCode)) {
         return botStartedContext.reply('Неверный формат кода. Используйте ссылку из админки.');
       }
       const maxUserId = String(botStartedContext.user?.user_id ?? '');
@@ -258,7 +240,7 @@ async function bootstrap(): Promise<void> {
     if (startParts) {
       if (startParts.code) {
         const safeCode = startParts.code;
-        if (!VALID_CODE_REGEX.test(safeCode)) {
+        if (!MAX_LINK_CODE_REGEX.test(safeCode)) {
           await messageContext.reply('Неверный формат кода. Используйте ссылку из личного кабинета.');
           return;
         }

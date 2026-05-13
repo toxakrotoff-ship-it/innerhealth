@@ -22,10 +22,21 @@ import {
   resolveMaxMenuCommand,
   type MaxMenuCommand,
 } from '@/lib/max-bot-menu';
+import {
+  MAX_LINK_CODE_MAX_LENGTH,
+  MAX_LINK_CODE_REGEX,
+  parseSimpleMaxSlashCommand,
+  parseSlashStart,
+  isSlashHelp,
+} from '@/lib/max-message-slash';
+
 const maxWebhookUpdateSchema = z.object({
   update_type: z.string(),
   chat_id: z.union([z.number(), z.string()]).optional(),
+  /** Код deep link; у MAX также встречается start_payload / startPayload */
   payload: z.string().nullable().optional(),
+  start_payload: z.string().nullable().optional(),
+  startPayload: z.string().nullable().optional(),
   message: z
     .object({
       body: z
@@ -51,8 +62,16 @@ const maxWebhookUpdateSchema = z.object({
     .optional(),
 });
 
-const VALID_CODE_REGEX = /^[a-zA-Z0-9]+$/;
-const MAX_START_CODE_LENGTH = 64;
+function extractBotStartedLinkCode(update: z.infer<typeof maxWebhookUpdateSchema>): string {
+  const candidates = [update.payload, update.start_payload, update.startPayload];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate.trim().slice(0, MAX_LINK_CODE_MAX_LENGTH);
+    }
+  }
+  return '';
+}
+
 const REVIEW_APPROVE_PREFIX = 'review_approve_';
 const REVIEW_REJECT_PREFIX = 'review_reject_';
 const CDEK_CREATE_PREFIX = 'cdek_create_';
@@ -164,10 +183,9 @@ export async function POST(request: Request) {
   }
 
   if (parsed.data.update_type === 'bot_started') {
-    const codeRaw = parsed.data.payload ?? '';
-    const safeCode = codeRaw.slice(0, MAX_START_CODE_LENGTH);
+    const safeCode = extractBotStartedLinkCode(parsed.data);
     const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
-    if (safeCode && VALID_CODE_REGEX.test(safeCode) && maxUserId) {
+    if (safeCode && MAX_LINK_CODE_REGEX.test(safeCode) && maxUserId) {
       const result = await confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
       if (result) {
         void notifyMaxConnection({ userId: result.userId, maxUserId, brandId: result.brandId });
@@ -181,6 +199,15 @@ export async function POST(request: Request) {
             })
             .catch(() => {});
         }
+      } else if (config.token && maxUserId) {
+        const bot = new Bot(config.token);
+        await bot.api
+          .sendMessageToUser(
+            Number.parseInt(maxUserId, 10),
+            'Не удалось привязать: код неверный или истёк. Создайте новую ссылку в админке / личном кабинете.',
+            { format: 'markdown' }
+          )
+          .catch(() => {});
       }
     }
   }
@@ -195,19 +222,71 @@ export async function POST(request: Request) {
     const bot = config.token ? new Bot(config.token) : null;
     if (!bot) return NextResponse.json({ ok: true });
 
-    if (text === '/help' || text === '/status' || text === '/promo' || text === '/stats') {
-      const command = text.slice(1) as MaxMenuCommand;
-      const response = await buildMaxCommandResponse(maxUserId, command, brandId);
+    if (isSlashHelp(text)) {
+      const response = await buildMaxCommandResponse(maxUserId, 'help', brandId);
       await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format, brandId);
       return NextResponse.json({ ok: true });
     }
 
-    if (!text.startsWith('/')) {
-      const capabilities: BotUserCapabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
-      await sendMaxMessageWithMenu(bot, maxUserId, buildUnknownCommandTextForMax(capabilities), 'markdown', brandId);
+    const startParts = parseSlashStart(text);
+    if (startParts) {
+      if (startParts.code) {
+        const safeCode = startParts.code;
+        if (!MAX_LINK_CODE_REGEX.test(safeCode)) {
+          await sendMaxMessageWithMenu(
+            bot,
+            maxUserId,
+            'Неверный формат кода. Используйте ссылку из личного кабинета.',
+            'markdown',
+            brandId
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const result = await confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
+        if (result) {
+          void notifyMaxConnection({ userId: result.userId, maxUserId, brandId: result.brandId });
+          const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId: result.brandId });
+          await bot.api
+            .sendMessageToUser(Number.parseInt(maxUserId, 10), buildWelcomeTextForMax(capabilities), {
+              format: 'markdown',
+              attachments: buildMaxMenuAttachments(capabilities) as unknown as never,
+            })
+            .catch(() => {});
+        } else {
+          await sendMaxMessageWithMenu(
+            bot,
+            maxUserId,
+            'Не удалось привязать: код неверный или истёк. Создайте новую ссылку в админке.',
+            'markdown',
+            brandId
+          );
+        }
+        return NextResponse.json({ ok: true });
+      }
+      const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
+      await sendMaxMessageWithMenu(
+        bot,
+        maxUserId,
+        'Чтобы подключить уведомления, откройте **ссылку из личного кабинета** (кнопка «Подключить MAX»). Просто /start без этой ссылки не привязывает аккаунт.',
+        'markdown',
+        brandId
+      );
       return NextResponse.json({ ok: true });
     }
 
+    const simpleCmd = parseSimpleMaxSlashCommand(text);
+    if (simpleCmd) {
+      const response = await buildMaxCommandResponse(maxUserId, simpleCmd, brandId);
+      await sendMaxMessageWithMenu(bot, maxUserId, response.text, response.format, brandId);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (text.startsWith('/')) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const capabilities: BotUserCapabilities = await getMaxBotUserCapabilities(maxUserId, { brandId });
+    await sendMaxMessageWithMenu(bot, maxUserId, buildUnknownCommandTextForMax(capabilities), 'markdown', brandId);
     return NextResponse.json({ ok: true });
   }
 
