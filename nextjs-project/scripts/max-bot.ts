@@ -62,6 +62,33 @@ function checkRateLimit(userId: string): boolean {
   return entry.count <= RATE_LIMIT_MAX_PER_USER;
 }
 
+/**
+ * MAX (как Telegram) присылает не только `/start`, но и `/start@BotUsername`.
+ * Раньше проверяли только точное равенство `/start`, из‑за чего бот молчал.
+ * Опционально: второй токен после пробела — код привязки (как в Telegram).
+ */
+function parseSlashStart(text: string): { code: string | null } | null {
+  const t = text.trim();
+  const match = t.match(/^\/start(?:@[^\s]+)?(?:\s+(.+))?$/i);
+  if (!match) return null;
+  const raw = match[1]?.trim();
+  if (!raw) return { code: null };
+  return { code: raw.slice(0, MAX_START_CODE_LENGTH) };
+}
+
+function isSlashHelp(text: string): boolean {
+  return /^\/help(?:@[^\s]+)?$/i.test(text.trim());
+}
+
+/** Команды без аргументов в том же формате `/cmd@Bot`. */
+function parseSimpleMaxSlashCommand(text: string): MaxMenuCommand | null {
+  const t = text.trim();
+  if (/^\/status(?:@[^\s]+)?$/i.test(t)) return 'status';
+  if (/^\/promo(?:@[^\s]+)?$/i.test(t)) return 'promo';
+  if (/^\/stats(?:@[^\s]+)?$/i.test(t)) return 'stats';
+  return null;
+}
+
 async function confirmLink(code: string, maxUserId: string): Promise<{ success?: boolean; error?: string }> {
   if (!MAX_SERVICE_SECRET) return { error: 'MAX_SERVICE_SECRET is missing' };
   try {
@@ -222,10 +249,45 @@ async function bootstrap(): Promise<void> {
       await messageContext.reply('⏳ Слишком много запросов. Подождите минуту.');
       return;
     }
-    if (text === '/help') {
+    if (isSlashHelp(text)) {
       await executeMaxCommand(messageContext, userId, 'help');
       return;
     }
+
+    const startParts = parseSlashStart(text);
+    if (startParts) {
+      if (startParts.code) {
+        const safeCode = startParts.code;
+        if (!VALID_CODE_REGEX.test(safeCode)) {
+          await messageContext.reply('Неверный формат кода. Используйте ссылку из личного кабинета.');
+          return;
+        }
+        const result = await confirmLink(safeCode, userId);
+        if (result.success) {
+          const capabilities = await getMaxBotUserCapabilities(userId, { brandId: MAX_BOT_BRAND_ID });
+          await messageContext.reply(buildWelcomeTextForMax(capabilities), {
+            format: 'markdown',
+            attachments: buildMaxMenuAttachments(capabilities) as unknown[],
+          });
+          return;
+        }
+        await messageContext.reply(result.error || 'Не удалось привязать. Попробуйте снова.');
+        return;
+      }
+      const capabilities = await getMaxBotUserCapabilities(userId, { brandId: MAX_BOT_BRAND_ID });
+      await messageContext.reply(
+        'Чтобы подключить уведомления, откройте **ссылку из личного кабинета** (кнопка «Подключить MAX») — в ней уже есть ваш код. Просто команда /start без этой ссылки не привязывает аккаунт.',
+        { format: 'markdown', attachments: buildMaxMenuAttachments(capabilities) as unknown[] }
+      );
+      return;
+    }
+
+    const simpleCmd = parseSimpleMaxSlashCommand(text);
+    if (simpleCmd) {
+      await executeMaxCommand(messageContext, userId, simpleCmd);
+      return;
+    }
+
     if (text.startsWith('/')) return;
     const capabilities: BotUserCapabilities = await getMaxBotUserCapabilities(userId, {
       brandId: MAX_BOT_BRAND_ID,

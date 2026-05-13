@@ -13,9 +13,14 @@ export function AccountMaxBlock({ brandId }: { brandId: BrandId }) {
   const [linkResult, setLinkResult] = useState<{ startUrl: string; expiresInMinutes: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadStatus() {
+  async function loadStatus(options?: { showError?: boolean }) {
     const response = await fetch(`/api/account/max/status${brandQuery}`);
-    if (!response.ok) return;
+    if (!response.ok) {
+      if (options?.showError) {
+        setError('Не удалось получить статус привязки. Обновите страницу или войдите снова.');
+      }
+      return;
+    }
     const data = await response.json();
     setStatus({ linked: data.linked, linkedAt: data.linkedAt });
     if (data.linked) setLinkResult(null);
@@ -53,7 +58,7 @@ export function AccountMaxBlock({ brandId }: { brandId: BrandId }) {
     setRefreshing(true);
     setError(null);
     try {
-      await loadStatus();
+      await loadStatus({ showError: true });
     } finally {
       setRefreshing(false);
     }
