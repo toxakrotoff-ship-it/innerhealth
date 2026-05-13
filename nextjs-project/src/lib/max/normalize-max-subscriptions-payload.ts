@@ -61,5 +61,5 @@ export function extractMaxSubscriptionWebhookUrls(parsed: unknown): string[] {
           : null;
     if (u && u.length > 0) urls.push(u);
   }
-  return [...new Set(urls)];
+  return Array.from(new Set(urls));
 }
