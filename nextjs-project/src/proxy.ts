@@ -1,14 +1,68 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
+import type { BrandId } from '@/lib/brand/brand'
 
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
 const BRAND_IDS = new Set(['inner', 'sprint-power'])
 const REDIRECT_STATUS_CODES = new Set([301, 302, 307, 308])
+const DEFAULT_INNER_SITE_URL = 'https://innerhealth.ru'
+const DEFAULT_SPRINT_SITE_URL = 'https://sprint-power.ru'
 
 function getAdminSecretPath(): string {
   return process.env.ADMIN_SECRET_PATH || 'admin'
+}
+
+function resolveRedirectBrand(request: Request): BrandId {
+  const forwardedBrand = request.headers.get('x-brand')?.trim().toLowerCase()
+  if (forwardedBrand === 'sprint-power') return 'sprint-power'
+
+  const host = (
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    ''
+  ).toLowerCase()
+  if (host.includes('sprint')) return 'sprint-power'
+  return 'inner'
+}
+
+function getCanonicalOrigin(brandId: BrandId): string {
+  const raw =
+    brandId === 'sprint-power'
+      ? process.env.NEXT_PUBLIC_SPRINT_POWER_SITE_URL || DEFAULT_SPRINT_SITE_URL
+      : process.env.NEXT_PUBLIC_INNER_SITE_URL || DEFAULT_INNER_SITE_URL
+
+  return raw.replace(/\/+$/, '')
+}
+
+function getRequestPublicOrigin(request: Request): string | null {
+  const host = (
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    ''
+  ).trim()
+  if (!host) return null
+
+  const normalizedHost = host.toLowerCase()
+  if (
+    normalizedHost.startsWith('localhost') ||
+    normalizedHost.startsWith('127.0.0.1') ||
+    normalizedHost.startsWith('0.0.0.0') ||
+    normalizedHost === 'app' ||
+    normalizedHost.startsWith('app:')
+  ) {
+    return null
+  }
+
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() || 'https'
+  return `${proto}://${host}`.replace(/\/+$/, '')
+}
+
+function createRedirectLocation(destination: string, request: Request, brandId: BrandId): string {
+  if (destination.startsWith('http')) return destination
+  const path = destination.startsWith('/') ? destination : `/${destination}`
+  return `${getRequestPublicOrigin(request) || getCanonicalOrigin(brandId)}${path}`
 }
 
 /** Запрос от Telegram-бота с секретным ключом (whitelist, confirm, promo-stats, review moderation). */
@@ -76,11 +130,7 @@ async function applyRedirectIfMatched(request: Request): Promise<NextResponse | 
     const statusCode = Number(body?.statusCode)
     if (!destination || typeof destination !== 'string') return null
     const code = REDIRECT_STATUS_CODES.has(statusCode) ? statusCode : 301
-    const target = destination.startsWith('http')
-      ? destination
-      : destination.startsWith('/')
-        ? destination
-        : `/${destination}`
+    const target = createRedirectLocation(destination, request, resolveRedirectBrand(request))
     return new NextResponse(null, {
       status: code,
       headers: { Location: target },
