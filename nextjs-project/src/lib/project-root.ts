@@ -21,16 +21,16 @@ function resolveStandaloneBundleRoot(): string | null {
 export function getProjectRoot(): string {
   const explicit = process.env.PROJECT_ROOT
   if (typeof explicit === 'string' && explicit.trim().length > 0) {
-    return path.resolve(explicit.trim())
+    return path.resolve(/* turbopackIgnore: true */ explicit.trim())
   }
 
   const fromArgv = resolveStandaloneBundleRoot()
   if (fromArgv) return fromArgv
 
-  const cwd = process.cwd()
+  const cwd = /* turbopackIgnore: true */ process.cwd()
   const normalized = cwd.replace(/\\/g, '/')
   if (normalized.endsWith('/.next/standalone')) {
-    return path.resolve(cwd, '..', '..')
+    return path.resolve(/* turbopackIgnore: true */ cwd, '..', '..')
   }
   return cwd
 }

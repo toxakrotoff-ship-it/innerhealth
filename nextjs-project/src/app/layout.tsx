@@ -1,7 +1,6 @@
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
-import { Unbounded } from 'next/font/google'
 import Script from 'next/script'
 import { IconoirProvider } from 'iconoir-react'
 import { Preloader } from '@/components/site/preloader'
@@ -37,8 +36,11 @@ const marckScript = localFont({
   display: 'swap',
 })
 
-const unbounded = Unbounded({
-  subsets: ['cyrillic', 'latin'],
+const unbounded = localFont({
+  src: [
+    { path: './fonts/unbounded-cyrillic-variable.woff2', weight: '200 900', style: 'normal' },
+    { path: './fonts/unbounded-latin-variable.woff2', weight: '200 900', style: 'normal' },
+  ],
   variable: '--font-unbounded',
   display: 'swap',
 })
