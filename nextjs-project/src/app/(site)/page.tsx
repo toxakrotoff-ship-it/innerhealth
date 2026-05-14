@@ -609,7 +609,7 @@ function SprintPowerHome({
                 alt=""
                 fill
                 priority
-                className="object-cover object-[64%_center] opacity-76 brightness-[0.82] grayscale saturate-0 contrast-[1.12] md:object-[90%_center] md:opacity-78"
+                className="object-cover object-[64%_center] opacity-76 brightness-[0.82] grayscale saturate-0 contrast-[1.12] md:object-[68%_center] md:opacity-78"
                 sizes="100vw"
                 quality={90}
               />
