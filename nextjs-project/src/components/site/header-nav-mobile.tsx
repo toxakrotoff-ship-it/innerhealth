@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { signOut } from 'next-auth/react'
@@ -12,6 +13,8 @@ interface HeaderNavMobileProps {
   isAuthenticated?: boolean
   role?: string
   logoText: string
+  /** When set, drawer header shows raster logo (e.g. Sprint) instead of text. */
+  logoImageSrc?: string
   navLinks: readonly BrandNavLink[]
   contact: BrandContactConfig
 }
@@ -21,6 +24,7 @@ export function HeaderNavMobile({
   isAuthenticated = false,
   role,
   logoText,
+  logoImageSrc,
   navLinks,
   contact,
 }: HeaderNavMobileProps) {
@@ -86,10 +90,21 @@ export function HeaderNavMobile({
             <Link
               href="/"
               onClick={() => setOpen(false)}
-              className={`flex items-center px-5 pb-4 border-b ${navBorder} font-semibold uppercase tracking-tighter ${variant === 'dark' ? 'text-white' : 'text-slate-900'}`}
+              className={`flex items-center px-5 pb-4 border-b ${navBorder} ${logoImageSrc ? '' : `font-semibold uppercase tracking-tighter ${variant === 'dark' ? 'text-white' : 'text-slate-900'}`}`}
               aria-label={`${logoText} — на главную`}
             >
-              {logoText}
+              {logoImageSrc ? (
+                <Image
+                  src={logoImageSrc}
+                  alt={logoText}
+                  width={1680}
+                  height={845}
+                  className="h-8 w-auto max-w-[200px] object-contain object-left"
+                  sizes="200px"
+                />
+              ) : (
+                logoText
+              )}
             </Link>
             <div className="flex flex-col">
               {navLinks.map(({ label, href }) => (

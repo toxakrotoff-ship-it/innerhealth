@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { cookies } from 'next/headers'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -83,21 +84,40 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
             isAuthenticated={isAuthenticated}
             role={session?.user?.role}
             logoText={siteConfig.logoText}
+            logoImageSrc={isSprintTheme ? '/images/sprint-power/sprint-power-hero-logo.png' : undefined}
             navLinks={siteConfig.mobileNavLinks}
             contact={siteConfig.contact}
           />
-          <Link
-            href="/"
-            className={`
+          {isSprintTheme ? (
+            <Link
+              href="/"
+              className="relative block shrink-0 hover:opacity-90 transition-opacity"
+              aria-label={`${siteConfig.title} — на главную`}
+            >
+              <Image
+                src="/images/sprint-power/sprint-power-hero-logo.png"
+                alt={siteConfig.logoText}
+                width={1680}
+                height={845}
+                priority
+                className="h-7 w-auto max-h-7 max-w-[min(11.5rem,42vw)] object-contain object-left sm:h-8 sm:max-h-8 sm:max-w-[min(13rem,38vw)] 2xl:h-9 2xl:max-h-9 2xl:max-w-[min(15rem,32vw)] 3xl:h-10 3xl:max-h-10 3xl:max-w-[min(17rem,28vw)]"
+                sizes="(max-width: 640px) 42vw, (max-width: 1536px) 13rem, 17rem"
+              />
+            </Link>
+          ) : (
+            <Link
+              href="/"
+              className={`
               font-display font-semibold tracking-tighter uppercase
               text-lg 2xl:text-xl 3xl:text-2xl 4xl:text-3xl 5xl:text-4xl 6xl:text-5xl
               hover:opacity-90 transition-opacity shrink-0
-              ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}
+              text-slate-900
             `}
-            aria-label={`${siteConfig.title} — на главную`}
-          >
-            {siteConfig.logoText}
-          </Link>
+              aria-label={`${siteConfig.title} — на главную`}
+            >
+              {siteConfig.logoText}
+            </Link>
+          )}
           <AdaptiveNav links={siteConfig.navLinks} variant={isSprintTheme ? 'dark' : 'light'} />
         </div>
 
