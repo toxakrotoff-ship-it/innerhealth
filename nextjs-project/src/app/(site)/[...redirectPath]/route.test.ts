@@ -32,7 +32,7 @@ describe('legacy redirect fallback route', () => {
 
     expect(findRedirectByPath).toHaveBeenCalledWith('/nutrienty', { brandId: 'inner' })
     expect(response.status).toBe(301)
-    expect(response.headers.get('location')).toBe('https://innerhealth.ru/catalog/nutrienty')
+    expect(response.headers.get('location')).toBe('/catalog/nutrienty')
   })
 
   it('falls through to the site 404 when no redirect exists', async () => {
@@ -44,4 +44,3 @@ describe('legacy redirect fallback route', () => {
     expect(notFound).toHaveBeenCalled()
   })
 })
-

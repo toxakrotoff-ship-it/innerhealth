@@ -23,11 +23,15 @@ async function handleLegacyRedirect(request: Request): Promise<NextResponse> {
 
   const target = rule.destination.startsWith('http')
     ? rule.destination
-    : new URL(rule.destination.startsWith('/') ? rule.destination : `/${rule.destination}`, url.origin).toString()
+    : rule.destination.startsWith('/')
+      ? rule.destination
+      : `/${rule.destination}`
 
-  return NextResponse.redirect(target, rule.statusCode)
+  return new NextResponse(null, {
+    status: rule.statusCode,
+    headers: { Location: target },
+  })
 }
 
 export const GET = handleLegacyRedirect
 export const HEAD = handleLegacyRedirect
-

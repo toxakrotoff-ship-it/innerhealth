@@ -5,6 +5,7 @@ import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
 const BRAND_IDS = new Set(['inner', 'sprint-power'])
+const REDIRECT_STATUS_CODES = new Set([301, 302, 307, 308])
 
 function getAdminSecretPath(): string {
   return process.env.ADMIN_SECRET_PATH || 'admin'
@@ -74,10 +75,16 @@ async function applyRedirectIfMatched(request: Request): Promise<NextResponse | 
     const destination = body?.destination
     const statusCode = Number(body?.statusCode)
     if (!destination || typeof destination !== 'string') return null
-    const allowed = [301, 302, 307, 308]
-    const code = allowed.includes(statusCode) ? statusCode : 301
-    const target = destination.startsWith('http') ? destination : `${base}${destination.startsWith('/') ? '' : '/'}${destination}`
-    return NextResponse.redirect(target, code)
+    const code = REDIRECT_STATUS_CODES.has(statusCode) ? statusCode : 301
+    const target = destination.startsWith('http')
+      ? destination
+      : destination.startsWith('/')
+        ? destination
+        : `/${destination}`
+    return new NextResponse(null, {
+      status: code,
+      headers: { Location: target },
+    })
   } catch {
     return null
   }
