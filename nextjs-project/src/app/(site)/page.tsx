@@ -603,13 +603,13 @@ function SprintPowerHome({
         />
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
-            <div className="relative isolate min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] overflow-hidden rounded-[0.35rem] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+            <div className="relative isolate min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:rounded-3xl">
               <Image
                 src="/images/sprint-power/sprint-power-promo-hero.jpg"
                 alt=""
                 fill
                 priority
-                className="object-cover object-[64%_center] opacity-60 brightness-[0.72] grayscale saturate-0 contrast-[1.12] md:object-[72%_center] md:opacity-78"
+                className="object-cover object-[72%_center] opacity-60 brightness-[0.72] grayscale saturate-0 contrast-[1.12] md:object-[82%_center] md:opacity-78"
                 sizes="100vw"
                 quality={90}
               />
@@ -627,9 +627,6 @@ function SprintPowerHome({
               />
               <div className="relative z-20 flex min-h-[inherit] flex-col justify-center px-[clamp(1.25rem,6vw,5rem)] py-[clamp(2rem,5vw,4.5rem)]">
                 <div className="max-w-[min(100%,58rem)] space-y-[clamp(1rem,2vw,1.5rem)]">
-                  <p className="font-display text-[clamp(1rem,1.2vw,1.5rem)] font-bold uppercase tracking-[0.35em] text-[#5B8CFF]">
-                    ISP
-                  </p>
                   <h1 className="max-w-[60rem] text-balance text-[clamp(2.65rem,5.8vw+0.7rem,6.5rem)] font-extrabold leading-[0.98] text-white">
                     <span>{heroTitleLead}</span>
                     {heroTitleTail ? (
