@@ -587,6 +587,20 @@ function SprintPowerHome({
     'Почувствуй разницу с первой тренировки'
   )
   const { lead: heroTitleLead, tail: heroTitleTail } = splitSprintHeroTitleForAccent(heroTitle)
+  const sprintHeroTiles = [
+    { position: 'object-[12%_center]', span: 'md:col-span-1' },
+    { position: 'object-[36%_center]', span: 'md:col-span-1' },
+    { position: 'object-[58%_center]', span: 'md:col-span-2' },
+    { position: 'object-[72%_center]', span: 'md:col-span-1' },
+    { position: 'object-[86%_center]', span: 'md:col-span-1' },
+    { position: 'object-[28%_center]', span: 'md:col-span-2' },
+    { position: 'object-[50%_center]', span: 'md:col-span-1' },
+    { position: 'object-[68%_center]', span: 'md:col-span-1' },
+    { position: 'object-[44%_center]', span: 'md:col-span-1' },
+    { position: 'object-[82%_center]', span: 'md:col-span-2' },
+    { position: 'object-[20%_center]', span: 'md:col-span-1' },
+    { position: 'object-[60%_center]', span: 'md:col-span-1' },
+  ]
   const showSprintHomeNewsBlock =
     data.newsPosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(blocks, 'home.news.showWhenEmpty')?.text)
@@ -596,71 +610,96 @@ function SprintPowerHome({
 
   return (
     <>
-      <section className="relative overflow-hidden bg-[#060A14] py-8 sm:py-10 md:py-12">
+      <section className="relative overflow-hidden bg-[#050914] pb-8 pt-3 sm:pb-10 sm:pt-4 md:pb-12">
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_-15%,rgba(122,162,255,0.14),transparent_55%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_-15%,rgba(122,162,255,0.16),transparent_55%)]"
           aria-hidden
         />
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
-            <div className="relative isolate flex min-h-0 flex-col gap-8 md:min-h-[min(28rem,calc(100vh-10rem))] md:flex-row md:items-stretch md:gap-6 lg:min-h-[min(32rem,calc(100vh-9rem))] lg:gap-8">
-              <div className="relative z-20 flex min-w-0 flex-1 flex-col justify-center space-y-4 md:max-w-[min(100%,26rem)] md:flex-[0_1_auto] md:pr-0 lg:max-w-[min(100%,28rem)]">
-                <h1 className="max-w-xl text-balance text-[clamp(1.55rem,4.8vw+0.45rem,2.875rem)] font-extrabold leading-[1.12] md:text-5xl">
-                  <span className="text-white">{heroTitleLead}</span>
-                  {heroTitleTail ? (
-                    <>
-                      {' '}
-                      <span className="bg-gradient-to-r from-[#7AA2FF] to-cyan-300 bg-clip-text text-transparent">
-                        {heroTitleTail}
-                      </span>
-                    </>
-                  ) : null}
-                </h1>
-                <p className="max-w-fluid text-fluid-subtitle font-light text-slate-300">
-                  {getBlockTextForBrand(
-                    blocks,
-                    'home',
-                    'hero.subtitle',
-                    'sprint-power',
-                    'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
-                  )}
-                </p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  <Link
-                    href="/catalog"
-                    className="inline-flex w-full items-center justify-center rounded-full bg-[#7AA2FF] px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF] sm:w-auto sm:py-2"
+            <div className="relative isolate min-h-[clamp(34rem,calc(100dvh-5.25rem),52rem)] overflow-hidden rounded-[0.35rem] border border-[#162542] bg-[#060A14] shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+              <div className="absolute inset-x-0 top-0 grid auto-rows-[10.5rem] grid-cols-2 gap-1.5 p-1.5 sm:auto-rows-[13rem] sm:grid-cols-3 md:auto-rows-[14.25rem] md:grid-cols-6 lg:auto-rows-[15.5rem]">
+                {sprintHeroTiles.map((tile, index) => (
+                  <div
+                    key={`${tile.position}-${index}`}
+                    className={`relative overflow-hidden rounded-[0.2rem] bg-[#0B1224] ${tile.span}`}
                   >
-                    {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
-                  </Link>
-                  <Link
-                    href="/otzyvy"
-                    className="inline-flex w-full items-center justify-center rounded-full border border-white/10 bg-white/10 px-5 py-2.5 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/15 sm:w-auto sm:py-2"
-                  >
-                    {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
-                  </Link>
+                    <Image
+                      src="/images/sprint-power/sprint-power-promo-hero.jpg"
+                      alt=""
+                      fill
+                      priority={index === 0}
+                      className={`object-cover ${tile.position} brightness-[0.68] saturate-[0.72] contrast-[1.08]`}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 34vw, 20vw"
+                      quality={84}
+                    />
+                    <div className="absolute inset-0 bg-[#050914]/20" aria-hidden />
+                  </div>
+                ))}
+              </div>
+              <div
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,9,20,0.08)_0%,rgba(5,9,20,0.2)_44%,#050914_84%)]"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] border-t border-[#18253D] bg-[#031021]/95 shadow-[0_-32px_80px_rgba(3,16,33,0.9)]"
+                aria-hidden
+              />
+              <Image
+                src="/sprint-power-mockup.png"
+                alt=""
+                width={500}
+                height={500}
+                priority
+                className="pointer-events-none absolute bottom-0 right-[max(1rem,5vw)] z-10 hidden w-[min(30vw,21rem)] translate-y-[18%] opacity-80 drop-shadow-[0_26px_55px_rgba(0,0,0,0.5)] md:block"
+              />
+              <div className="relative z-20 flex min-h-[inherit] flex-col justify-end px-[clamp(1.25rem,4vw,3.5rem)] pb-[clamp(1.75rem,5vw,4rem)] pt-8">
+                <span className="sr-only">{heroBrandLabel}</span>
+                <div className="max-w-[min(100%,48rem)] space-y-4 md:space-y-5">
+                  <Image
+                    src="/images/sprint-power/sprint-power-hero-logo.png"
+                    alt="Sprint Power"
+                    width={1680}
+                    height={845}
+                    priority
+                    className="h-auto w-[clamp(8.5rem,20vw,15rem)] object-contain"
+                  />
+                  <h1 className="text-balance text-[clamp(2rem,5vw+0.7rem,5.5rem)] font-extrabold leading-[0.98] text-white">
+                    <span>{heroTitleLead}</span>
+                    {heroTitleTail ? (
+                      <>
+                        {' '}
+                        <span className="bg-gradient-to-r from-[#7AA2FF] to-cyan-300 bg-clip-text text-transparent">
+                          {heroTitleTail}
+                        </span>
+                      </>
+                    ) : null}
+                  </h1>
+                  <p className="max-w-[42rem] text-[clamp(0.95rem,0.9vw+0.75rem,1.35rem)] font-light leading-relaxed text-slate-300">
+                    {getBlockTextForBrand(
+                      blocks,
+                      'home',
+                      'hero.subtitle',
+                      'sprint-power',
+                      'Научные формулы для силы, восстановления и защиты суставов. Без лактозы. Без компромиссов.'
+                    )}
+                  </p>
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap">
+                    <Link
+                      href="/catalog"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.35rem] bg-[#7AA2FF] px-6 py-3 text-sm font-semibold text-slate-950 transition-colors hover:bg-[#9AB8FF] sm:w-auto sm:min-w-[13rem]"
+                    >
+                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
+                    </Link>
+                    <Link
+                      href="/otzyvy"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.35rem] border border-white/14 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/10 sm:w-auto sm:min-w-[13rem]"
+                    >
+                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
+                    </Link>
+                  </div>
                 </div>
               </div>
-
-              <Link
-                href="/catalog"
-                className="group relative -mx-4 aspect-[5/3] min-h-[15rem] overflow-hidden sm:mx-0 sm:rounded-2xl md:mx-0 md:aspect-auto md:min-h-0 md:min-w-0 md:flex-[1.35] md:rounded-none lg:flex-[1.45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060A14]"
-                aria-label="Перейти в каталог"
-              >
-                <Image
-                  src="/images/sprint-power/sprint-power-promo-hero.jpg"
-                  alt=""
-                  fill
-                  priority
-                  className="object-cover object-[52%_center] sm:object-[54%_center] md:object-[58%_center] lg:object-[60%_center] transition-transform duration-500 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1536px) 55vw, 720px"
-                  quality={90}
-                />
-                <div
-                  className="pointer-events-none absolute inset-0 [background:linear-gradient(180deg,#060A14_0%,transparent_20%,transparent_62%,rgba(6,10,20,0.42)_100%)] md:[background:linear-gradient(90deg,#060A14_0%,rgba(6,10,20,0.88)_min(12%,5.5rem),rgba(6,10,20,0.28)_min(38%,14rem),transparent_56%)]"
-                  aria-hidden
-                />
-                <span className="sr-only">{heroBrandLabel}</span>
-              </Link>
             </div>
 
             <SprintPowerHomeAboutSection blocks={blocks} />
