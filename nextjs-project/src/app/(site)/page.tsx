@@ -528,9 +528,28 @@ function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[
   )
 }
 
-/** Вариант C hero: первое слово заголовка — белое, остаток — градиентный акцент. */
+/**
+ * Референс: «Почувствуй разницу» — белым, «с первой тренировки» — акцент.
+ * В CMS можно задать разрез явно: «левая часть|правая часть».
+ */
 function splitSprintHeroTitleForAccent(title: string): { lead: string; tail: string } {
   const trimmed = title.trim()
+  const pipeIdx = trimmed.indexOf('|')
+  if (pipeIdx !== -1) {
+    const lead = trimmed.slice(0, pipeIdx).trim()
+    const tail = trimmed.slice(pipeIdx + 1).trim()
+    if (lead.length > 0 && tail.length > 0) {
+      return { lead, tail }
+    }
+  }
+  const referenceMatch = trimmed.match(/^(.*?)(\bразницу\b)(\s+)(.+)$/i)
+  if (referenceMatch) {
+    const lead = `${referenceMatch[1] ?? ''}${referenceMatch[2] ?? ''}`.trim()
+    const tail = (referenceMatch[4] ?? '').trim()
+    if (tail.length > 0) {
+      return { lead, tail }
+    }
+  }
   const boundary = trimmed.search(/\s/)
   if (boundary <= 0) {
     return { lead: trimmed, tail: '' }
@@ -568,7 +587,6 @@ function SprintPowerHome({
     'Почувствуй разницу с первой тренировки'
   )
   const { lead: heroTitleLead, tail: heroTitleTail } = splitSprintHeroTitleForAccent(heroTitle)
-  const heroTag = getBlockTextForBrand(blocks, 'home', 'hero.tag', 'sprint-power', 'SP')
   const showSprintHomeNewsBlock =
     data.newsPosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(blocks, 'home.news.showWhenEmpty')?.text)
@@ -585,14 +603,8 @@ function SprintPowerHome({
         />
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
-            <div className="relative isolate flex min-h-0 flex-col gap-8 md:min-h-[min(28rem,calc(100vh-10rem))] md:flex-row md:items-stretch md:gap-0 lg:min-h-[min(30rem,calc(100vh-9rem))]">
-              <div className="relative z-20 flex min-w-0 flex-1 flex-col justify-center space-y-4 md:max-w-[min(100%,28rem)] md:pr-8 lg:max-w-[min(100%,32rem)] lg:pr-12">
-                <div className="flex items-center gap-2.5">
-                  <span className="h-4 w-0.5 shrink-0 rounded-full bg-[#7AA2FF]" aria-hidden />
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
-                    {heroTag}
-                  </span>
-                </div>
+            <div className="relative isolate flex min-h-0 flex-col gap-8 md:min-h-[min(28rem,calc(100vh-10rem))] md:flex-row md:items-stretch md:gap-6 lg:min-h-[min(32rem,calc(100vh-9rem))] lg:gap-8">
+              <div className="relative z-20 flex min-w-0 flex-1 flex-col justify-center space-y-4 md:max-w-[min(100%,26rem)] md:flex-[0_1_auto] md:pr-0 lg:max-w-[min(100%,28rem)]">
                 <h1 className="max-w-xl text-balance text-[clamp(1.55rem,4.8vw+0.45rem,2.875rem)] font-extrabold leading-[1.12] md:text-5xl">
                   <span className="text-white">{heroTitleLead}</span>
                   {heroTitleTail ? (
@@ -631,7 +643,7 @@ function SprintPowerHome({
 
               <Link
                 href="/catalog"
-                className="group relative -mx-4 aspect-[16/11] min-h-[13.5rem] overflow-hidden sm:mx-0 sm:rounded-2xl md:mx-0 md:aspect-auto md:min-h-0 md:flex-1 md:rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060A14]"
+                className="group relative -mx-4 aspect-[5/3] min-h-[15rem] overflow-hidden sm:mx-0 sm:rounded-2xl md:mx-0 md:aspect-auto md:min-h-0 md:min-w-0 md:flex-[1.35] md:rounded-none lg:flex-[1.45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7AA2FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#060A14]"
                 aria-label="Перейти в каталог"
               >
                 <Image
@@ -639,16 +651,12 @@ function SprintPowerHome({
                   alt=""
                   fill
                   priority
-                  className="object-cover object-[center_22%] transition-transform duration-500 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover object-[52%_center] sm:object-[54%_center] md:object-[58%_center] lg:object-[60%_center] transition-transform duration-500 ease-out group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1536px) 55vw, 720px"
                   quality={90}
                 />
                 <div
-                  className="absolute inset-0 bg-gradient-to-b from-[#060A14] from-0% via-transparent via-35% to-transparent to-45% md:bg-gradient-to-r md:from-[#060A14] md:from-0% md:via-[#060A14]/75 md:via-28% md:to-transparent md:to-55%"
-                  aria-hidden
-                />
-                <div
-                  className="absolute inset-0 bg-gradient-to-t from-[#060A14]/90 from-0% via-transparent to-transparent to-40% md:from-transparent"
+                  className="pointer-events-none absolute inset-0 [background:linear-gradient(180deg,#060A14_0%,transparent_20%,transparent_62%,rgba(6,10,20,0.42)_100%)] md:[background:linear-gradient(90deg,#060A14_0%,rgba(6,10,20,0.88)_min(12%,5.5rem),rgba(6,10,20,0.28)_min(38%,14rem),transparent_56%)]"
                   aria-hidden
                 />
                 <span className="sr-only">{heroBrandLabel}</span>
