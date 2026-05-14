@@ -603,7 +603,7 @@ function SprintPowerHome({
         />
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
-            <div className="relative isolate min-h-[clamp(42rem,calc(100dvh-6rem),48rem)] overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] md:rounded-3xl">
+            <div className="relative isolate overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] md:rounded-3xl">
               <div className="absolute inset-x-0 top-0 h-[16rem] overflow-hidden sm:h-[18rem] md:hidden">
                 <Image
                   src="/images/sprint-power/sprint-power-promo-hero.jpg"
@@ -629,14 +629,14 @@ function SprintPowerHome({
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,33,0.04)_0%,rgba(3,16,33,0.18)_22%,rgba(3,16,33,0.62)_38%,rgba(3,16,33,0.92)_52%,#031021_68%,#031021_100%)] md:bg-[linear-gradient(90deg,#031021_0%,rgba(3,16,33,0.98)_30%,rgba(3,16,33,0.74)_50%,rgba(3,16,33,0.2)_74%,rgba(3,16,33,0.78)_100%)]"
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,33,0.05)_0%,rgba(3,16,33,0.2)_22%,rgba(3,16,33,0.68)_38%,rgba(3,16,33,0.96)_52%,#031021_68%,#031021_100%)] md:bg-[linear-gradient(90deg,#031021_0%,rgba(3,16,33,0.98)_30%,rgba(3,16,33,0.74)_50%,rgba(3,16,33,0.2)_74%,rgba(3,16,33,0.78)_100%)]"
                 aria-hidden
               />
               <div
                 className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_92%_30%,rgba(122,162,255,0.32),transparent_18%),linear-gradient(180deg,transparent_0%,rgba(3,16,33,0.22)_54%,#031021_100%)]"
                 aria-hidden
               />
-              <div className="relative z-20 flex min-h-[inherit] flex-col justify-start px-[clamp(1.5rem,6vw,5rem)] pb-[clamp(1.5rem,5vw,4.5rem)] pt-[clamp(13rem,43vw,16.5rem)] md:justify-center md:py-[clamp(1.75rem,5vw,4.5rem)]">
+              <div className="relative z-20 flex flex-col justify-start px-[clamp(1.5rem,6vw,5rem)] pb-[clamp(1.5rem,5vw,4.5rem)] pt-[clamp(13rem,43vw,16.5rem)] md:min-h-[inherit] md:justify-center md:py-[clamp(1.75rem,5vw,4.5rem)]">
                 <div className="max-w-[min(100%,58rem)] space-y-[clamp(0.75rem,2vw,1.5rem)]">
                   <h1 className="max-w-[60rem] text-balance text-[clamp(2rem,7vw,3.6rem)] font-extrabold leading-[0.98] text-white md:text-[clamp(2.65rem,5.8vw+0.7rem,6.5rem)]">
                     <span>{heroTitleLead}</span>
