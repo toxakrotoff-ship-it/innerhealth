@@ -604,12 +604,23 @@ function SprintPowerHome({
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
             <div className="relative isolate min-h-[clamp(30rem,calc(100dvh-8rem),40rem)] overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] md:rounded-3xl">
+              <div className="absolute inset-x-0 top-0 h-[15rem] overflow-hidden sm:h-[18rem] md:hidden">
+                <Image
+                  src="/images/sprint-power/sprint-power-promo-hero.jpg"
+                  alt=""
+                  fill
+                  priority
+                  className="object-cover object-center opacity-84 brightness-[0.88] grayscale saturate-0 contrast-[1.12]"
+                  sizes="100vw"
+                  quality={90}
+                />
+              </div>
               <Image
                 src="/images/sprint-power/sprint-power-promo-hero.jpg"
                 alt=""
                 fill
                 priority
-                className="scale-[0.72] object-cover object-[54%_20%] opacity-80 brightness-[0.86] grayscale saturate-0 contrast-[1.12] md:translate-x-[20%] md:translate-y-[15%] md:scale-[1.3] md:object-center md:opacity-78"
+                className="hidden object-cover object-center opacity-78 brightness-[0.82] grayscale saturate-0 contrast-[1.12] md:block md:translate-x-[20%] md:translate-y-[15%] md:scale-[1.3]"
                 sizes="100vw"
                 quality={90}
               />
@@ -618,16 +629,16 @@ function SprintPowerHome({
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#031021_0%,rgba(3,16,33,0.9)_36%,rgba(3,16,33,0.56)_58%,rgba(3,16,33,0.18)_78%,rgba(3,16,33,0.7)_100%)] md:bg-[linear-gradient(90deg,#031021_0%,rgba(3,16,33,0.98)_30%,rgba(3,16,33,0.74)_50%,rgba(3,16,33,0.2)_74%,rgba(3,16,33,0.78)_100%)]"
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,33,0.14)_0%,rgba(3,16,33,0.42)_32%,#031021_48%,#031021_100%)] md:bg-[linear-gradient(90deg,#031021_0%,rgba(3,16,33,0.98)_30%,rgba(3,16,33,0.74)_50%,rgba(3,16,33,0.2)_74%,rgba(3,16,33,0.78)_100%)]"
                 aria-hidden
               />
               <div
                 className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_92%_30%,rgba(122,162,255,0.32),transparent_18%),linear-gradient(180deg,transparent_0%,rgba(3,16,33,0.22)_54%,#031021_100%)]"
                 aria-hidden
               />
-              <div className="relative z-20 flex min-h-[inherit] flex-col justify-center px-[clamp(1.5rem,6vw,5rem)] py-[clamp(1.75rem,5vw,4.5rem)]">
+              <div className="relative z-20 flex min-h-[inherit] flex-col justify-start px-[clamp(1.5rem,6vw,5rem)] pb-[clamp(1.75rem,5vw,4.5rem)] pt-[clamp(12rem,40vw,16rem)] md:justify-center md:py-[clamp(1.75rem,5vw,4.5rem)]">
                 <div className="max-w-[min(100%,58rem)] space-y-[clamp(0.85rem,2vw,1.5rem)]">
-                  <h1 className="max-w-[60rem] text-balance text-[clamp(2.15rem,8.6vw,6.5rem)] font-extrabold leading-[0.98] text-white md:text-[clamp(2.65rem,5.8vw+0.7rem,6.5rem)]">
+                  <h1 className="max-w-[60rem] text-balance text-[clamp(2rem,7vw,3.6rem)] font-extrabold leading-[0.98] text-white md:text-[clamp(2.65rem,5.8vw+0.7rem,6.5rem)]">
                     <span>{heroTitleLead}</span>
                     {heroTitleTail ? (
                       <>
