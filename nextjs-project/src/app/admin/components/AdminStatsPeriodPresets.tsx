@@ -22,7 +22,7 @@ function buildPresetHref(adminBasePath: string, key: PeriodKey): string {
 
 interface AdminStatsPeriodPresetsProps {
   adminBasePath: string
-  period: PeriodKey
+  period: PeriodKey | null
 }
 
 /**

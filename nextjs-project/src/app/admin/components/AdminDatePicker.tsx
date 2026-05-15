@@ -19,8 +19,12 @@ function toYMD(d: Date): string {
 
 function parseYMD(s: string): Date | null {
   if (!s) return null
-  const d = new Date(s)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  const d = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(s)
   if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
   return d
 }
 
@@ -76,6 +80,13 @@ export function AdminDatePicker({ name, id, label, defaultValue, minDate, maxDat
     return startOfMonth(from ?? new Date())
   })
   const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const nextValue = defaultValue ?? ''
+    setValue(nextValue)
+    const nextDate = parseYMD(nextValue)
+    if (nextDate) setViewMonth(startOfMonth(nextDate))
+  }, [defaultValue])
 
   useEffect(() => {
     if (!open) return

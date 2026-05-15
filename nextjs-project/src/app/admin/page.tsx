@@ -39,10 +39,21 @@ function resolveSortDirection(value: string | undefined): SortDirection {
 
 function parseDateParam(value: string | undefined): Date | undefined {
   if (!value) return undefined
-  const d = new Date(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  const d = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value)
   if (Number.isNaN(d.getTime())) return undefined
   d.setHours(0, 0, 0, 0)
   return d
+}
+
+function formatDateInputValue(date: Date | undefined): string {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function getDateRange(
@@ -54,13 +65,15 @@ function getDateRange(
   const toDate = parseDateParam(customTo)
 
   if (fromDate && toDate && fromDate <= toDate) {
+    toDate.setHours(23, 59, 59, 999)
     return { from: fromDate, to: toDate, isCustom: true }
   }
 
   if (period === 'all') return { isCustom: false }
   const to = new Date()
-  to.setHours(0, 0, 0, 0)
+  to.setHours(23, 59, 59, 999)
   const from = new Date(to)
+  from.setHours(0, 0, 0, 0)
   if (period === '7d') from.setDate(from.getDate() - 6)
   if (period === '30d') from.setDate(from.getDate() - 29)
   if (period === '90d') from.setDate(from.getDate() - 89)
@@ -594,21 +607,21 @@ export default async function AdminPage({
           <div className="flex flex-col items-start gap-4 lg:flex-row lg:flex-wrap lg:items-end">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600">Быстрый выбор:</span>
-              <AdminStatsPeriodPresets adminBasePath={adminBasePath} period={period} />
+              <AdminStatsPeriodPresets adminBasePath={adminBasePath} period={isCustom ? null : period} />
             </div>
             <form method="get" className="flex w-full flex-wrap items-end gap-3 border-t border-gray-200 pt-4 lg:w-auto lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
               <AdminDatePicker
                 name="from"
                 id="admin-stats-from"
                 label="С"
-                defaultValue={fromParam ?? (from ? from.toISOString().slice(0, 10) : '')}
+                defaultValue={fromParam ?? formatDateInputValue(from)}
                 maxDate={toParam ?? undefined}
               />
               <AdminDatePicker
                 name="to"
                 id="admin-stats-to"
                 label="По"
-                defaultValue={toParam ?? (to ? to.toISOString().slice(0, 10) : '')}
+                defaultValue={toParam ?? formatDateInputValue(to)}
                 minDate={fromParam ?? undefined}
               />
               <div className="flex items-center gap-2">
