@@ -117,6 +117,7 @@ export async function findOrderForCdekShipment(orderId: string) {
 
 export interface AdminOrderDto {
   id: string;
+  orderNumber: number | null;
   total: number;
   status: string;
   createdAt: string;
@@ -152,8 +153,15 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
     orderBy: { createdAt: 'desc' },
   });
 
-  return orders.map((order) => ({
+  return orders.map((order) => mapOrderToAdminDto(order));
+}
+
+function mapOrderToAdminDto(
+  order: Prisma.OrderGetPayload<{ include: typeof orderAdminInclude }>
+): AdminOrderDto {
+  return {
     id: order.id,
+    orderNumber: order.orderNumber ?? null,
     total: order.total,
     status: order.status,
     createdAt: order.createdAt.toISOString(),
@@ -175,7 +183,7 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
           deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
         }
       : null,
-  }));
+  };
 }
 
 export interface AdminOrderWithDeletedDto extends AdminOrderDto {
@@ -227,28 +235,7 @@ export async function getOrdersForAdminWithTrash(options: {
   });
 
   return orders.map((order) => ({
-    id: order.id,
-    total: order.total,
-    status: order.status,
-    createdAt: order.createdAt.toISOString(),
-    userId: order.userId ?? null,
-    promoCodeId: order.promoCodeId ?? null,
-    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
-    yookassaPaymentId: order.yookassaPaymentId ?? null,
-    cdekOrderUuid: order.cdekOrderUuid ?? null,
-    cdekTrackNumber: order.cdekTrackNumber ?? null,
-    cdekOrderError: order.cdekOrderError ?? null,
-    brand: normalizeBrandId(order.brand) ?? 'inner',
-    shippingInfo: order.shippingInfo
-      ? {
-          fullName: order.shippingInfo.fullName,
-          phoneMasked: maskPhone(order.shippingInfo.phone),
-          phoneRaw: order.shippingInfo.phone,
-          city: order.shippingInfo.city,
-          addressShort: shortAddress(order.shippingInfo.address, order.shippingInfo.city),
-          deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
-        }
-      : null,
+    ...mapOrderToAdminDto(order),
     deletedAt: order.deletedAt ? order.deletedAt.toISOString() : null,
   }));
 }
@@ -269,25 +256,9 @@ export async function getOrderDetailForAdmin(
   if (!isSprintPowerBrand(brandId) && orderBrand === 'sprint-power') return null;
 
   return {
-    id: order.id,
-    total: order.total,
-    status: order.status,
-    createdAt: order.createdAt.toISOString(),
-    userId: order.userId ?? null,
-    promoCodeId: order.promoCodeId ?? null,
-    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    ...mapOrderToAdminDto(order),
     yookassaPaymentId: order.yookassaPaymentId ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,
-    shippingInfo: order.shippingInfo
-      ? {
-          fullName: order.shippingInfo.fullName,
-          phoneMasked: maskPhone(order.shippingInfo.phone),
-          phoneRaw: order.shippingInfo.phone,
-          city: order.shippingInfo.city,
-          addressShort: shortAddress(order.shippingInfo.address, order.shippingInfo.city),
-          deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
-        }
-      : null,
     items: order.items.map((item) => ({
       id: item.id,
       quantity: item.quantity,

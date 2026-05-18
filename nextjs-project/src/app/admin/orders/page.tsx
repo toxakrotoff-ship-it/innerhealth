@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatOrderLabel } from '@/lib/order-label';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 
 interface OrderProduct {
@@ -34,6 +35,7 @@ interface PromoCodeInfo {
 
 interface Order {
   id: string;
+  orderNumber?: number | null;
   userId: string | null;
   total: number;
   status: string;
@@ -61,6 +63,32 @@ function formatDate(dateString: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function getOrderDisplayLabel(order: Pick<Order, 'id' | 'orderNumber'>): string {
+  return formatOrderLabel({ orderId: order.id, orderNumber: order.orderNumber });
+}
+
+function matchesOrderSearch(order: Order, rawTerm: string): boolean {
+  const term = rawTerm.trim();
+  if (!term) return true;
+
+  const termLower = term.toLowerCase();
+  const termDigits = term.replace(/\D+/g, '');
+  const phoneDigits = order.shippingInfo?.phoneRaw?.replace(/\D+/g, '') ?? '';
+  const orderNumberTerm = term.replace(/^#/, '').trim();
+
+  if (/^\d+$/.test(orderNumberTerm) && typeof order.orderNumber === 'number') {
+    if (String(order.orderNumber).includes(orderNumberTerm)) return true;
+  }
+
+  return (
+    order.id.toLowerCase().includes(termLower) ||
+    getOrderDisplayLabel(order).toLowerCase().includes(termLower) ||
+    (termDigits !== '' && phoneDigits.includes(termDigits)) ||
+    order.shippingInfo?.phoneMasked?.includes(term) ||
+    order.shippingInfo?.fullName?.toLowerCase().includes(termLower)
+  );
 }
 
 export default function AdminOrdersPage() {
@@ -318,19 +346,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const filteredOrders = orders.filter((o) => {
-    const term = searchTerm.trim();
-    const termLower = term.toLowerCase();
-    const termDigits = term.replace(/\D+/g, '');
-    const phoneDigits = o.shippingInfo?.phoneRaw?.replace(/\D+/g, '') ?? '';
-
-    return (
-      o.id.toLowerCase().includes(termLower) ||
-      (termDigits !== '' && phoneDigits.includes(termDigits)) ||
-      o.shippingInfo?.phoneMasked?.includes(term) ||
-      o.shippingInfo?.fullName?.toLowerCase().includes(termLower)
-    );
-  });
+  const filteredOrders = orders.filter((order) => matchesOrderSearch(order, searchTerm));
 
   const getCdekTrackingLink = (trackNumber?: string | null) =>
     trackNumber
@@ -514,7 +530,7 @@ export default function AdminOrdersPage() {
             <label className="block text-xs font-medium text-gray-500 mb-1">Поиск</label>
             <input
               type="text"
-              placeholder={mode === 'trash' ? 'ID заказа, телефон, ФИО (в корзине)' : 'ID заказа, телефон, ФИО'}
+              placeholder={mode === 'trash' ? '№ заказа (#63), телефон, ФИО' : '№ заказа (#63), телефон, ФИО'}
               className="form-input w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -580,7 +596,10 @@ export default function AdminOrdersPage() {
                   <div className="flex flex-col gap-2">
                     <p className="font-medium text-gray-900">{order.shippingInfo?.fullName ?? '—'}</p>
                     <p className="text-sm text-gray-600">{order.shippingInfo?.phoneMasked ?? '—'}</p>
-                    <p className="text-xs text-gray-400">{order.id}</p>
+                    <p className="text-sm font-medium text-gray-700">{getOrderDisplayLabel(order)}</p>
+                    {order.orderNumber != null ? (
+                      <p className="text-xs text-gray-400 font-mono break-all" title="Внутренний ID">{order.id}</p>
+                    ) : null}
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
                       <span className="text-sm font-medium">{order.total.toFixed(2)} ₽</span>
@@ -649,7 +668,10 @@ export default function AdminOrdersPage() {
                           <td className="px-4 py-3 text-sm">
                             <div className="font-medium text-gray-900">{order.shippingInfo?.fullName ?? '—'}</div>
                             <div className="text-gray-600 mt-0.5">{order.shippingInfo?.phoneMasked ?? '—'}</div>
-                            <div className="text-xs text-gray-400 mt-1" title="ID заказа">{order.id}</div>
+                            <div className="text-sm font-medium text-gray-700 mt-1">{getOrderDisplayLabel(order)}</div>
+                            {order.orderNumber != null ? (
+                              <div className="text-xs text-gray-400 font-mono mt-0.5 break-all" title="Внутренний ID">{order.id}</div>
+                            ) : null}
                             {mode === 'trash' && order.deletedAt && (
                               <div className="text-xs text-gray-500 mt-1">
                                 В корзине с {formatDate(order.deletedAt)}
@@ -718,12 +740,15 @@ export default function AdminOrdersPage() {
             className="w-full max-w-2xl rounded-xl bg-white shadow-xl"
             role="dialog"
             aria-modal="true"
-            aria-label={`Карточка заказа ${popupOrder.id}`}
+            aria-label={`Карточка заказа ${getOrderDisplayLabel(popupOrder)}`}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b border-gray-200 p-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Заказ {popupOrder.id}</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Заказ {getOrderDisplayLabel(popupOrder)}</h2>
+                {popupOrder.orderNumber != null ? (
+                  <p className="text-xs text-gray-400 font-mono break-all" title="Внутренний ID">{popupOrder.id}</p>
+                ) : null}
                 <p className="text-sm text-gray-600">{formatDate(popupOrder.createdAt)}</p>
               </div>
               <button
