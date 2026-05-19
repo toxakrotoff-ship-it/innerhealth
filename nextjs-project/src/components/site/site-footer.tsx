@@ -7,6 +7,9 @@ import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import type { BrandId } from '@/lib/brand/brand'
 
+const SITE_DEVELOPER_TELEGRAM_URL = 'https://t.me/Tony_CoffeeZombie'
+const SITE_DEVELOPER_TELEGRAM_LABEL = '@Tony_CoffeeZombie'
+
 export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const siteConfig = getBrandSiteConfig(brandId)
   const isSprintTheme = brandId === 'sprint-power'
@@ -314,6 +317,37 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   Политика конфиденциальности
                 </ResponsiveText>
               </Link>
+              <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
+                |
+              </span>
+              <ResponsiveText
+                as="span"
+                variant="sm"
+                color="secondary"
+                adaptive
+              >
+                Разработка сайта:{' '}
+              </ResponsiveText>
+              <a
+                href={SITE_DEVELOPER_TELEGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                  isSprintTheme
+                    ? 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 hover:text-action-blue'
+                }`}
+              >
+                <ResponsiveText
+                  as="span"
+                  variant="sm"
+                  weight="light"
+                  color={isSprintTheme ? 'current' : 'secondary'}
+                  adaptive
+                >
+                  {SITE_DEVELOPER_TELEGRAM_LABEL}
+                </ResponsiveText>
+              </a>
             </div>
           </ScalableSpacing>
         </AdaptiveContainer>
