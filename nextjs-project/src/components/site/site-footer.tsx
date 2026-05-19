@@ -296,7 +296,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 color="secondary"
                 adaptive
               >
-                © 2022 {siteConfig.logoText}
+                © 2026 {siteConfig.logoText}
               </ResponsiveText>
               <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
                 |
