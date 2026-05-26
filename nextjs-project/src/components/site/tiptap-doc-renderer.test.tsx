@@ -143,4 +143,26 @@ describe('TipTapDocRenderer', () => {
     expect(container.querySelector('td')?.className).toMatch(/text-slate-200/)
     expect(container.querySelector('th')?.className).toMatch(/text-slate-50/)
   })
+
+  it('renders superscript and subscript marks', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Витамин B' },
+            { type: 'text', text: '2', marks: [{ type: 'subscript' }] },
+            { type: 'text', text: ' и м' },
+            { type: 'text', text: '2', marks: [{ type: 'superscript' }] },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} />)
+
+    expect(container.querySelector('sub')?.textContent).toBe('2')
+    expect(container.querySelector('sup')?.textContent).toBe('2')
+  })
 })

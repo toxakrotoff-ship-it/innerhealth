@@ -8,6 +8,8 @@ import type { Extensions } from '@tiptap/core';
 import { CustomBulletList } from './editor-extensions/custom-bullet-list';
 import { CustomOrderedList } from './editor-extensions/custom-ordered-list';
 import { ProductLink } from './editor-extensions/product-link-suggestion';
+import { Superscript } from './editor-extensions/superscript';
+import { Subscript } from './editor-extensions/subscript';
 
 /**
  * Один набор расширений для редактора и для generateHTML / generateJSON в обёртках,
@@ -23,6 +25,8 @@ export function buildRichTextEditorExtensions(placeholder: string): Extensions {
     CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
     CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),
     Underline,
+    Superscript,
+    Subscript,
     Image.configure({ inline: false }),
     Placeholder.configure({ placeholder }),
     Link.configure({

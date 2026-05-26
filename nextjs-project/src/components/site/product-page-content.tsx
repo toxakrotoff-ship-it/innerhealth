@@ -20,6 +20,7 @@ import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
+import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
 
 interface ProductPageContentProps {
   product: {
@@ -167,6 +168,9 @@ export function ProductPageContent({
   relatedProductsCategoryTitle,
   isSprintTheme = false,
 }: ProductPageContentProps) {
+  const shouldRenderDescription =
+    !!product.description &&
+    (isSprintTheme || !shouldHideInnerProductDescription(product.description, product.text))
   const isOutOfStock = product.quantity != null && product.quantity <= 0
   const isPreorderEnabled = product.isPreorderEnabled === true
   const isUnavailable = isOutOfStock && !isPreorderEnabled
@@ -279,7 +283,7 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
           <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
-          {product.description && (
+          {shouldRenderDescription && product.description && (
             <ProductDescriptionBlock description={product.description} isSprintTheme={isSprintTheme} />
           )}
         </div>

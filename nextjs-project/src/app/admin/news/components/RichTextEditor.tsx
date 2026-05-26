@@ -161,6 +161,22 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
       >
         Ч
       </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleSuperscript().run()}
+        className={`px-2 py-1 rounded text-sm ${editor.isActive('superscript') ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+        title="Надстрочный текст"
+      >
+        x²
+      </button>
+      <button
+        type="button"
+        onClick={() => editor.chain().focus().toggleSubscript().run()}
+        className={`px-2 py-1 rounded text-sm ${editor.isActive('subscript') ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
+        title="Подстрочный текст"
+      >
+        x₂
+      </button>
       <div className="relative flex items-center" ref={linkWrapRef}>
         <button
           type="button"
@@ -455,6 +471,8 @@ const LIST_STYLES = `
   .rich-text-editor-content ul ul, .rich-text-editor-content ol ul { margin: 0.2em 0; padding-left: 1.25rem; }
   .rich-text-editor-content ol ol, .rich-text-editor-content ul ol { margin: 0.2em 0; padding-left: 1.25rem; }
   .rich-text-editor-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; margin: 0.75em 0; color: #374151; font-style: italic; }
+  .rich-text-editor-content sup { vertical-align: super; font-size: 0.75em; line-height: 0; }
+  .rich-text-editor-content sub { vertical-align: sub; font-size: 0.75em; line-height: 0; }
   .rich-text-editor-content .tableWrapper { margin: 0.75rem 0; overflow-x: auto; }
   .rich-text-editor-content table { border-collapse: collapse; width: 100%; table-layout: auto; }
   .rich-text-editor-content th, .rich-text-editor-content td { border: 1px solid #d1d5db; padding: 0.4rem 0.6rem; vertical-align: top; min-width: 4rem; }

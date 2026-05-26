@@ -5,6 +5,8 @@ import Underline from '@tiptap/extension-underline'
 import Image from '@tiptap/extension-image'
 import { CustomBulletList } from '@/app/admin/news/components/editor-extensions/custom-bullet-list'
 import { CustomOrderedList } from '@/app/admin/news/components/editor-extensions/custom-ordered-list'
+import { Superscript } from '@/app/admin/news/components/editor-extensions/superscript'
+import { Subscript } from '@/app/admin/news/components/editor-extensions/subscript'
 
 const EXTENSIONS = [
   StarterKit.configure({
@@ -15,6 +17,8 @@ const EXTENSIONS = [
   CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
   CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),
   Underline,
+  Superscript,
+  Subscript,
   Image.configure({ inline: false }),
 ]
 
@@ -33,4 +37,3 @@ export function ProductRichText({ html }: ProductRichTextProps) {
   }
   return <div dangerouslySetInnerHTML={{ __html: sanitized }} />
 }
-

@@ -83,6 +83,8 @@ function renderMarks(
     if (mark.type === 'bold') node = <strong>{node}</strong>
     else if (mark.type === 'italic') node = <em>{node}</em>
     else if (mark.type === 'underline') node = <u>{node}</u>
+    else if (mark.type === 'superscript') node = <sup>{node}</sup>
+    else if (mark.type === 'subscript') node = <sub>{node}</sub>
     else if (mark.type === 'link' && mark.attrs?.href) {
       const href = mark.attrs.href
       const isExternal = /^https?:\/\//i.test(href)
@@ -273,6 +275,8 @@ const tiptapListStyles = `
   .tiptap-list-bullet ul, .tiptap-list-bullet ol, .tiptap-list-ordered ul, .tiptap-list-ordered ol { margin-top: 0.25em; padding-left: 1.25rem; }
   .tiptap-table td p, .tiptap-table th p { margin: 0 0 0.35rem 0; }
   .tiptap-table td p:last-child, .tiptap-table th p:last-child { margin-bottom: 0; }
+  sup { vertical-align: super; font-size: 0.75em; line-height: 0; }
+  sub { vertical-align: sub; font-size: 0.75em; line-height: 0; }
 `
 
 interface TipTapDocRendererProps {
