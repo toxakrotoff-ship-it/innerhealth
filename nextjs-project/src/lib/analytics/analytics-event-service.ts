@@ -16,10 +16,44 @@ interface AnalyticsContext {
 
 type AnalyticsEventWithContext = AnalyticsEventInput & AnalyticsContext
 
+async function hasOrderCreatedAnalyticsEvent(orderId: string): Promise<boolean> {
+  const count = await prisma.analyticsEvent.count({
+    where: {
+      type: 'ORDER_CREATED',
+      meta: {
+        path: ['orderId'],
+        equals: orderId,
+      },
+    },
+  })
+  return count > 0
+}
+
 export async function createAnalyticsEvent(
   input: AnalyticsEventWithContext
 ): Promise<AnalyticsEvent> {
   const parsed = analyticsEventInputSchema.parse(input)
+
+  const orderIdFromMeta =
+    parsed.type === 'ORDER_CREATED' && parsed.meta && typeof parsed.meta.orderId === 'string'
+      ? parsed.meta.orderId
+      : null
+  if (orderIdFromMeta && (await hasOrderCreatedAnalyticsEvent(orderIdFromMeta))) {
+    return {
+      id: 'duplicate-skipped',
+      brand: resolveDbBrand(parsed.brand),
+      occurredAt: parsed.occurredAt,
+      userId: parsed.userId ?? null,
+      sessionId: parsed.sessionId ?? null,
+      anonId: parsed.anonId ?? null,
+      type: parsed.type as never,
+      path: parsed.path,
+      pageTitle: parsed.pageTitle ?? null,
+      meta: parsed.meta ?? null,
+      ipHash: input.ipHash ?? null,
+      userAgent: input.userAgent ?? null,
+    } as AnalyticsEvent
+  }
 
   const anyPrisma = prisma as unknown as {
     analyticsEvent?: {

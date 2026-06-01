@@ -11,6 +11,7 @@ import {
   notifyMaxOrderStatusForUser,
   notifyMaxCdekTrackForUser,
 } from '@/lib/max-notify'
+import { recordOrderCreatedAnalyticsEvent } from '@/lib/analytics/order-created-analytics'
 import { scheduleNotifyAllChannelsAfterOrderPaid } from '@/lib/order-paid-notifications'
 import * as orderService from '@/services/order.service'
 
@@ -78,6 +79,12 @@ export async function transitionOrderToPaid(
   })
 
   scheduleNotifyAllChannelsAfterOrderPaid(orderId)
+
+  after(() => {
+    void recordOrderCreatedAnalyticsEvent(orderId, orderBrandId).catch((err) =>
+      console.error('[order-payment-flow] recordOrderCreatedAnalyticsEvent failed', orderId, err)
+    )
+  })
 
   return { changed: true, previousStatus, status: 'paid' }
 }

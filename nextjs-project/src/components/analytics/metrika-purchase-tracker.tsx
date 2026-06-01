@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { pushMetrikaEcommerceEvent } from '@/lib/analytics/metrika-ecommerce'
 import { reachMetrikaGoal } from '@/lib/analytics/metrika'
 
@@ -70,6 +71,15 @@ export function MetrikaPurchaseTracker({ payment }: MetrikaPurchaseTrackerProps)
             currency: order.currency ?? 'RUB',
             value: Number(order.value ?? 0),
             items: Array.isArray(order.items) ? order.items : [],
+          },
+        })
+
+        logAnalyticsEvent({
+          type: 'ORDER_CREATED',
+          path: '/cart',
+          meta: {
+            orderId: order.id,
+            source: 'payment_return',
           },
         })
 

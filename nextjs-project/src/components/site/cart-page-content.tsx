@@ -571,6 +571,8 @@ export function CartPageContent({
           meta: {
             totalWithDelivery,
             deliveryMethod,
+            orderId: data.id,
+            paymentFlow: 'yookassa',
           },
         })
         window.location.href = data.confirmationUrl
@@ -585,8 +587,10 @@ export function CartPageContent({
         type: 'ORDER_CREATED',
         path: '/cart',
         meta: {
+          orderId: data.id,
           totalWithDelivery,
           deliveryMethod,
+          paymentFlow: 'without_yookassa',
         },
       })
     } catch (err) {

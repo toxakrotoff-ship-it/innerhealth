@@ -173,8 +173,9 @@ async function getSummary(
     }),
     anyPrisma.dailyFunnelStats.findMany({
       where: dateWhere ? { brand: activeBrand, date: dateWhere } : { brand: activeBrand },
-      orderBy: { date: 'desc' },
-      take: 90,
+      orderBy: [{ date: 'desc' }, { step: 'asc' }],
+      // Без лимита при фильтре по периоду (до ~4 строк на день). Для «всё время» — последние 30 дней.
+      ...(dateWhere ? {} : { take: 120 }),
     }),
     anyPrisma.order.count({
       where: {
