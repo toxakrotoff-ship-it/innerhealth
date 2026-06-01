@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `Сотрудничество | ${siteTitle}`,
     description:
-      `Партнёрская программа ${siteTitle}: скидки, кешбэк, оптовые условия. Сотрудничаем с врачами, нутрициологами, health-coach, косметологами и фитнес-тренерами.`,
+      `Партнёрская программа ${siteTitle}. Сотрудничаем с врачами, нутрициологами, health-coach, косметологами и фитнес-тренерами.`,
   }
 }
 
@@ -69,24 +69,6 @@ export default async function SotrudnichestvoPage() {
     'cooperation.audience.text',
     'Сотрудничаем с врачами, нутрициологами, health-coach, специалистами помогающих профессий, фитнес-тренерами, косметологами.'
   )
-  const benefitsTitle = getText(blocks, 'cooperation.benefits.title', 'Вы получите')
-  const benefitsItems = [
-    getText(
-      blocks,
-      'cooperation.benefits.item1',
-      'Скидка до 25% по личному промокоду для вас, ваших клиентов, пациентов, друзей и знакомых.'
-    ),
-    getText(
-      blocks,
-      'cooperation.benefits.item2',
-      'Ежемесячный кешбэк от суммы заказа по промокоду — выплачивается по результатам месяца на вашу банковскую карту.'
-    ),
-    getText(
-      blocks,
-      'cooperation.benefits.item3',
-      'Выгодные условия для оптовых закупок и работы представительств в регионах.'
-    ),
-  ]
   const extraTitle = getText(blocks, 'cooperation.extra.title', 'А также')
   const extraItems = [
     getText(
@@ -141,19 +123,6 @@ export default async function SotrudnichestvoPage() {
           <section>
             <h2 className={`mb-3 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{audienceTitle}</h2>
             <p>{audienceText}</p>
-          </section>
-
-          <section
-            className={`rounded-2xl border p-6 sm:p-8 ${
-              isSprintTheme ? 'border-slate-800 bg-slate-950/50' : 'border-gray-200 bg-soft-background/50'
-            }`}
-          >
-            <h2 className={`mb-4 text-xl font-semibold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{benefitsTitle}</h2>
-            <ol className={`list-inside list-decimal space-y-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
-              {benefitsItems.map((item, index) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ol>
           </section>
 
           <section
