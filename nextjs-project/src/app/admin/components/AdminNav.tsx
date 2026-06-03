@@ -223,6 +223,12 @@ function getItemIsActive(
   if (itemPath === 'content') return pathname === `${prefix}content`
   if (itemPath === 'seo-hubs') return pathname.startsWith(`${prefix}seo-hubs`)
   if (itemPath === 'settings') return pathname === `${prefix}settings`
+  if (itemPath === 'orders') {
+    return (
+      pathname === `${prefix}orders` ||
+      pathname.startsWith(`${prefix}orders/`)
+    )
+  }
   return pathname === `${prefix}${itemPath}`
 }
 

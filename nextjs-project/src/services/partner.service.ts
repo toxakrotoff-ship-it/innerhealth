@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { Role } from '@prisma/client';
 import type { BrandId } from '@/lib/brand/brand';
 import { promoBelongsToBrandScope } from '@/lib/brand/brand-scope';
-
-const PAID_STATUSES = ['paid', 'completed'] as const;
+import { PAID_ORDER_STATUSES } from '@/lib/order-paid-statuses';
 
 export interface PartnerStatForAdmin {
   promoCodeId: string;
@@ -52,7 +51,7 @@ export async function getPartnerStatsByUserId(
     const agg = await prisma.order.aggregate({
       where: {
         promoCodeId: b.promoCodeId,
-        status: { in: [...PAID_STATUSES] },
+        status: { in: [...PAID_ORDER_STATUSES] },
       },
       _count: { id: true },
       _sum: { total: true },
@@ -91,7 +90,7 @@ export async function getPartnerStatsForPartner(
       prisma.order.aggregate({
         where: {
           promoCodeId: b.promoCodeId,
-          status: { in: [...PAID_STATUSES] },
+          status: { in: [...PAID_ORDER_STATUSES] },
         },
         _count: { id: true },
         _sum: {
