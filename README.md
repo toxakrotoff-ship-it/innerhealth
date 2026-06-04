@@ -1,6 +1,6 @@
-# Inner Health Platform
+# InnerHealth
 
-Платформа e-commerce для двух брендов: **Inner Health** и **Sprint Power**.
+Open-source multi-brand e-commerce platform and starter for small commerce teams. The repository ships with two example storefront brands — **Inner Health** and **Sprint Power** — on one shared Next.js/Prisma/PostgreSQL codebase.
 
 - **Один бэкенд**, **две изолированные витрины** (домены Inner и Sprint), одна админка с переключателем бренда
 - Общие модули каталога, заказов и интеграций; **разведение** товаров, заказов и brand-scoped настроек
@@ -124,6 +124,12 @@ npm run dev
 - **[docs/plans/2026-02-28-partner-lk-implementation.md](docs/plans/2026-02-28-partner-lk-implementation.md)** — ЛК партнёра и управление партнёрами
 - **[docs/LK-users.md](docs/LK-users.md)** — ЛК пользователя (профиль, заказы, адреса)
 
+### Open source
+
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — как сообщать об issues и открывать PR
+- **[SECURITY.md](./SECURITY.md)** — ответственное раскрытие уязвимостей
+- **[ROADMAP.md](./ROADMAP.md)** — краткая дорожная карта проекта
+
 ### Дополнительно
 
 - **[docs/categories.md](docs/categories.md)** — категории каталога
@@ -143,6 +149,6 @@ API: префикс `/api` (auth, admin, cart, orders, telegram, partners и т.
 
 ---
 
-## 📄 Лицензия
+## Лицензия
 
 InnerHealth is open-source software licensed under the Apache License 2.0. See [LICENSE](./LICENSE) for details.
