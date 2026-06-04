@@ -7,6 +7,10 @@
 - **Объединённый ЛК** по email (сеть магазинов); вход/регистрация на **общих** URL
 - Целевая модель, интеграции и чеклист расхождений с кодом: **[docs/two-storefronts-architecture.md](docs/two-storefronts-architecture.md)**
 
+## Open Source Purpose
+
+InnerHealth is designed as a reusable multi-brand e-commerce starter for small commerce teams. It provides brand-scoped storefronts, shared customer accounts, catalog, orders, payments, delivery integrations, admin settings, 2FA, bot automation, and migration tooling in one Next.js/Prisma/PostgreSQL codebase.
+
 ---
 
 ## Стек
@@ -139,6 +143,6 @@ API: префикс `/api` (auth, admin, cart, orders, telegram, partners и т.
 
 ---
 
-## Лицензия
+## 📄 Лицензия
 
-Приватный репозиторий. Все права защищены.
+InnerHealth is open-source software licensed under the Apache License 2.0. See [LICENSE](./LICENSE) for details.
