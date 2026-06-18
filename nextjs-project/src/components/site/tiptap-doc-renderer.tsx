@@ -108,6 +108,9 @@ function renderMarks(
   return node
 }
 
+/** Блочный текст: сохраняет \n внутри абзаца и нормальные отступы между блоками. */
+const blockTextClassName = 'tiptap-block-text mb-4 whitespace-pre-line leading-relaxed last:mb-0'
+
 function renderCategoryTextImageSection(
   node: TipTapNode,
   key: number,
@@ -162,7 +165,7 @@ function renderCategoryTextImageSection(
           imagePosition === 'left' ? 'lg:[&>div:first-child]:order-2 lg:[&>div:last-child]:order-1' : ''
         }`}
       >
-        <div className="min-w-0">{textChildren}</div>
+        <div className="tiptap-text-column min-w-0 space-y-4">{textChildren}</div>
         {imageColumn ? <div className="min-w-0">{imageColumn}</div> : null}
       </div>
     </section>
@@ -181,19 +184,34 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
   const children = node.content?.map((n, i) => renderNode(n, i, tone))
 
   switch (node.type) {
-    case 'paragraph':
+    case 'hardBreak':
+      return <br key={stableKey} />
+    case 'paragraph': {
+      const hasVisibleContent = node.content?.some((child) => {
+        if (child.type === 'hardBreak') return true
+        if (child.type === 'text') return Boolean(child.text?.trim())
+        return true
+      })
+      if (!hasVisibleContent) {
+        return (
+          <p key={stableKey} className="tiptap-block-empty mb-4 min-h-[1.25em] last:mb-0" aria-hidden="true">
+            {'\u00A0'}
+          </p>
+        )
+      }
       return (
-        <p key={stableKey} className="mb-4">
+        <p key={stableKey} className={blockTextClassName}>
           {children}
         </p>
       )
+    }
     case 'heading': {
       const level = node.attrs?.level ?? 1
       const Tag = `h${Math.min(3, Math.max(1, level))}` as 'h1' | 'h2' | 'h3'
       const classMap = {
-        h1: 'text-2xl font-bold mt-8 mb-4',
-        h2: 'text-xl font-bold mt-6 mb-3',
-        h3: 'text-lg font-semibold mt-4 mb-2',
+        h1: 'tiptap-block-text text-2xl font-bold mt-8 mb-4 whitespace-pre-line leading-tight last:mb-0',
+        h2: 'tiptap-block-text text-xl font-bold mt-6 mb-3 whitespace-pre-line leading-snug last:mb-0',
+        h3: 'tiptap-block-text text-lg font-semibold mt-4 mb-2 whitespace-pre-line leading-snug last:mb-0',
       }
       return (
         <Tag key={stableKey} className={classMap[Tag]}>
@@ -229,7 +247,7 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
     }
     case 'listItem':
       return (
-        <li key={stableKey} className="ml-2">
+        <li key={stableKey} className="ml-2 whitespace-pre-line leading-relaxed">
           {children}
         </li>
       )
@@ -345,6 +363,15 @@ function renderTipTapDoc(content: TipTapNode | null, tone: DocTone): React.React
 }
 
 const tiptapListStyles = `
+  .tiptap-doc-body > .tiptap-text-column > *:last-child,
+  .tiptap-doc-body > .tiptap-block-text:last-child,
+  .tiptap-doc-body > section:last-child .tiptap-block-text:last-child { margin-bottom: 0; }
+  .tiptap-doc-body.prose :where(p.tiptap-block-text):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+  }
+  .tiptap-doc-body.prose :where(p.tiptap-block-text + p.tiptap-block-text):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+    margin-top: 0;
+  }
   .tiptap-list-bullet[data-list-style-type="disc"] { list-style-type: disc; }
   .tiptap-list-bullet[data-list-style-type="circle"] { list-style-type: circle; }
   .tiptap-list-bullet[data-list-style-type="square"] { list-style-type: square; }
@@ -399,7 +426,9 @@ export function TipTapDocRenderer({ raw, className = '', tone = 'light' }: TipTa
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: tiptapListStyles }} />
-      <div className={`prose prose-gray max-w-none ${className}`.trim()}>{tipTapContent ?? fallback}</div>
+      <div className={`tiptap-doc-body prose prose-gray max-w-none ${className}`.trim()}>
+        {tipTapContent ?? fallback}
+      </div>
     </>
   )
 }

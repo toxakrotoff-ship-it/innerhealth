@@ -226,4 +226,55 @@ describe('TipTapDocRenderer', () => {
     expect(sections[1]?.className).toMatch(/border-t/)
     expect(sections[1]?.firstElementChild?.className).toMatch(/order-2/)
   })
+
+  it('renders hardBreak and newline characters inside a paragraph', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Первая строка' },
+            { type: 'hardBreak' },
+            { type: 'text', text: 'Вторая строка' },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Строка A\nСтрока B\nСтрока C' }],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} tone="dark" />)
+    const paragraphs = container.querySelectorAll('p.tiptap-block-text')
+
+    expect(paragraphs).toHaveLength(2)
+    expect(paragraphs[0]?.querySelector('br')).not.toBeNull()
+    expect(paragraphs[0]?.textContent).toContain('Первая строка')
+    expect(paragraphs[0]?.textContent).toContain('Вторая строка')
+    expect(paragraphs[1]?.className).toMatch(/whitespace-pre-line/)
+    expect(paragraphs[1]?.textContent).toContain('Строка A')
+    expect(paragraphs[1]?.textContent).toContain('Строка B')
+    expect(paragraphs[1]?.textContent).toContain('Строка C')
+  })
+
+  it('renders consecutive paragraphs and empty paragraph spacers', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Абзац 1' }] },
+        { type: 'paragraph' },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Абзац 2' }] },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} />)
+    const paragraphs = container.querySelectorAll('p')
+
+    expect(paragraphs).toHaveLength(3)
+    expect(paragraphs[0]?.className).toMatch(/tiptap-block-text/)
+    expect(paragraphs[1]?.className).toMatch(/tiptap-block-empty/)
+    expect(paragraphs[2]?.textContent).toBe('Абзац 2')
+  })
 })

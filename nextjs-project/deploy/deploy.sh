@@ -113,7 +113,7 @@ require_free_disk_mb "${MIN_FREE_MB}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):
-#   export CERT_DOMAINS="innerhealth.ru www.innerhealth.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
+#   export CERT_DOMAINS="innerhealth.ru sprintpower.inetrnet.pp.ru"
 #   export CERT_EMAIL=you@example.com
 # Backward compatibility: CERT_DOMAIN is still supported for a single domain.
 DOMAINS_INPUT="${CERT_DOMAINS:-${CERT_DOMAIN:-}}"

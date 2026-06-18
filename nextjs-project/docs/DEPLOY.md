@@ -140,7 +140,7 @@ proxy_set_header X-Accel-Buffering no;
 For host-based brand routing (e.g. `inner...` + `sprintpower...`) point all domains to one VPS IP and include all of them in TLS cert:
 
 ```bash
-export CERT_DOMAINS="innerhaealth.inetrnet.pp.ru sprintpower.inetrnet.pp.ru www.sprintpower.inetrnet.pp.ru"
+export CERT_DOMAINS="innerhealth.ru sprintpower.inetrnet.pp.ru"
 export CERT_EMAIL="you@example.com"
 ./deploy/deploy.sh
 ```
