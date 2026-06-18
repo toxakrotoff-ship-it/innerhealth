@@ -16,6 +16,11 @@ interface TipTapNode {
     listStyleType?: string
     markerStyle?: string
     start?: number
+    imageCaption?: string
+    imagePosition?: 'left' | 'right'
+    imageObjectPosition?: string
+    imageSrc?: string
+    imageAlt?: string
   }
   marks?: {
     type: string
@@ -103,6 +108,67 @@ function renderMarks(
   return node
 }
 
+function renderCategoryTextImageSection(
+  node: TipTapNode,
+  key: number,
+  tone: DocTone,
+  showTopDivider: boolean
+): React.ReactNode {
+  const stableKey = `section-${key}`
+  const imageSrc = node.attrs?.imageSrc ?? node.attrs?.src
+  const imageAlt = node.attrs?.imageAlt ?? node.attrs?.alt ?? ''
+  const imageCaption = node.attrs?.imageCaption?.trim() ?? ''
+  const imagePosition = node.attrs?.imagePosition === 'left' ? 'left' : 'right'
+  const imageObjectPosition = node.attrs?.imageObjectPosition ?? 'center'
+  const textChildren = node.content?.map((child, index) => renderNode(child, index, tone))
+
+  const captionClass =
+    tone === 'dark' ? 'mt-3 text-center text-sm text-slate-400' : 'mt-3 text-center text-sm text-gray-500'
+
+  const imageColumn = imageSrc ? (
+    <figure className="min-w-0">
+      {typeof imageSrc === 'string' && imageSrc.startsWith('/') ? (
+        <Image
+          src={imageSrc}
+          alt={imageAlt}
+          width={800}
+          height={800}
+          className="h-auto w-full max-h-[min(85vh,40rem)] rounded-xl object-cover"
+          style={{ objectPosition: imageObjectPosition }}
+          sizes="(max-width: 768px) 100vw, 50vw"
+          unoptimized
+        />
+      ) : (
+        <img
+          src={imageSrc}
+          alt={imageAlt}
+          className="h-auto w-full max-h-[min(85vh,40rem)] rounded-xl object-cover"
+          style={{ objectPosition: imageObjectPosition }}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      {imageCaption ? <figcaption className={captionClass}>{imageCaption}</figcaption> : null}
+    </figure>
+  ) : null
+
+  return (
+    <section
+      key={stableKey}
+      className={showTopDivider ? 'border-t border-slate-600/70 pt-10 mt-10' : 'mt-2'}
+    >
+      <div
+        className={`grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-12 ${
+          imagePosition === 'left' ? 'lg:[&>div:first-child]:order-2 lg:[&>div:last-child]:order-1' : ''
+        }`}
+      >
+        <div className="min-w-0">{textChildren}</div>
+        {imageColumn ? <div className="min-w-0">{imageColumn}</div> : null}
+      </div>
+    </section>
+  )
+}
+
 function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): React.ReactNode {
   if (!node) return null
 
@@ -167,6 +233,8 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
           {children}
         </li>
       )
+    case 'categoryTextImageSection':
+      return renderCategoryTextImageSection(node, key, tone, false)
     case 'image': {
       const src = node.attrs?.src
       if (!src) return null
@@ -257,7 +325,23 @@ function renderTipTapDoc(content: TipTapNode | null, tone: DocTone): React.React
   if (!content || content.type !== 'doc' || !Array.isArray(content.content)) {
     return null
   }
-  return content.content.map((node, i) => renderNode(node, i, tone))
+
+  let textImageSectionIndex = 0
+
+  return content.content.map((node, index) => {
+    if (node.type === 'categoryTextImageSection') {
+      const section = renderCategoryTextImageSection(
+        node,
+        index,
+        tone,
+        textImageSectionIndex > 0
+      )
+      textImageSectionIndex += 1
+      return section
+    }
+
+    return renderNode(node, index, tone)
+  })
 }
 
 const tiptapListStyles = `

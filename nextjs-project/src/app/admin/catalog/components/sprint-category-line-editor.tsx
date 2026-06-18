@@ -1,8 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import type { JSONContent } from '@tiptap/core';
+import { useCallback, useMemo } from 'react';
+import type { Editor, JSONContent } from '@tiptap/core';
 import type { UploadedImage } from '@/app/admin/news/components/EditorMediaPanel';
+import { buildSprintCategoryLineEditorExtensions } from './sprint-category-line-editor-extensions';
 
 const RichTextEditor = dynamic(
   () =>
@@ -25,14 +27,49 @@ export interface SprintCategoryLineEditorProps {
   onMediaUploaded?: (img: UploadedImage) => void;
 }
 
+function SprintCategoryExtraToolbar({ editor }: { editor: Editor }) {
+  const insertTextImageSection = useCallback(() => {
+    const chain = editor.chain().focus() as unknown as {
+      insertCategoryTextImageSection: () => { run: () => boolean };
+    };
+    chain.insertCategoryTextImageSection().run();
+  }, [editor]);
+
+  return (
+    <>
+      <span className="w-px h-5 bg-gray-300 mx-1" />
+      <button
+        type="button"
+        onClick={insertTextImageSection}
+        className="px-2 py-1 rounded text-sm hover:bg-gray-200"
+        title="Секция: текст слева или справа + фото"
+      >
+        Текст + фото
+      </button>
+    </>
+  );
+}
+
 export function SprintCategoryLineEditor(props: SprintCategoryLineEditorProps) {
+  const placeholder = props.placeholder ?? 'Описание линейки, таблицы, юридические абзацы…';
+  const extensions = useMemo(
+    () => buildSprintCategoryLineEditorExtensions(placeholder),
+    [placeholder]
+  );
+  const renderExtraToolbar = useCallback(
+    (editor: Editor) => <SprintCategoryExtraToolbar editor={editor} />,
+    []
+  );
+
   return (
     <RichTextEditor
       value={props.value}
       onChange={props.onChange}
-      placeholder={props.placeholder}
+      placeholder={placeholder}
       uploadedMedia={props.uploadedMedia}
       onMediaUploaded={props.onMediaUploaded}
+      extensions={extensions}
+      renderExtraToolbar={renderExtraToolbar}
     />
   );
 }

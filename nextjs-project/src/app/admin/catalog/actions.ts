@@ -25,6 +25,7 @@ export interface Category {
   catalogTeaser?: string | null;
   linePageBodyRichJson?: Prisma.JsonValue | null;
   featuredProductId?: string | null;
+  showLegacyLinePageBlocks?: boolean;
   /** ISO-8601 из Server Actions / JSON (без объектов Date в ответе). */
   createdAt: string;
   updatedAt: string;
@@ -40,6 +41,7 @@ interface CategoryInput {
   catalogTeaser?: string | null;
   linePageBodyRichJson?: Prisma.JsonValue | null;
   featuredProductId?: string | null;
+  showLegacyLinePageBlocks?: boolean;
 }
 
 interface BrandScopeOptions {
@@ -68,6 +70,7 @@ const categoryInputSchema = z.object({
   catalogTeaser: z.string().max(20000).nullable().optional(),
   linePageBodyRichJson: z.unknown().optional(),
   featuredProductId: z.string().nullable().optional(),
+  showLegacyLinePageBlocks: z.boolean().optional(),
 });
 
 const categoryUpdateSchema = categoryInputSchema.partial();
@@ -99,6 +102,7 @@ function stripSprintOnlyCategoryFields<T extends Partial<CategoryInput> | Catego
   delete rest.catalogTeaser;
   delete rest.linePageBodyRichJson;
   delete rest.featuredProductId;
+  delete rest.showLegacyLinePageBlocks;
   return rest as T;
 }
 
@@ -148,6 +152,7 @@ function mapInnerCategoryAdminListRow(row: InnerCategoryAdminListRow): Category 
     catalogTeaser: null,
     linePageBodyRichJson: null,
     featuredProductId: null,
+    showLegacyLinePageBlocks: false,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -169,6 +174,7 @@ function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
         ? (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue)
         : null,
     featuredProductId: sprintRow ? (row.featuredProductId ?? null) : null,
+    showLegacyLinePageBlocks: sprintRow ? row.showLegacyLinePageBlocks : false,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -289,7 +295,12 @@ export async function getCategoriesWithCounts(
       select: {
         ...innerCategoryAdminListSelect,
         ...(isSprintPowerBrand(effectiveBrandId)
-          ? { catalogTeaser: true, linePageBodyRichJson: true, featuredProductId: true }
+          ? {
+              catalogTeaser: true,
+              linePageBodyRichJson: true,
+              featuredProductId: true,
+              showLegacyLinePageBlocks: true,
+            }
           : {}),
         products: {
           select: {
@@ -488,6 +499,7 @@ export async function createCategory(
       catalogTeaser: dataScoped.catalogTeaser?.trim() ? dataScoped.catalogTeaser.trim() : null,
       linePageBodyRichJson: dataScoped.linePageBodyRichJson,
       featuredProductId: dataScoped.featuredProductId,
+      showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
     });
 
     if (isSprintPowerBrand(effectiveBrandId)) {
@@ -512,6 +524,7 @@ export async function createCategory(
           showInCategoriesBlock: parsed.showInCategoriesBlock ?? true,
           catalogTeaser: parsed.catalogTeaser ?? null,
           ...(lineJson !== undefined ? { linePageBodyRichJson: lineJson } : {}),
+          showLegacyLinePageBlocks: parsed.showLegacyLinePageBlocks ?? false,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -598,6 +611,7 @@ export async function updateCategory(
             : null,
       linePageBodyRichJson: dataScoped.linePageBodyRichJson,
       featuredProductId: dataScoped.featuredProductId,
+      showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
     });
 
     if (isSprintPowerBrand(effectiveBrandId) && parsed.linePageBodyRichJson !== undefined) {
@@ -626,6 +640,9 @@ export async function updateCategory(
     }
     if (parsed.catalogTeaser !== undefined) {
       updateData.catalogTeaser = parsed.catalogTeaser;
+    }
+    if (parsed.showLegacyLinePageBlocks !== undefined) {
+      updateData.showLegacyLinePageBlocks = parsed.showLegacyLinePageBlocks;
     }
     if (parsed.linePageBodyRichJson !== undefined) {
       const lineJson = linePageJsonForWrite(parsed.linePageBodyRichJson);

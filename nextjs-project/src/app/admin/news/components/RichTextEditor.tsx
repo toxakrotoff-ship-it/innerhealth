@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import type { Editor, JSONContent } from '@tiptap/core';
+import type { Editor, Extensions, JSONContent } from '@tiptap/core';
 import { BULLET_MARKERS, type BulletMarkerType } from './editor-extensions/custom-bullet-list';
 import { ORDERED_MARKERS, type OrderedMarkerType } from './editor-extensions/custom-ordered-list';
 import { buildRichTextEditorExtensions } from './rich-text-editor-extensions';
@@ -19,12 +19,17 @@ interface RichTextEditorProps {
   uploadedMedia?: UploadedImage[];
   /** Колбэк при новой загрузке (передайте с страницы, чтобы фото не пропадали). */
   onMediaUploaded?: (img: UploadedImage) => void;
+  /** Переопределение набора расширений TipTap (например, редактор категории Sprint). */
+  extensions?: Extensions;
+  /** Дополнительные кнопки в тулбаре. */
+  renderExtraToolbar?: (editor: Editor) => ReactNode;
 }
 
 interface MenuBarProps {
   editor: ReturnType<typeof useEditor>;
   uploadedMedia: UploadedImage[];
   onMediaUploaded: (img: UploadedImage) => void;
+  renderExtraToolbar?: (editor: Editor) => ReactNode;
 }
 
 /**
@@ -46,7 +51,7 @@ function runUpdateOrderedListMarker(editor: Editor, marker: OrderedMarkerType): 
   chain.updateOrderedListMarker(marker).run();
 }
 
-function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
+function MenuBar({ editor, uploadedMedia, onMediaUploaded, renderExtraToolbar }: MenuBarProps) {
   const [bulletOpen, setBulletOpen] = useState(false);
   const [orderedOpen, setOrderedOpen] = useState(false);
   const [mediaPanelOpen, setMediaPanelOpen] = useState(false);
@@ -436,6 +441,7 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded }: MenuBarProps) {
       >
         🖼 Фото
       </button>
+      {renderExtraToolbar?.(editor)}
     </div>
         {mediaPanelOpen && (
       <div ref={mediaPanelRef}>
@@ -488,13 +494,18 @@ export function RichTextEditor({
   className = '',
   uploadedMedia: uploadedMediaProp,
   onMediaUploaded: onMediaUploadedProp,
+  extensions: extensionsProp,
+  renderExtraToolbar,
 }: RichTextEditorProps) {
   const [uploadedMediaInternal, setUploadedMediaInternal] = useState<UploadedImage[]>([]);
   const uploadedMedia = uploadedMediaProp ?? uploadedMediaInternal;
   const onMediaUploaded =
     onMediaUploadedProp ?? ((img: UploadedImage) => setUploadedMediaInternal((prev) => [...prev, img]));
 
-  const extensions = useMemo(() => buildRichTextEditorExtensions(placeholder), [placeholder]);
+  const extensions = useMemo(
+    () => extensionsProp ?? buildRichTextEditorExtensions(placeholder),
+    [extensionsProp, placeholder]
+  );
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -551,6 +562,7 @@ export function RichTextEditor({
         editor={editor}
         uploadedMedia={uploadedMedia}
         onMediaUploaded={onMediaUploaded}
+        renderExtraToolbar={renderExtraToolbar}
       />
       <div className="flex-1 min-h-0 overflow-auto rounded-b-lg">
         <EditorContent editor={editor} />

@@ -165,4 +165,65 @@ describe('TipTapDocRenderer', () => {
     expect(container.querySelector('sub')?.textContent).toBe('2')
     expect(container.querySelector('sup')?.textContent).toBe('2')
   })
+
+  it('renders categoryTextImageSection with image on the right and caption', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'categoryTextImageSection',
+          attrs: {
+            imageSrc: '/uploads/section.jpg',
+            imageAlt: 'Продукт',
+            imageCaption: 'Подпись к фото',
+            imagePosition: 'right',
+          },
+          content: [
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'Текст секции' }],
+            },
+          ],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} tone="dark" />)
+
+    expect(container.textContent).toContain('Текст секции')
+    expect(container.querySelector('img')).toHaveAttribute('src', '/uploads/section.jpg')
+    expect(container.querySelector('figcaption')?.textContent).toBe('Подпись к фото')
+    expect(container.querySelector('section')?.className).not.toMatch(/border-t/)
+  })
+
+  it('renders categoryTextImageSection with left image and top divider for second section', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        {
+          type: 'categoryTextImageSection',
+          attrs: {
+            imageSrc: '/uploads/one.jpg',
+            imagePosition: 'right',
+          },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Первая' }] }],
+        },
+        {
+          type: 'categoryTextImageSection',
+          attrs: {
+            imageSrc: '/uploads/two.jpg',
+            imagePosition: 'left',
+          },
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Вторая' }] }],
+        },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} tone="dark" />)
+    const sections = container.querySelectorAll('section')
+
+    expect(sections).toHaveLength(2)
+    expect(sections[1]?.className).toMatch(/border-t/)
+    expect(sections[1]?.firstElementChild?.className).toMatch(/order-2/)
+  })
 })

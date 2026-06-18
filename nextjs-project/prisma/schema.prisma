@@ -108,6 +108,8 @@ model Category {
   catalogTeaser         String?
   /// Длинный контент страницы категории (TipTap JSON), под сеткой товаров
   linePageBodyRichJson  Json?
+  /// Показать захардкоженные bento/spec-блоки (откат; по умолчанию только TipTap)
+  showLegacyLinePageBlocks Boolean           @default(false)
   /// Товар для верхнего блока «купить» на странице линейки (должен входить в эту категорию)
   featuredProductId     String?
   featuredProduct       Product?          @relation("CategoryFeaturedProduct", fields: [featuredProductId], references: [id], onDelete: SetNull)

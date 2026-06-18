@@ -68,6 +68,7 @@ interface CategoryFormState {
   catalogTeaser: string;
   featuredProductId: string;
   linePageBodyRichJson: JSONContent;
+  showLegacyLinePageBlocks: boolean;
 }
 
 interface CategoryRowProps {
@@ -156,6 +157,7 @@ export default function AdminCategoriesPage() {
     catalogTeaser: '',
     featuredProductId: '',
     linePageBodyRichJson: EMPTY_LINE_DOC,
+    showLegacyLinePageBlocks: false,
   });
   /** Только ошибка первичной загрузки списка — полноэкранный блок */
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export default function AdminCategoriesPage() {
 
   const migrationHint = (message: string): string =>
     /column .+ does not exist|Unknown column|P2022/i.test(message) ||
-    /catalogTeaser|linePageBodyRichJson|featuredProductId/i.test(message)
+    /catalogTeaser|linePageBodyRichJson|featuredProductId|showLegacyLinePageBlocks/i.test(message)
       ? ' Похоже, не применена миграция БД (поля категории Sprint). Выполните prisma migrate deploy.'
       : '';
 
@@ -240,6 +242,7 @@ export default function AdminCategoriesPage() {
                 linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
                   ? undefined
                   : lineDocToJsonValue(formData.linePageBodyRichJson),
+                showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
         },
@@ -257,6 +260,7 @@ export default function AdminCategoriesPage() {
         catalogTeaser: '',
         featuredProductId: '',
         linePageBodyRichJson: EMPTY_LINE_DOC,
+        showLegacyLinePageBlocks: false,
       });
       setIsCreating(false);
       setActionError(null);
@@ -287,6 +291,7 @@ export default function AdminCategoriesPage() {
                 linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
                   ? null
                   : lineDocToJsonValue(formData.linePageBodyRichJson),
+                showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
         },
@@ -305,6 +310,7 @@ export default function AdminCategoriesPage() {
         catalogTeaser: '',
         featuredProductId: '',
         linePageBodyRichJson: EMPTY_LINE_DOC,
+        showLegacyLinePageBlocks: false,
       });
       setActionError(null);
     } catch (error) {
@@ -346,6 +352,7 @@ export default function AdminCategoriesPage() {
       catalogTeaser: category.catalogTeaser ?? '',
       featuredProductId: category.featuredProductId ?? '',
       linePageBodyRichJson: lineDoc,
+      showLegacyLinePageBlocks: category.showLegacyLinePageBlocks ?? false,
     });
   };
 
@@ -362,6 +369,7 @@ export default function AdminCategoriesPage() {
       catalogTeaser: '',
       featuredProductId: '',
       linePageBodyRichJson: EMPTY_LINE_DOC,
+      showLegacyLinePageBlocks: false,
     });
   };
 
@@ -601,6 +609,28 @@ export default function AdminCategoriesPage() {
                     <p className="text-xs text-gray-500 mt-1">
                       Товар должен быть уже привязан к этой категории. Оставьте пустым, если блок не нужен.
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="flex items-start gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.showLegacyLinePageBlocks}
+                        onChange={(e) =>
+                          setFormData({ ...formData, showLegacyLinePageBlocks: e.target.checked })
+                        }
+                        className="mt-1 rounded border-gray-300"
+                      />
+                      <span>
+                        <span className="font-medium text-gray-800">
+                          Показать старые захардкоженные блоки (откат)
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          Bento-коллажи, сетки BCAA/Collagen, экраны Hydro/Nutrient/BoneBroth. По
+                          умолчанию выключено — контент только из редактора ниже.
+                        </span>
+                      </span>
+                    </label>
                   </div>
 
                   <div>

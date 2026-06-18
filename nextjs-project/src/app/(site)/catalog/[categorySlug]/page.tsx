@@ -61,11 +61,11 @@ function htmlToPlainText(html: string): string {
 
 function SprintLineTipTapBlock({ raw }: { raw: unknown }) {
   return (
-    <div className="mt-12 max-w-4xl border-t border-slate-700 pt-10">
+    <div className="mt-12 border-t border-slate-700 pt-10">
       <TipTapDocRenderer
         raw={raw}
         tone="dark"
-        className="prose-invert text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline"
+        className="prose-invert max-w-none text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline"
       />
     </div>
   )
@@ -544,67 +544,82 @@ export default async function CategoryPage({ params }: PageProps) {
             </FluidGrid>
           )}
 
-          {isSprintTheme && (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
-            <NutrientCategoryUsageComposition />
-          )}
-
-          {isSprintTheme && (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
-            <Bcaa6000CategoryInfoGrid cells={BCAA6000_INFO_CELLS} />
-          )}
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
+              <NutrientCategoryUsageComposition />
+            )}
 
           {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
+              <Bcaa6000CategoryInfoGrid cells={BCAA6000_INFO_CELLS} />
+            )}
+
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
             hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
             (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {isSprintTheme && (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
-            <Bcaa6000CategoryBenefitsBento />
-          )}
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
+              <Bcaa6000CategoryBenefitsBento />
+            )}
 
-          {isSprintTheme && categorySlug === 'hydro' && (
+          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'hydro' && (
             <HydroCategoryProductDescription content={HYDRO_CATEGORY_PRODUCT_DESCRIPTION} />
           )}
 
-          {isSprintTheme && categorySlug === 'hydro' && (
+          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'hydro' && (
             <HydroCategoryBenefitsBento />
           )}
 
           {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
             hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
             categorySlug === 'hydro' && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {isSprintTheme && categorySlug === 'collagen' && (
+          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'collagen' && (
             <CollagenCategorySpecGrid cells={COLLAGEN_SPEC_CELLS} />
           )}
 
           {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
             hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
             categorySlug === 'collagen' && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {isSprintTheme && categorySlug === 'collagen' && (
+          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'collagen' && (
             <CollagenCategoryBenefitsBento />
           )}
 
-          {isSprintTheme && (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-            <BoneBrothProductDescriptionScreen />
-          )}
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
+              <BoneBrothProductDescriptionScreen />
+            )}
 
           {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
             hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
             (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {isSprintTheme && (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-            <BoneBrothCompositionAndBenefitsScreen />
-          )}
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
+              <BoneBrothCompositionAndBenefitsScreen />
+            )}
 
           {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
             hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
             categorySlug !== 'hydro' &&
             categorySlug !== 'collagen' &&
@@ -615,9 +630,17 @@ export default async function CategoryPage({ params }: PageProps) {
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {isSprintTheme && (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
-            <NutrientCategoryBenefitsBento />
-          )}
+          {isSprintTheme &&
+            category.showLegacyLinePageBlocks &&
+            (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
+              <NutrientCategoryBenefitsBento />
+            )}
+
+          {isSprintTheme &&
+            !category.showLegacyLinePageBlocks &&
+            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
+              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
+            )}
 
           {/* Описание раздела под каталогом */}
           {hasDescription && content && (
