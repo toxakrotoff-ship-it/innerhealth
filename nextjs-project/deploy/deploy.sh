@@ -13,40 +13,12 @@ docker_compose() {
   DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" COMPOSE_DOCKER_CLI_BUILD="${COMPOSE_DOCKER_CLI_BUILD:-1}" docker compose "$@"
 }
 
-docker_disk_free_mb() {
-  df -Pm / | awk 'NR==2 { print $4 }'
-}
+# shellcheck source=ops/disk-guard.sh
+source "$(dirname "$0")/ops/disk-guard.sh"
 
-cleanup_docker_cache_if_needed() {
-  local min_free_mb="${1}"
-  local free_mb
-  free_mb="$(docker_disk_free_mb)"
-  if [ -n "${free_mb}" ] && [ "${free_mb}" -ge "${min_free_mb}" ]; then
-    log "Free disk is healthy (${free_mb}MB), skipping Docker cache cleanup."
-    return 0
-  fi
-
-  log "Low disk (${free_mb:-0}MB). Running safe Docker cleanup..."
-  docker image prune -f || true
-  docker container prune -f || true
-  docker network prune -f || true
-  docker builder prune -af --filter "until=${DOCKER_CACHE_MAX_AGE:-168h}" || true
-}
-
-require_free_disk_mb() {
-  local min_free_mb="${1}"
-  local free_mb
-  free_mb="$(docker_disk_free_mb)"
-  if [ -z "${free_mb}" ] || [ "${free_mb}" -lt "${min_free_mb}" ]; then
-    log "ERROR: only ${free_mb:-0}MB free on /, need at least ${min_free_mb}MB for Docker build."
-    log "Run docker cleanup or expand VPS disk before retrying deploy."
-    exit 1
-  fi
-  log "Free disk on /: ${free_mb}MB"
-}
-
-MIN_FREE_MB="${MIN_FREE_MB:-4096}"
-POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-2048}"
+# Очистка кэша и проверка перед сборкой: держим >= 6 ГБ свободного места на /.
+MIN_FREE_MB="${MIN_FREE_MB:-6144}"
+POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-6144}"
 NO_CACHE="${NO_CACHE:-0}"
 SKIP_VPS_SAFEGUARDS="${SKIP_VPS_SAFEGUARDS:-0}"
 
