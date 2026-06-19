@@ -15,9 +15,10 @@ docker_compose() {
 # shellcheck source=ops/disk-guard.sh
 source "$(dirname "$0")/ops/disk-guard.sh"
 
-# Очистка кэша и проверка перед сборкой: держим >= 6 ГБ свободного места на /.
-MIN_FREE_MB="${MIN_FREE_MB:-6144}"
-POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-6144}"
+# TARGET_FREE_MB — цель очистки (6 ГБ). ABSOLUTE_MIN_FREE_MB — жёсткий минимум для сборки.
+TARGET_FREE_MB="${TARGET_FREE_MB:-6144}"
+ABSOLUTE_MIN_FREE_MB="${ABSOLUTE_MIN_FREE_MB:-3072}"
+POST_BUILD_TARGET_FREE_MB="${POST_BUILD_TARGET_FREE_MB:-6144}"
 NO_CACHE="${NO_CACHE:-0}"
 SKIP_VPS_SAFEGUARDS="${SKIP_VPS_SAFEGUARDS:-0}"
 
@@ -86,8 +87,8 @@ cd "$DEPLOY_DIR"
 
 ensure_app_secrets
 
-cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
-require_free_disk_mb "${MIN_FREE_MB}"
+cleanup_docker_cache_if_needed "${TARGET_FREE_MB}"
+require_free_disk_mb "${ABSOLUTE_MIN_FREE_MB}" "${TARGET_FREE_MB}"
 
 BUILD_ARGS=()
 if [ "${NO_CACHE}" = "1" ]; then
@@ -125,7 +126,7 @@ docker_compose up -d --force-recreate nginx
 log "Removing old telegram-bot image (if still present)..."
 docker image rm nextjs-project-telegram-bot:latest || true
 
-cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
+cleanup_docker_cache_if_needed "${POST_BUILD_TARGET_FREE_MB}"
 
 ensure_vps_safeguards
 

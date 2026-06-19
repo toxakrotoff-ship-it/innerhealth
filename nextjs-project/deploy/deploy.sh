@@ -16,9 +16,10 @@ docker_compose() {
 # shellcheck source=ops/disk-guard.sh
 source "$(dirname "$0")/ops/disk-guard.sh"
 
-# Очистка кэша и проверка перед сборкой: держим >= 6 ГБ свободного места на /.
-MIN_FREE_MB="${MIN_FREE_MB:-6144}"
-POST_BUILD_MIN_FREE_MB="${POST_BUILD_MIN_FREE_MB:-6144}"
+# TARGET_FREE_MB — цель очистки (6 ГБ). ABSOLUTE_MIN_FREE_MB — жёсткий минимум для сборки.
+TARGET_FREE_MB="${TARGET_FREE_MB:-6144}"
+ABSOLUTE_MIN_FREE_MB="${ABSOLUTE_MIN_FREE_MB:-4096}"
+POST_BUILD_TARGET_FREE_MB="${POST_BUILD_TARGET_FREE_MB:-6144}"
 NO_CACHE="${NO_CACHE:-0}"
 SKIP_VPS_SAFEGUARDS="${SKIP_VPS_SAFEGUARDS:-0}"
 
@@ -80,8 +81,8 @@ git pull --ff-only origin "${CURRENT_BRANCH}"
 
 ensure_app_secrets
 
-cleanup_docker_cache_if_needed "${MIN_FREE_MB}"
-require_free_disk_mb "${MIN_FREE_MB}"
+cleanup_docker_cache_if_needed "${TARGET_FREE_MB}"
+require_free_disk_mb "${ABSOLUTE_MIN_FREE_MB}" "${TARGET_FREE_MB}"
 
 # Optional: issue/renew TLS certificate and copy it into deploy/nginx/ssl.
 # Usage example (before running this script):
@@ -147,7 +148,7 @@ docker_compose up -d
 log "Reloading nginx with current config..."
 docker_compose up -d --force-recreate nginx
 
-cleanup_docker_cache_if_needed "${POST_BUILD_MIN_FREE_MB}"
+cleanup_docker_cache_if_needed "${POST_BUILD_TARGET_FREE_MB}"
 
 log "Waiting for app to be up..."
 sleep 5
