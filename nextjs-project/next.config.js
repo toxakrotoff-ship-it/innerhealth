@@ -20,7 +20,7 @@ const nextConfig = {
   },
   experimental: {
     staleTimes: {
-      static: 300,
+      static: 30,
       dynamic: 30,
     },
   },
@@ -28,7 +28,7 @@ const nextConfig = {
     return []
   },
   async headers() {
-    const CATALOG_CACHE_CONTROL = 'public, max-age=3600, stale-while-revalidate=3600'
+    const CATALOG_CACHE_CONTROL = 'public, max-age=0, must-revalidate'
     return [
       {
         source: '/catalog',

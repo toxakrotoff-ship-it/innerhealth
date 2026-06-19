@@ -1,8 +1,8 @@
 import type { NextConfig } from 'next'
 
-/** Catalog: pre-rendered, fresh 1h, then serve stale while revalidating (ISR). */
+/** Catalog HTML: browser always revalidates; ISR still applies on the server until admin busts cache. */
 const CATALOG_CACHE_CONTROL =
-  'public, max-age=3600, stale-while-revalidate=3600'
+  'public, max-age=0, must-revalidate'
 
 /** Must match `src/app/admin/layout.tsx` (`ADMIN_SECRET_PATH` or `admin`). */
 const ADMIN_UI_PATH = process.env.ADMIN_SECRET_PATH || 'admin'
@@ -33,10 +33,10 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   experimental: {
-    /** Client-side Router Cache: keep cached page payload this long before refetching on navigation */
+    /** Shorter client router cache so storefront updates appear sooner after admin edits. */
     staleTimes: {
-      static: 300, // 5 min for static/prefetched (e.g. catalog with revalidate)
-      dynamic: 30, // 30 s for dynamic segments
+      static: 30,
+      dynamic: 30,
     },
     /** Длинный TipTap JSON в Server Actions категорий */
     serverActions: {

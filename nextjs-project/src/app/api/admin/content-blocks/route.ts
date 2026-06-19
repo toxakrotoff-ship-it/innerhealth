@@ -8,6 +8,7 @@ import {
   getAdminBlocksForPage,
   resetBlockOverrides,
 } from '@/services/content-block.service'
+import { revalidateContentBlockPage } from '@/lib/site-revalidation'
 
 function validateInternalHref(value: string): boolean {
   if (value.trim() !== value) return false
@@ -118,6 +119,8 @@ export async function PUT(request: Request) {
 
     await resetBlockOverrides(resetInputs, brandId)
     await upsertBlocks(upsertInputs, brandId)
+
+    revalidateContentBlockPage(body.page)
 
     const refreshed = await getAdminBlocksForPage(body.page, brandId)
     return NextResponse.json(refreshed)

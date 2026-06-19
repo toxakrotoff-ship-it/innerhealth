@@ -1,5 +1,5 @@
-import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { revalidateStorefrontPaths } from '@/lib/site-revalidation'
 
 export function buildCatalogRevalidationPaths(categorySlugs: readonly string[]): string[] {
   const basePaths = ['/', '/catalog']
@@ -13,6 +13,10 @@ export function buildCatalogRevalidationPaths(categorySlugs: readonly string[]):
   )
 
   return [...basePaths, ...normalizedCategoryPaths]
+}
+
+export function revalidateCategoryStorefront(categorySlugs: readonly string[]): void {
+  revalidateStorefrontPaths(buildCatalogRevalidationPaths(categorySlugs))
 }
 
 /**
@@ -36,9 +40,7 @@ export async function revalidateCatalogForProduct(options: {
   )
 
   if (categoryIds.length === 0) {
-    for (const path of buildCatalogRevalidationPaths([])) {
-      revalidatePath(path)
-    }
+    revalidateCategoryStorefront([])
     return
   }
 
@@ -47,7 +49,5 @@ export async function revalidateCatalogForProduct(options: {
     select: { slug: true },
   })
 
-  for (const path of buildCatalogRevalidationPaths(categories.map((category) => category.slug))) {
-    revalidatePath(path)
-  }
+  revalidateCategoryStorefront(categories.map((category) => category.slug))
 }

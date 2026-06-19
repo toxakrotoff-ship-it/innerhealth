@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { buildCatalogRevalidationPaths, revalidateCatalogForProduct } from '@/lib/catalog-revalidation';
+import { revalidateCatalogForProduct, revalidateCategoryStorefront } from '@/lib/catalog-revalidation';
 import { cookies, headers } from 'next/headers';
 import { z, ZodError } from 'zod';
 import { Prisma, type Category as PrismaCategory } from '@prisma/client';
@@ -212,9 +212,7 @@ async function assertFeaturedProductInCategory(
 }
 
 function revalidateCategoryPaths(slugs: string[]): void {
-  for (const path of buildCatalogRevalidationPaths(slugs)) {
-    revalidatePath(path);
-  }
+  revalidateCategoryStorefront(slugs);
 }
 
 async function ensureCategoryParentExists(
@@ -724,9 +722,8 @@ export async function updateCategoriesSortOrder(
       })
     )
   );
+  revalidateCategoryStorefront([]);
   revalidatePath('/admin/catalog');
-  revalidatePath('/');
-  revalidatePath('/catalog');
 }
 
 // Удаление категории

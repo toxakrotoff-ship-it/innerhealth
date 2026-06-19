@@ -6,8 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
 import { productBelongsToBrandScope } from '@/lib/brand/brand-scope';
-import { buildCatalogRevalidationPaths } from '@/lib/catalog-revalidation';
-import { revalidatePath } from 'next/cache';
+import { revalidateCategoryStorefront } from '@/lib/catalog-revalidation';
 
 const reorderSchema = z.object({
   categoryId: z.string().min(1, 'Category ID is required').optional().nullable(),
@@ -76,9 +75,7 @@ export async function POST(request: Request) {
           value: JSON.stringify(deduplicatedProductIds),
         },
       });
-      for (const path of buildCatalogRevalidationPaths([])) {
-        revalidatePath(path);
-      }
+      revalidateCategoryStorefront([]);
       return NextResponse.json({ ok: true });
     }
 
@@ -100,9 +97,7 @@ export async function POST(request: Request) {
         sortOrder: index,
       }))
     );
-    for (const path of buildCatalogRevalidationPaths([category.slug])) {
-      revalidatePath(path);
-    }
+    revalidateCategoryStorefront([category.slug]);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
