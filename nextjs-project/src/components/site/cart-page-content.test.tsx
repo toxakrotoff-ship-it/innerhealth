@@ -136,7 +136,7 @@ describe('CartPageContent delivery type switch', () => {
     vi.stubGlobal('fetch', fetchMock)
   })
 
-  it('uses pickup by default and keeps CDEK widget preloaded but hidden', async () => {
+  it('uses pickup by default and mounts CDEK widget only after selecting delivery', async () => {
     const user = userEvent.setup({ document })
     render(
       <CartPageContent pickupAddress="г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис Inner Health" />
@@ -146,9 +146,7 @@ describe('CartPageContent delivery type switch', () => {
     expect(pickupRadio.checked).toBe(true)
     expect(cdekRadio.checked).toBe(false)
 
-    const cdekWidget = screen.getByTestId('mock-cdek-widget')
-    expect(cdekWidget).toBeInTheDocument()
-    expect(cdekWidget).not.toBeVisible()
+    expect(screen.queryByTestId('mock-cdek-widget')).not.toBeInTheDocument()
     expect(
       screen.getByText('г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис Inner Health')
     ).toBeInTheDocument()
@@ -156,7 +154,7 @@ describe('CartPageContent delivery type switch', () => {
     await user.click(cdekRadio)
     expect(cdekRadio.checked).toBe(true)
     expect(pickupRadio.checked).toBe(false)
-    expect(cdekWidget).toBeVisible()
+    expect(screen.getByTestId('mock-cdek-widget')).toBeVisible()
   })
 
   it('renders required name field and keeps it empty by default', () => {

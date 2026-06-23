@@ -795,9 +795,8 @@ export function CartPageContent({
           </div>
         ) : null}
 
-        {!usingSavedAddress ? (
-          <div hidden={!isCdekDeliverySelected} aria-hidden={!isCdekDeliverySelected}>
-            <CdekWidget
+        {!usingSavedAddress && isCdekDeliverySelected ? (
+          <CdekWidget
               key={[
                 'cdek-widget',
                 // When user changes the selected saved address, remount the widget to force recalculation.
@@ -883,7 +882,6 @@ export function CartPageContent({
                 }
               }}
             />
-          </div>
         ) : null}
 
         {!usingSavedAddress && deliveryMethod === 'cdek_door' ? (

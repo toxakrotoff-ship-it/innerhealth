@@ -312,14 +312,14 @@ export function CdekWidget({
   }, [brandId, items, defaultLocation, selected?.door, selected?.office, rootId])
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-3">
+    <div className="cdek-widget-host min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
       <div className="text-lg font-semibold">Доставка (СДЭК)</div>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {!error && !isReady ? (
         <div className="text-sm text-gray-600">Загружаем виджет СДЭК…</div>
       ) : null}
-      <div className="relative h-[650px] w-full overflow-hidden rounded-xl">
-        <div id={rootId} className="h-full w-full" />
+      <div className="relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl sm:h-[580px] md:h-[650px]">
+        <div id={rootId} style={{ width: '100%', height: '100%' }} />
       </div>
     </div>
   )

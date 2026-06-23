@@ -2139,3 +2139,59 @@ html.preloader-skip .preloader-overlay {
     font-size: 10px;
   }
 }
+
+/*
+ * CDEK delivery widget — mobile layout fixes.
+ * The widget toggles `.mobile` when its container width is < 555px, but it initializes
+ * with width=800 until ResizeObserver runs. If mounted while hidden (display:none), some
+ * mobile browsers never update — desktop tabs + side panel get clipped. These rules mirror
+ * the widget's `.mobile` styles and constrain viewport-based widths on narrow screens.
+ */
+.cdek-widget-host {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cdek-widget-host [id^='cdek-widget-'] {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .cdek-widget-host [class*='cdek-c66dnq'] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .cdek-widget-host [class*='cdek-xvnk8x'] {
+    gap: 0.5rem !important;
+    grid-auto-flow: row !important;
+  }
+
+  .cdek-widget-host [class*='cdek-dorbss'],
+  .cdek-widget-host [class*='cdek-uv033b'] {
+    position: fixed !important;
+    inset: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    z-index: 50 !important;
+  }
+
+  .cdek-widget-host [class*='cdek-i5n42d'] {
+    right: -100% !important;
+  }
+
+  .cdek-widget-host [class*='cdek-fptd2w'],
+  .cdek-widget-host [class*='cdek-brn495'],
+  .cdek-widget-host [class*='cdek-koxl8j'],
+  .cdek-widget-host [class*='cdek-lelauu'] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
