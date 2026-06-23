@@ -2142,18 +2142,20 @@ html.preloader-skip .preloader-overlay {
 
 /*
  * CDEK delivery widget — mobile layout fixes.
- * The widget toggles `.mobile` when its container width is < 555px, but it initializes
- * with width=800 until ResizeObserver runs. If mounted while hidden (display:none), some
- * mobile browsers never update — desktop tabs + side panel get clipped. These rules mirror
- * the widget's `.mobile` styles and constrain viewport-based widths on narrow screens.
+ * Widget uses `.mobile` when container width < 555px. We also set it from React
+ * (see cdek-widget.tsx) and mirror the styles below for narrow viewports.
  */
 .cdek-widget-host {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
-.cdek-widget-host [id^='cdek-widget-'] {
+.cdek-widget-viewport {
+  position: relative;
+  isolation: isolate;
+}
+
+.cdek-widget-viewport [id^='cdek-widget-'] {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
@@ -2162,35 +2164,43 @@ html.preloader-skip .preloader-overlay {
 }
 
 @media (max-width: 767px) {
-  .cdek-widget-host [class*='cdek-c66dnq'] {
+  .cdek-widget-viewport [class*='cdek-c66dnq'] {
     width: 100% !important;
     max-width: 100% !important;
   }
 
-  .cdek-widget-host [class*='cdek-xvnk8x'] {
+  .cdek-widget-viewport [class*='cdek-xvnk8x'] {
     gap: 0.5rem !important;
     grid-auto-flow: row !important;
   }
 
-  .cdek-widget-host [class*='cdek-dorbss'],
-  .cdek-widget-host [class*='cdek-uv033b'] {
-    position: fixed !important;
+  /* PVZ / postamat info panel: full overlay inside widget, not 18rem desktop sidebar */
+  .cdek-widget-viewport [class*='cdek-dorbss']:not([class*='cdek-i5n42d']),
+  .cdek-widget-viewport [class*='cdek-uv033b']:not([class*='cdek-i5n42d']) {
+    position: absolute !important;
     inset: 0 !important;
+    left: 0 !important;
     right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     height: 100% !important;
-    z-index: 50 !important;
+    z-index: 30 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .cdek-widget-host [class*='cdek-i5n42d'] {
+  .cdek-widget-viewport [class*='cdek-i5n42d'] {
     right: -100% !important;
+    pointer-events: none !important;
   }
 
-  .cdek-widget-host [class*='cdek-fptd2w'],
-  .cdek-widget-host [class*='cdek-brn495'],
-  .cdek-widget-host [class*='cdek-koxl8j'],
-  .cdek-widget-host [class*='cdek-lelauu'] {
+  .cdek-widget-viewport [class*='cdek-fptd2w'],
+  .cdek-widget-viewport [class*='cdek-brn495'],
+  .cdek-widget-viewport [class*='cdek-koxl8j'],
+  .cdek-widget-viewport [class*='cdek-lelauu'],
+  .cdek-widget-viewport [class*='cdek-4rxe5u'] {
     width: 100% !important;
     max-width: 100% !important;
   }

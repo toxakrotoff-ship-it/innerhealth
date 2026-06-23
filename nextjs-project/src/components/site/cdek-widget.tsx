@@ -74,6 +74,33 @@ function parseWidgetInt(value: unknown): number {
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
 
+const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = 555
+
+function applyCdekWidgetMobileLayout(hostEl: HTMLElement): () => void {
+  const widgetAppRoot = hostEl.querySelector<HTMLElement>('[class*="cdek-jipbqv"]')
+  if (!widgetAppRoot) return () => undefined
+
+  const syncMobileLayout = (width: number) => {
+    const isMobile = width > 0 && width < CDEK_WIDGET_MOBILE_BREAKPOINT_PX
+    widgetAppRoot.classList.toggle('mobile', isMobile)
+    hostEl.classList.toggle('cdek-widget-host--mobile', isMobile)
+  }
+
+  const observer = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width ?? 0
+    syncMobileLayout(width)
+  })
+
+  observer.observe(hostEl)
+  syncMobileLayout(hostEl.getBoundingClientRect().width)
+
+  return () => {
+    observer.disconnect()
+    widgetAppRoot.classList.remove('mobile')
+    hostEl.classList.remove('cdek-widget-host--mobile')
+  }
+}
+
 function loadScriptOnce(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
@@ -117,6 +144,7 @@ export function CdekWidget({
   const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
   const onModeChangeRef = useRef<CdekWidgetProps['onModeChange']>(onModeChange)
   const lastKnownModeRef = useRef<'cdek_pvz' | 'cdek_door' | null>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
 
@@ -153,6 +181,7 @@ export function CdekWidget({
   useEffect(() => {
     let cancelled = false
     let removeRootInteractionListeners: (() => void) | null = null
+    let removeMobileLayoutSync: (() => void) | null = null
 
     async function run() {
       setError(null)
@@ -208,6 +237,13 @@ export function CdekWidget({
         tariffs: configJson.tariffs ?? { office: [234, 136, 138], door: [233, 137, 139] },
         onReady() {
           setIsReady(true)
+          const hostEl = hostRef.current
+          if (!hostEl) return
+          requestAnimationFrame(() => {
+            if (cancelled) return
+            removeMobileLayoutSync?.()
+            removeMobileLayoutSync = applyCdekWidgetMobileLayout(hostEl)
+          })
         },
         onCalculate(tariffs: unknown) {
           const t = tariffs as {
@@ -304,6 +340,7 @@ export function CdekWidget({
 
     return () => {
       cancelled = true
+      removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null
       const rootEl = document.getElementById(rootId)
@@ -312,13 +349,16 @@ export function CdekWidget({
   }, [brandId, items, defaultLocation, selected?.door, selected?.office, rootId])
 
   return (
-    <div className="cdek-widget-host min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6">
+    <div
+      ref={hostRef}
+      className="cdek-widget-host min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6"
+    >
       <div className="text-lg font-semibold">Доставка (СДЭК)</div>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
       {!error && !isReady ? (
         <div className="text-sm text-gray-600">Загружаем виджет СДЭК…</div>
       ) : null}
-      <div className="relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl sm:h-[580px] md:h-[650px]">
+      <div className="cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl sm:h-[580px] md:h-[650px]">
         <div id={rootId} style={{ width: '100%', height: '100%' }} />
       </div>
     </div>
