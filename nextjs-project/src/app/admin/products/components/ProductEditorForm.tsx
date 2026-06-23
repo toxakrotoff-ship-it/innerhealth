@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { CategoryMultiSelect } from './CategoryMultiSelect';
 import { getCategoriesWithCounts } from '@/app/admin/catalog/actions';
-import { sanitizeProductText } from '@/lib/sanitize-text';
+import { sanitizeProductTitleInput } from '@/lib/sanitize-text';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
 import { ProductGalleryEditor } from './ProductGalleryEditor';
 import type { ProductGalleryEditorPhoto } from './ProductGalleryEditor';
@@ -223,7 +223,7 @@ export function ProductEditorForm({
     const { name, value } = event.target;
     const sanitized =
       textFieldsToSanitize.includes(name) && typeof value === 'string'
-        ? sanitizeProductText(value)
+        ? sanitizeProductTitleInput(value)
         : value;
 
     setFormData((prev) => ({

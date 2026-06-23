@@ -89,6 +89,15 @@ function stripControlChars(value: string): string {
 }
 
 /**
+ * Санитизация названия таба при вводе в форме: убирает управляющие символы и схлопывает
+ * повторяющиеся пробелы, но не обрезает края — иначе пробел между словами пропадает при наборе.
+ */
+export function sanitizeProductTitleInput(value: string): string {
+  if (typeof value !== 'string') return '';
+  return stripControlChars(value).replace(/[ \t]{2,}/g, ' ');
+}
+
+/**
  * Очищает текст товара от разметки Тильды (info|#|…|#|, chars|#|…|#|) и HTML,
  * возвращает обычный текст с переносами; списки — строки с "- ".
  */
