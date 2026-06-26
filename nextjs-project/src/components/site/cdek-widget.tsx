@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BrandId } from '@/lib/brand/brand'
+import {
+  buildCdekWidgetItemsSignature,
+  getCdekWidgetCartLines,
+} from '@/lib/cdek-widget-items'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import type { CartLine } from '@/store/cart-store'
 
@@ -73,6 +77,7 @@ function parseWidgetInt(value: unknown): number {
 
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
+const WIDGET_INIT_TIMEOUT_MS = 45_000
 
 const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = 555
 
@@ -101,31 +106,54 @@ function applyCdekWidgetMobileLayout(hostEl: HTMLElement): () => void {
   }
 }
 
+function finishCdekScriptLoad(resolve: () => void, reject: (error: Error) => void): void {
+  if (window.CDEKWidget) {
+    resolve()
+    return
+  }
+  reject(new Error('CDEKWidget is not available after script load'))
+}
+
 function loadScriptOnce(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (window.CDEKWidget) {
+      resolve()
+      return
+    }
+
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
     if (existing) {
       if (existing.dataset.loaded === 'true') {
-        resolve()
+        finishCdekScriptLoad(resolve, reject)
         return
       }
-      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener(
+        'load',
+        () => {
+          finishCdekScriptLoad(resolve, reject)
+        },
+        { once: true }
+      )
       existing.addEventListener('error', () => reject(new Error('Failed to load script')), { once: true })
-      // if already loaded:
-      if ((existing as unknown as { readyState?: string }).readyState === 'complete') resolve()
       return
     }
-    const s = document.createElement('script')
-    s.src = src
-    s.async = true
-    s.dataset.loaded = 'false'
-    s.onload = () => {
-      s.dataset.loaded = 'true'
-      resolve()
+
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.dataset.loaded = 'false'
+    script.onload = () => {
+      script.dataset.loaded = 'true'
+      finishCdekScriptLoad(resolve, reject)
     }
-    s.onerror = () => reject(new Error(`Failed to load ${src}`))
-    document.head.appendChild(s)
+    script.onerror = () => reject(new Error(`Failed to load ${src}`))
+    document.head.appendChild(script)
   })
+}
+
+/** Warm up the UMD bundle before the user opens the widget (e.g. on cart page mount). */
+export function preloadCdekWidgetScript(): void {
+  void loadScriptOnce(WIDGET_UMD_SRC).catch(() => {})
 }
 
 export function CdekWidget({
@@ -143,10 +171,16 @@ export function CdekWidget({
   const onChooseRef = useRef<CdekWidgetProps['onChoose']>(onChoose)
   const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
   const onModeChangeRef = useRef<CdekWidgetProps['onModeChange']>(onModeChange)
+  const itemsRef = useRef(items)
   const lastKnownModeRef = useRef<'cdek_pvz' | 'cdek_door' | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const itemsSignature = useMemo(() => buildCdekWidgetItemsSignature(items), [items])
+
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
 
   useEffect(() => {
     onChooseRef.current = onChoose
@@ -155,44 +189,38 @@ export function CdekWidget({
   }, [onChoose, onCalculate, onModeChange])
 
   useEffect(() => {
-    function reinitWidget() {
-      setInstanceKey(Math.random().toString(16).slice(2))
-    }
-
     function handlePageShow(event: PageTransitionEvent) {
       // bfcache restore: scripts might be present, but widget internal state can be broken.
-      if (event.persisted) reinitWidget()
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState !== 'visible') return
-      // If the page becomes visible and the widget isn't ready, attempt re-init.
-      if (!isReady) reinitWidget()
+      if (event.persisted) {
+        setInstanceKey(Math.random().toString(16).slice(2))
+      }
     }
 
     window.addEventListener('pageshow', handlePageShow)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       window.removeEventListener('pageshow', handlePageShow)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isReady])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
+    let initTimeoutId: ReturnType<typeof setTimeout> | null = null
+    let widgetReady = false
 
     async function run() {
       setError(null)
       setIsReady(false)
+      widgetReady = false
       const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
+      const widgetItems = getCdekWidgetCartLines(itemsRef.current)
 
       const configRes = await fetch(`/api/cdek-widget/config${brandQuery}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+          items: widgetItems.map((item) => ({ productId: item.productId, quantity: item.quantity })),
         }),
       })
       const configJson = (await configRes.json()) as Partial<WidgetConfigResponse> & { error?: string }
@@ -206,6 +234,11 @@ export function CdekWidget({
       if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
         throw new Error('Yandex Maps apiKey is missing (NEXT_PUBLIC_YANDEX_MAPS_API_KEY)')
       }
+
+      initTimeoutId = setTimeout(() => {
+        if (cancelled || widgetReady) return
+        setError('Виджет СДЭК не ответил вовремя. Проверьте интернет и попробуйте ещё раз.')
+      }, WIDGET_INIT_TIMEOUT_MS)
 
       widgetRef.current = new window.CDEKWidget({
         root: rootId,
@@ -236,6 +269,12 @@ export function CdekWidget({
         goods: configJson.goods ?? [],
         tariffs: configJson.tariffs ?? { office: [234, 136, 138], door: [233, 137, 139] },
         onReady() {
+          if (cancelled) return
+          widgetReady = true
+          if (initTimeoutId != null) {
+            clearTimeout(initTimeoutId)
+            initTimeoutId = null
+          }
           setIsReady(true)
           const hostEl = hostRef.current
           if (!hostEl) return
@@ -340,13 +379,20 @@ export function CdekWidget({
 
     return () => {
       cancelled = true
+      if (initTimeoutId != null) clearTimeout(initTimeoutId)
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null
       const rootEl = document.getElementById(rootId)
       if (rootEl) rootEl.innerHTML = ''
     }
-  }, [brandId, items, defaultLocation, selected?.door, selected?.office, rootId])
+  }, [brandId, itemsSignature, defaultLocation, selected?.door, selected?.office, rootId])
+
+  function handleRetry() {
+    setError(null)
+    setIsReady(false)
+    setInstanceKey(Math.random().toString(16).slice(2))
+  }
 
   return (
     <div
@@ -354,11 +400,27 @@ export function CdekWidget({
       className="cdek-widget-host min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6"
     >
       <div className="text-lg font-semibold">Доставка (СДЭК)</div>
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
-      {!error && !isReady ? (
-        <div className="text-sm text-gray-600">Загружаем виджет СДЭК…</div>
+      {error ? (
+        <div className="space-y-2">
+          <div className="text-sm text-red-600">{error}</div>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="min-h-[44px] rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+          >
+            Повторить загрузку
+          </button>
+        </div>
       ) : null}
       <div className="cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl sm:h-[580px] md:h-[650px]">
+        {!error && !isReady ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 px-4 text-center">
+            <p className="text-sm text-gray-600">
+              Загружаем карту и пункты выдачи СДЭК…
+              <span className="mt-1 block text-xs text-gray-500">Первый запуск может занять до минуты</span>
+            </p>
+          </div>
+        ) : null}
         <div id={rootId} style={{ width: '100%', height: '100%' }} />
       </div>
     </div>

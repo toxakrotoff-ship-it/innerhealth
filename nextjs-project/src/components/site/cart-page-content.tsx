@@ -11,7 +11,7 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
-import { CdekWidget } from '@/components/site/cdek-widget'
+import { CdekWidget, preloadCdekWidgetScript } from '@/components/site/cdek-widget'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
 import { Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -131,6 +131,10 @@ export function CartPageContent({
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const mergeItemDetails = useCartStore((s) => s.mergeItemDetails)
   const setHasPromoCode = usePromoStore((s) => s.setHasPromoCode)
+
+  useEffect(() => {
+    preloadCdekWidgetScript()
+  }, [])
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
