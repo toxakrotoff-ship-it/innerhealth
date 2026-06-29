@@ -722,6 +722,16 @@ export function CartPageContent({
         reachMetrikaGoal('order_created', { totalWithDelivery, deliveryMethod })
       }
       logAnalyticsEvent({
+        type: 'CHECKOUT_START',
+        path: '/cart',
+        meta: {
+          totalWithDelivery,
+          deliveryMethod,
+          orderId: data.id,
+          paymentFlow: 'without_yookassa',
+        },
+      })
+      logAnalyticsEvent({
         type: 'ORDER_CREATED',
         path: '/cart',
         meta: {

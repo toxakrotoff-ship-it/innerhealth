@@ -3,6 +3,7 @@ import 'server-only'
 import type { BrandId } from '@/lib/brand/brand'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { createAnalyticsEvent } from '@/lib/analytics/analytics-event-service'
+import { prisma } from '@/lib/prisma'
 
 function resolveAnalyticsBrand(brandId: BrandId): 'inner' | 'sprint-power' {
   return isSprintPowerBrand(brandId) ? 'sprint-power' : 'inner'
@@ -16,11 +17,17 @@ export async function recordOrderCreatedAnalyticsEvent(
   orderId: string,
   brandId: BrandId
 ): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { createdAt: true },
+  })
+
   await createAnalyticsEvent({
     type: 'ORDER_CREATED',
     path: '/cart',
     brand: resolveAnalyticsBrand(brandId),
-    occurredAt: new Date(),
+    // Привязываем к дню оформления, а не к моменту webhook — иначе воронка «ломается» по дням.
+    occurredAt: order?.createdAt ?? new Date(),
     meta: { orderId, source: 'payment_confirmed' },
   })
 }

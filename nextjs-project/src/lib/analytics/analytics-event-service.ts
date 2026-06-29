@@ -136,8 +136,52 @@ export async function createAnalyticsEventsBatch(
   }
 
   try {
+    const orderIdsToCheck = parsedArray
+      .filter(
+        (item) =>
+          item.type === 'ORDER_CREATED' &&
+          item.meta &&
+          typeof item.meta.orderId === 'string'
+      )
+      .map((item) => item.meta!.orderId as string)
+
+    const existingOrderIds = new Set<string>()
+    if (orderIdsToCheck.length > 0) {
+      const existing = await prisma.analyticsEvent.findMany({
+        where: {
+          type: 'ORDER_CREATED',
+          OR: orderIdsToCheck.map((orderId) => ({
+            meta: { path: ['orderId'], equals: orderId },
+          })),
+        },
+        select: { meta: true },
+      })
+      for (const row of existing) {
+        const orderId =
+          row.meta && typeof row.meta === 'object' && 'orderId' in row.meta
+            ? String((row.meta as { orderId: unknown }).orderId)
+            : null
+        if (orderId) existingOrderIds.add(orderId)
+      }
+    }
+
+    const dedupedArray = parsedArray.filter((item) => {
+      if (
+        item.type === 'ORDER_CREATED' &&
+        item.meta &&
+        typeof item.meta.orderId === 'string'
+      ) {
+        return !existingOrderIds.has(item.meta.orderId)
+      }
+      return true
+    })
+
+    if (dedupedArray.length === 0) {
+      return { insertedCount: 0 }
+    }
+
     const result = await anyPrisma.analyticsEvent.createMany({
-      data: parsedArray.map((item) => ({
+      data: dedupedArray.map((item) => ({
         occurredAt: item.occurredAt,
         brand: resolveDbBrand(item.brand),
         userId: item.userId,

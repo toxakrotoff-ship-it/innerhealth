@@ -9,6 +9,10 @@ import { buildFallbackTrafficRowsByPath } from './admin-stats-helpers'
 import type { BrandId } from '@/lib/brand/brand'
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import {
+  buildFunnelStatsFromCounts,
+  fetchDistinctFunnelCounts,
+} from '@/lib/analytics/funnel-stats'
 
 export const dynamic = 'force-dynamic'
 
@@ -312,7 +316,7 @@ async function getSummary(
       totalClicksRaw,
       pageViewByPathRaw,
       clickByPathRaw,
-      funnelByTypeRaw,
+      funnelCountsRaw,
     ] = await Promise.all([
       needTrafficTotalFallback
         ? anyPrisma.analyticsEvent.count({
@@ -355,16 +359,13 @@ async function getSummary(
           })
         : Promise.resolve([] as Array<{ path?: string | null; _count: { _all: number } }>),
       needFunnelFallback
-        ? anyPrisma.analyticsEvent.groupBy({
-            by: ['type'],
-            where: {
-              type: { in: ['PAGE_VIEW', 'CART_ADD', 'CHECKOUT_START', 'ORDER_CREATED'] },
-              brand: activeBrand,
-              occurredAt: dateWhere,
-            },
-            _count: { _all: true },
+        ? fetchDistinctFunnelCounts({
+            brand: activeBrand,
+            ...(dateWhere
+              ? { occurredAtGte: dateWhere.gte, occurredAtLte: dateWhere.lte }
+              : {}),
           })
-        : Promise.resolve([] as Array<{ type?: string; _count: { _all: number } }>),
+        : Promise.resolve(new Map<string, number>()),
     ])
 
     if (needTrafficTotalFallback) {
@@ -398,30 +399,10 @@ async function getSummary(
     }
 
     if (needFunnelFallback) {
-      const funnelMap = new Map<string, number>()
-      for (const row of funnelByTypeRaw) {
-        if (!row.type) continue
-        funnelMap.set(row.type, row._count._all)
-      }
-
-      const funnelSteps: Array<'PAGE_VIEW' | 'CART_ADD' | 'CHECKOUT_START' | 'ORDER_CREATED'> = [
-        'PAGE_VIEW',
-        'CART_ADD',
-        'CHECKOUT_START',
-        'ORDER_CREATED',
-      ]
-
-      funnelTotal = funnelSteps.map((step, index) => {
-        const count = funnelMap.get(step) ?? 0
-        const next = funnelSteps[index + 1]
-        const nextCount = next ? funnelMap.get(next) ?? 0 : 0
-        const conversionToNext = next && count > 0 ? Math.min(1, nextCount / count) : null
-        return {
-          date: from ?? new Date(),
-          step,
-          count,
-          conversionToNext,
-        }
+      funnelTotal = buildFunnelStatsFromCounts({
+        brand: activeBrand,
+        date: from ?? new Date(),
+        counts: funnelCountsRaw,
       })
     }
   }

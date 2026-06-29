@@ -2,18 +2,15 @@ import 'server-only'
 
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import {
+  buildFunnelStatsFromCounts,
+  fetchDistinctFunnelCounts,
+} from '@/lib/analytics/funnel-stats'
 
 const ANALYTICS_EVENT_KEEP_LAST_DAYS = (() => {
   const raw = Number(process.env.ANALYTICS_EVENT_KEEP_LAST_DAYS ?? '7')
   return Number.isFinite(raw) && raw >= 0 ? raw : 7
 })()
-
-const FUNNEL_STEPS = [
-  { step: 'PAGE_VIEW' as const, next: 'CART_ADD' as const },
-  { step: 'CART_ADD' as const, next: 'CHECKOUT_START' as const },
-  { step: 'CHECKOUT_START' as const, next: 'ORDER_CREATED' as const },
-  { step: 'ORDER_CREATED' as const },
-]
 
 function getDateRangeForDay(date: Date): { start: Date; end: Date } {
   const start = new Date(date)
@@ -206,52 +203,37 @@ async function upsertDailyDeviceStatsForDay(start: Date, end: Date): Promise<voi
 export async function aggregateFunnelForDate(date: Date): Promise<void> {
   const { start, end } = getDateRangeForDay(date)
 
-  const counts = await prisma.analyticsEvent.groupBy({
-    by: ['brand', 'type'],
-    where: {
-      occurredAt: { gte: start, lt: end },
-    },
-    _count: {
-      _all: true,
-    },
-  })
-
-  const map = new Map<string, number>()
+  const map = await fetchDistinctFunnelCounts({ start, end })
   const brands = new Set<string>()
-  for (const row of counts) {
-    brands.add(row.brand)
-    map.set(`${row.brand}:${row.type}`, row._count._all)
+  for (const key of map.keys()) {
+    brands.add(key.split(':')[0] ?? '')
   }
 
   await prisma.$transaction(
     Array.from(brands).flatMap((brand) =>
-      FUNNEL_STEPS.map(({ step, next }) => {
-        const count = map.get(`${brand}:${step}`) ?? 0
-        const nextCount = next ? map.get(`${brand}:${next}`) ?? 0 : 0
-        const conversionToNext =
-          next && count > 0 ? Math.min(1, nextCount / count) : null
-
-        return prisma.dailyFunnelStats.upsert({
-          where: {
-            brand_date_step: {
+      buildFunnelStatsFromCounts({ brand, date: start, counts: map }).map(
+        ({ step, count, conversionToNext }) =>
+          prisma.dailyFunnelStats.upsert({
+            where: {
+              brand_date_step: {
+                brand,
+                date: start,
+                step,
+              },
+            },
+            create: {
               brand,
               date: start,
               step,
+              count,
+              conversionToNext,
             },
-          },
-          create: {
-            brand,
-            date: start,
-            step,
-            count,
-            conversionToNext,
-          },
-          update: {
-            count,
-            conversionToNext,
-          },
-        })
-      })
+            update: {
+              count,
+              conversionToNext,
+            },
+          })
+      )
     )
   )
 }
