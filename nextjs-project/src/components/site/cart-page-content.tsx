@@ -22,6 +22,7 @@ import {
 import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
+import { logCartDebug } from '@/lib/cart-debug-log'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
 import { usePromoStore } from '@/store/promo-store'
@@ -134,7 +135,16 @@ export function CartPageContent({
 
   useEffect(() => {
     preloadCdekWidgetScript()
-  }, [])
+    logCartDebug({
+      scope: 'cart',
+      event: 'page_mounted',
+      data: {
+        brandId: brandId ?? null,
+        itemsCount: items.length,
+        canUseSavedAddresses,
+      },
+    })
+  }, [brandId, canUseSavedAddresses, items.length])
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
@@ -352,12 +362,25 @@ export function CartPageContent({
   )
 
   function handlePickupModeSelect() {
+    logCartDebug({
+      scope: 'cart',
+      event: 'delivery_mode_changed',
+      data: { deliveryMethod: 'pickup' },
+    })
     setDeliveryMethod('pickup')
     setHasWidgetTariffSelection(false)
   }
 
   function handleCdekModeSelect() {
-    setDeliveryMethod((prev) => (prev === 'pickup' ? 'cdek_pvz' : prev))
+    setDeliveryMethod((prev) => {
+      const next = prev === 'pickup' ? 'cdek_pvz' : prev
+      logCartDebug({
+        scope: 'cart',
+        event: 'delivery_mode_changed',
+        data: { deliveryMethod: next, previous: prev },
+      })
+      return next
+    })
   }
 
   const resolveCdekCityCodeByName = useCallback(
@@ -367,12 +390,33 @@ export function CartPageContent({
       const brandQuery = brandId ? `&brand=${encodeURIComponent(brandId)}` : ''
       try {
         const response = await fetch(`/api/cdek/cities?q=${encodeURIComponent(query)}&size=1${brandQuery}`)
-        if (!response.ok) return null
+        if (!response.ok) {
+          logCartDebug({
+            scope: 'cart',
+            event: 'resolve_city_failed',
+            level: 'warn',
+            data: { cityName: query, status: response.status },
+          })
+          return null
+        }
         const data = (await response.json().catch(() => null)) as
           | { cities?: Array<{ code?: number; city?: string; region?: string; country?: string }> }
           | null
         const code = data?.cities?.[0]?.code
-        if (typeof code !== 'number' || !Number.isFinite(code) || code <= 0) return null
+        if (typeof code !== 'number' || !Number.isFinite(code) || code <= 0) {
+          logCartDebug({
+            scope: 'cart',
+            event: 'resolve_city_empty',
+            level: 'warn',
+            data: { cityName: query },
+          })
+          return null
+        }
+        logCartDebug({
+          scope: 'cart',
+          event: 'resolve_city_success',
+          data: { cityName: query, cityCode: code },
+        })
         setSelectedCity((prev) => ({
           code,
           city: data?.cities?.[0]?.city ?? prev?.city ?? query,
@@ -380,7 +424,14 @@ export function CartPageContent({
           country: data?.cities?.[0]?.country ?? prev?.country,
         }))
         return code
-      } catch {
+      } catch (error) {
+        logCartDebug({
+          scope: 'cart',
+          event: 'resolve_city_error',
+          level: 'error',
+          error,
+          data: { cityName: query },
+        })
         return null
       }
     },
@@ -439,22 +490,79 @@ export function CartPageContent({
       effectiveCityCode = await resolveCdekCityCodeByName(selectedCity?.city ?? formData.city)
     }
     if ((deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door') && effectiveCityCode == null) {
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_validation_failed',
+        level: 'warn',
+        data: {
+          reason: 'missing_city_code',
+          deliveryMethod,
+          selectedCity: selectedCity?.city ?? formData.city ?? null,
+        },
+      })
       setDeliveryError('Не указан код города СДЭК')
       return
     }
     if (deliveryMethod === 'cdek_pvz' && (!selectedPvz?.code || !pvzTariff?.tariffCode)) {
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_validation_failed',
+        level: 'warn',
+        data: {
+          reason: 'missing_pvz_or_tariff',
+          deliveryMethod,
+          pvzCode: selectedPvz?.code ?? null,
+          tariffCode: pvzTariff?.tariffCode ?? null,
+        },
+      })
       setDeliveryError('Выберите пункт выдачи СДЭК и дождитесь расчёта тарифа')
       return
     }
     if (deliveryMethod === 'cdek_door' && !doorTariff?.tariffCode) {
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_validation_failed',
+        level: 'warn',
+        data: {
+          reason: 'missing_door_tariff',
+          deliveryMethod,
+          tariffCode: doorTariff?.tariffCode ?? null,
+        },
+      })
       setDeliveryError('Не удалось определить тариф СДЭК до двери')
       return
     }
     if (deliveryMethod === 'cdek_door' && (!doorAddress.street.trim() || !doorAddress.house.trim())) {
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_validation_failed',
+        level: 'warn',
+        data: {
+          reason: 'missing_door_address',
+          deliveryMethod,
+          street: doorAddress.street || null,
+          house: doorAddress.house || null,
+        },
+      })
       setDeliveryError('Укажите улицу и дом для доставки СДЭК')
       return
     }
     setDeliveryError(null)
+    logCartDebug({
+      scope: 'cart',
+      event: 'checkout_submit_start',
+      data: {
+        deliveryMethod,
+        totalWithDelivery,
+        deliverySum,
+        cityCode: effectiveCityCode,
+        pvzCode: selectedPvz?.code ?? null,
+        pvzTariffCode: pvzTariff?.tariffCode ?? null,
+        doorTariffCode: doorTariff?.tariffCode ?? null,
+        usingSavedAddress,
+        itemsCount: items.length,
+      },
+    })
     const city = deliveryMethod === 'pickup'
       ? formData.city.trim() || resolvePickupCity(pickupAddress)
       : selectedCity?.city ?? formData.city
@@ -541,9 +649,28 @@ export function CartPageContent({
       })
       if (!res.ok) {
         const err = await res.json()
+        logCartDebug({
+          scope: 'cart',
+          event: 'checkout_submit_failed',
+          level: 'error',
+          data: {
+            status: res.status,
+            error: err.error ?? null,
+            deliveryMethod,
+          },
+        })
         throw new Error(err.error || 'Ошибка оформления')
       }
       const data = await res.json()
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_submit_success',
+        data: {
+          orderId: data.id ?? null,
+          hasConfirmationUrl: Boolean(data.confirmationUrl),
+          deliveryMethod,
+        },
+      })
       if (data.confirmationUrl) {
         try {
           const nonGiftItems = items
@@ -598,6 +725,12 @@ export function CartPageContent({
         },
       })
     } catch (err) {
+      logCartDebug({
+        scope: 'cart',
+        event: 'checkout_submit_error',
+        level: 'error',
+        error: err,
+      })
       alert(err instanceof Error ? err.message : 'Ошибка оформления заказа')
     } finally {
       setSubmitting(false)
@@ -821,6 +954,17 @@ export function CartPageContent({
                   : undefined
               }
               onCalculate={({ office, door }) => {
+                logCartDebug({
+                  scope: 'cart',
+                  event: 'cdek_widget_calculate',
+                  data: {
+                    hasWidgetTariffSelection,
+                    officeCount: office.length,
+                    doorCount: door.length,
+                    officeTariffCodes: office.map((t) => t.tariffCode),
+                    doorTariffCodes: door.map((t) => t.tariffCode),
+                  },
+                })
                 // До выбора пользователем — можно подставить дефолт для отображения.
                 // После `onChoose` выбранный тариф является источником истины и не должен затираться.
                 if (hasWidgetTariffSelection) return
@@ -830,9 +974,28 @@ export function CartPageContent({
                 setDoorTariff(doorTariff ?? null)
               }}
               onModeChange={(method) => {
+                logCartDebug({
+                  scope: 'cart',
+                  event: 'cdek_widget_mode_change',
+                  data: { deliveryMethod: method },
+                })
                 setDeliveryMethod(method)
               }}
               onChoose={({ deliveryMethod: method, tariff, cityCode: cdekCityCode, cityUuid, city: cdekCity, pvzCode, pvzAddress, doorAddress: doorAddr }) => {
+                logCartDebug({
+                  scope: 'cart',
+                  event: 'cdek_widget_choose',
+                  data: {
+                    deliveryMethod: method,
+                    tariffCode: tariff.tariffCode,
+                    deliverySum: tariff.deliverySum,
+                    cityCode: cdekCityCode ?? null,
+                    cityUuid: cityUuid ?? null,
+                    city: cdekCity ?? null,
+                    pvzCode: pvzCode ?? null,
+                    hasDoorAddress: Boolean(doorAddr),
+                  },
+                })
                 setHasWidgetTariffSelection(true)
                 setDeliveryMethod(method)
                 if (

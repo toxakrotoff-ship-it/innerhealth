@@ -36,6 +36,10 @@ export async function POST(request: Request) {
     const raw = await request.json()
     const parsed = bodySchema.safeParse(raw)
     if (!parsed.success) {
+      console.warn('[cdek/widget][config][invalid_body]', {
+        brandId,
+        issues: parsed.error.issues.map((issue) => issue.message),
+      })
       return NextResponse.json(
         { error: parsed.error.message },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
@@ -49,6 +53,10 @@ export async function POST(request: Request) {
     if (!senderSettingsResult.ok) {
       const errorMessage =
         'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
+      console.warn('[cdek/widget][config][sender_settings_failed]', {
+        brandId,
+        error: errorMessage,
+      })
       return NextResponse.json(
         { error: errorMessage },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
@@ -64,6 +72,7 @@ export async function POST(request: Request) {
     const productIds = Array.from(new Set(parsed.data.items.map((i) => i.productId)))
     const products = await productService.getProductsForCdek(productIds)
     const productMap = new Map(products.map((p) => [p.id, p]))
+    const missingProductIds = productIds.filter((id) => !productMap.has(id))
 
     const packages = mergeCdekPackages(
       parsed.data.items.flatMap((item) => {
@@ -94,6 +103,22 @@ export async function POST(request: Request) {
       },
     ]
 
+    if (missingProductIds.length > 0) {
+      console.warn('[cdek/widget][config][missing_products]', {
+        brandId,
+        missingProductIds,
+        requestedCount: productIds.length,
+        resolvedCount: products.length,
+      })
+    }
+
+    console.info('[cdek/widget][config][success]', {
+      brandId,
+      itemsCount: parsed.data.items.length,
+      goodsWeight: goods[0]?.weight ?? null,
+      fromCode: from.code ?? null,
+    })
+
     return NextResponse.json(
       {
         from,
@@ -109,6 +134,7 @@ export async function POST(request: Request) {
     )
   } catch (e) {
     const message = e instanceof Error ? e.message : 'CDEK widget config error'
+    console.error('[cdek/widget][config][error]', { message, error: e })
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

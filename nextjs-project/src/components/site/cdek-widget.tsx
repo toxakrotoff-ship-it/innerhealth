@@ -6,6 +6,7 @@ import {
   buildCdekWidgetItemsSignature,
   getCdekWidgetCartLines,
 } from '@/lib/cdek-widget-items'
+import { logCartDebug } from '@/lib/cart-debug-log'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import type { CartLine } from '@/store/cart-store'
 
@@ -216,6 +217,20 @@ export function CdekWidget({
       const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
       const widgetItems = getCdekWidgetCartLines(itemsRef.current)
 
+      logCartDebug({
+        scope: 'cdek-widget',
+        event: 'init_start',
+        data: {
+          brandId: brandId ?? null,
+          itemsCount: widgetItems.length,
+          itemsSignature,
+          defaultLocation: defaultLocation ?? null,
+          selectedOffice: selected?.office ?? null,
+          selectedDoor: selected?.door ?? null,
+          rootId,
+        },
+      })
+
       const configRes = await fetch(`/api/cdek-widget/config${brandQuery}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -224,19 +239,66 @@ export function CdekWidget({
         }),
       })
       const configJson = (await configRes.json()) as Partial<WidgetConfigResponse> & { error?: string }
-      if (!configRes.ok) throw new Error(configJson.error ?? 'Failed to load CDEK widget config')
+      if (!configRes.ok) {
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'config_failed',
+          level: 'error',
+          data: {
+            brandId: brandId ?? null,
+            status: configRes.status,
+            error: configJson.error ?? null,
+            itemsCount: widgetItems.length,
+          },
+        })
+        throw new Error(configJson.error ?? 'Failed to load CDEK widget config')
+      }
+
+      logCartDebug({
+        scope: 'cdek-widget',
+        event: 'config_loaded',
+        data: {
+          brandId: brandId ?? null,
+          goodsCount: configJson.goods?.length ?? 0,
+          officeTariffs: configJson.tariffs?.office ?? [],
+          doorTariffs: configJson.tariffs?.door ?? [],
+          from: configJson.from ?? null,
+        },
+      })
 
       await loadScriptOnce(WIDGET_UMD_SRC)
       if (cancelled) return
 
-      if (!window.CDEKWidget) throw new Error('CDEKWidget is not available on window')
+      if (!window.CDEKWidget) {
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'script_loaded_without_global',
+          level: 'error',
+        })
+        throw new Error('CDEKWidget is not available on window')
+      }
       const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY
       if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'missing_yandex_maps_key',
+          level: 'error',
+        })
         throw new Error('Yandex Maps apiKey is missing (NEXT_PUBLIC_YANDEX_MAPS_API_KEY)')
       }
 
       initTimeoutId = setTimeout(() => {
         if (cancelled || widgetReady) return
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'init_timeout',
+          level: 'error',
+          data: {
+            timeoutMs: WIDGET_INIT_TIMEOUT_MS,
+            brandId: brandId ?? null,
+            rootId,
+          },
+        })
         setError('Виджет СДЭК не ответил вовремя. Проверьте интернет и попробуйте ещё раз.')
       }, WIDGET_INIT_TIMEOUT_MS)
 
@@ -275,6 +337,11 @@ export function CdekWidget({
             clearTimeout(initTimeoutId)
             initTimeoutId = null
           }
+          logCartDebug({
+            scope: 'cdek-widget',
+            event: 'ready',
+            data: { brandId: brandId ?? null, rootId },
+          })
           setIsReady(true)
           const hostEl = hostRef.current
           if (!hostEl) return
@@ -289,6 +356,22 @@ export function CdekWidget({
             office?: Array<{ tariff_code: number; delivery_sum: number; period_min: number; period_max: number }>
             door?: Array<{ tariff_code: number; delivery_sum: number; period_min: number; period_max: number }>
           }
+          logCartDebug({
+            scope: 'cdek-widget',
+            event: 'calculate',
+            data: {
+              officeCount: t.office?.length ?? 0,
+              doorCount: t.door?.length ?? 0,
+              office: (t.office ?? []).map((x) => ({
+                tariffCode: x.tariff_code,
+                deliverySum: x.delivery_sum,
+              })),
+              door: (t.door ?? []).map((x) => ({
+                tariffCode: x.tariff_code,
+                deliverySum: x.delivery_sum,
+              })),
+            },
+          })
           onCalculateRef.current({
             office: (t.office ?? []).map((x) => ({
               tariffCode: x.tariff_code,
@@ -310,6 +393,25 @@ export function CdekWidget({
           onModeChangeRef.current?.(m)
           const t = tariff as Record<string, unknown>
           const a = address as Record<string, unknown>
+          logCartDebug({
+            scope: 'cdek-widget',
+            event: 'choose',
+            data: {
+              mode: m,
+              tariff: {
+                tariffCode: t.tariff_code ?? t.tariffCode ?? t.code ?? null,
+                deliverySum: t.delivery_sum ?? t.deliverySum ?? t.price ?? t.cost ?? null,
+              },
+              address: {
+                cityCode: a.city_code ?? a.code ?? null,
+                cityUuid: a.city_uuid ?? null,
+                city: a.city ?? null,
+                pvzCode: a.code ?? null,
+                pvzAddress: a.address ?? null,
+                doorAddress: a.formatted ?? null,
+              },
+            },
+          })
           const cityCodeRaw = a.city_code ?? a.code
           const cityCode =
             typeof cityCodeRaw === 'number'
@@ -374,7 +476,19 @@ export function CdekWidget({
 
     run().catch((e) => {
       if (cancelled) return
-      setError(e instanceof Error ? e.message : 'CDEK widget error')
+      const message = e instanceof Error ? e.message : 'CDEK widget error'
+      logCartDebug({
+        scope: 'cdek-widget',
+        event: 'init_failed',
+        level: 'error',
+        error: e,
+        data: {
+          brandId: brandId ?? null,
+          message,
+          rootId,
+        },
+      })
+      setError(message)
     })
 
     return () => {
@@ -389,6 +503,12 @@ export function CdekWidget({
   }, [brandId, itemsSignature, defaultLocation, selected?.door, selected?.office, rootId])
 
   function handleRetry() {
+    logCartDebug({
+      scope: 'cdek-widget',
+      event: 'retry',
+      level: 'warn',
+      data: { previousError: error },
+    })
     setError(null)
     setIsReady(false)
     setInstanceKey(Math.random().toString(16).slice(2))

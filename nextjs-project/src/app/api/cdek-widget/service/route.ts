@@ -338,6 +338,7 @@ async function handle(request: Request) {
       (await settingsService.getCdekCredentials({ brandId })) ??
       (await settingsService.getCdekCredentials({}))
     if (!cdekCredentials) {
+      console.warn('[cdek/widget][service][missing_credentials]', { brandId })
       return json({ message: 'CDEK credentials are missing in admin settings' }, { status: 400 })
     }
 
@@ -345,7 +346,13 @@ async function handle(request: Request) {
     const incoming = normalizeWidgetPayload(rawIncoming)
 
     const parsed = requestSchema.safeParse(incoming)
-    if (!parsed.success) return json({ message: 'Action is required' }, { status: 400 })
+    if (!parsed.success) {
+      console.warn('[cdek/widget][service][invalid_action]', {
+        brandId,
+        action: incoming.action ?? null,
+      })
+      return json({ message: 'Action is required' }, { status: 400 })
+    }
 
     const data: Record<string, unknown> = { ...parsed.data }
     if (parsed.data.action === 'calculate') {
@@ -389,6 +396,10 @@ async function handle(request: Request) {
       if (!senderSettingsResult.ok) {
         const message =
           'error' in senderSettingsResult ? senderSettingsResult.error : 'CDEK sender settings error'
+        console.warn('[cdek/widget][calculate][sender_settings_failed]', {
+          brandId,
+          message,
+        })
         return json({ message }, { status: 400 })
       }
 
@@ -406,12 +417,26 @@ async function handle(request: Request) {
 
     const token = await getCdekToken(cdekCredentials)
     const baseUrl = buildCdekBaseUrl(cdekCredentials.useTest)
+    console.info('[cdek/widget][service][proxy]', {
+      brandId,
+      action: parsed.data.action,
+      payload: summarizeIncomingPayload(incoming),
+    })
     const { status, text } = await proxyToCdek({
       baseUrl,
       token,
       action: parsed.data.action,
       data,
     })
+
+    if (status >= 400) {
+      console.warn('[cdek/widget][service][proxy_failed]', {
+        brandId,
+        action: parsed.data.action,
+        status,
+        responsePreview: text.slice(0, 500),
+      })
+    }
 
     return new NextResponse(text, {
       status,
@@ -423,6 +448,7 @@ async function handle(request: Request) {
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'CDEK widget service error'
+    console.error('[cdek/widget][service][error]', { message, error: e })
     return json({ message }, { status: 500 })
   }
 }
