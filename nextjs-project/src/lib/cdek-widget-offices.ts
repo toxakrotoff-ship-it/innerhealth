@@ -1,5 +1,8 @@
-const DEFAULT_OFFICES_CITY_CODE = 44
 export const OFFICES_PAGE_SIZE = 500
+export const OFFICES_MAX_PAGES = 40
+const DEFAULT_OFFICES_CITY_CODE = 44
+
+export type CdekOfficesScope = 'local' | 'country'
 
 function parseOptionalInt(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value)
@@ -47,18 +50,30 @@ export function isWidgetOfficesBulkDumpRequest(data: Record<string, unknown>): b
   return size === null || size === undefined || size === ''
 }
 
+export function resolveOfficesScope(data: Record<string, unknown>): CdekOfficesScope {
+  return data.offices_scope === 'country' ? 'country' : 'local'
+}
+
 export function normalizeWidgetOfficesQuery(
   data: Record<string, unknown>,
-  defaultCityCode: number | null
+  options?: { defaultCityCode?: number | null; officesScope?: CdekOfficesScope }
 ): Record<string, unknown> {
   const normalized: Record<string, unknown> = { ...data }
+  delete normalized.offices_scope
+
+  const officesScope = options?.officesScope ?? resolveOfficesScope(data)
 
   if (normalized.country_code == null) normalized.country_code = 'RU'
   if (normalized.type == null) normalized.type = 'PVZ'
 
-  if (!hasWidgetOfficesCityFilter(normalized)) {
+  if (
+    officesScope === 'local' &&
+    !hasWidgetOfficesCityFilter(normalized)
+  ) {
     const fallbackCityCode =
-      defaultCityCode != null && defaultCityCode > 0 ? defaultCityCode : DEFAULT_OFFICES_CITY_CODE
+      options?.defaultCityCode != null && options.defaultCityCode > 0
+        ? options.defaultCityCode
+        : DEFAULT_OFFICES_CITY_CODE
     normalized.city_code = fallbackCityCode
     normalized._injected_city_code = true
   }
@@ -98,16 +113,19 @@ export function buildOfficesCacheKey(data: Record<string, unknown>): string {
   return JSON.stringify(entries)
 }
 
-export function buildProbeOfficesResponse(fullResult: {
-  status: number
-  text: string
-  responseHeaders: Headers
-}): {
+export function buildProbeOfficesResponse(
+  fullResult: {
+    status: number
+    text: string
+    responseHeaders: Headers
+  },
+  totalElements?: number | null
+): {
   status: number
   text: string
   responseHeaders: Record<string, string>
 } {
-  const totalElements = countOfficesPayload(fullResult.text)
+  const resolvedTotal = totalElements ?? countOfficesPayload(fullResult.text)
   const probeBody = sliceOfficesPayload(fullResult.text, 0, 1)
 
   return {
@@ -115,9 +133,33 @@ export function buildProbeOfficesResponse(fullResult: {
     text: probeBody,
     responseHeaders: mergeOfficesProxyHeaders({
       upstreamHeaders: fullResult.responseHeaders,
-      totalElements,
+      totalElements: resolvedTotal,
     }),
   }
+}
+
+export async function countOfficesTotalByPaging(
+  fetchPage: (page: number) => Promise<{ text: string }>,
+  maxPages: number = OFFICES_MAX_PAGES
+): Promise<number> {
+  let total = 0
+
+  for (let page = 0; page <= maxPages; page += 1) {
+    const result = await fetchPage(page)
+    const count = countOfficesPayload(result.text)
+    total += count
+    if (count < OFFICES_PAGE_SIZE) return total
+  }
+
+  return total
+}
+
+export function readUpstreamOfficesTotal(headers: Headers): number | null {
+  const raw =
+    headers.get('x-total-elements') ?? headers.get('X-Total-Elements')
+  if (!raw) return null
+  const parsed = Number.parseInt(raw, 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
 
 export function mergeOfficesProxyHeaders(params: {

@@ -15,6 +15,8 @@ import {
   type CdekWidgetConfigResponse,
 } from '@/lib/cdek-widget-preload'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
+import { fetchCountryOfficesRaw } from '@/lib/cdek-widget-country-offices'
+import { attachCdekMapExpandListener } from '@/lib/cdek-widget-map-expand'
 import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
 
@@ -130,6 +132,7 @@ export function CdekWidget({
   const initGenerationRef = useRef(0)
   const lastSyncedItemsSignatureRef = useRef('')
   const lastKnownModeRef = useRef<'cdek_pvz' | 'cdek_door' | null>(null)
+  const countryOfficesExpandedRef = useRef(false)
   const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
@@ -174,8 +177,11 @@ export function CdekWidget({
     let cancelled = false
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
+    let removeMapExpandListener: (() => void) | null = null
+    const expandAbortController = new AbortController()
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
     let widgetReady = false
+    countryOfficesExpandedRef.current = false
     lastSyncedItemsSignatureRef.current = ''
     const initGeneration = ++initGenerationRef.current
     const initStartedAt = typeof performance !== 'undefined' ? performance.now() : 0
@@ -342,6 +348,57 @@ export function CdekWidget({
             if (cancelled) return
             removeMobileLayoutSync?.()
             removeMobileLayoutSync = applyCdekWidgetMobileLayout(hostEl)
+
+            removeMapExpandListener?.()
+            removeMapExpandListener = attachCdekMapExpandListener(hostEl, () => {
+              if (cancelled || countryOfficesExpandedRef.current) return
+              countryOfficesExpandedRef.current = true
+
+              logCartDebug({
+                scope: 'cdek-widget',
+                event: 'expand_offices_start',
+                data: { initGeneration, brandId: brandId ?? null, rootId },
+              })
+              pushDebugEvent('expand_offices_start', { initGeneration, rootId })
+
+              void fetchCountryOfficesRaw({
+                brandId,
+                signal: expandAbortController.signal,
+              })
+                .then(async (offices) => {
+                  if (cancelled || expandAbortController.signal.aborted) return
+                  const widget = widgetRef.current
+                  if (!widget?.updateOfficesRaw) return
+                  await widget.updateOfficesRaw(offices)
+                  logCartDebug({
+                    scope: 'cdek-widget',
+                    event: 'expand_offices_done',
+                    data: {
+                      initGeneration,
+                      brandId: brandId ?? null,
+                      rootId,
+                      count: offices.length,
+                    },
+                  })
+                  pushDebugEvent('expand_offices_done', {
+                    initGeneration,
+                    rootId,
+                    count: offices.length,
+                  })
+                })
+                .catch((expandError) => {
+                  if (cancelled || expandAbortController.signal.aborted) return
+                  countryOfficesExpandedRef.current = false
+                  logCartDebug({
+                    scope: 'cdek-widget',
+                    event: 'expand_offices_failed',
+                    level: 'warn',
+                    error: expandError,
+                    data: { initGeneration, brandId: brandId ?? null, rootId },
+                  })
+                  pushDebugEvent('expand_offices_failed', { initGeneration, rootId })
+                })
+            })
           })
         },
         onCalculate(tariffs: unknown) {
@@ -501,6 +558,8 @@ export function CdekWidget({
         data: { initGeneration, rootId, widgetReady },
       })
       if (initTimeoutId != null) clearTimeout(initTimeoutId)
+      expandAbortController.abort()
+      removeMapExpandListener?.()
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null

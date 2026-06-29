@@ -13,12 +13,21 @@ import {
   buildOfficesCacheKey,
   buildProbeOfficesResponse,
   countOfficesPayload,
+  countOfficesTotalByPaging,
   isWidgetOfficesProbeRequest,
   mergeOfficesProxyHeaders,
   normalizeWidgetOfficesQuery,
   OFFICES_PAGE_SIZE,
+  readUpstreamOfficesTotal,
+  resolveOfficesScope,
   sliceOfficesPayload,
 } from '@/lib/cdek-widget-offices'
+import {
+  deserializeOfficesResult,
+  readSharedOfficesCache,
+  serializeOfficesResult,
+  writeSharedOfficesCache,
+} from '@/lib/cdek-offices-cache'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
@@ -162,36 +171,15 @@ async function buildWidgetTariffAttempts(params: {
   return [{ name: mode, request: baseRequest }]
 }
 
-const OFFICES_CACHE_TTL_MS = 120_000
-
 type OfficesProxyResult = {
   status: number
   text: string
   responseHeaders: Headers
 }
 
-const officesResponseCache = new Map<string, { expiresAt: number; value: OfficesProxyResult }>()
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
-  })
-}
-
-function readOfficesCache(cacheKey: string): OfficesProxyResult | null {
-  const cached = officesResponseCache.get(cacheKey)
-  if (!cached) return null
-  if (cached.expiresAt <= Date.now()) {
-    officesResponseCache.delete(cacheKey)
-    return null
-  }
-  return cached.value
-}
-
-function writeOfficesCache(cacheKey: string, value: OfficesProxyResult): void {
-  officesResponseCache.set(cacheKey, {
-    expiresAt: Date.now() + OFFICES_CACHE_TTL_MS,
-    value,
   })
 }
 
@@ -222,13 +210,14 @@ async function proxyToCdekWithRetry(params: {
 }
 
 async function getOfficesPageResult(params: {
+  brandId: string | null
   baseUrl: string
   token: string
   data: Record<string, unknown>
 }): Promise<OfficesProxyResult> {
   const cacheKey = buildOfficesCacheKey(params.data)
-  const cached = readOfficesCache(cacheKey)
-  if (cached) return cached
+  const cached = await readSharedOfficesCache({ brandId: params.brandId, cacheKey })
+  if (cached) return deserializeOfficesResult(cached)
 
   const result = await proxyToCdekWithRetry({
     baseUrl: params.baseUrl,
@@ -236,8 +225,20 @@ async function getOfficesPageResult(params: {
     action: 'offices',
     data: params.data,
   })
-  writeOfficesCache(cacheKey, result)
+  await writeSharedOfficesCache({
+    brandId: params.brandId,
+    cacheKey,
+    value: serializeOfficesResult(result),
+  })
   return result
+}
+
+async function hasSharedOfficesPageCache(params: {
+  brandId: string | null
+  data: Record<string, unknown>
+}): Promise<boolean> {
+  const cacheKey = buildOfficesCacheKey(params.data)
+  return (await readSharedOfficesCache({ brandId: params.brandId, cacheKey })) != null
 }
 
 async function proxyToCdek(params: {
@@ -285,12 +286,17 @@ async function proxyWidgetOffices(params: {
   data: Record<string, unknown>
   defaultCityCode: number | null
 }) {
-  const normalized = normalizeWidgetOfficesQuery(params.data, params.defaultCityCode)
+  const officesScope = resolveOfficesScope(params.data)
+  const normalized = normalizeWidgetOfficesQuery(params.data, {
+    defaultCityCode: params.defaultCityCode,
+    officesScope,
+  })
 
   if (normalized._injected_city_code) {
     console.warn('[cdek/widget][offices][inject_city_code]', {
       brandId: params.brandId,
       city_code: normalized.city_code ?? null,
+      officesScope,
     })
   }
   if (normalized._converted_bulk_dump) {
@@ -298,34 +304,109 @@ async function proxyWidgetOffices(params: {
       brandId: params.brandId,
       city_code: normalized.city_code ?? null,
       size: normalized.size ?? null,
+      officesScope,
     })
   }
 
   if (isWidgetOfficesProbeRequest(normalized)) {
-    const fullQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
-    const cacheKey = buildOfficesCacheKey(fullQuery)
-    const wasCached = readOfficesCache(cacheKey) != null
-    const fullResult = await getOfficesPageResult({
+    if (officesScope === 'local') {
+      const fullQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
+      const wasCached = await hasSharedOfficesPageCache({
+        brandId: params.brandId,
+        data: fullQuery,
+      })
+      const fullResult = await getOfficesPageResult({
+        brandId: params.brandId,
+        baseUrl: params.baseUrl,
+        token: params.token,
+        data: fullQuery,
+      })
+
+      console.info('[cdek/widget][offices][probe]', {
+        brandId: params.brandId,
+        city_code: normalized.city_code ?? null,
+        totalElements: countOfficesPayload(fullResult.text),
+        cached: wasCached,
+        officesScope,
+      })
+
+      return buildProbeOfficesResponse(fullResult)
+    }
+
+    const probeQuery = { ...normalized, page: 1, size: 1 }
+    const directResult = await getOfficesPageResult({
+      brandId: params.brandId,
       baseUrl: params.baseUrl,
       token: params.token,
-      data: fullQuery,
+      data: probeQuery,
     })
+
+    const upstreamTotal = readUpstreamOfficesTotal(directResult.responseHeaders)
+    if (upstreamTotal != null) {
+      console.info('[cdek/widget][offices][probe]', {
+        brandId: params.brandId,
+        city_code: normalized.city_code ?? null,
+        totalElements: upstreamTotal,
+        source: 'upstream_header',
+      })
+
+      return {
+        status: directResult.status,
+        text: directResult.text,
+        responseHeaders: mergeOfficesProxyHeaders({
+          upstreamHeaders: directResult.responseHeaders,
+        }),
+      }
+    }
+
+    const totalElements = await countOfficesTotalByPaging(async (page) =>
+      getOfficesPageResult({
+        brandId: params.brandId,
+        baseUrl: params.baseUrl,
+        token: params.token,
+        data: { ...normalized, page, size: OFFICES_PAGE_SIZE },
+      })
+    )
+
+    const firstPageQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
+    const firstPageKey = buildOfficesCacheKey(firstPageQuery)
+    const firstPageCachedRaw = await readSharedOfficesCache({
+      brandId: params.brandId,
+      cacheKey: firstPageKey,
+    })
+    const firstPage =
+      firstPageCachedRaw != null
+        ? deserializeOfficesResult(firstPageCachedRaw)
+        : await getOfficesPageResult({
+            brandId: params.brandId,
+            baseUrl: params.baseUrl,
+            token: params.token,
+            data: firstPageQuery,
+          })
 
     console.info('[cdek/widget][offices][probe]', {
       brandId: params.brandId,
       city_code: normalized.city_code ?? null,
-      totalElements: countOfficesPayload(fullResult.text),
-      cached: wasCached,
+      totalElements,
+      cached: firstPageCachedRaw != null,
+      source: 'paged_count',
+      officesScope,
     })
 
-    return buildProbeOfficesResponse(fullResult)
+    return buildProbeOfficesResponse(firstPage, totalElements)
   }
 
   const page = typeof normalized.page === 'number' ? normalized.page : Number(normalized.page ?? 0)
   const size =
     typeof normalized.size === 'number' ? normalized.size : Number(normalized.size ?? OFFICES_PAGE_SIZE)
-  const firstPageKey = buildOfficesCacheKey({ ...normalized, page: 0, size: OFFICES_PAGE_SIZE })
-  const firstPageCached = readOfficesCache(firstPageKey)
+  const firstPageQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
+  const firstPageKey = buildOfficesCacheKey(firstPageQuery)
+  const firstPageCachedRaw = await readSharedOfficesCache({
+    brandId: params.brandId,
+    cacheKey: firstPageKey,
+  })
+  const firstPageCached =
+    firstPageCachedRaw != null ? deserializeOfficesResult(firstPageCachedRaw) : null
 
   if (firstPageCached && page > 0 && Number.isFinite(page) && Number.isFinite(size) && size > 0) {
     const totalInFirstPage = countOfficesPayload(firstPageCached.text)
@@ -342,6 +423,7 @@ async function proxyWidgetOffices(params: {
   }
 
   const result = await getOfficesPageResult({
+    brandId: params.brandId,
     baseUrl: params.baseUrl,
     token: params.token,
     data: normalized,

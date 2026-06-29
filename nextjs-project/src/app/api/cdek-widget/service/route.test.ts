@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from './route'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
+import { clearSharedOfficesCacheForTests } from '@/lib/cdek-offices-cache'
 
 vi.mock('@/services/settings.service', () => ({
   getCdekCredentials: vi.fn(),
@@ -18,6 +19,7 @@ const cdek = await import('@/lib/cdek')
 describe('normalizeWidgetPayload', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    clearSharedOfficesCacheForTests()
   })
 
   it('strips sender address and prefers sender code for widget calculate payloads', () => {
@@ -225,7 +227,7 @@ describe('normalizeWidgetPayload', () => {
     )
   })
 
-  it('injects city_code and x-total-elements for offices probe', async () => {
+  it('injects city_code and x-total-elements for local offices probe', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -273,6 +275,55 @@ describe('normalizeWidgetPayload', () => {
     expect(body).toEqual([{ code: 'A' }])
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('city_code=44')
+  })
+
+  it('loads country offices probe without city filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([{ code: 'A' }, { code: 'B' }]),
+      headers: new Headers(),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    vi.mocked(settingsService.getCdekCredentials).mockResolvedValue({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      useTest: false,
+    })
+    vi.mocked(cdek.getCdekToken).mockResolvedValue('token')
+    vi.mocked(cdek.resolveCdekSenderSettings).mockResolvedValue({
+      ok: true,
+      settings: {
+        fromPvzCode: 'MSK1',
+        fromCityCode: 44,
+        senderAddress: 'Москва',
+        senderName: 'Inner Health',
+        senderPhone: '+78120000000',
+        scopeUsed: 'global',
+        fromPostalCode: null,
+        calculatorFromLocation: { code: 44, country_code: 'RU' },
+      },
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/cdek-widget/service?brand=inner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'offices',
+          offices_scope: 'country',
+          is_handout: true,
+          page: 1,
+          size: 1,
+        }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('x-total-elements')).toBe('2')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain('city_code=')
   })
 
   it('skips calculate when destination is empty', async () => {
