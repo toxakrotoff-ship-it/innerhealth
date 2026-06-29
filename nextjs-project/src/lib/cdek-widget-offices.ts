@@ -1,0 +1,107 @@
+const DEFAULT_OFFICES_CITY_CODE = 44
+export const OFFICES_PAGE_SIZE = 500
+
+function parseOptionalInt(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value)
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number.parseInt(value.trim(), 10)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+export function hasWidgetOfficesCityFilter(data: Record<string, unknown>): boolean {
+  const cityCode = parseOptionalInt(data.city_code ?? data.cityCode ?? data.code)
+  if (cityCode != null && cityCode > 0) return true
+
+  const cityUuid =
+    typeof data.city_uuid === 'string'
+      ? data.city_uuid.trim()
+      : typeof data.cityUuid === 'string'
+        ? data.cityUuid.trim()
+        : ''
+  if (cityUuid.length > 0) return true
+
+  const postalCode =
+    typeof data.postal_code === 'string'
+      ? data.postal_code.trim()
+      : typeof data.postalCode === 'string'
+        ? data.postalCode.trim()
+        : ''
+  if (postalCode.length > 0) return true
+
+  const regionCode = parseOptionalInt(data.region_code ?? data.regionCode)
+  return regionCode != null && regionCode > 0
+}
+
+export function isWidgetOfficesProbeRequest(data: Record<string, unknown>): boolean {
+  const page = parseOptionalInt(data.page)
+  const size = parseOptionalInt(data.size)
+  return page === 1 && size === 1
+}
+
+export function isWidgetOfficesBulkDumpRequest(data: Record<string, unknown>): boolean {
+  const page = parseOptionalInt(data.page)
+  if (page !== 0) return false
+  const size = data.size
+  return size === null || size === undefined || size === ''
+}
+
+export function normalizeWidgetOfficesQuery(
+  data: Record<string, unknown>,
+  defaultCityCode: number | null
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...data }
+
+  if (normalized.country_code == null) normalized.country_code = 'RU'
+  if (normalized.type == null) normalized.type = 'PVZ'
+
+  if (!hasWidgetOfficesCityFilter(normalized)) {
+    const fallbackCityCode =
+      defaultCityCode != null && defaultCityCode > 0 ? defaultCityCode : DEFAULT_OFFICES_CITY_CODE
+    normalized.city_code = fallbackCityCode
+    normalized._injected_city_code = true
+  }
+
+  if (isWidgetOfficesBulkDumpRequest(normalized)) {
+    normalized.page = 0
+    normalized.size = OFFICES_PAGE_SIZE
+    normalized._converted_bulk_dump = true
+  }
+
+  return normalized
+}
+
+export function countOfficesPayload(text: string): number {
+  try {
+    const parsed = JSON.parse(text) as unknown
+    return Array.isArray(parsed) ? parsed.length : 0
+  } catch {
+    return 0
+  }
+}
+
+export function mergeOfficesProxyHeaders(params: {
+  upstreamHeaders: Headers
+  totalElements?: number | null
+}): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Service-Version': '3.11.1',
+    'Cache-Control': 'no-store',
+  }
+
+  const upstreamTotal =
+    params.upstreamHeaders.get('x-total-elements') ??
+    params.upstreamHeaders.get('X-Total-Elements')
+  if (upstreamTotal) {
+    headers['x-total-elements'] = upstreamTotal
+    return headers
+  }
+
+  if (params.totalElements != null && params.totalElements >= 0) {
+    headers['x-total-elements'] = String(params.totalElements)
+  }
+
+  return headers
+}

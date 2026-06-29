@@ -9,6 +9,13 @@ import {
   type ResolvedCdekSenderSettings,
 } from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
+import {
+  countOfficesPayload,
+  isWidgetOfficesProbeRequest,
+  mergeOfficesProxyHeaders,
+  normalizeWidgetOfficesQuery,
+  OFFICES_PAGE_SIZE,
+} from '@/lib/cdek-widget-offices'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
@@ -169,19 +176,15 @@ async function proxyToCdek(params: {
   }
 
   if (action === 'offices') {
-    // Widget may call `offices` before user chose a city.
-    // Provide safe defaults so CDEK can return at least some PVZ.
-    if (data.country_code == null) data.country_code = 'RU'
-    if (data.type == null) data.type = 'PVZ'
-
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(data)) {
+      if (k.startsWith('_')) continue
       if (v === undefined || v === null) continue
       qs.set(k, typeof v === 'string' ? v : JSON.stringify(v))
     }
     const res = await fetch(`${baseUrl}/deliverypoints?${qs.toString()}`, { headers })
     const text = await res.text()
-    return { status: res.status, text }
+    return { status: res.status, text, responseHeaders: res.headers }
   }
 
   headers['Content-Type'] = 'application/json'
@@ -191,7 +194,79 @@ async function proxyToCdek(params: {
     body: JSON.stringify(data),
   })
   const text = await res.text()
-  return { status: res.status, text }
+  return { status: res.status, text, responseHeaders: res.headers }
+}
+
+async function proxyWidgetOffices(params: {
+  baseUrl: string
+  token: string
+  brandId: string | null
+  data: Record<string, unknown>
+  defaultCityCode: number | null
+}) {
+  const normalized = normalizeWidgetOfficesQuery(params.data, params.defaultCityCode)
+
+  if (normalized._injected_city_code) {
+    console.warn('[cdek/widget][offices][inject_city_code]', {
+      brandId: params.brandId,
+      city_code: normalized.city_code ?? null,
+    })
+  }
+  if (normalized._converted_bulk_dump) {
+    console.warn('[cdek/widget][offices][convert_bulk_dump]', {
+      brandId: params.brandId,
+      city_code: normalized.city_code ?? null,
+      size: normalized.size ?? null,
+    })
+  }
+
+  if (isWidgetOfficesProbeRequest(normalized)) {
+    const countQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
+    const countResult = await proxyToCdek({
+      baseUrl: params.baseUrl,
+      token: params.token,
+      action: 'offices',
+      data: countQuery,
+    })
+
+    const probeResult = await proxyToCdek({
+      baseUrl: params.baseUrl,
+      token: params.token,
+      action: 'offices',
+      data: normalized,
+    })
+
+    const totalElements = countOfficesPayload(countResult.text)
+    console.info('[cdek/widget][offices][probe]', {
+      brandId: params.brandId,
+      city_code: normalized.city_code ?? null,
+      totalElements,
+    })
+
+    return {
+      status: probeResult.status,
+      text: probeResult.text,
+      responseHeaders: mergeOfficesProxyHeaders({
+        upstreamHeaders: probeResult.responseHeaders,
+        totalElements,
+      }),
+    }
+  }
+
+  const result = await proxyToCdek({
+    baseUrl: params.baseUrl,
+    token: params.token,
+    action: 'offices',
+    data: normalized,
+  })
+
+  return {
+    status: result.status,
+    text: result.text,
+    responseHeaders: mergeOfficesProxyHeaders({
+      upstreamHeaders: result.responseHeaders,
+    }),
+  }
 }
 
 async function calculateForWidgetTariffs(params: {
@@ -422,6 +497,38 @@ async function handle(request: Request) {
       action: parsed.data.action,
       payload: summarizeIncomingPayload(incoming),
     })
+
+    if (parsed.data.action === 'offices') {
+      const senderSettingsResult = await resolveCdekSenderSettings({
+        brandId,
+        overrideCredentials: cdekCredentials,
+        validatePvzCity: false,
+      })
+      const defaultCityCode =
+        senderSettingsResult.ok && senderSettingsResult.settings.fromCityCode != null
+          ? senderSettingsResult.settings.fromCityCode
+          : null
+
+      const { status, text, responseHeaders } = await proxyWidgetOffices({
+        baseUrl,
+        token,
+        brandId,
+        data,
+        defaultCityCode,
+      })
+
+      if (status >= 400) {
+        console.warn('[cdek/widget][service][proxy_failed]', {
+          brandId,
+          action: parsed.data.action,
+          status,
+          responsePreview: text.slice(0, 500),
+        })
+      }
+
+      return new NextResponse(text, { status, headers: responseHeaders })
+    }
+
     const { status, text } = await proxyToCdek({
       baseUrl,
       token,

@@ -10,28 +10,10 @@ export interface CdekWidgetConfigResponse {
 }
 
 const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
-const YANDEX_MAPS_V3_SCRIPT_ID = 'vue-yandex-maps'
-
-declare global {
-  interface Window {
-    ymaps3?: unknown
-  }
-}
 
 const configCache = new Map<string, Promise<CdekWidgetConfigResponse>>()
 let widgetScriptPromise: Promise<void> | null = null
-let yandexMapsV3Promise: Promise<void> | null = null
 let umdPreloadLinkAttached = false
-
-function getYandexMapsV3ScriptUrl(): string | null {
-  const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY?.trim()
-  if (!apiKey) return null
-
-  const url = new URL('https://api-maps.yandex.ru/v3/')
-  url.searchParams.set('lang', 'ru_RU')
-  url.searchParams.set('apikey', apiKey)
-  return url.toString()
-}
 
 function buildConfigCacheKey(brandId: BrandId | undefined, items: readonly CartLine[]): string {
   const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
@@ -119,44 +101,24 @@ export function loadCdekWidgetScriptOnce(): Promise<void> {
   return widgetScriptPromise
 }
 
-/** Preload the same Yandex Maps v3 bundle the CDEK widget uses (id: vue-yandex-maps). */
+function preconnectYandexMaps(): void {
+  if (typeof document === 'undefined') return
+
+  const origins = ['https://api-maps.yandex.ru', 'https://yastatic.net']
+  for (const href of origins) {
+    if (document.querySelector(`link[rel="preconnect"][href="${href}"]`)) continue
+    const link = document.createElement('link')
+    link.rel = 'preconnect'
+    link.href = href
+    link.crossOrigin = 'anonymous'
+    document.head.appendChild(link)
+  }
+}
+
+/** @deprecated Widget owns Yandex Maps v3 init; only preconnect here to avoid broken double-load. */
 export function preloadCdekYandexMapsV3(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve()
-  if (window.ymaps3) return Promise.resolve()
-  if (yandexMapsV3Promise) return yandexMapsV3Promise
-
-  const scriptUrl = getYandexMapsV3ScriptUrl()
-  if (!scriptUrl) return Promise.resolve()
-
-  yandexMapsV3Promise = new Promise<void>((resolve, reject) => {
-    const existing = document.getElementById(YANDEX_MAPS_V3_SCRIPT_ID) as HTMLScriptElement | null
-    if (existing) {
-      if (window.ymaps3) {
-        resolve()
-        return
-      }
-      existing.addEventListener('load', () => resolve(), { once: true })
-      existing.addEventListener('error', () => reject(new Error('Failed to preload Yandex Maps v3')), {
-        once: true,
-      })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.id = YANDEX_MAPS_V3_SCRIPT_ID
-    script.src = scriptUrl
-    script.async = true
-    script.defer = true
-    script.type = 'text/javascript'
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('Failed to preload Yandex Maps v3'))
-    document.head.appendChild(script)
-  }).catch((error) => {
-    yandexMapsV3Promise = null
-    throw error
-  })
-
-  return yandexMapsV3Promise
+  preconnectYandexMaps()
+  return Promise.resolve()
 }
 
 function attachUmdPreloadLink(): void {
@@ -183,8 +145,8 @@ export function warmupCdekWidget(params: {
   if (getCdekWidgetCartLines(params.items).length === 0) return
 
   attachUmdPreloadLink()
+  preconnectYandexMaps()
   void loadCdekWidgetScriptOnce().catch(() => {})
-  void preloadCdekYandexMapsV3().catch(() => {})
   void getCachedCdekWidgetConfig(params).catch(() => {})
 }
 
