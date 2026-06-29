@@ -13,6 +13,9 @@ const ADMIN_NO_STORE =
 const nextConfig: NextConfig = {
   output: 'standalone',
   serverExternalPackages: ['geoip-lite'],
+  outputFileTracingIncludes: {
+    '/**': ['./node_modules/geoip-lite/data/**'],
+  },
   /** При деплое за несколькими инстансами задайте DEPLOYMENT_VERSION для защиты от version skew */
   ...(process.env.DEPLOYMENT_VERSION && {
     deploymentId: process.env.DEPLOYMENT_VERSION,

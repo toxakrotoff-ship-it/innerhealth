@@ -2,6 +2,10 @@
 const nextConfig = {
   output: 'standalone',
   outputFileTracingRoot: __dirname,
+  serverExternalPackages: ['geoip-lite'],
+  outputFileTracingIncludes: {
+    '/**': ['./node_modules/geoip-lite/data/**'],
+  },
   ...(process.env.DEPLOYMENT_VERSION
     ? { deploymentId: process.env.DEPLOYMENT_VERSION }
     : {}),

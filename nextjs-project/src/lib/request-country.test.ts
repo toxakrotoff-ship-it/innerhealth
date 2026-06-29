@@ -140,6 +140,17 @@ describe('request-country', () => {
       await expect(shouldShowVpnNotice()).resolves.toBe(false)
     })
 
+    it('returns false during Next.js production build phase', async () => {
+      process.env.NEXT_PHASE = 'phase-production-build'
+      mockRequestHeaders({
+        host: 'innerhealth.ru',
+        'x-forwarded-for': '8.8.8.8',
+      })
+
+      await expect(shouldShowVpnNotice()).resolves.toBe(false)
+      expect(mockedGeoipLookup).not.toHaveBeenCalled()
+    })
+
     it('returns false when feature is disabled', async () => {
       process.env.VPN_NOTICE_ENABLED = 'off'
       process.env.NODE_ENV = 'production'

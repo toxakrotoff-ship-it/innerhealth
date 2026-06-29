@@ -87,6 +87,7 @@ RUN adduser --system --uid 1001 nextjs
 # Аналогично `public/` (картинки `/images/...`, favicon и т.д.) должен быть доступен как
 # `.next/standalone/public`, иначе запросы к статике из `public/` вернут 404.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./.next/standalone
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/geoip-lite ./.next/standalone/node_modules/geoip-lite
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 RUN mkdir -p ./.next/standalone/.next \
