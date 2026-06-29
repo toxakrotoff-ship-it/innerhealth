@@ -88,7 +88,7 @@ export function ProductCard({
   }
 
   return (
-    <ScrollReveal as="div" variant="fade-up">
+    <ScrollReveal as="div" variant="fade-up" className="h-full w-full min-w-0">
       <div
         ref={ref}
         className="group block h-full w-full perspective-[600px]"
@@ -128,7 +128,7 @@ export function ProductCard({
       >
         <div
           className={cn(
-            'relative aspect-3/4 overflow-hidden',
+            'relative aspect-3/4 overflow-hidden max-sm:aspect-square',
             'max-sm:w-[40%] max-sm:shrink-0 max-[360px]:w-[36%]',
             isSprintTheme ? 'bg-slate-800 max-sm:bg-slate-900' : 'bg-highlight-blue max-sm:bg-white'
           )}
@@ -176,17 +176,17 @@ export function ProductCard({
           )}
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 py-2 max-sm:gap-2 max-sm:py-3 2xl:px-3.5 2xl:py-2.5 3xl:px-4 3xl:py-3">
-          <div className="min-h-0 min-w-0 max-sm:flex max-sm:items-start max-sm:justify-between max-sm:gap-3">
+          <div className="min-h-0 min-w-0">
             <h3
               className={cn(
-                'min-w-0 max-w-full line-clamp-2 break-words hyphens-auto text-sm font-medium transition-colors max-sm:line-clamp-none 2xl:text-[0.95rem] 3xl:text-base',
+                'min-w-0 max-w-full line-clamp-2 break-words [overflow-wrap:anywhere] hyphens-auto text-sm font-medium transition-colors 2xl:text-[0.95rem] 3xl:text-base',
                 isSprintTheme ? 'text-slate-100 group-hover:text-[#7AA2FF]' : 'text-text group-hover:text-action-blue'
               )}
             >
               {title}
             </h3>
 
-            <div className="mt-0 flex shrink-0 items-baseline gap-2 max-sm:pt-0.5">
+            <div className="mt-1 flex shrink-0 items-baseline gap-2">
               <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
                 {price.toLocaleString('ru-RU')} ₽
               </span>

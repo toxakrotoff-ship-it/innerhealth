@@ -1203,7 +1203,7 @@ export default async function HomePage() {
                   cols4xl={6}
                   gap="6"
                   adaptiveGap={false}
-                  className="gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+                  className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
                   justify={newProducts.length < 4 ? 'center' : 'start'}
                 >
                   {newProducts.map((p, index) => (

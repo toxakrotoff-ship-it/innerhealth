@@ -120,7 +120,7 @@ export default async function SeoHubPage({ params }: PageProps) {
                 colsDesktop={4}
                 gap="6"
                 adaptiveGap={false}
-                className="gap-6"
+                className="max-sm:grid-cols-1 gap-6"
               >
                 {products.map((p, index) => (
                   <ProductCard

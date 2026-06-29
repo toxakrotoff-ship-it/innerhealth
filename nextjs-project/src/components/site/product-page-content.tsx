@@ -332,6 +332,7 @@ export function ProductPageContent({
               cols6xl={4}
               gap={4}
               adaptiveGap
+              className="max-sm:grid-cols-1"
             >
               {relatedListingItems.map((item) =>
                 item.kind === 'single' ? (
