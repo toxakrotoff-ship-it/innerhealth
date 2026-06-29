@@ -8,8 +8,10 @@ import { CartOwnerSync } from '@/components/site/cart-owner-sync'
 import { CartGiftSync } from '@/components/site/cart-gift-sync'
 import { SiteLayoutJsonLd } from './site-layout-json-ld'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
+import { VpnNoticeBanner } from '@/components/site/vpn-notice-banner'
 import { getRedirectMap } from '@/services/redirect.service'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
+import { shouldShowVpnNotice } from '@/lib/request-country'
 
 const CartDrawer = nextDynamic(
   () => import('@/components/site/cart-drawer').then((m) => ({ default: m.CartDrawer }))
@@ -98,6 +100,7 @@ export default async function SiteLayout({
   }, {})
   const hashRedirectsJson = JSON.stringify(hashRedirects).replace(/</g, '\\u003c')
   const hashRedirectScript = createHashRedirectScript(hashRedirectsJson)
+  const showVpnNotice = await shouldShowVpnNotice()
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
@@ -109,8 +112,9 @@ export default async function SiteLayout({
       <PageViewTracker />
       <CartOwnerSync />
       <CartGiftSync />
+      {showVpnNotice ? <VpnNoticeBanner brandId={activeBrand} /> : null}
       <SiteHeader brandId={activeBrand} />
-      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top))] 2xl:pt-[calc(4.5rem+env(safe-area-inset-top))] 3xl:pt-[calc(5rem+env(safe-area-inset-top))] 4xl:pt-[calc(6rem+env(safe-area-inset-top))] 5xl:pt-[calc(7rem+env(safe-area-inset-top))] 6xl:pt-[calc(8rem+env(safe-area-inset-top))]">
+      <main className="flex-1 pt-[calc(4rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))] 2xl:pt-[calc(4.5rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))] 3xl:pt-[calc(5rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))] 4xl:pt-[calc(6rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))] 5xl:pt-[calc(7rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))] 6xl:pt-[calc(8rem+env(safe-area-inset-top)+var(--vpn-notice-offset,0px))]">
         {children}
       </main>
       <SiteFooter brandId={activeBrand} />

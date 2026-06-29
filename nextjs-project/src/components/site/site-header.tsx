@@ -64,7 +64,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
     {/* Клиентский компонент для очистки поврежденных cookies */}
     <ClearInvalidSession hasInvalidSession={hasInvalidSession} />
     <header
-      className={`fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-md pt-[env(safe-area-inset-top)] ${
+      className={`site-header fixed top-[var(--vpn-notice-offset,0px)] left-0 right-0 z-50 w-full backdrop-blur-md pt-[env(safe-area-inset-top)] ${
         isSprintTheme
           ? 'border-b border-slate-800 bg-[#060A14]/85 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.85)] supports-backdrop-filter:bg-[#060A14]/80'
           : 'border-b border-slate-100 bg-white/80 shadow-[0_10px_30px_-28px_rgba(2,6,23,0.45)] supports-backdrop-filter:bg-white/80'
