@@ -10,11 +10,14 @@ import {
 } from '@/lib/cdek'
 import { normalizeWidgetPayload } from '@/lib/cdek-widget-payload'
 import {
+  buildOfficesCacheKey,
+  buildProbeOfficesResponse,
   countOfficesPayload,
   isWidgetOfficesProbeRequest,
   mergeOfficesProxyHeaders,
   normalizeWidgetOfficesQuery,
   OFFICES_PAGE_SIZE,
+  sliceOfficesPayload,
 } from '@/lib/cdek-widget-offices'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
@@ -159,6 +162,84 @@ async function buildWidgetTariffAttempts(params: {
   return [{ name: mode, request: baseRequest }]
 }
 
+const OFFICES_CACHE_TTL_MS = 120_000
+
+type OfficesProxyResult = {
+  status: number
+  text: string
+  responseHeaders: Headers
+}
+
+const officesResponseCache = new Map<string, { expiresAt: number; value: OfficesProxyResult }>()
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+function readOfficesCache(cacheKey: string): OfficesProxyResult | null {
+  const cached = officesResponseCache.get(cacheKey)
+  if (!cached) return null
+  if (cached.expiresAt <= Date.now()) {
+    officesResponseCache.delete(cacheKey)
+    return null
+  }
+  return cached.value
+}
+
+function writeOfficesCache(cacheKey: string, value: OfficesProxyResult): void {
+  officesResponseCache.set(cacheKey, {
+    expiresAt: Date.now() + OFFICES_CACHE_TTL_MS,
+    value,
+  })
+}
+
+async function proxyToCdekWithRetry(params: {
+  baseUrl: string
+  token: string
+  action: 'offices' | 'calculate'
+  data: Record<string, unknown>
+}): Promise<OfficesProxyResult> {
+  let lastResult: OfficesProxyResult | null = null
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await proxyToCdek(params)
+      lastResult = result
+      if (result.status < 500) return result
+    } catch (error) {
+      if (attempt === 2) throw error
+    }
+
+    if (attempt < 2) {
+      await sleep(250 * (attempt + 1))
+    }
+  }
+
+  if (lastResult) return lastResult
+  throw new Error('CDEK proxy failed without response')
+}
+
+async function getOfficesPageResult(params: {
+  baseUrl: string
+  token: string
+  data: Record<string, unknown>
+}): Promise<OfficesProxyResult> {
+  const cacheKey = buildOfficesCacheKey(params.data)
+  const cached = readOfficesCache(cacheKey)
+  if (cached) return cached
+
+  const result = await proxyToCdekWithRetry({
+    baseUrl: params.baseUrl,
+    token: params.token,
+    action: 'offices',
+    data: params.data,
+  })
+  writeOfficesCache(cacheKey, result)
+  return result
+}
+
 async function proxyToCdek(params: {
   baseUrl: string
   token: string
@@ -221,42 +302,48 @@ async function proxyWidgetOffices(params: {
   }
 
   if (isWidgetOfficesProbeRequest(normalized)) {
-    const countQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
-    const countResult = await proxyToCdek({
+    const fullQuery = { ...normalized, page: 0, size: OFFICES_PAGE_SIZE }
+    const cacheKey = buildOfficesCacheKey(fullQuery)
+    const wasCached = readOfficesCache(cacheKey) != null
+    const fullResult = await getOfficesPageResult({
       baseUrl: params.baseUrl,
       token: params.token,
-      action: 'offices',
-      data: countQuery,
+      data: fullQuery,
     })
 
-    const probeResult = await proxyToCdek({
-      baseUrl: params.baseUrl,
-      token: params.token,
-      action: 'offices',
-      data: normalized,
-    })
-
-    const totalElements = countOfficesPayload(countResult.text)
     console.info('[cdek/widget][offices][probe]', {
       brandId: params.brandId,
       city_code: normalized.city_code ?? null,
-      totalElements,
+      totalElements: countOfficesPayload(fullResult.text),
+      cached: wasCached,
     })
 
-    return {
-      status: probeResult.status,
-      text: probeResult.text,
-      responseHeaders: mergeOfficesProxyHeaders({
-        upstreamHeaders: probeResult.responseHeaders,
-        totalElements,
-      }),
+    return buildProbeOfficesResponse(fullResult)
+  }
+
+  const page = typeof normalized.page === 'number' ? normalized.page : Number(normalized.page ?? 0)
+  const size =
+    typeof normalized.size === 'number' ? normalized.size : Number(normalized.size ?? OFFICES_PAGE_SIZE)
+  const firstPageKey = buildOfficesCacheKey({ ...normalized, page: 0, size: OFFICES_PAGE_SIZE })
+  const firstPageCached = readOfficesCache(firstPageKey)
+
+  if (firstPageCached && page > 0 && Number.isFinite(page) && Number.isFinite(size) && size > 0) {
+    const totalInFirstPage = countOfficesPayload(firstPageCached.text)
+    const offset = page * size
+    if (offset < totalInFirstPage) {
+      return {
+        status: firstPageCached.status,
+        text: sliceOfficesPayload(firstPageCached.text, offset, size),
+        responseHeaders: mergeOfficesProxyHeaders({
+          upstreamHeaders: firstPageCached.responseHeaders,
+        }),
+      }
     }
   }
 
-  const result = await proxyToCdek({
+  const result = await getOfficesPageResult({
     baseUrl: params.baseUrl,
     token: params.token,
-    action: 'offices',
     data: normalized,
   })
 
@@ -265,6 +352,8 @@ async function proxyWidgetOffices(params: {
     text: result.text,
     responseHeaders: mergeOfficesProxyHeaders({
       upstreamHeaders: result.responseHeaders,
+      totalElements:
+        Number(normalized.page ?? 0) === 0 ? countOfficesPayload(result.text) : undefined,
     }),
   }
 }

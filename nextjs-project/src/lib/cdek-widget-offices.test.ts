@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildProbeOfficesResponse,
   countOfficesPayload,
   isWidgetOfficesBulkDumpRequest,
   isWidgetOfficesProbeRequest,
@@ -44,8 +45,15 @@ describe('cdek-widget-offices', () => {
     expect(headers['x-total-elements']).toBe('42')
   })
 
-  it('counts offices payload length', () => {
-    expect(countOfficesPayload('[{"code":"A"},{"code":"B"}]')).toBe(2)
-    expect(countOfficesPayload('not-json')).toBe(0)
+  it('builds probe response from a full offices page', () => {
+    const probe = buildProbeOfficesResponse({
+      status: 200,
+      text: JSON.stringify([{ code: 'A' }, { code: 'B' }]),
+      responseHeaders: new Headers(),
+    })
+
+    expect(probe.status).toBe(200)
+    expect(JSON.parse(probe.text)).toEqual([{ code: 'A' }])
+    expect(probe.responseHeaders['x-total-elements']).toBe('2')
   })
 })

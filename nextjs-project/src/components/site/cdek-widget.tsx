@@ -574,6 +574,49 @@ export function CdekWidget({
     setInstanceKey(Math.random().toString(16).slice(2))
   }
 
+  const handleRetryRef = useRef(handleRetry)
+  handleRetryRef.current = handleRetry
+
+  useEffect(() => {
+    if (!isReady || error) return
+    const hostEl = hostRef.current
+    if (!hostEl) return
+
+    let autoRetried = false
+
+    function hasMapLoadError(): boolean {
+      const text = hostEl?.textContent ?? ''
+      return (
+        text.includes('непредвиденная ошибка') ||
+        text.includes('при загрузке карты') ||
+        text.includes('ошибка при загрузке карты')
+      )
+    }
+
+    function tryAutoRetry() {
+      if (autoRetried || !hasMapLoadError()) return
+      autoRetried = true
+      logCartDebug({
+        scope: 'cdek-widget',
+        event: 'map_error_auto_retry',
+        level: 'warn',
+      })
+      pushDebugEvent('map_error_auto_retry')
+      handleRetryRef.current()
+    }
+
+    const observer = new MutationObserver(() => {
+      tryAutoRetry()
+    })
+
+    observer.observe(hostEl, { childList: true, subtree: true, characterData: true })
+    tryAutoRetry()
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [isReady, error, rootId])
+
   return (
     <div
       ref={hostRef}

@@ -226,20 +226,12 @@ describe('normalizeWidgetPayload', () => {
   })
 
   it('injects city_code and x-total-elements for offices probe', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify([{ code: 'A' }, { code: 'B' }]),
-        headers: new Headers(),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify([{ code: 'A' }]),
-        headers: new Headers(),
-      })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([{ code: 'A' }, { code: 'B' }]),
+      headers: new Headers(),
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     vi.mocked(settingsService.getCdekCredentials).mockResolvedValue({
@@ -277,7 +269,9 @@ describe('normalizeWidgetPayload', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('x-total-elements')).toBe('2')
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const body = await response.json()
+    expect(body).toEqual([{ code: 'A' }])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('city_code=44')
   })
 

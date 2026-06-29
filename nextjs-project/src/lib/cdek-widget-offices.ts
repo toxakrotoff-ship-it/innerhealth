@@ -81,6 +81,45 @@ export function countOfficesPayload(text: string): number {
   }
 }
 
+export function sliceOfficesPayload(text: string, start: number, count: number): string {
+  try {
+    const parsed = JSON.parse(text) as unknown
+    if (!Array.isArray(parsed)) return '[]'
+    return JSON.stringify(parsed.slice(start, start + count))
+  } catch {
+    return '[]'
+  }
+}
+
+export function buildOfficesCacheKey(data: Record<string, unknown>): string {
+  const entries = Object.entries(data)
+    .filter(([key, value]) => !key.startsWith('_') && value !== undefined && value !== null)
+    .sort(([left], [right]) => left.localeCompare(right))
+  return JSON.stringify(entries)
+}
+
+export function buildProbeOfficesResponse(fullResult: {
+  status: number
+  text: string
+  responseHeaders: Headers
+}): {
+  status: number
+  text: string
+  responseHeaders: Record<string, string>
+} {
+  const totalElements = countOfficesPayload(fullResult.text)
+  const probeBody = sliceOfficesPayload(fullResult.text, 0, 1)
+
+  return {
+    status: fullResult.status,
+    text: probeBody,
+    responseHeaders: mergeOfficesProxyHeaders({
+      upstreamHeaders: fullResult.responseHeaders,
+      totalElements,
+    }),
+  }
+}
+
 export function mergeOfficesProxyHeaders(params: {
   upstreamHeaders: Headers
   totalElements?: number | null
