@@ -79,7 +79,7 @@ function readMemoryCache(key: string): CdekOfficesCachedResult | null {
 function writeMemoryCache(key: string, value: CdekOfficesCachedResult, ttlSec: number): void {
   if (memoryStore.size >= MEMORY_MAX_ENTRIES) {
     const now = Date.now()
-    for (const [entryKey, entry] of memoryStore.entries()) {
+    for (const [entryKey, entry] of Array.from(memoryStore.entries())) {
       if (entry.expiresAt <= now) memoryStore.delete(entryKey)
       if (memoryStore.size < MEMORY_MAX_ENTRIES) break
     }
