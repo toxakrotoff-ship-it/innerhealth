@@ -53,16 +53,6 @@ export function PostCard({
             {typeLabel}
           </span>
         )}
-        <span
-          className={cn(
-            'absolute left-4 top-4 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]',
-            isSprintTheme
-              ? 'bg-white/10 text-slate-100 backdrop-blur'
-              : 'bg-white/90 text-slate-900 backdrop-blur'
-          )}
-        >
-          {typeLabel}
-        </span>
       </div>
       <div className="flex flex-1 flex-col justify-between gap-3 p-4 lg:p-5">
         <span

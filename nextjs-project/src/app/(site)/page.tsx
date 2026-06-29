@@ -894,9 +894,6 @@ function SprintPowerHome({
                           <div className="absolute inset-0 bg-linear-to-br from-[#12203D] to-[#0B1327]" />
                         )}
                         <div className="absolute inset-0 bg-linear-to-t from-[#060A14] via-[#060A14]/40 to-transparent" />
-                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-100 backdrop-blur">
-                          Новость
-                        </span>
                       </div>
                       <div className="space-y-3 p-5">
                         <p className="line-clamp-3 text-base font-semibold leading-6 text-white transition-colors group-hover:text-[#9CC0FF]">
@@ -961,9 +958,6 @@ function SprintPowerHome({
                           <div className="absolute inset-0 bg-linear-to-br from-[#E8EEFF] to-[#D6E4FF]" />
                         )}
                         <div className="absolute inset-0 bg-linear-to-t from-[#0F172A]/20 via-transparent to-transparent" />
-                        <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-900 backdrop-blur">
-                          Статья
-                        </span>
                       </div>
                       <div className="space-y-3 p-5">
                         <p className="line-clamp-3 text-base font-semibold leading-6 text-slate-900 transition-colors group-hover:text-[#1D4ED8]">
@@ -1388,10 +1382,7 @@ export default async function HomePage() {
                               />
                             </>
                           )}
-                          <div className="relative z-10 space-y-2 max-w-xs">
-                            <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
-                              Новость
-                            </span>
+                          <div className="relative z-10 max-w-xs">
                             <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
                               {post.title}
                             </span>
@@ -1461,10 +1452,7 @@ export default async function HomePage() {
                               />
                             </>
                           )}
-                          <div className="relative z-10 space-y-2 max-w-xs">
-                            <span className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold tracking-wide text-slate-900 2xl:text-sm">
-                              Статья
-                            </span>
+                          <div className="relative z-10 max-w-xs">
                             <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
                               {post.title}
                             </span>
