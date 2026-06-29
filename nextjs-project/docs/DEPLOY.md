@@ -147,6 +147,108 @@ export CERT_EMAIL="you@example.com"
 
 Nginx must forward `Host` and `X-Forwarded-Host` so the app can resolve brand by incoming domain.
 
+Для плашки VPN nginx **обязательно** должен передавать реальный IP клиента (уже настроено в `deploy/nginx/conf.d/default.conf`):
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+Без этих заголовков GeoIP в приложении не сможет определить страну.
+
+## Плашка «Выключите VPN» (GeoIP)
+
+Плашка показывается посетителям с IP **вне России** (`country !== RU`). Страна определяется в Next.js через пакет **`geoip-lite`** (база внутри npm-зависимости). Отдельные ключи MaxMind, скачивание `.mmdb` и настройка GeoIP в nginx **не нужны**.
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Назначение |
+|------------|--------------|------------|
+| `VPN_NOTICE_ENABLED` | включено | `false` / `0` / `off` — полностью отключить плашку |
+| `VPN_NOTICE_DEV_COUNTRY` | — | Только dev на `localhost`: принудительная страна, напр. `US` |
+
+В `.env` на VPS обычно ничего добавлять не нужно — плашка включена после деплоя.
+
+Чтобы отключить:
+
+```env
+VPN_NOTICE_ENABLED=false
+```
+
+### Деплой на VPS (Docker)
+
+Из каталога `nextjs-project` на сервере:
+
+```bash
+# Обычное обновление (код уже в git, миграции, пересборка app)
+./deploy/deploy-quick.sh
+```
+
+Скрипт сам:
+
+1. делает `git pull`;
+2. собирает образ `app` (в него попадает `geoip-lite`);
+3. применяет миграции Prisma;
+4. перезапускает `app`, ботов и nginx.
+
+Первый деплой или полная переустановка:
+
+```bash
+./deploy/deploy.sh
+```
+
+Проверка перед выкладкой с локальной машины (без Docker):
+
+```bash
+npm run deploy:check
+```
+
+### Проверка после деплоя
+
+1. **С российского IP** (без VPN) — плашки быть не должно.
+2. **С VPN на зарубежный выход** — жёлтая полоса вверху: «Для стабильной работы сайта выключите VPN».
+3. Кнопка **✕** скрывает плашку; выбор запоминается в `localStorage` (`vpn-notice-dismissed`) в этом браузере.
+
+Проверка логики GeoIP на сервере (в контейнере app):
+
+```bash
+docker compose exec app node -e "const g=require('geoip-lite'); console.log(g.lookup('8.8.8.8'));"
+# ожидается country: 'US'
+
+docker compose exec app node -e "const g=require('geoip-lite'); console.log(g.lookup('87.250.250.242'));"
+# ожидается country: 'RU'
+```
+
+### Локальная разработка
+
+В `.env.local`:
+
+```env
+VPN_NOTICE_DEV_COUNTRY=US
+```
+
+Запуск:
+
+```bash
+npm run dev
+```
+
+На `localhost` плашка появится без VPN. На продакшене `VPN_NOTICE_DEV_COUNTRY` игнорируется.
+
+### Ограничения
+
+- Определяется **страна IP**, а не факт VPN: выход в РФ — плашки нет; пользователь за рубежом без VPN — плашка есть.
+- Точность GeoIP ~95–99%; возможны редкие ошибки у мобильных и корпоративных сетей.
+- База `geoip-lite` обновляется при `npm update geoip-lite` и пересборке образа `app`.
+- Внутренние IP (`10.x`, `172.16–31.x`, `192.168.x`) не мапятся — плашка не показывается.
+
+### Если плашка не появляется у пользователя с VPN
+
+1. Убедитесь, что VPN выдаёт **не российский** exit IP.
+2. Проверьте, что nginx передаёт `X-Forwarded-For` / `X-Real-IP` (см. выше).
+3. Убедитесь, что в `.env` нет `VPN_NOTICE_ENABLED=false`.
+4. Пользователь мог закрыть плашку ранее — очистить `localStorage` для домена или проверить в режиме инкогнито.
+
 ## Если в dev появляются ошибки
 
 - **«Persisting failed» / SST (Turbopack):** удалите `.next` и снова запустите `npm run dev`, либо используйте `npm run dev:webpack`.
