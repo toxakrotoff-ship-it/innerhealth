@@ -11,9 +11,12 @@ describe('detectCdekWidgetModeFromText', () => {
   it('returns door mode for courier-related text', () => {
     expect(detectCdekWidgetModeFromText('Курьером до двери')).toBe('cdek_door')
     expect(detectCdekWidgetModeFromText('Доставка до двери')).toBe('cdek_door')
+    expect(detectCdekWidgetModeFromText('Курьерская доставка')).toBe('cdek_door')
   })
 
-  it('returns null for unrelated text', () => {
+  it('returns null for unrelated or overly broad text', () => {
     expect(detectCdekWidgetModeFromText('Выберите способ доставки')).toBe(null)
+    expect(detectCdekWidgetModeFromText('ул. Дверская, 10')).toBe(null)
+    expect(detectCdekWidgetModeFromText('a'.repeat(120))).toBe(null)
   })
 })

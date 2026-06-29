@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCdekWidgetItemsSignature, getCdekWidgetCartLines } from '@/lib/cdek-widget-items'
+import { buildCdekWidgetItemsSignature, buildCdekWidgetProductSetSignature, getCdekWidgetCartLines } from '@/lib/cdek-widget-items'
 
 describe('cdek-widget-items', () => {
   it('excludes gift lines from widget cart payload', () => {
@@ -28,5 +28,13 @@ describe('cdek-widget-items', () => {
     ])
 
     expect(after).toBe(before)
+  })
+
+  it('builds product set signature without quantities', () => {
+    const signature = buildCdekWidgetProductSetSignature([
+      { productId: 'b', quantity: 2 },
+      { productId: 'a', quantity: 1 },
+    ])
+    expect(signature).toBe('a|b')
   })
 })

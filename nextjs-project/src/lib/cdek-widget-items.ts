@@ -11,3 +11,11 @@ export function buildCdekWidgetItemsSignature(items: readonly CartLine[]): strin
     .sort()
     .join('|')
 }
+
+/** Product set only — quantity changes should not force a full widget remount. */
+export function buildCdekWidgetProductSetSignature(items: readonly CartLine[]): string {
+  return getCdekWidgetCartLines(items)
+    .map((item) => item.productId)
+    .sort()
+    .join('|')
+}

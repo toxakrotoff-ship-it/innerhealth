@@ -1,7 +1,25 @@
 import { NextResponse } from 'next/server'
-import { getCdekCities } from '@/lib/cdek'
+import {
+  CDEK_CIS_COUNTRY_CODES,
+  filterCdekCitiesToCis,
+  getCdekCities,
+  getCdekSuggestCities,
+} from '@/lib/cdek'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import * as settingsService from '@/services/settings.service'
+
+function normalizeCityCode(cities: ReturnType<typeof filterCdekCitiesToCis>) {
+  return cities
+    .map((c) => {
+      const row = c as unknown as Record<string, unknown>
+      const code = row.code ?? row.city_code
+      return { ...c, code: code != null ? Number(code) : undefined }
+    })
+    .filter((c) => {
+      const code = (c as unknown as { code?: number }).code
+      return code != null && code !== 0
+    })
+}
 
 /**
  * GET /api/cdek/cities
@@ -22,48 +40,49 @@ export async function GET(request: Request) {
 
     const requestedSize = size ? Math.min(100, Math.max(1, parseInt(size, 10))) : 20
     const requestedPage = page ? Math.max(0, parseInt(page, 10)) : 0
+    const cisCountryCodes = [...CDEK_CIS_COUNTRY_CODES]
 
-    let raw = await getCdekCities({
-      country_codes: ['RU'],
-      ...(q ? { city: q } : undefined),
-      ...(regionCode ? { region_code: Number(regionCode) } : undefined),
-      ...(postalCode ? { postal_code: postalCode } : undefined),
-      size: requestedSize,
-      page: requestedPage,
-      lang,
-    }, cdekCredentials)
+    let raw = q
+      ? await getCdekSuggestCities({ name: q, country_codes: cisCountryCodes }, cdekCredentials)
+      : []
 
-    /** Если по запросу ничего не вернулось — запрашиваем без фильтра city и фильтруем по названию на своей стороне */
     if (q && raw.length === 0) {
-      const all = await getCdekCities({
-        country_codes: ['RU'],
-        size: 500,
-        page: 0,
-        lang,
-      }, cdekCredentials)
-      const qLower = q.toLowerCase().trim()
-      raw = all.filter((c) => {
-        const r = c as unknown as Record<string, unknown>
-        const name = (c.city ?? r.cityName ?? r.name ?? '').toString().toLowerCase()
-        return name.includes(qLower) || name.startsWith(qLower)
-      })
+      raw = await getCdekCities(
+        {
+          country_codes: cisCountryCodes,
+          city: q,
+          ...(regionCode ? { region_code: Number(regionCode) } : undefined),
+          ...(postalCode ? { postal_code: postalCode } : undefined),
+          size: requestedSize,
+          page: requestedPage,
+          lang,
+        },
+        cdekCredentials
+      )
+    } else if (!q) {
+      raw = await getCdekCities(
+        {
+          country_codes: cisCountryCodes,
+          ...(regionCode ? { region_code: Number(regionCode) } : undefined),
+          ...(postalCode ? { postal_code: postalCode } : undefined),
+          size: requestedSize,
+          page: requestedPage,
+          lang,
+        },
+        cdekCredentials
+      )
     }
 
-    /** Нормализуем code: СДЭК может вернуть code или city_code */
-    const cities = raw
-      .map((c) => {
-        const row = c as unknown as Record<string, unknown>
-        const code = row.code ?? row.city_code
-        return { ...c, code: code != null ? Number(code) : undefined }
-      })
-      .filter((c) => {
-        const code = (c as unknown as { code?: number }).code
-        return code != null && code !== 0
-      })
-      .slice(0, requestedSize)
+    raw = filterCdekCitiesToCis(raw)
+
+    const cities = normalizeCityCode(raw).slice(0, requestedSize)
 
     if (raw.length > 0 && cities.length === 0) {
-      console.warn('CDEK cities: raw count=%d but all filtered out. First raw keys:', raw.length, Object.keys((raw[0] as unknown as Record<string, unknown>) ?? {}))
+      console.warn(
+        'CDEK cities: raw count=%d but all filtered out. First raw keys:',
+        raw.length,
+        Object.keys((raw[0] as unknown as Record<string, unknown>) ?? {})
+      )
     } else if (cities.length > 0) {
       console.info('CDEK cities: q=%s, returning %d cities', q ?? '(all)', cities.length)
     }

@@ -4,21 +4,30 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BrandId } from '@/lib/brand/brand'
 import {
   buildCdekWidgetItemsSignature,
+  buildCdekWidgetProductSetSignature,
   getCdekWidgetCartLines,
 } from '@/lib/cdek-widget-items'
 import { logCartDebug } from '@/lib/cart-debug-log'
+import {
+  getCachedCdekWidgetConfig,
+  loadCdekWidgetScriptOnce,
+  preloadCdekYandexMapsV3,
+  type CdekWidgetConfigResponse,
+} from '@/lib/cdek-widget-preload'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import type { CartLine } from '@/store/cart-store'
 
 declare global {
   interface Window {
-    CDEKWidget?: new (params: Record<string, unknown>) => {
-      addParcel?: (parcel: unknown) => void
-      resetParcels?: () => void
-      open?: () => void
-      close?: () => void
-    }
+    CDEKWidget?: new (params: Record<string, unknown>) => CdekWidgetInstance
   }
+}
+
+interface CdekWidgetInstance {
+  addParcel?: (parcel: unknown) => void
+  resetParcels?: () => void
+  open?: () => void
+  close?: () => void
 }
 
 interface CdekWidgetProps {
@@ -52,11 +61,7 @@ interface CdekWidgetProps {
   onModeChange?: (deliveryMethod: 'cdek_pvz' | 'cdek_door') => void
 }
 
-type WidgetConfigResponse = {
-  from: unknown
-  goods: Array<{ width: number; height: number; length: number; weight: number }>
-  tariffs: { office: number[]; door: number[] }
-}
+type WidgetConfigResponse = CdekWidgetConfigResponse
 
 function parseWidgetNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -77,10 +82,19 @@ function parseWidgetInt(value: unknown): number {
 }
 
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
-const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
 const WIDGET_INIT_TIMEOUT_MS = 45_000
 
 const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = 555
+
+function isCdekWidgetDebugEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_CART_DEBUG === 'true' || process.env.NODE_ENV === 'development'
+}
+
+interface CdekWidgetDebugEvent {
+  at: string
+  event: string
+  data?: Record<string, unknown>
+}
 
 function applyCdekWidgetMobileLayout(hostEl: HTMLElement): () => void {
   const widgetAppRoot = hostEl.querySelector<HTMLElement>('[class*="cdek-jipbqv"]')
@@ -107,55 +121,7 @@ function applyCdekWidgetMobileLayout(hostEl: HTMLElement): () => void {
   }
 }
 
-function finishCdekScriptLoad(resolve: () => void, reject: (error: Error) => void): void {
-  if (window.CDEKWidget) {
-    resolve()
-    return
-  }
-  reject(new Error('CDEKWidget is not available after script load'))
-}
-
-function loadScriptOnce(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (window.CDEKWidget) {
-      resolve()
-      return
-    }
-
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
-    if (existing) {
-      if (existing.dataset.loaded === 'true') {
-        finishCdekScriptLoad(resolve, reject)
-        return
-      }
-      existing.addEventListener(
-        'load',
-        () => {
-          finishCdekScriptLoad(resolve, reject)
-        },
-        { once: true }
-      )
-      existing.addEventListener('error', () => reject(new Error('Failed to load script')), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = src
-    script.async = true
-    script.dataset.loaded = 'false'
-    script.onload = () => {
-      script.dataset.loaded = 'true'
-      finishCdekScriptLoad(resolve, reject)
-    }
-    script.onerror = () => reject(new Error(`Failed to load ${src}`))
-    document.head.appendChild(script)
-  })
-}
-
-/** Warm up the UMD bundle before the user opens the widget (e.g. on cart page mount). */
-export function preloadCdekWidgetScript(): void {
-  void loadScriptOnce(WIDGET_UMD_SRC).catch(() => {})
-}
+export { warmupCdekWidget, preloadCdekWidgetScript } from '@/lib/cdek-widget-preload'
 
 export function CdekWidget({
   brandId,
@@ -168,16 +134,29 @@ export function CdekWidget({
 }: CdekWidgetProps) {
   const [instanceKey, setInstanceKey] = useState<string>(() => Math.random().toString(16).slice(2))
   const rootId = useMemo(() => `cdek-widget-${instanceKey}`, [instanceKey])
-  const widgetRef = useRef<unknown>(null)
+  const widgetRef = useRef<CdekWidgetInstance | null>(null)
   const onChooseRef = useRef<CdekWidgetProps['onChoose']>(onChoose)
   const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
   const onModeChangeRef = useRef<CdekWidgetProps['onModeChange']>(onModeChange)
   const itemsRef = useRef(items)
+  const initGenerationRef = useRef(0)
+  const lastSyncedItemsSignatureRef = useRef('')
   const lastKnownModeRef = useRef<'cdek_pvz' | 'cdek_door' | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [debugEvents, setDebugEvents] = useState<CdekWidgetDebugEvent[]>([])
+  const [debugMode, setDebugMode] = useState<'cdek_pvz' | 'cdek_door' | null>(null)
   const itemsSignature = useMemo(() => buildCdekWidgetItemsSignature(items), [items])
+  const productSetSignature = useMemo(() => buildCdekWidgetProductSetSignature(items), [items])
+
+  const pushDebugEvent = (event: string, data?: Record<string, unknown>) => {
+    if (!isCdekWidgetDebugEnabled()) return
+    setDebugEvents((prev) => [
+      ...prev.slice(-11),
+      { at: new Date().toISOString(), event, data },
+    ])
+  }
 
   useEffect(() => {
     itemsRef.current = items
@@ -209,21 +188,32 @@ export function CdekWidget({
     let removeMobileLayoutSync: (() => void) | null = null
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
     let widgetReady = false
+    lastSyncedItemsSignatureRef.current = ''
+    const initGeneration = ++initGenerationRef.current
+    const initStartedAt = typeof performance !== 'undefined' ? performance.now() : 0
 
     async function run() {
       setError(null)
       setIsReady(false)
       widgetReady = false
-      const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
       const widgetItems = getCdekWidgetCartLines(itemsRef.current)
 
+      pushDebugEvent('init_start', {
+        initGeneration,
+        brandId: brandId ?? null,
+        itemsSignature,
+        productSetSignature,
+        rootId,
+      })
       logCartDebug({
         scope: 'cdek-widget',
         event: 'init_start',
         data: {
+          initGeneration,
           brandId: brandId ?? null,
           itemsCount: widgetItems.length,
           itemsSignature,
+          productSetSignature,
           defaultLocation: defaultLocation ?? null,
           selectedOffice: selected?.office ?? null,
           selectedDoor: selected?.door ?? null,
@@ -231,33 +221,42 @@ export function CdekWidget({
         },
       })
 
-      const configRes = await fetch(`/api/cdek-widget/config${brandQuery}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: widgetItems.map((item) => ({ productId: item.productId, quantity: item.quantity })),
-        }),
-      })
-      const configJson = (await configRes.json()) as Partial<WidgetConfigResponse> & { error?: string }
-      if (!configRes.ok) {
+      let configJson: WidgetConfigResponse
+      try {
+        ;[configJson] = await Promise.all([
+          getCachedCdekWidgetConfig({ brandId, items: itemsRef.current }),
+          loadCdekWidgetScriptOnce(),
+          preloadCdekYandexMapsV3(),
+        ])
+        if (initStartedAt > 0) {
+          pushDebugEvent('assets_ready', {
+            initGeneration,
+            ms: Math.round(performance.now() - initStartedAt),
+          })
+        }
+      } catch (configError) {
+        const message =
+          configError instanceof Error ? configError.message : 'Failed to load CDEK widget config'
         logCartDebug({
           scope: 'cdek-widget',
           event: 'config_failed',
           level: 'error',
           data: {
+            initGeneration,
             brandId: brandId ?? null,
-            status: configRes.status,
-            error: configJson.error ?? null,
+            message,
             itemsCount: widgetItems.length,
           },
         })
-        throw new Error(configJson.error ?? 'Failed to load CDEK widget config')
+        throw configError
       }
+      if (cancelled) return
 
       logCartDebug({
         scope: 'cdek-widget',
         event: 'config_loaded',
         data: {
+          initGeneration,
           brandId: brandId ?? null,
           goodsCount: configJson.goods?.length ?? 0,
           officeTariffs: configJson.tariffs?.office ?? [],
@@ -265,9 +264,6 @@ export function CdekWidget({
           from: configJson.from ?? null,
         },
       })
-
-      await loadScriptOnce(WIDGET_UMD_SRC)
-      if (cancelled) return
 
       if (!window.CDEKWidget) {
         logCartDebug({
@@ -294,11 +290,13 @@ export function CdekWidget({
           event: 'init_timeout',
           level: 'error',
           data: {
+            initGeneration,
             timeoutMs: WIDGET_INIT_TIMEOUT_MS,
             brandId: brandId ?? null,
             rootId,
           },
         })
+        pushDebugEvent('init_timeout', { initGeneration, rootId })
         setError('Виджет СДЭК не ответил вовремя. Проверьте интернет и попробуйте ещё раз.')
       }, WIDGET_INIT_TIMEOUT_MS)
 
@@ -310,7 +308,8 @@ export function CdekWidget({
         // and the backend will not receive `action`.
         servicePath: '/api/cdek-widget/service',
         canChoose: true,
-        debug: false,
+        debug: isCdekWidgetDebugEnabled(),
+        fixBounds: 'country',
         from: configJson.from,
         defaultLocation:
           defaultLocation?.trim().length
@@ -340,8 +339,14 @@ export function CdekWidget({
           logCartDebug({
             scope: 'cdek-widget',
             event: 'ready',
-            data: { brandId: brandId ?? null, rootId },
+            data: { initGeneration, brandId: brandId ?? null, rootId },
           })
+          pushDebugEvent('ready', {
+            initGeneration,
+            rootId,
+            ms: initStartedAt > 0 ? Math.round(performance.now() - initStartedAt) : null,
+          })
+          lastSyncedItemsSignatureRef.current = itemsSignature
           setIsReady(true)
           const hostEl = hostRef.current
           if (!hostEl) return
@@ -390,6 +395,7 @@ export function CdekWidget({
         onChoose(mode: unknown, tariff: unknown, address: unknown) {
           const m = mode === 'office' ? 'cdek_pvz' : 'cdek_door'
           lastKnownModeRef.current = m
+          setDebugMode(m)
           onModeChangeRef.current?.(m)
           const t = tariff as Record<string, unknown>
           const a = address as Record<string, unknown>
@@ -446,17 +452,22 @@ export function CdekWidget({
       const syncMode = (mode: 'cdek_pvz' | 'cdek_door') => {
         if (lastKnownModeRef.current === mode) return
         lastKnownModeRef.current = mode
+        setDebugMode(mode)
         onModeChangeRef.current?.(mode)
       }
 
       const detectModeFromEvent = (event: Event): 'cdek_pvz' | 'cdek_door' | null => {
-        const eventPath = typeof event.composedPath === 'function' ? event.composedPath() : []
-        for (const node of eventPath) {
-          if (!(node instanceof HTMLElement)) continue
-          if (!rootEl.contains(node)) continue
-          const mode = detectCdekWidgetModeFromText(node.textContent ?? '')
-          if (mode) return mode
-          if (node === rootEl) break
+        const target = event.target
+        if (!(target instanceof HTMLElement) || !rootEl.contains(target)) return null
+
+        let element: HTMLElement | null = target
+        for (let depth = 0; depth < 4 && element && rootEl.contains(element); depth += 1) {
+          const label = (element.innerText ?? '').trim()
+          if (label.length > 0 && label.length <= 80) {
+            const mode = detectCdekWidgetModeFromText(label)
+            if (mode) return mode
+          }
+          element = element.parentElement
         }
         return null
       }
@@ -483,16 +494,24 @@ export function CdekWidget({
         level: 'error',
         error: e,
         data: {
+          initGeneration,
           brandId: brandId ?? null,
           message,
           rootId,
         },
       })
+      pushDebugEvent('init_failed', { initGeneration, message, rootId })
       setError(message)
     })
 
     return () => {
       cancelled = true
+      pushDebugEvent('cleanup', { initGeneration, rootId })
+      logCartDebug({
+        scope: 'cdek-widget',
+        event: 'cleanup',
+        data: { initGeneration, rootId, widgetReady },
+      })
       if (initTimeoutId != null) clearTimeout(initTimeoutId)
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
@@ -500,7 +519,60 @@ export function CdekWidget({
       const rootEl = document.getElementById(rootId)
       if (rootEl) rootEl.innerHTML = ''
     }
-  }, [brandId, itemsSignature, defaultLocation, selected?.door, selected?.office, rootId])
+  }, [brandId, productSetSignature, defaultLocation, selected?.door, selected?.office, rootId])
+
+  useEffect(() => {
+    if (!isReady) return
+    if (lastSyncedItemsSignatureRef.current === itemsSignature) return
+
+    const widget = widgetRef.current
+    if (!widget?.resetParcels || !widget.addParcel) return
+
+    let cancelled = false
+
+    async function syncParcels() {
+      try {
+        const configJson = await getCachedCdekWidgetConfig({ brandId, items: itemsRef.current })
+        if (cancelled) return
+
+        widget.resetParcels?.()
+        for (const good of configJson.goods ?? []) {
+          widget.addParcel?.(good)
+        }
+
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'parcels_synced',
+          data: {
+            itemsSignature,
+            goodsCount: configJson.goods?.length ?? 0,
+          },
+        })
+        pushDebugEvent('parcels_synced', {
+          itemsSignature,
+          goodsCount: configJson.goods?.length ?? 0,
+        })
+        lastSyncedItemsSignatureRef.current = itemsSignature
+      } catch (syncError) {
+        if (cancelled) return
+        const message = syncError instanceof Error ? syncError.message : 'parcel sync failed'
+        logCartDebug({
+          scope: 'cdek-widget',
+          event: 'parcels_sync_failed',
+          level: 'warn',
+          error: syncError,
+          data: { itemsSignature, message },
+        })
+        pushDebugEvent('parcels_sync_failed', { itemsSignature, message })
+      }
+    }
+
+    void syncParcels()
+
+    return () => {
+      cancelled = true
+    }
+  }, [brandId, isReady, itemsSignature])
 
   function handleRetry() {
     logCartDebug({
@@ -537,12 +609,52 @@ export function CdekWidget({
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 px-4 text-center">
             <p className="text-sm text-gray-600">
               Загружаем карту и пункты выдачи СДЭК…
-              <span className="mt-1 block text-xs text-gray-500">Первый запуск может занять до минуты</span>
             </p>
           </div>
         ) : null}
         <div id={rootId} style={{ width: '100%', height: '100%' }} />
       </div>
+      {isCdekWidgetDebugEnabled() ? (
+        <details className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+          <summary className="cursor-pointer font-medium">CDEK debug</summary>
+          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
+            <div>
+              <dt className="font-medium">ready</dt>
+              <dd>{isReady ? 'yes' : 'no'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">mode</dt>
+              <dd>{debugMode ?? '—'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">root</dt>
+              <dd className="break-all">{rootId}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">items</dt>
+              <dd className="break-all">{itemsSignature || '—'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">products</dt>
+              <dd className="break-all">{productSetSignature || '—'}</dd>
+            </div>
+            <div>
+              <dt className="font-medium">error</dt>
+              <dd className="break-all">{error ?? '—'}</dd>
+            </div>
+          </dl>
+          {debugEvents.length > 0 ? (
+            <ol className="mt-2 max-h-40 space-y-1 overflow-auto font-mono text-[11px]">
+              {debugEvents.map((entry) => (
+                <li key={`${entry.at}-${entry.event}`}>
+                  {entry.at.slice(11, 19)} {entry.event}
+                  {entry.data ? ` ${JSON.stringify(entry.data)}` : ''}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </details>
+      ) : null}
     </div>
   )
 }

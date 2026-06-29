@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useCartStore, type CartLine } from '@/store/cart-store'
@@ -11,7 +11,9 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
-import { CdekWidget, preloadCdekWidgetScript } from '@/components/site/cdek-widget'
+import { CdekWidget } from '@/components/site/cdek-widget'
+import { warmupCdekWidget } from '@/lib/cdek-widget-preload'
+import { buildCdekWidgetItemsSignature } from '@/lib/cdek-widget-items'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
 import { Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -128,13 +130,14 @@ export function CartPageContent({
 }: CartPageContentProps) {
   const mounted = useMounted()
   const items = useCartStore((s) => s.items)
+  const itemsSignature = useMemo(() => buildCdekWidgetItemsSignature(items), [items])
   const removeItem = useCartStore((s) => s.removeItem)
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const mergeItemDetails = useCartStore((s) => s.mergeItemDetails)
   const setHasPromoCode = usePromoStore((s) => s.setHasPromoCode)
 
   useEffect(() => {
-    preloadCdekWidgetScript()
+    warmupCdekWidget({ brandId, items })
     logCartDebug({
       scope: 'cart',
       event: 'page_mounted',
@@ -144,7 +147,11 @@ export function CartPageContent({
         canUseSavedAddresses,
       },
     })
-  }, [brandId, canUseSavedAddresses, items.length])
+  }, [brandId, canUseSavedAddresses, itemsSignature, items.length])
+
+  function handleCdekWarmup() {
+    warmupCdekWidget({ brandId, items })
+  }
 
   /** Enrich slim items (rehydrated from localStorage) with product details. */
   useEffect(() => {
@@ -916,7 +923,11 @@ export function CartPageContent({
                   ) : null}
                 </span>
               </label>
-              <label className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3', isSprintTheme ? 'border-slate-600 hover:bg-slate-800/60' : 'border-gray-200 hover:bg-gray-50')}>
+              <label
+                className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3', isSprintTheme ? 'border-slate-600 hover:bg-slate-800/60' : 'border-gray-200 hover:bg-gray-50')}
+                onMouseEnter={handleCdekWarmup}
+                onFocus={handleCdekWarmup}
+              >
                 <input
                   type="radio"
                   name="checkout-delivery-kind"

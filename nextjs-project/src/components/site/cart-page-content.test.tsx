@@ -68,6 +68,10 @@ vi.mock('@/components/site/cdek-widget', () => ({
   CdekWidget: () => <div data-testid="mock-cdek-widget">CDEK Widget</div>,
 }))
 
+vi.mock('@/lib/cdek-widget-preload', () => ({
+  warmupCdekWidget: vi.fn(),
+}))
+
 vi.mock('@/components/site/saved-address-selector', () => ({
   SavedAddressSelector: ({
     usingSavedAddress,

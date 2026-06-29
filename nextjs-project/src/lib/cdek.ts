@@ -338,6 +338,61 @@ interface CdekAuthResponse {
 
 // --- Location (cities) ---
 
+export const CDEK_RUSSIA_COUNTRY_CODE = 'RU'
+
+/** Страны СНГ, доступные в справочнике СДЭК для поиска городов. */
+export const CDEK_CIS_COUNTRY_CODES = [
+  'RU',
+  'BY',
+  'KZ',
+  'AM',
+  'AZ',
+  'KG',
+  'MD',
+  'TJ',
+  'TM',
+  'UZ',
+] as const
+
+export type CdekCisCountryCode = (typeof CDEK_CIS_COUNTRY_CODES)[number]
+
+const CDEK_CIS_COUNTRY_CODE_SET = new Set<string>(CDEK_CIS_COUNTRY_CODES)
+
+export function isCdekCisCountryCode(code: string | undefined | null): boolean {
+  if (!code) return false
+  return CDEK_CIS_COUNTRY_CODE_SET.has(code.trim().toUpperCase())
+}
+
+/** Оставляет только города СНГ (или без country_code в ответе СДЭК). */
+export function filterCdekCitiesToCis(cities: CdekCity[]): CdekCity[] {
+  return cities.filter((city) => {
+    const row = city as unknown as Record<string, unknown>
+    const countryCode = String(city.country_code ?? row.countryCode ?? '')
+      .trim()
+      .toUpperCase()
+    return countryCode === '' || isCdekCisCountryCode(countryCode)
+  })
+}
+
+function dedupeCdekCitiesByCode(cities: CdekCity[]): CdekCity[] {
+  const seen = new Set<number>()
+  const result: CdekCity[] = []
+  for (const city of cities) {
+    if (!city.code || seen.has(city.code)) continue
+    seen.add(city.code)
+    result.push(city)
+  }
+  return result
+}
+
+/** Параметры подсказок городов (Location suggest) */
+export interface CdekSuggestCitiesRequest {
+  /** Название населённого пункта (частичное совпадение) */
+  name: string
+  /** Коды стран ISO 3166-1 alpha-2 (по умолчанию — СНГ) */
+  country_codes?: readonly string[]
+}
+
 /** Параметры запроса списка городов (Location) */
 export interface CdekCitiesRequest {
   /** Коды стран ISO 3166-1 alpha-2 */
@@ -905,7 +960,7 @@ export async function getCdekCities(
 ): Promise<CdekCity[]> {
   const token = await getCdekToken(overrideCredentials)
   const params = new URLSearchParams()
-  const countryCodes = request.country_codes ?? ['RU']
+  const countryCodes = request.country_codes ?? [...CDEK_CIS_COUNTRY_CODES]
   countryCodes.forEach((c) => params.append('country_codes', c))
   if (request.region_code != null) params.set('region_code', String(request.region_code))
   if (request.city) params.set('city', request.city)
@@ -935,7 +990,63 @@ export async function getCdekCities(
     const obj = data as Record<string, unknown>
     rawList = (obj.city as unknown[]) ?? (obj.cities as unknown[]) ?? []
   }
+  return filterCdekCitiesToCis(
+    rawList.map((item) => normalizeCdekCity(item as Record<string, unknown>))
+  )
+}
+
+async function fetchCdekSuggestCitiesForCountry(
+  name: string,
+  countryCode: string,
+  overrideCredentials?: CdekCredentials | null
+): Promise<CdekCity[]> {
+  const token = await getCdekToken(overrideCredentials)
+  const params = new URLSearchParams()
+  params.set('name', name)
+  params.set('country_code', countryCode)
+
+  const base = getCdekApiBase(overrideCredentials ?? null)
+  const url = `${base}/location/suggest/cities?${params.toString()}`
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`CDEK location/suggest/cities failed: ${response.status} ${text}`)
+  }
+
+  const data = (await response.json()) as unknown
+  let rawList: unknown[] = []
+  if (Array.isArray(data)) {
+    rawList = data
+  } else if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    rawList = (obj.city as unknown[]) ?? (obj.cities as unknown[]) ?? []
+  }
+
   return rawList.map((item) => normalizeCdekCity(item as Record<string, unknown>))
+}
+
+/**
+ * Подсказки городов СДЭК по частичному совпадению имени.
+ * GET /v2/location/suggest/cities
+ */
+export async function getCdekSuggestCities(
+  request: CdekSuggestCitiesRequest,
+  overrideCredentials?: CdekCredentials | null
+): Promise<CdekCity[]> {
+  const name = request.name.trim()
+  if (!name) return []
+
+  const countryCodes = request.country_codes ?? CDEK_CIS_COUNTRY_CODES
+  const batches = await Promise.all(
+    countryCodes.map((countryCode) =>
+      fetchCdekSuggestCitiesForCountry(name, countryCode, overrideCredentials).catch(() => [])
+    )
+  )
+
+  return filterCdekCitiesToCis(dedupeCdekCitiesByCode(batches.flat()))
 }
 
 /**
@@ -945,11 +1056,13 @@ function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
   const code = row.code ?? row.city_code ?? row.cityId ?? row.city_id
   const city = row.city ?? row.cityName ?? row.name
   const region = row.region ?? row.region_name
+  const countryCode = row.country_code ?? row.countryCode
   return {
     ...(row as unknown as CdekCity),
     code: code != null ? Number(code) : 0,
     city: city != null ? String(city) : undefined,
     region: region != null ? String(region) : undefined,
+    country_code: countryCode != null ? String(countryCode).toUpperCase() : undefined,
   }
 }
 
