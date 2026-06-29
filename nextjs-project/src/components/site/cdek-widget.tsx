@@ -15,20 +15,8 @@ import {
   type CdekWidgetConfigResponse,
 } from '@/lib/cdek-widget-preload'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
+import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
-
-declare global {
-  interface Window {
-    CDEKWidget?: new (params: Record<string, unknown>) => CdekWidgetInstance
-  }
-}
-
-interface CdekWidgetInstance {
-  addParcel?: (parcel: unknown) => void
-  resetParcels?: () => void
-  open?: () => void
-  close?: () => void
-}
 
 interface CdekWidgetProps {
   brandId?: BrandId

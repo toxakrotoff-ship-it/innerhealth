@@ -1,5 +1,6 @@
 import type { BrandId } from '@/lib/brand/brand'
 import { buildCdekWidgetItemsSignature, getCdekWidgetCartLines } from '@/lib/cdek-widget-items'
+import '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
 
 export interface CdekWidgetConfigResponse {
@@ -13,7 +14,6 @@ const YANDEX_MAPS_V3_SCRIPT_ID = 'vue-yandex-maps'
 
 declare global {
   interface Window {
-    CDEKWidget?: unknown
     ymaps3?: unknown
   }
 }
@@ -87,7 +87,7 @@ export function loadCdekWidgetScriptOnce(): Promise<void> {
   if (window.CDEKWidget) return Promise.resolve()
   if (widgetScriptPromise) return widgetScriptPromise
 
-  widgetScriptPromise = new Promise((resolve, reject) => {
+  widgetScriptPromise = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${WIDGET_UMD_SRC}"]`)
     if (existing) {
       if (existing.dataset.loaded === 'true') {
@@ -128,7 +128,7 @@ export function preloadCdekYandexMapsV3(): Promise<void> {
   const scriptUrl = getYandexMapsV3ScriptUrl()
   if (!scriptUrl) return Promise.resolve()
 
-  yandexMapsV3Promise = new Promise((resolve, reject) => {
+  yandexMapsV3Promise = new Promise<void>((resolve, reject) => {
     const existing = document.getElementById(YANDEX_MAPS_V3_SCRIPT_ID) as HTMLScriptElement | null
     if (existing) {
       if (window.ymaps3) {
