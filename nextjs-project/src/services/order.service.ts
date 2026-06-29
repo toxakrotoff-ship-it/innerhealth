@@ -125,6 +125,8 @@ export interface AdminOrderDto {
   promoCodeId: string | null;
   promoCode: {
     code: string;
+    discountType: string;
+    discountValue: number;
   } | null;
   yookassaPaymentId: string | null;
   cdekOrderUuid: string | null;
@@ -167,7 +169,13 @@ function mapOrderToAdminDto(
     createdAt: order.createdAt.toISOString(),
     userId: order.userId ?? null,
     promoCodeId: order.promoCodeId ?? null,
-    promoCode: order.promoCode ? { code: order.promoCode.code } : null,
+    promoCode: order.promoCode
+      ? {
+          code: order.promoCode.code,
+          discountType: order.promoCode.discountType,
+          discountValue: order.promoCode.discountValue,
+        }
+      : null,
     yookassaPaymentId: order.yookassaPaymentId ?? null,
     cdekOrderUuid: order.cdekOrderUuid ?? null,
     cdekTrackNumber: order.cdekTrackNumber ?? null,

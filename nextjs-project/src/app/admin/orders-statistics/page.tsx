@@ -74,14 +74,6 @@ export default function OrdersStatisticsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // #region agent log
-  useEffect(() => {
-    if (promoSearchQuery.trim().length < 1) return;
-    const suggestions = allPromoCodes.filter((p) => p.code.toLowerCase().includes(promoSearchQuery.toLowerCase()));
-    fetch('http://127.0.0.1:7242/ingest/4e38a816-a87e-4282-8acb-6d0b40fcac08', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'orders-statistics/page.tsx:useEffect(suggestions)', message: 'suggestions computed', data: { promoSearchQuery, allPromoCodesLength: allPromoCodes.length, allPromoCodesCodes: allPromoCodes.map((p) => p.code), suggestionsLength: suggestions.length, suggestionCodes: suggestions.map((p) => p.code) }, timestamp: Date.now(), hypothesisId: 'post-fix' }) }).catch(() => {});
-  }, [promoSearchQuery, allPromoCodes]);
-  // #endregion
-
   const fetchOrders = async () => {
     try {
       setLoading(true);
@@ -91,17 +83,32 @@ export default function OrdersStatisticsPage() {
       }
       const data = await response.json();
       setOrders(data);
-      // #region agent log
-      const withPromo = (data as Order[]).filter((o) => o.promoCode != null);
-      const codesFromOrders = Array.from(new Set(withPromo.map((o) => (o.promoCode as { code: string }).code)));
-      fetch('http://127.0.0.1:7242/ingest/4e38a816-a87e-4282-8acb-6d0b40fcac08', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'orders-statistics/page.tsx:fetchOrders', message: 'orders loaded', data: { ordersCount: data.length, ordersWithPromoCount: withPromo.length, promoCodesFromOrders: codesFromOrders }, timestamp: Date.now(), hypothesisId: 'H1-H2' }) }).catch(() => {});
-      // #endregion
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
+
+  function isWithinDateRange(createdAt: string, start: string, end: string): boolean {
+    const orderDate = new Date(createdAt);
+    if (start) {
+      const startDate = new Date(`${start}T00:00:00`);
+      if (orderDate < startDate) return false;
+    }
+    if (end) {
+      const endDate = new Date(`${end}T23:59:59.999`);
+      if (orderDate > endDate) return false;
+    }
+    return true;
+  }
+
+  function formatPromoDiscount(promo: NonNullable<Order['promoCode']>): string {
+    if (promo.discountType === 'percentage') {
+      return `${promo.discountValue}%`;
+    }
+    return `${promo.discountValue.toFixed(2)} ₽`;
+  }
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -111,9 +118,7 @@ export default function OrdersStatisticsPage() {
     const matchesPromo =
       !selectedPromoCode || order.promoCode?.code === selectedPromoCode;
 
-    const matchesDateRange =
-      (!dateRange.start || new Date(order.createdAt) >= new Date(dateRange.start)) &&
-      (!dateRange.end || new Date(order.createdAt) <= new Date(dateRange.end));
+    const matchesDateRange = isWithinDateRange(order.createdAt, dateRange.start, dateRange.end);
 
     return matchesSearch && matchesPromo && matchesDateRange;
   });
@@ -123,10 +128,10 @@ export default function OrdersStatisticsPage() {
     : null;
   const ordersCountForSelectedPromo = selectedPromoCode ? filteredOrders.length : null;
 
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const ordersWithPromo = orders.filter((order) => order.promoCodeId != null).length;
-  const revenueWithPromo = orders
+  const totalOrders = filteredOrders.length;
+  const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
+  const ordersWithPromo = filteredOrders.filter((order) => order.promoCodeId != null).length;
+  const revenueWithPromo = filteredOrders
     .filter((order) => order.promoCodeId != null)
     .reduce((sum, order) => sum + order.total, 0);
 
@@ -303,7 +308,7 @@ export default function OrdersStatisticsPage() {
                   <p className="font-medium text-gray-900 mt-1">{order.total.toFixed(2)} ₽</p>
                   {order.promoCode ? (
                     <p className="text-sm text-gray-600 mt-0.5">
-                      {order.promoCode.code} ({order.promoCode.discountType === 'percentage' ? `${order.promoCode.discountValue}%` : `${order.promoCode.discountValue} ₽`})
+                      {order.promoCode.code} ({formatPromoDiscount(order.promoCode)})
                     </p>
                   ) : (
                     <p className="text-sm text-gray-400 mt-0.5">—</p>
@@ -341,7 +346,7 @@ export default function OrdersStatisticsPage() {
                             <div>
                               <div className="font-medium">{order.promoCode.code}</div>
                               <div className="text-xs text-gray-500">
-                                {order.promoCode.discountType === 'percentage' ? `${order.promoCode.discountValue}%` : `${order.promoCode.discountValue} ₽`}
+                                {formatPromoDiscount(order.promoCode)}
                               </div>
                             </div>
                           ) : (
