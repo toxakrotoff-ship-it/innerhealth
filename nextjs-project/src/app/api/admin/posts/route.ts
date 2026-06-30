@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+import { sanitizeTipTapJsonForStorage } from '@/lib/sanitize-tiptap-json';
 import { requireAdminSession } from '@/lib/require-admin';
 import { slugify, slugifyUnique } from '@/lib/slugify';
 import * as postService from '@/services/post.service';
@@ -55,14 +55,14 @@ export async function POST(request: Request) {
       slug = slugifyUnique(baseSlug, existingSlugs);
     }
 
-    const content = body.content ?? { type: 'doc', content: [] };
+    const content = sanitizeTipTapJsonForStorage(body.content ?? { type: 'doc', content: [] });
 
     const post = await postService.createPost({
       title: body.title,
       slug,
       type: body.type,
       excerpt: body.excerpt ?? null,
-      content: content as Prisma.InputJsonValue,
+      content,
       previewImage: body.previewImage ?? null,
       published: body.published,
     }, brandId);

@@ -52,6 +52,13 @@ function isPartialTextblockSelection({ from, to, doc }: HeadingSelectionRange & 
   return from > blockStart || to < blockEnd;
 }
 
+function clampSelectionRange(doc: Parameters<typeof TextSelection.create>[0], from: number, to: number): { from: number; to: number } {
+  const docSize = doc.content.size;
+  const safeFrom = Math.min(Math.max(from, 0), docSize);
+  const safeTo = Math.min(Math.max(to, safeFrom), docSize);
+  return { from: safeFrom, to: safeTo };
+}
+
 /**
  * Applies heading to the selected text block. For partial selections inside a paragraph,
  * splits the block first so only the selected fragment becomes a heading.
@@ -63,7 +70,7 @@ export const HeadingSelection = Extension.create({
     return {
       toggleHeadingOnSelection:
         ({ level, from, to }) =>
-        ({ editor, state, chain }) => {
+        ({ state, chain }) => {
           const { doc } = state;
           const headingType = state.schema.nodes.heading;
           const paragraphType = state.schema.nodes.paragraph;
@@ -76,54 +83,52 @@ export const HeadingSelection = Extension.create({
             return chain().setTextSelection({ from, to }).toggleHeading({ level }).focus().run();
           }
 
-          const $from = doc.resolve(from);
-          const blockStart = $from.start();
-          const blockEnd = $from.end();
+          return chain()
+            .command(({ tr, state: commandState }) => {
+              const $from = commandState.doc.resolve(from);
+              const blockEnd = $from.end();
 
-          let tr = state.tr;
+              if (to < blockEnd && canSplit(tr.doc, to)) {
+                tr.split(to);
+              }
 
-          if (to < blockEnd && canSplit(tr.doc, to)) {
-            tr = tr.split(to);
-          }
+              const mappedFrom = tr.mapping.map(from);
+              const $mappedFrom = tr.doc.resolve(mappedFrom);
 
-          const mappedFrom = tr.mapping.map(from);
-          const $mappedFrom = tr.doc.resolve(mappedFrom);
+              if (mappedFrom > $mappedFrom.start() && canSplit(tr.doc, mappedFrom)) {
+                tr.split(mappedFrom);
+              }
 
-          if (mappedFrom > $mappedFrom.start() && canSplit(tr.doc, mappedFrom)) {
-            tr = tr.split(mappedFrom);
-          }
+              const selectionAnchor = tr.mapping.map(from);
+              const selectionHead = tr.mapping.map(to, -1);
+              const blockPos = getTextblockPos(tr.doc, selectionAnchor);
 
-          const selectionAnchor = tr.mapping.map(from);
-          const selectionHead = tr.mapping.map(to, -1);
-          const blockPos = getTextblockPos(tr.doc, selectionAnchor);
+              if (blockPos === null) {
+                return false;
+              }
 
-          if (blockPos === null) {
-            return false;
-          }
+              const blockNode = tr.doc.nodeAt(blockPos);
 
-          const blockNode = tr.doc.nodeAt(blockPos);
+              if (!blockNode?.isTextblock) {
+                return false;
+              }
 
-          if (!blockNode?.isTextblock) {
-            return false;
-          }
+              const isAlreadyHeading =
+                blockNode.type === headingType && blockNode.attrs.level === level;
 
-          const isAlreadyHeading =
-            blockNode.type === headingType && blockNode.attrs.level === level;
+              tr.setNodeMarkup(
+                blockPos,
+                isAlreadyHeading ? paragraphType : headingType,
+                isAlreadyHeading ? {} : { level },
+              );
 
-          tr = tr.setNodeMarkup(
-            blockPos,
-            isAlreadyHeading ? paragraphType : headingType,
-            isAlreadyHeading ? undefined : { level },
-          );
-
-          const mappedHead = tr.mapping.map(selectionHead);
-          tr = tr.setSelection(
-            TextSelection.create(tr.doc, Math.max(1, selectionAnchor), Math.max(1, mappedHead + 1)),
-          );
-
-          editor.view.dispatch(tr.scrollIntoView());
-          editor.commands.focus();
-          return true;
+              const mappedHead = tr.mapping.map(selectionHead);
+              const { from: selFrom, to: selTo } = clampSelectionRange(tr.doc, selectionAnchor, mappedHead + 1);
+              tr.setSelection(TextSelection.create(tr.doc, selFrom, selTo));
+              return true;
+            })
+            .focus()
+            .run();
         },
     };
   },

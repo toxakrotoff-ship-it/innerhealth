@@ -8,6 +8,7 @@ import { RichTextEditor } from '../../components/RichTextEditor';
 import { CoverImageDropzone } from '../../components/CoverImageDropzone';
 import type { UploadedImage } from '../../components/EditorMediaPanel';
 import type { JSONContent } from '@tiptap/core';
+import { sanitizeTipTapJsonForStorage } from '@/lib/sanitize-tiptap-json';
 
 type PostType = 'news' | 'article';
 
@@ -99,7 +100,7 @@ export function EditNewsPageClient({ postId }: EditNewsPageClientProps) {
           slug: formData.slug,
           excerpt: formData.excerpt || undefined,
           type: formData.type,
-          content: formData.content,
+          content: sanitizeTipTapJsonForStorage(formData.content),
           previewImage: formData.previewImage || undefined,
           published: formData.published,
         }),

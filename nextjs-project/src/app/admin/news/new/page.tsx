@@ -9,6 +9,7 @@ import type { UploadedImage } from '../components/EditorMediaPanel';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
 import type { JSONContent } from '@tiptap/core';
+import { sanitizeTipTapJsonForStorage } from '@/lib/sanitize-tiptap-json';
 
 type PostType = 'news' | 'article';
 
@@ -93,7 +94,7 @@ export default function NewNewsPage() {
           slug: formData.slug || undefined,
           excerpt: formData.excerpt || undefined,
           type: formData.type,
-          content: formData.content,
+          content: sanitizeTipTapJsonForStorage(formData.content),
           previewImage: formData.previewImage || undefined,
           published: formData.published,
         }),

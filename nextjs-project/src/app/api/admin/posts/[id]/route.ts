@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as postService from '@/services/post.service';
 import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
+import { sanitizeTipTapJsonForStorage } from '@/lib/sanitize-tiptap-json';
+import { formatPostUpdateError } from '@/lib/post-update-error';
 
 const putPostSchema = z.object({
   title: z.string().min(1).transform((s) => s.trim()).optional(),
@@ -58,12 +61,12 @@ export async function PUT(
   }
 
   try {
-    const data: Record<string, unknown> = {};
+    const data: Prisma.PostUpdateInput = {};
     if (body.title !== undefined) data.title = body.title;
     if (body.slug !== undefined) data.slug = body.slug;
     if (body.type !== undefined) data.type = body.type;
     if (body.excerpt !== undefined) data.excerpt = body.excerpt;
-    if (body.content !== undefined) data.content = body.content;
+    if (body.content !== undefined) data.content = sanitizeTipTapJsonForStorage(body.content);
     if (body.previewImage !== undefined) data.previewImage = body.previewImage;
     if (body.published !== undefined) data.published = body.published;
 
@@ -72,10 +75,8 @@ export async function PUT(
     return NextResponse.json(post);
   } catch (error) {
     console.error('Error updating post:', error);
-    return NextResponse.json(
-      { error: 'Failed to update post' },
-      { status: 500 }
-    );
+    const { message, status } = formatPostUpdateError(error);
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
