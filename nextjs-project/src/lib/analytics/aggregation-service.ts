@@ -205,9 +205,9 @@ export async function aggregateFunnelForDate(date: Date): Promise<void> {
 
   const map = await fetchDistinctFunnelCounts({ start, end })
   const brands = new Set<string>()
-  for (const key of map.keys()) {
+  map.forEach((_, key) => {
     brands.add(key.split(':')[0] ?? '')
-  }
+  })
 
   await prisma.$transaction(
     Array.from(brands).flatMap((brand) =>

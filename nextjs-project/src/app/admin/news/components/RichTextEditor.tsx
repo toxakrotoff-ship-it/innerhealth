@@ -142,6 +142,11 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded, renderExtraToolbar }:
     editor.chain().focus().setTextSelection({ from, to }).extendMarkRange('link').unsetLink().run();
   };
 
+  const handleHeadingMouseDown = (e: React.MouseEvent, level: 1 | 2 | 3) => {
+    e.preventDefault();
+    editor.chain().focus().toggleHeadingOnSelection({ level }).run();
+  };
+
   return (
     <>
     <div className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
@@ -215,21 +220,21 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded, renderExtraToolbar }:
       <span className="w-px h-5 bg-gray-300 mx-1" />
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        onMouseDown={(e) => handleHeadingMouseDown(e, 1)}
         className={`px-2 py-1 rounded text-sm ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
       >
         H1
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        onMouseDown={(e) => handleHeadingMouseDown(e, 2)}
         className={`px-2 py-1 rounded text-sm ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
       >
         H2
       </button>
       <button
         type="button"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        onMouseDown={(e) => handleHeadingMouseDown(e, 3)}
         className={`px-2 py-1 rounded text-sm ${editor.isActive('heading', { level: 3 }) ? 'bg-gray-300' : 'hover:bg-gray-200'}`}
       >
         H3

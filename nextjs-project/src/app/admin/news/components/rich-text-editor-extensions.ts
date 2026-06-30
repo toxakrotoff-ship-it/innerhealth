@@ -10,6 +10,7 @@ import { CustomOrderedList } from './editor-extensions/custom-ordered-list';
 import { ProductLink } from './editor-extensions/product-link-suggestion';
 import { Superscript } from './editor-extensions/superscript';
 import { Subscript } from './editor-extensions/subscript';
+import { HeadingSelection } from './editor-extensions/heading-selection';
 
 /**
  * Один набор расширений для редактора и для generateHTML / generateJSON в обёртках,
@@ -70,5 +71,6 @@ export function buildRichTextEditorExtensions(placeholder: string): Extensions {
     TableKit.configure({
       table: { resizable: false },
     }),
+    HeadingSelection,
   ];
 }
