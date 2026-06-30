@@ -144,7 +144,8 @@ function MenuBar({ editor, uploadedMedia, onMediaUploaded, renderExtraToolbar }:
 
   const handleHeadingMouseDown = (e: React.MouseEvent, level: 1 | 2 | 3) => {
     e.preventDefault();
-    editor.chain().focus().toggleHeadingOnSelection({ level }).run();
+    const { from, to } = editor.state.selection;
+    editor.chain().toggleHeadingOnSelection({ level, from, to }).run();
   };
 
   return (

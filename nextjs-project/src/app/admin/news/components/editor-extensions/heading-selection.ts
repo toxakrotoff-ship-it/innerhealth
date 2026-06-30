@@ -4,27 +4,45 @@ import { canSplit } from '@tiptap/pm/transform';
 
 type HeadingLevel = 1 | 2 | 3;
 
+interface HeadingSelectionRange {
+  from: number;
+  to: number;
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     headingSelection: {
-      toggleHeadingOnSelection: (attributes: { level: HeadingLevel }) => ReturnType;
+      toggleHeadingOnSelection: (attributes: {
+        level: HeadingLevel;
+        from: number;
+        to: number;
+      }) => ReturnType;
     };
   }
 }
 
-function isPartialTextblockSelection(state: {
-  selection: {
-    empty: boolean;
-    from: number;
-    to: number;
-    $from: { parent: { isTextblock: boolean }; start: () => number; end: () => number };
-    $to: { parent: unknown };
-  };
-}): boolean {
-  const { selection } = state;
-  const { $from, $to, empty, from, to } = selection;
+function getTextblockPos(doc: Parameters<typeof TextSelection.create>[0], pos: number): number | null {
+  const $pos = doc.resolve(pos);
 
-  if (empty || $from.parent !== $to.parent || !$from.parent.isTextblock) {
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    const node = $pos.node(depth);
+    if (node.isTextblock) {
+      return $pos.before(depth);
+    }
+  }
+
+  return null;
+}
+
+function isPartialTextblockSelection({ from, to, doc }: HeadingSelectionRange & { doc: Parameters<typeof TextSelection.create>[0] }): boolean {
+  if (from === to) {
+    return false;
+  }
+
+  const $from = doc.resolve(from);
+  const $to = doc.resolve(to);
+
+  if ($from.parent !== $to.parent || !$from.parent.isTextblock) {
     return false;
   }
 
@@ -44,13 +62,9 @@ export const HeadingSelection = Extension.create({
   addCommands() {
     return {
       toggleHeadingOnSelection:
-        ({ level }) =>
+        ({ level, from, to }) =>
         ({ editor, state, chain }) => {
-          if (!isPartialTextblockSelection(state)) {
-            return chain().toggleHeading({ level }).run();
-          }
-
-          const { from, to } = state.selection;
+          const { doc } = state;
           const headingType = state.schema.nodes.heading;
           const paragraphType = state.schema.nodes.paragraph;
 
@@ -58,20 +72,35 @@ export const HeadingSelection = Extension.create({
             return false;
           }
 
+          if (!isPartialTextblockSelection({ from, to, doc })) {
+            return chain().setTextSelection({ from, to }).toggleHeading({ level }).focus().run();
+          }
+
+          const $from = doc.resolve(from);
+          const blockStart = $from.start();
+          const blockEnd = $from.end();
+
           let tr = state.tr;
 
-          if (canSplit(tr.doc, to)) {
+          if (to < blockEnd && canSplit(tr.doc, to)) {
             tr = tr.split(to);
           }
 
           const mappedFrom = tr.mapping.map(from);
+          const $mappedFrom = tr.doc.resolve(mappedFrom);
 
-          if (canSplit(tr.doc, mappedFrom)) {
+          if (mappedFrom > $mappedFrom.start() && canSplit(tr.doc, mappedFrom)) {
             tr = tr.split(mappedFrom);
           }
 
-          const $pos = tr.doc.resolve(mappedFrom);
-          const blockPos = $pos.before($pos.depth);
+          const selectionAnchor = tr.mapping.map(from);
+          const selectionHead = tr.mapping.map(to, -1);
+          const blockPos = getTextblockPos(tr.doc, selectionAnchor);
+
+          if (blockPos === null) {
+            return false;
+          }
+
           const blockNode = tr.doc.nodeAt(blockPos);
 
           if (!blockNode?.isTextblock) {
@@ -87,11 +116,13 @@ export const HeadingSelection = Extension.create({
             isAlreadyHeading ? undefined : { level },
           );
 
-          const resolvedBlock = tr.doc.resolve(blockPos);
-          const cursorPos = Math.min(resolvedBlock.end() - 1, tr.doc.content.size - 1);
-          tr = tr.setSelection(TextSelection.near(tr.doc.resolve(Math.max(1, cursorPos))));
+          const mappedHead = tr.mapping.map(selectionHead);
+          tr = tr.setSelection(
+            TextSelection.create(tr.doc, Math.max(1, selectionAnchor), Math.max(1, mappedHead + 1)),
+          );
 
           editor.view.dispatch(tr.scrollIntoView());
+          editor.commands.focus();
           return true;
         },
     };
