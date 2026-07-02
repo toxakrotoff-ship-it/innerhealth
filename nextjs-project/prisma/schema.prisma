@@ -558,6 +558,18 @@ model PartnershipLead {
   @@index([brand, createdAt])
 }
 
+/// B2B заявки на получение оптовых прайс-листов.
+model B2bLead {
+  id        String   @id @default(cuid())
+  brand     String   @default("inner")
+  name      String
+  email     String
+  phone     String
+  createdAt DateTime @default(now())
+
+  @@index([brand, createdAt])
+}
+
 /// FAQ по брендам для страницы /faq.
 model Faq {
   id          String   @id @default(cuid())

@@ -132,6 +132,7 @@ const crmChildren: NavItemEntry[] = [
   { path: 'quick-orders', label: 'Быстрые заявки', icon: icons.orders },
   { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
+  { path: 'b2b', label: 'B2B', icon: icons.partnership },
   { path: 'leads-export', label: 'Выгрузка лидов', icon: icons.leadsExport },
   { path: 'orders-statistics', label: 'Статистика заказов', icon: icons.stats },
 ]

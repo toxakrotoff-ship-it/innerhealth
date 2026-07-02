@@ -181,6 +181,14 @@ const COOPERATION_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'sotrudnichestvo', key: 'cooperation.extra.item3' },
 ] as const
 
+const B2B_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'b2b', key: 'b2b.title' },
+  { page: 'b2b', key: 'b2b.body', adminLabel: 'B2B — основной текст страницы' },
+  { page: 'b2b', key: 'b2b.form.title' },
+  { page: 'b2b', key: 'b2b.form.subtitle' },
+  { page: 'b2b', key: 'b2b.form.successMessage' },
+] as const
+
 const CERTIFICATES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'certificates', key: 'certificates.title' },
   { page: 'certificates', key: 'certificates.subtitle' },
@@ -247,6 +255,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     cart: CART_ADMIN_SCHEMA,
     certificates: CERTIFICATES_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
+    b2b: B2B_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
     ...Object.fromEntries(LEGAL_PAGES_ADMIN_SCHEMA.map((e) => [e.page, [e]] as const)),
   },
@@ -259,6 +268,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     cart: CART_ADMIN_SCHEMA,
     certificates: CERTIFICATES_ADMIN_SCHEMA,
     sotrudnichestvo: COOPERATION_ADMIN_SCHEMA,
+    b2b: B2B_ADMIN_SCHEMA,
     footer: FOOTER_ADMIN_SCHEMA,
     ...Object.fromEntries(LEGAL_PAGES_ADMIN_SCHEMA.map((e) => [e.page, [e]] as const)),
   },
@@ -1436,6 +1446,56 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Сотрудничество — секция “А также” (пункт 3)',
     type: 'short',
     text: 'Изучаете рынок продуктов для здоровья и делаете обзоры в соцсетях — расскажем о преимуществах и предоставим продукты на тестирование.',
+  },
+
+  // B2B
+  {
+    page: 'b2b',
+    key: 'b2b.title',
+    label: 'B2B — заголовок страницы',
+    type: 'short',
+    text: 'B2B',
+  },
+  {
+    page: 'b2b',
+    key: 'b2b.body',
+    label: 'B2B — основной текст страницы',
+    type: 'rich',
+    richJson: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Мы открыты к сотрудничеству с аптеками, клиниками, салонами красоты и другими партнёрами. Оставьте заявку — мы отправим оптовый прайс-лист и обсудим условия поставки.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    page: 'b2b',
+    key: 'b2b.form.title',
+    label: 'B2B — заголовок блока формы',
+    type: 'short',
+    text: 'Заявка на оптовый прайс-лист',
+  },
+  {
+    page: 'b2b',
+    key: 'b2b.form.subtitle',
+    label: 'B2B — подпись блока формы',
+    type: 'short',
+    text: 'Заполните форму — мы отправим вам оптовый прайс-лист и свяжемся для обсуждения условий.',
+  },
+  {
+    page: 'b2b',
+    key: 'b2b.form.successMessage',
+    label: 'B2B — сообщение после отправки заявки',
+    type: 'short',
+    text: 'Спасибо, с вами в ближайшее время свяжется наш специалист.',
   },
 
   // Footer — юридический блок

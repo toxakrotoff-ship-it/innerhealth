@@ -41,6 +41,7 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
       { label: 'О нас', href: '/o-nas' },
       { label: 'Акции', href: '/catalog/aktsii' },
       { label: 'Статьи', href: '/informaciya' },
+      { label: 'B2B', href: '/b2b' },
       { label: 'Контакты', href: '/contacts' },
     ],
     mobileNavLinks: [
@@ -49,6 +50,7 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
       { label: 'О нас', href: '/o-nas' },
       { label: 'Статьи', href: '/informaciya' },
       { label: 'АКЦИИ', href: '/catalog/aktsii' },
+      { label: 'B2B', href: '/b2b' },
       { label: 'Сотрудничество', href: '/sotrudnichestvo' },
       { label: 'Контакты', href: '/contacts' },
       { label: 'FAQ', href: '/faq' },
@@ -56,6 +58,7 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     footerLinks: [
       { label: 'О нас', href: '/o-nas' },
       { label: 'Контакты', href: '/contacts' },
+      { label: 'B2B', href: '/b2b' },
       { label: 'Сотрудничество', href: '/sotrudnichestvo' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },

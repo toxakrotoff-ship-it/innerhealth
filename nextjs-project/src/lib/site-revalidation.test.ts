@@ -58,6 +58,7 @@ describe('revalidateContentBlockPage', () => {
       'contacts',
       'certificates',
       'sotrudnichestvo',
+      'b2b',
       'footer',
       'legal-privacy',
       'legal-oferta',

@@ -33,6 +33,7 @@ export const CONTENT_BLOCK_PAGE_PATHS: Readonly<Record<string, readonly string[]
   contacts: ['/contacts'],
   certificates: ['/sertifikaty-sootvetstviya'],
   sotrudnichestvo: ['/sotrudnichestvo'],
+  b2b: ['/b2b'],
   'legal-privacy': ['/privacy'],
   'legal-oferta': ['/oferta'],
   footer: ['/'],

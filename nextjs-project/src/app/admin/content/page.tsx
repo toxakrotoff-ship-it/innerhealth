@@ -38,6 +38,7 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'contacts', label: 'Контакты' },
   { id: 'certificates', label: 'Сертификаты соответствия' },
   { id: 'sotrudnichestvo', label: 'Сотрудничество' },
+  { id: 'b2b', label: 'B2B' },
   { id: 'footer', label: 'Футер' },
   { id: 'legal-privacy', label: 'Политика конфиденциальности' },
   { id: 'legal-oferta', label: 'Публичная оферта' },

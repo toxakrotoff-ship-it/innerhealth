@@ -5,7 +5,7 @@ import type { BrandId } from '@/lib/brand/brand'
 import { normalizeBrandId } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 
-export type LeadSource = 'partnership' | 'tilda' | 'quick_order'
+export type LeadSource = 'partnership' | 'tilda' | 'quick_order' | 'b2b'
 
 /** `all` — лиды обеих витрин; иначе фильтр по колонке `brand` в источниках. */
 export type LeadsExportBrandScope = BrandId | 'all'
@@ -178,7 +178,24 @@ function quickOrderWhereClause(
   return { ...brandWhere }
 }
 
-/** Fetch all leads from PartnershipLead, TildaLead, QuickOrder and map to unified export rows. */
+function b2bWhereClause(
+  filter: LeadExportFilter | undefined,
+  brandScope: LeadsExportBrandScope
+): Prisma.B2bLeadWhereInput {
+  const brandWhere = brandSliceWhere(brandScope)
+  if (filter && (filter.from || filter.to)) {
+    return {
+      ...brandWhere,
+      createdAt: {
+        ...(filter.from ? { gte: filter.from } : {}),
+        ...(filter.to ? { lte: filter.to } : {}),
+      },
+    }
+  }
+  return { ...brandWhere }
+}
+
+/** Fetch all leads from PartnershipLead, TildaLead, QuickOrder, B2bLead and map to unified export rows. */
 export async function getAllLeadsForExport(
   filter: LeadExportFilter | undefined,
   brandScope: LeadsExportBrandScope
@@ -186,8 +203,9 @@ export async function getAllLeadsForExport(
   const partnershipWhere = partnershipWhereClause(filter, brandScope)
   const tildaWhere = tildaWhereClause(filter, brandScope)
   const quickOrderWhere = quickOrderWhereClause(filter, brandScope)
+  const b2bWhere = b2bWhereClause(filter, brandScope)
 
-  const [partnershipLeads, tildaLeads, quickOrders] = await Promise.all([
+  const [partnershipLeads, tildaLeads, quickOrders, b2bLeads] = await Promise.all([
     prisma.partnershipLead.findMany({
       where: partnershipWhere,
       orderBy: { createdAt: 'desc' },
@@ -202,6 +220,10 @@ export async function getAllLeadsForExport(
       include: {
         product: { select: { title: true, slug: true } },
       },
+    }),
+    prisma.b2bLead.findMany({
+      where: b2bWhere,
+      orderBy: { createdAt: 'desc' },
     }),
   ])
 
@@ -238,5 +260,13 @@ export async function getAllLeadsForExport(
     quantity: String(o.quantity),
   }))
 
-  return [...partnershipRows, ...tildaRows, ...quickOrderRows]
+  const b2bRows: LeadExportRow[] = b2bLeads.map((l) => ({
+    ...emptyRow('b2b', l.id, formatExportDate(l.createdAt)),
+    storefront: labelForLeadBrand(l.brand),
+    name: l.name ?? '',
+    email: l.email ?? '',
+    phone: l.phone ?? '',
+  }))
+
+  return [...partnershipRows, ...tildaRows, ...quickOrderRows, ...b2bRows]
 }
