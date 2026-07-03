@@ -8,8 +8,6 @@ export interface BrandNavLink {
 export interface BrandContactConfig {
   phone: string;
   email: string;
-  whatsappUrl: string;
-  telegramUrl: string;
 }
 
 export interface BrandSiteConfig {
@@ -68,8 +66,6 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     contact: {
       phone: '+7 (989) 103-91-92',
       email: 'innerhealth@mail.ru',
-      whatsappUrl: 'https://wa.me/79891039192',
-      telegramUrl: 'https://t.me/innerhealth_ih',
     },
   },
   'sprint-power': {
@@ -102,8 +98,6 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     contact: {
       phone: '+7 (989) 103-91-92',
       email: 'sprintpower@mail.ru',
-      whatsappUrl: 'https://wa.me/79891039192',
-      telegramUrl: 'https://t.me/sprintpower_official',
     },
   },
 };

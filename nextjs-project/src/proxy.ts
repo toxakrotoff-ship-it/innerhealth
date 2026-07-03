@@ -94,15 +94,22 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
   // CSP: restrict scripts and inline; allow same-origin and trusted payment/analytics if needed
   const frameAncestors =
     "frame-ancestors 'self' https://metrika.yandex.ru https://*.metrika.yandex.ru http://metrika.yandex.ru http://*.metrika.yandex.ru https://metrika.yandex.by https://*.metrika.yandex.by http://metrika.yandex.by http://*.metrika.yandex.by https://metrica.yandex.com https://*.metrica.yandex.com http://metrica.yandex.com http://*.metrica.yandex.com https://metrica.yandex.com.tr https://*.metrica.yandex.com.tr http://metrica.yandex.com.tr http://*.metrica.yandex.com.tr https://webvisor.com https://*.webvisor.com http://webvisor.com http://*.webvisor.com https://mc.yandex.ru https://*.mc.yandex.ru http://mc.yandex.ru http://*.mc.yandex.ru"
+  // Yandex Maps v3 CSP bundle (main-csp-2024.js/css) — see https://yandex.ru/maps-api/docs/js-api/common/connection/csp.html
+  const yandexMapsScriptSrc =
+    'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yastatic.net'
+  const yandexMapsStyleSrc =
+    'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yastatic.net'
+  const yandexMapsConnectSrc =
+    'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru https://search-maps.yandex.ru https://api.routing.yandex.net'
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api-maps.yandex.ru https://yastatic.net https://mc.yandex.ru", // Yandex Maps JS API + Yandex Metrika
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${yandexMapsScriptSrc} https://mc.yandex.ru`,
     // Yandex Maps v3 uses WebWorkers from blob:/data: (e.g. content_provider.worker.js).
-    "worker-src 'self' blob: data: https://yastatic.net",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `worker-src 'self' blob: data: ${yandexMapsScriptSrc}`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${yandexMapsStyleSrc}`,
     "img-src 'self' data: https: blob:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru https://mc.yandex.ru", // Yandex Maps API + Yandex Metrika
+    `connect-src 'self' ${yandexMapsConnectSrc} https://mc.yandex.ru`,
     frameAncestors,
     "base-uri 'self'",
     "form-action 'self'",
