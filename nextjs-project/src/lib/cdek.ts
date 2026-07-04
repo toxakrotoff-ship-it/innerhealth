@@ -1062,6 +1062,12 @@ function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
     code: code != null ? Number(code) : 0,
     city: city != null ? String(city) : undefined,
     region: region != null ? String(region) : undefined,
+    region_code:
+      row.region_code != null
+        ? Number(row.region_code)
+        : row.regionCode != null
+          ? Number(row.regionCode)
+          : undefined,
     country_code: countryCode != null ? String(countryCode).toUpperCase() : undefined,
   }
 }

@@ -966,6 +966,7 @@ export function CartPageContent({
               ].join(':')}
               brandId={brandId}
               items={items}
+              bootstrapCityCode={selectedSavedAddress?.cdekCityCode ?? undefined}
               defaultLocation={selectedSavedAddress?.city ?? undefined}
               selected={
                 selectedSavedAddress

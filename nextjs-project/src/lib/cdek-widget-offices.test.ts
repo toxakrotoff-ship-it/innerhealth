@@ -5,6 +5,8 @@ import {
   countOfficesTotalByPaging,
   isWidgetOfficesBulkDumpRequest,
   isWidgetOfficesProbeRequest,
+  isWidgetCountryHandoutRequest,
+  isWidgetRegionBootstrapRequest,
   mergeOfficesProxyHeaders,
   normalizeWidgetOfficesQuery,
   readUpstreamOfficesTotal,
@@ -19,24 +21,91 @@ describe('cdek-widget-offices', () => {
     expect(isWidgetOfficesBulkDumpRequest({ page: 0, size: 500 })).toBe(false)
   })
 
-  it('resolves offices scope from request payload', () => {
-    expect(resolveOfficesScope({ offices_scope: 'country' })).toBe('country')
-    expect(resolveOfficesScope({ is_handout: true })).toBe('local')
+  it('resolves region bootstrap scope from widget query params', () => {
+    expect(
+      resolveOfficesScope({
+        widget_offices_scope: 'region',
+        region_code: 39,
+        is_handout: true,
+      })
+    ).toBe('region')
+    expect(isWidgetRegionBootstrapRequest({ widget_offices_scope: 'region', region_code: 39 })).toBe(
+      true
+    )
   })
 
-  it('injects city_code for local scope and converts bulk dump', () => {
+  it('falls back to country when region bootstrap has no region_code', () => {
+    expect(
+      resolveOfficesScope({
+        widget_offices_scope: 'region',
+        is_handout: true,
+      })
+    ).toBe('country')
+  })
+
+  it('does not inject city_code for region bootstrap handout', () => {
+    const normalized = normalizeWidgetOfficesQuery({
+      action: 'offices',
+      widget_offices_scope: 'region',
+      region_code: 39,
+      is_handout: true,
+      page: 0,
+      size: null,
+    })
+
+    expect(normalized.region_code).toBe(39)
+    expect(normalized.city_code).toBeUndefined()
+    expect(normalized._injected_city_code).toBeUndefined()
+  })
+
+  it('normalizes region_code and city_code from query strings', () => {
+    const normalized = normalizeWidgetOfficesQuery({
+      action: 'offices',
+      widget_offices_scope: 'region',
+      region_code: '39',
+      city_code: '137',
+      is_handout: true,
+      page: 0,
+      size: null,
+    })
+
+    expect(normalized.region_code).toBe(39)
+    expect(normalized.city_code).toBe(137)
+  })
+
+  it('resolves offices scope from request payload', () => {
+    expect(resolveOfficesScope({ offices_scope: 'country' })).toBe('country')
+    expect(resolveOfficesScope({ is_handout: true })).toBe('country')
+    expect(resolveOfficesScope({ is_reception: true })).toBe('local')
+  })
+
+  it('detects widget handout requests that should load country-wide offices', () => {
+    expect(isWidgetCountryHandoutRequest({ is_handout: true })).toBe(true)
+    expect(isWidgetCountryHandoutRequest({ is_handout: true, city_code: 44 })).toBe(false)
+  })
+
+  it('does not inject city_code for widget handout bulk dump', () => {
     const normalized = normalizeWidgetOfficesQuery(
       { action: 'offices', page: 0, is_handout: true },
-      { defaultCityCode: 137, officesScope: 'local' }
+      { defaultCityCode: 137 }
     )
 
-    expect(normalized.city_code).toBe(137)
+    expect(normalized.city_code).toBeUndefined()
+    expect(normalized._injected_city_code).toBeUndefined()
     expect(normalized.country_code).toBe('RU')
     expect(normalized.type).toBe('PVZ')
     expect(normalized.size).toBe(500)
     expect(normalized._converted_bulk_dump).toBe(true)
+  })
+
+  it('injects city_code for non-handout local scope', () => {
+    const normalized = normalizeWidgetOfficesQuery(
+      { action: 'offices', page: 0, is_reception: true },
+      { defaultCityCode: 137, officesScope: 'local' }
+    )
+
+    expect(normalized.city_code).toBe(137)
     expect(normalized._injected_city_code).toBe(true)
-    expect(normalized.offices_scope).toBeUndefined()
   })
 
   it('does not inject city_code for country scope', () => {
