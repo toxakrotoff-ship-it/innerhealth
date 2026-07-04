@@ -7,6 +7,7 @@ vi.mock('@/lib/cdek-yandex-reverse-geocode', () => ({
 
 vi.mock('@/lib/cdek', () => ({
   getCdekSuggestCities: vi.fn(),
+  getCdekCities: vi.fn(),
 }))
 
 const reverseGeocode = await import('@/lib/cdek-yandex-reverse-geocode')
@@ -103,6 +104,7 @@ describe('resolveCdekRegionFromCoordinates', () => {
         country_code: 'RU',
       },
     ])
+    vi.mocked(cdek.getCdekCities).mockResolvedValue([])
 
     const result = await resolveCdekRegionFromCoordinates({
       latitude: 1,
@@ -112,5 +114,78 @@ describe('resolveCdekRegionFromCoordinates', () => {
     })
 
     expect(result).toBeNull()
+  })
+
+  it('enriches suggest city with region_code via location/cities lookup', async () => {
+    vi.mocked(reverseGeocode.reverseGeocodeYandexCoordinates).mockResolvedValue({
+      formattedAddress: 'Санкт-Петербург',
+      locality: 'Санкт-Петербург',
+      province: 'Ленинградская область',
+    })
+    vi.mocked(cdek.getCdekSuggestCities).mockResolvedValue([
+      {
+        code: 137,
+        city: 'Санкт-Петербург',
+        region: 'Ленинградская область',
+        country_code: 'RU',
+      },
+    ])
+    vi.mocked(cdek.getCdekCities).mockResolvedValue([
+      {
+        code: 137,
+        city: 'Санкт-Петербург',
+        region: 'Ленинградская область',
+        region_code: 82,
+        country_code: 'RU',
+      },
+    ])
+
+    const result = await resolveCdekRegionFromCoordinates({
+      latitude: 59.93,
+      longitude: 30.33,
+      yandexApiKey: 'yandex-key',
+      cdekCredentials: credentials,
+    })
+
+    expect(result?.regionCode).toBe(82)
+    expect(result?.cityCode).toBe(137)
+    expect(result?.defaultLocation).toBe('Санкт-Петербург')
+  })
+
+  it('retries suggest with province when locality lookup is empty', async () => {
+    vi.mocked(reverseGeocode.reverseGeocodeYandexCoordinates).mockResolvedValue({
+      formattedAddress: 'Сестрорецк',
+      locality: 'Сестрорецк',
+      province: 'Ленинградская область',
+    })
+    vi.mocked(cdek.getCdekSuggestCities)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          code: 137,
+          city: 'Санкт-Петербург',
+          region: 'Ленинградская область',
+          country_code: 'RU',
+        },
+      ])
+    vi.mocked(cdek.getCdekCities).mockResolvedValue([
+      {
+        code: 137,
+        city: 'Санкт-Петербург',
+        region: 'Ленинградская область',
+        region_code: 82,
+        country_code: 'RU',
+      },
+    ])
+
+    const result = await resolveCdekRegionFromCoordinates({
+      latitude: 60.1,
+      longitude: 29.95,
+      yandexApiKey: 'yandex-key',
+      cdekCredentials: credentials,
+    })
+
+    expect(cdek.getCdekSuggestCities).toHaveBeenCalledTimes(2)
+    expect(result?.regionCode).toBe(82)
   })
 })

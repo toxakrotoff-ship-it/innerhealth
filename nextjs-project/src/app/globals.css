@@ -2170,6 +2170,11 @@ html.preloader-skip .preloader-overlay {
 }
 
 @media (max-width: 767px) {
+  .cdek-widget-host--mobile .cdek-widget-viewport {
+    padding-bottom: 0.625rem;
+    box-sizing: border-box;
+  }
+
   .cdek-widget-viewport [class*='cdek-c66dnq'] {
     width: 100% !important;
     max-width: 100% !important;
@@ -2209,6 +2214,24 @@ html.preloader-skip .preloader-overlay {
   .cdek-widget-viewport [class*='cdek-4rxe5u'] {
     width: 100% !important;
     max-width: 100% !important;
+  }
+
+  /*
+   * Map frame uses overflow:clip + border-radius; geo/zoom controls sit on the
+   * bottom edge and get cut in half inside our rounded viewport on phones.
+   */
+  .cdek-widget-viewport [class*='cdek-32nljf'] {
+    overflow: visible !important;
+    padding-bottom: 0.375rem;
+    box-sizing: border-box;
+  }
+
+  .cdek-widget-viewport [class*='cdek-7aru09'] {
+    bottom: 1rem !important;
+  }
+
+  .cdek-widget-viewport [class*='cdek-pdfvml'] {
+    padding-bottom: 0.375rem !important;
   }
 }
 

@@ -24,8 +24,68 @@ export interface WidgetOfficesBootstrap {
   geoDenied: boolean
 }
 
-export const WIDGET_GEO_RESOLVE_BUDGET_MS = 2_000
-export const WIDGET_GEO_API_TIMEOUT_MS = 5_000
+export const WIDGET_GEO_TOTAL_BUDGET_MS = 12_000
+export const WIDGET_GEO_RESOLVE_BUDGET_MS = 10_000
+export const WIDGET_GEO_API_TIMEOUT_MS = 8_000
+
+/** CDEK widget `.mobile` layout class — container width threshold. */
+export const CDEK_WIDGET_LAYOUT_BREAKPOINT_PX = 555
+
+/** @deprecated Use CDEK_WIDGET_LAYOUT_BREAKPOINT_PX */
+export const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = CDEK_WIDGET_LAYOUT_BREAKPOINT_PX
+
+/** Aligns with globals.css `@media (max-width: 767px)` mobile fixes. */
+export const CDEK_WIDGET_MOBILE_CLIENT_MAX_WIDTH_PX = 767
+
+/** Touch phones in landscape (e.g. iPhone 844px wide). */
+export const CDEK_WIDGET_TOUCH_LANDSCAPE_MAX_WIDTH_PX = 932
+
+export function extractCityFromSenderAddress(address: string | null | undefined): string | null {
+  const trimmed = address?.trim()
+  if (!trimmed) return null
+  const cityPart = trimmed.split(',')[0]?.trim()
+  return cityPart && cityPart.length > 0 ? cityPart : null
+}
+
+export function isCdekWidgetNarrowLayout(containerWidth: number): boolean {
+  return containerWidth > 0 && containerWidth < CDEK_WIDGET_LAYOUT_BREAKPOINT_PX
+}
+
+/** @deprecated Use isCdekWidgetNarrowLayout for layout or isCdekWidgetMobileClient for behavior. */
+export function isCdekWidgetMobileViewport(viewportWidth?: number): boolean {
+  if (viewportWidth != null) return isCdekWidgetNarrowLayout(viewportWidth)
+  if (typeof window === 'undefined') return false
+  return isCdekWidgetNarrowLayout(window.innerWidth)
+}
+
+export function isCdekWidgetMobileClient(params?: {
+  containerWidth?: number
+  matchMedia?: (query: string) => { matches: boolean }
+}): boolean {
+  if (typeof window === 'undefined') return false
+
+  const media =
+    params?.matchMedia ??
+    ((query: string) => window.matchMedia(query))
+
+  if (media(`(max-width: ${CDEK_WIDGET_MOBILE_CLIENT_MAX_WIDTH_PX}px)`).matches) {
+    return true
+  }
+
+  if (
+    media('(hover: none) and (pointer: coarse)').matches &&
+    media(`(max-width: ${CDEK_WIDGET_TOUCH_LANDSCAPE_MAX_WIDTH_PX}px)`).matches
+  ) {
+    return true
+  }
+
+  const containerWidth = params?.containerWidth ?? 0
+  if (containerWidth > 0 && containerWidth < CDEK_WIDGET_LAYOUT_BREAKPOINT_PX) {
+    return true
+  }
+
+  return false
+}
 
 export interface GeolocationReadResult {
   coords: GeolocationCoordinates | null
@@ -164,8 +224,14 @@ export async function resolveWidgetGeoRegionWithBudgetDetailed(params: {
   brandId?: BrandId
   geolocationBudgetMs?: number
   geoApiTimeoutMs?: number
+  totalBudgetMs?: number
 }): Promise<{ geoRegion: WidgetGeoRegion | null; geoDenied: boolean }> {
-  const geolocationBudgetMs = params.geolocationBudgetMs ?? WIDGET_GEO_RESOLVE_BUDGET_MS
+  const totalBudgetMs = params.totalBudgetMs ?? WIDGET_GEO_TOTAL_BUDGET_MS
+  const geolocationBudgetMs = Math.min(
+    params.geolocationBudgetMs ?? WIDGET_GEO_RESOLVE_BUDGET_MS,
+    totalBudgetMs
+  )
+  const startedAt = Date.now()
   const geolocation = await readBrowserGeolocationDetailed(geolocationBudgetMs)
   if (!geolocation.coords) {
     return {
@@ -174,10 +240,16 @@ export async function resolveWidgetGeoRegionWithBudgetDetailed(params: {
     }
   }
 
+  const remainingBudgetMs = Math.max(0, totalBudgetMs - (Date.now() - startedAt))
+  const geoApiTimeoutMs = Math.min(
+    params.geoApiTimeoutMs ?? WIDGET_GEO_API_TIMEOUT_MS,
+    remainingBudgetMs
+  )
+
   const geoRegion = await resolveWidgetGeoRegion({
     brandId: params.brandId,
     coords: geolocation.coords,
-    geoApiTimeoutMs: params.geoApiTimeoutMs ?? WIDGET_GEO_API_TIMEOUT_MS,
+    geoApiTimeoutMs: geoApiTimeoutMs > 0 ? geoApiTimeoutMs : 1,
   })
 
   return { geoRegion, geoDenied: false }
@@ -285,6 +357,38 @@ export async function resolveWidgetOfficesBootstrap(params: {
   }
 }
 
+export function readWidgetSenderCityFromConfig(from: unknown): string | null {
+  if (!from || typeof from !== 'object') return null
+  const row = from as { city?: unknown; address?: unknown }
+  if (typeof row.city === 'string' && row.city.trim().length > 0) {
+    return row.city.trim()
+  }
+  if (typeof row.address === 'string' && row.address.trim().length > 0) {
+    return extractCityFromSenderAddress(row.address)
+  }
+  return null
+}
+
+export function resolveWidgetDefaultLocation(params: {
+  defaultLocation?: string | null
+  geoRegion?: WidgetGeoRegion | null
+  configFrom?: unknown
+}): string {
+  const explicit = params.defaultLocation?.trim()
+  if (explicit) return explicit
+
+  const fromGeo = params.geoRegion?.defaultLocation?.trim()
+  if (fromGeo) return fromGeo
+
+  const fromGeoCity = params.geoRegion?.city?.trim()
+  if (fromGeoCity) return fromGeoCity
+
+  const fromSender = readWidgetSenderCityFromConfig(params.configFrom)
+  if (fromSender) return fromSender
+
+  return 'Россия'
+}
+
 export function buildCdekWidgetServicePath(params: {
   brandId?: BrandId
   regionCode?: number | null
@@ -306,8 +410,21 @@ export function buildCdekWidgetServicePath(params: {
 export function shouldExpandCountryOfficesAfterInit(params: {
   regionCode?: number | null
   fallbackCityCode?: number | null
+  bootstrapSource?: WidgetOfficesBootstrapSource | null
+  /** Skip background country load on mobile after geo_region bootstrap to avoid map jank. */
+  isMobileClient?: boolean
 }): boolean {
-  if (params.regionCode != null && params.regionCode > 0) return true
-  if (params.fallbackCityCode != null && params.fallbackCityCode > 0) return true
-  return false
+  const hasRegionBootstrap = params.regionCode != null && params.regionCode > 0
+  const hasCityBootstrap = params.fallbackCityCode != null && params.fallbackCityCode > 0
+  if (!hasRegionBootstrap && !hasCityBootstrap) return false
+
+  if (
+    params.isMobileClient &&
+    params.bootstrapSource === 'geo_region' &&
+    hasRegionBootstrap
+  ) {
+    return false
+  }
+
+  return true
 }

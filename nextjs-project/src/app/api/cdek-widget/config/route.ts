@@ -8,6 +8,7 @@ import {
   resolveCdekSenderSettings,
   type CdekLocation,
 } from '@/lib/cdek'
+import { extractCityFromSenderAddress } from '@/lib/cdek-widget-geo-region'
 
 const bodySchema = z.object({
   items: z
@@ -64,9 +65,16 @@ export async function POST(request: Request) {
     }
 
     const fromCode = senderSettingsResult.settings.fromCityCode
+    const senderAddress = senderSettingsResult.settings.senderAddress?.trim() ?? ''
+    const senderCity = extractCityFromSenderAddress(senderAddress)
     const from: CdekLocation =
       fromCode != null
-        ? { code: fromCode, country_code: 'RU' }
+        ? {
+            code: fromCode,
+            country_code: 'RU',
+            ...(senderCity ? { city: senderCity } : {}),
+            ...(senderAddress ? { address: senderAddress } : {}),
+          }
         : { country_code: 'RU' }
 
     const productIds = Array.from(new Set(parsed.data.items.map((i) => i.productId)))

@@ -67,6 +67,8 @@ describe('POST /api/cdek-widget/config', () => {
       from: {
         code: 137,
         country_code: 'RU',
+        city: 'Санкт-Петербург',
+        address: 'Санкт-Петербург, склад',
       },
       goods: [
         {

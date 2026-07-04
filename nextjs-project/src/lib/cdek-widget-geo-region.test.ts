@@ -2,14 +2,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildCdekWidgetServicePath,
+  extractCityFromSenderAddress,
+  isCdekWidgetMobileClient,
+  isCdekWidgetMobileViewport,
+  isCdekWidgetNarrowLayout,
   readSenderCityCodeFromWidgetConfig,
+  readWidgetSenderCityFromConfig,
   resolveCdekCityCodeByName,
+  resolveWidgetDefaultLocation,
   resolveWidgetGeoRegion,
   resolveWidgetOfficesBootstrap,
   resolveWidgetGeoRegionWithBudget,
   shouldExpandCountryOfficesAfterInit,
   WIDGET_GEO_API_TIMEOUT_MS,
   WIDGET_GEO_RESOLVE_BUDGET_MS,
+  WIDGET_GEO_TOTAL_BUDGET_MS,
 } from '@/lib/cdek-widget-geo-region'
 
 describe('cdek-widget-geo-region', () => {
@@ -48,6 +55,59 @@ describe('cdek-widget-geo-region', () => {
     expect(shouldExpandCountryOfficesAfterInit({})).toBe(false)
   })
 
+  it('skips background country expand on mobile after geo_region bootstrap only', () => {
+    expect(isCdekWidgetNarrowLayout(390)).toBe(true)
+    expect(isCdekWidgetNarrowLayout(555)).toBe(false)
+    expect(isCdekWidgetMobileViewport(390)).toBe(true)
+
+    const matchMedia = (query: string) => ({
+      matches:
+        query.includes('767px') ||
+        (query.includes('932px') && query.includes('max-width')),
+    })
+
+    expect(isCdekWidgetMobileClient({ matchMedia })).toBe(true)
+    expect(
+      isCdekWidgetMobileClient({
+        containerWidth: 844,
+        matchMedia: (query) => ({
+          matches:
+            query === '(hover: none) and (pointer: coarse)' ||
+            query === '(max-width: 932px)',
+        }),
+      })
+    ).toBe(true)
+
+    expect(
+      shouldExpandCountryOfficesAfterInit({
+        regionCode: 82,
+        bootstrapSource: 'geo_region',
+        isMobileClient: true,
+      })
+    ).toBe(false)
+
+    expect(
+      shouldExpandCountryOfficesAfterInit({
+        regionCode: 82,
+        bootstrapSource: 'geo_region',
+        isMobileClient: false,
+      })
+    ).toBe(true)
+
+    expect(
+      shouldExpandCountryOfficesAfterInit({
+        fallbackCityCode: 44,
+        bootstrapSource: 'sender_city',
+        isMobileClient: true,
+      })
+    ).toBe(true)
+  })
+
+  it('extracts city name from sender address', () => {
+    expect(extractCityFromSenderAddress('Санкт-Петербург, склад')).toBe('Санкт-Петербург')
+    expect(extractCityFromSenderAddress('  ')).toBeNull()
+  })
+
   it('returns null when geolocation never resolves within budget', async () => {
     vi.stubGlobal('navigator', {
       geolocation: {
@@ -61,8 +121,9 @@ describe('cdek-widget-geo-region', () => {
     })
 
     expect(result).toBeNull()
-    expect(WIDGET_GEO_RESOLVE_BUDGET_MS).toBe(2_000)
-    expect(WIDGET_GEO_API_TIMEOUT_MS).toBe(5_000)
+    expect(WIDGET_GEO_TOTAL_BUDGET_MS).toBe(12_000)
+    expect(WIDGET_GEO_RESOLVE_BUDGET_MS).toBe(10_000)
+    expect(WIDGET_GEO_API_TIMEOUT_MS).toBe(8_000)
   })
 
   it('resolves region when geolocation is fast even if geo API is slow', async () => {
@@ -176,6 +237,38 @@ describe('cdek-widget-geo-region', () => {
     expect(result.bootstrap.bootstrapSource).toBe('location_name')
     expect(result.bootstrap.fallbackCityCode).toBe(88)
     expect(result.bootstrap.geoDenied).toBe(true)
+  })
+
+  it('reads sender city name from widget config', () => {
+    expect(
+      readWidgetSenderCityFromConfig({ code: 44, city: 'Москва', country_code: 'RU' })
+    ).toBe('Москва')
+    expect(
+      readWidgetSenderCityFromConfig({ code: 44, address: 'Санкт-Петербург, Невский пр., 1' })
+    ).toBe('Санкт-Петербург')
+    expect(readWidgetSenderCityFromConfig({ code: 44 })).toBeNull()
+  })
+
+  it('resolves default location without hardcoded Moscow fallback', () => {
+    expect(
+      resolveWidgetDefaultLocation({
+        geoRegion: {
+          regionCode: 82,
+          cityCode: 137,
+          city: 'Санкт-Петербург',
+          region: 'Ленинградская область',
+          defaultLocation: 'Санкт-Петербург, Россия',
+        },
+      })
+    ).toBe('Санкт-Петербург, Россия')
+
+    expect(
+      resolveWidgetDefaultLocation({
+        configFrom: { code: 44, city: 'Москва', country_code: 'RU' },
+      })
+    ).toBe('Москва')
+
+    expect(resolveWidgetDefaultLocation({})).toBe('Россия')
   })
 
   it('resolves city code by name from cdek cities api', async () => {

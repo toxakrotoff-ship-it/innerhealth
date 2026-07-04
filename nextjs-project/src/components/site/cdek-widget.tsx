@@ -17,10 +17,14 @@ import {
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import {
   buildCdekWidgetServicePath,
+  CDEK_WIDGET_LAYOUT_BREAKPOINT_PX,
+  isCdekWidgetMobileClient,
   readSenderCityCodeFromWidgetConfig,
+  resolveWidgetDefaultLocation,
   resolveWidgetOfficesBootstrap,
   shouldExpandCountryOfficesAfterInit,
   type WidgetGeoRegion,
+  type WidgetOfficesBootstrapSource,
 } from '@/lib/cdek-widget-geo-region'
 import { expandCountryOfficesIntoWidget } from '@/lib/cdek-widget-country-offices'
 import { runWhenIdle } from '@/lib/run-when-idle'
@@ -87,8 +91,6 @@ function parseWidgetInt(value: unknown): number {
 const WIDGET_INIT_TIMEOUT_MS = 45_000
 const COUNTRY_OFFICES_BACKGROUND_DEFER_MS = 4_000
 
-const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = 555
-
 function isCdekWidgetDebugEnabled(): boolean {
   return process.env.NEXT_PUBLIC_CART_DEBUG === 'true' || process.env.NODE_ENV === 'development'
 }
@@ -104,7 +106,7 @@ function applyCdekWidgetMobileLayout(hostEl: HTMLElement): () => void {
   if (!widgetAppRoot) return () => undefined
 
   const syncMobileLayout = (width: number) => {
-    const isMobile = width > 0 && width < CDEK_WIDGET_MOBILE_BREAKPOINT_PX
+    const isMobile = width > 0 && width < CDEK_WIDGET_LAYOUT_BREAKPOINT_PX
     widgetAppRoot.classList.toggle('mobile', isMobile)
     hostEl.classList.toggle('cdek-widget-host--mobile', isMobile)
   }
@@ -246,7 +248,7 @@ export function CdekWidget({
 
       let configJson: WidgetConfigResponse
       let geoRegion: WidgetGeoRegion | null = null
-      let officesBootstrapSource: string | null = null
+      let officesBootstrapSource: WidgetOfficesBootstrapSource | null = null
       let geoDenied = false
       let fallbackCityCode: number | null = null
       try {
@@ -303,6 +305,22 @@ export function CdekWidget({
       }
       if (cancelled) return
 
+      const resolvedDefaultLocation = resolveWidgetDefaultLocation({
+        defaultLocation,
+        geoRegion,
+        configFrom: configJson.from,
+      })
+
+      const fallbackCityCodeForPath = geoRegion ? null : fallbackCityCode
+      const containerWidth = hostRef.current?.getBoundingClientRect().width ?? 0
+      const isMobileClient = isCdekWidgetMobileClient({ containerWidth })
+      const shouldBackgroundExpandCountry = shouldExpandCountryOfficesAfterInit({
+        regionCode: geoRegion?.regionCode ?? null,
+        fallbackCityCode: fallbackCityCodeForPath,
+        bootstrapSource: officesBootstrapSource,
+        isMobileClient,
+      })
+
       logCartDebug({
         scope: 'cdek-widget',
         event: 'config_loaded',
@@ -318,29 +336,13 @@ export function CdekWidget({
           officesBootstrapSource,
           geoDenied,
           fallbackCityCode,
+          isMobileClient,
+          shouldBackgroundExpandCountry,
         },
       })
 
-      const resolvedDefaultLocation =
-        defaultLocation?.trim().length
-          ? defaultLocation.trim()
-          : geoRegion?.defaultLocation?.trim().length
-            ? geoRegion.defaultLocation.trim()
-            : typeof (configJson.from as { city?: unknown } | null)?.city === 'string'
-              ? ((configJson.from as { city?: string }).city as string)
-              : typeof (configJson.from as { address?: unknown } | null)?.address === 'string'
-                ? ((configJson.from as { address?: string }).address as string)
-                : 'Москва'
-
-      const fallbackCityCodeForPath = geoRegion ? null : fallbackCityCode
-
       const servicePath = buildCdekWidgetServicePath({
         brandId,
-        regionCode: geoRegion?.regionCode ?? null,
-        fallbackCityCode: fallbackCityCodeForPath,
-      })
-
-      const shouldBackgroundExpandCountry = shouldExpandCountryOfficesAfterInit({
         regionCode: geoRegion?.regionCode ?? null,
         fallbackCityCode: fallbackCityCodeForPath,
       })
@@ -799,7 +801,7 @@ export function CdekWidget({
           </button>
         </div>
       ) : null}
-      <div className="cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl sm:h-[580px] md:h-[650px]">
+      <div className="cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl max-sm:h-[min(540px,calc(100dvh-10rem))] sm:h-[580px] md:h-[650px]">
         {!error && !isReady ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 px-4 text-center">
             <p className="text-sm text-gray-600">

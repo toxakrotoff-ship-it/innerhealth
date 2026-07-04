@@ -1,4 +1,4 @@
-import { getCdekSuggestCities, type CdekCity } from '@/lib/cdek'
+import { getCdekCities, getCdekSuggestCities, type CdekCity } from '@/lib/cdek'
 import type { CdekCredentials } from '@/lib/cdek'
 import { reverseGeocodeYandexCoordinates } from '@/lib/cdek-yandex-reverse-geocode'
 
@@ -25,6 +25,42 @@ function pickBestCity(cities: CdekCity[], locality: string | null): CdekCity | n
   return partial ?? cities[0] ?? null
 }
 
+async function enrichCityWithRegionCode(
+  city: CdekCity,
+  cdekCredentials: CdekCredentials
+): Promise<CdekCity | null> {
+  if (city.region_code != null && city.region_code > 0) return city
+
+  if (city.code > 0) {
+    const byCode = await getCdekCities(
+      { code: city.code, country_codes: ['RU'], size: 1 },
+      cdekCredentials
+    )
+    const enriched = byCode[0]
+    if (enriched?.region_code != null && enriched.region_code > 0) {
+      return { ...city, ...enriched }
+    }
+  }
+
+  if (city.city?.trim()) {
+    const byName = await getCdekCities(
+      { city: city.city.trim(), country_codes: ['RU'], size: 10 },
+      cdekCredentials
+    )
+    const exact =
+      byName.find((row) => row.code === city.code) ??
+      byName.find(
+        (row) => row.city?.trim().toLowerCase() === city.city?.trim().toLowerCase()
+      ) ??
+      byName[0]
+    if (exact?.region_code != null && exact.region_code > 0) {
+      return { ...city, ...exact }
+    }
+  }
+
+  return null
+}
+
 export async function resolveCdekRegionFromCoordinates(params: {
   latitude: number
   longitude: number
@@ -41,18 +77,38 @@ export async function resolveCdekRegionFromCoordinates(params: {
   const lookupName = geocoded.locality ?? geocoded.province
   if (!lookupName) return null
 
-  const cities = await getCdekSuggestCities(
+  let cities = await getCdekSuggestCities(
     { name: lookupName, country_codes: ['RU'] },
     params.cdekCredentials
   )
-  const city = pickBestCity(cities, geocoded.locality)
-  if (!city?.region_code || city.region_code <= 0) return null
+  let city = pickBestCity(cities, geocoded.locality)
+
+  if (!city && geocoded.province && geocoded.province !== lookupName) {
+    cities = await getCdekSuggestCities(
+      { name: geocoded.province, country_codes: ['RU'] },
+      params.cdekCredentials
+    )
+    city = pickBestCity(cities, geocoded.locality)
+  }
+
+  if (!city) {
+    const byLocality = await getCdekCities(
+      { city: lookupName, country_codes: ['RU'], size: 10 },
+      params.cdekCredentials
+    )
+    city = pickBestCity(byLocality, geocoded.locality)
+  }
+
+  if (!city) return null
+
+  const cityWithRegion = await enrichCityWithRegionCode(city, params.cdekCredentials)
+  if (!cityWithRegion?.region_code || cityWithRegion.region_code <= 0) return null
 
   return {
-    regionCode: city.region_code,
-    cityCode: city.code > 0 ? city.code : null,
-    city: city.city ?? geocoded.locality,
-    region: city.region ?? geocoded.province,
+    regionCode: cityWithRegion.region_code,
+    cityCode: cityWithRegion.code > 0 ? cityWithRegion.code : null,
+    city: cityWithRegion.city ?? geocoded.locality,
+    region: cityWithRegion.region ?? geocoded.province,
     defaultLocation: geocoded.formattedAddress || lookupName,
   }
 }
