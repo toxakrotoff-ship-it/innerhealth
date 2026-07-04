@@ -1,6 +1,28 @@
 import type { BrandId } from '@/lib/brand/brand'
 import { OFFICES_PAGE_SIZE } from '@/lib/cdek-widget-offices'
 
+export const COUNTRY_OFFICES_MOBILE_CONCURRENCY = 2
+export const COUNTRY_OFFICES_DESKTOP_CONCURRENCY = 4
+
+export interface CountryOfficesBatchMeta {
+  page: number
+  pageCount: number
+  batchSize: number
+  totalLoaded: number
+  isComplete: boolean
+}
+
+export interface FetchCountryOfficesStagedOptions {
+  brandId?: BrandId
+  signal?: AbortSignal
+  concurrency?: number
+  onBatch?: (payload: {
+    batch: unknown[]
+    accumulated: unknown[]
+    meta: CountryOfficesBatchMeta
+  }) => void | Promise<void>
+}
+
 function buildCdekWidgetServiceUrl(brandId?: BrandId): string {
   if (!brandId) return '/api/cdek-widget/service'
   return `/api/cdek-widget/service?brand=${encodeURIComponent(brandId)}`
@@ -39,13 +61,11 @@ async function fetchOfficesPage(params: {
   return Array.isArray(data) ? data : []
 }
 
-export async function fetchCountryOfficesRaw(params: {
-  brandId?: BrandId
+async function probeCountryOfficesTotal(params: {
+  serviceUrl: string
   signal?: AbortSignal
-}): Promise<unknown[]> {
-  const serviceUrl = buildCdekWidgetServiceUrl(params.brandId)
-
-  const probeResponse = await fetch(serviceUrl, {
+}): Promise<number> {
+  const probeResponse = await fetch(params.serviceUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -62,17 +82,123 @@ export async function fetchCountryOfficesRaw(params: {
     throw new Error(`CDEK country offices probe failed: ${probeResponse.status}`)
   }
 
-  const totalElements = parseOfficesTotalElements(probeResponse)
+  return parseOfficesTotalElements(probeResponse)
+}
+
+export async function mapWithConcurrency<TItem, TResult>(
+  items: readonly TItem[],
+  concurrency: number,
+  worker: (item: TItem, index: number) => Promise<TResult>,
+  signal?: AbortSignal
+): Promise<TResult[]> {
+  if (items.length === 0) return []
+
+  const results = new Array<TResult>(items.length)
+  let cursor = 0
+
+  async function consume(): Promise<void> {
+    while (true) {
+      if (signal?.aborted) {
+        throw new DOMException('The operation was aborted', 'AbortError')
+      }
+
+      const index = cursor
+      cursor += 1
+      if (index >= items.length) return
+
+      results[index] = await worker(items[index]!, index)
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, concurrency), items.length)
+  await Promise.all(Array.from({ length: workerCount }, () => consume()))
+  return results
+}
+
+export async function fetchCountryOfficesStaged(
+  options: FetchCountryOfficesStagedOptions
+): Promise<unknown[]> {
+  const serviceUrl = buildCdekWidgetServiceUrl(options.brandId)
+  const concurrency = Math.max(1, options.concurrency ?? COUNTRY_OFFICES_DESKTOP_CONCURRENCY)
+  const totalElements = await probeCountryOfficesTotal({
+    serviceUrl,
+    signal: options.signal,
+  })
+
   if (totalElements <= OFFICES_PAGE_SIZE) {
-    return fetchOfficesPage({ serviceUrl, page: 0, signal: params.signal })
+    const offices = await fetchOfficesPage({ serviceUrl, page: 0, signal: options.signal })
+    await options.onBatch?.({
+      batch: offices,
+      accumulated: offices,
+      meta: {
+        page: 0,
+        pageCount: 1,
+        batchSize: offices.length,
+        totalLoaded: offices.length,
+        isComplete: true,
+      },
+    })
+    return offices
   }
 
   const pageCount = Math.ceil(totalElements / OFFICES_PAGE_SIZE)
-  const pages = await Promise.all(
-    Array.from({ length: pageCount }, (_, page) =>
-      fetchOfficesPage({ serviceUrl, page, signal: params.signal })
-    )
+  const firstPage = await fetchOfficesPage({ serviceUrl, page: 0, signal: options.signal })
+  const accumulated: unknown[] = [...firstPage]
+
+  await options.onBatch?.({
+    batch: firstPage,
+    accumulated,
+    meta: {
+      page: 0,
+      pageCount,
+      batchSize: firstPage.length,
+      totalLoaded: accumulated.length,
+      isComplete: pageCount === 1,
+    },
+  })
+
+  if (pageCount === 1) return accumulated
+
+  const remainingPages = Array.from({ length: pageCount - 1 }, (_, index) => index + 1)
+  const pageResults = await mapWithConcurrency(
+    remainingPages,
+    concurrency,
+    async (page) => ({
+      page,
+      offices: await fetchOfficesPage({ serviceUrl, page, signal: options.signal }),
+    }),
+    options.signal
   )
 
-  return pages.flat()
+  pageResults
+    .sort((left, right) => left.page - right.page)
+    .forEach(({ page, offices }) => {
+      accumulated.push(...offices)
+    })
+
+  await options.onBatch?.({
+    batch: [],
+    accumulated,
+    meta: {
+      page: pageCount - 1,
+      pageCount,
+      batchSize: 0,
+      totalLoaded: accumulated.length,
+      isComplete: true,
+    },
+  })
+
+  return accumulated
+}
+
+export async function fetchCountryOfficesRaw(params: {
+  brandId?: BrandId
+  signal?: AbortSignal
+  concurrency?: number
+}): Promise<unknown[]> {
+  return fetchCountryOfficesStaged({
+    brandId: params.brandId,
+    signal: params.signal,
+    concurrency: params.concurrency ?? COUNTRY_OFFICES_DESKTOP_CONCURRENCY,
+  })
 }

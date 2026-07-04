@@ -15,7 +15,13 @@ import {
   type CdekWidgetConfigResponse,
 } from '@/lib/cdek-widget-preload'
 import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
-import { fetchCountryOfficesRaw } from '@/lib/cdek-widget-country-offices'
+import {
+  fetchCountryOfficesStaged,
+  COUNTRY_OFFICES_MOBILE_CONCURRENCY,
+  COUNTRY_OFFICES_DESKTOP_CONCURRENCY,
+} from '@/lib/cdek-widget-country-offices'
+import { scheduleMobileCountryOfficesPrefetch } from '@/lib/cdek-widget-mobile-prefetch'
+import { runWhenIdle } from '@/lib/run-when-idle'
 import { attachCdekMapExpandListener } from '@/lib/cdek-widget-map-expand'
 import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
@@ -178,6 +184,7 @@ export function CdekWidget({
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
     let removeMapExpandListener: (() => void) | null = null
+    let removeMobilePrefetch: (() => void) | null = null
     const expandAbortController = new AbortController()
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
     let widgetReady = false
@@ -344,61 +351,90 @@ export function CdekWidget({
           setIsReady(true)
           const hostEl = hostRef.current
           if (!hostEl) return
+
+          const expandCountryOffices = () => {
+            if (cancelled || countryOfficesExpandedRef.current) return
+            countryOfficesExpandedRef.current = true
+
+            logCartDebug({
+              scope: 'cdek-widget',
+              event: 'expand_offices_start',
+              data: { initGeneration, brandId: brandId ?? null, rootId },
+            })
+            pushDebugEvent('expand_offices_start', { initGeneration, rootId })
+
+            const isMobileLayout = hostEl.classList.contains('cdek-widget-host--mobile')
+            const concurrency = isMobileLayout
+              ? COUNTRY_OFFICES_MOBILE_CONCURRENCY
+              : COUNTRY_OFFICES_DESKTOP_CONCURRENCY
+
+            void fetchCountryOfficesStaged({
+              brandId,
+              signal: expandAbortController.signal,
+              concurrency,
+              onBatch: async ({ accumulated, meta }) => {
+                if (!meta.isComplete) return
+                if (cancelled || expandAbortController.signal.aborted) return
+
+                const widget = widgetRef.current
+                if (!widget?.updateOfficesRaw) return
+
+                await runWhenIdle(async () => {
+                  if (cancelled || expandAbortController.signal.aborted) return
+                  await widget.updateOfficesRaw!(accumulated)
+                }, isMobileLayout ? 1_200 : 600)
+
+                logCartDebug({
+                  scope: 'cdek-widget',
+                  event: 'expand_offices_done',
+                  data: {
+                    initGeneration,
+                    brandId: brandId ?? null,
+                    rootId,
+                    count: accumulated.length,
+                    concurrency,
+                    isMobileLayout,
+                  },
+                })
+                pushDebugEvent('expand_offices_done', {
+                  initGeneration,
+                  rootId,
+                  count: accumulated.length,
+                })
+              },
+            }).catch((expandError) => {
+              if (cancelled || expandAbortController.signal.aborted) return
+              countryOfficesExpandedRef.current = false
+              logCartDebug({
+                scope: 'cdek-widget',
+                event: 'expand_offices_failed',
+                level: 'warn',
+                error: expandError,
+                data: { initGeneration, brandId: brandId ?? null, rootId },
+              })
+              pushDebugEvent('expand_offices_failed', { initGeneration, rootId })
+            })
+          }
+
           requestAnimationFrame(() => {
             if (cancelled) return
             removeMobileLayoutSync?.()
             removeMobileLayoutSync = applyCdekWidgetMobileLayout(hostEl)
 
             removeMapExpandListener?.()
-            removeMapExpandListener = attachCdekMapExpandListener(hostEl, () => {
-              if (cancelled || countryOfficesExpandedRef.current) return
-              countryOfficesExpandedRef.current = true
+            const mapRoot = hostEl.querySelector<HTMLElement>(`#${rootId}`) ?? hostEl
+            removeMapExpandListener = attachCdekMapExpandListener(mapRoot, expandCountryOffices)
 
-              logCartDebug({
-                scope: 'cdek-widget',
-                event: 'expand_offices_start',
-                data: { initGeneration, brandId: brandId ?? null, rootId },
-              })
-              pushDebugEvent('expand_offices_start', { initGeneration, rootId })
-
-              void fetchCountryOfficesRaw({
-                brandId,
+            removeMobilePrefetch?.()
+            if (hostEl.classList.contains('cdek-widget-host--mobile')) {
+              const mapViewport =
+                hostEl.querySelector<HTMLElement>('.cdek-widget-viewport') ?? mapRoot
+              removeMobilePrefetch = scheduleMobileCountryOfficesPrefetch({
+                target: mapViewport,
                 signal: expandAbortController.signal,
+                onPrefetch: expandCountryOffices,
               })
-                .then(async (offices) => {
-                  if (cancelled || expandAbortController.signal.aborted) return
-                  const widget = widgetRef.current
-                  if (!widget?.updateOfficesRaw) return
-                  await widget.updateOfficesRaw(offices)
-                  logCartDebug({
-                    scope: 'cdek-widget',
-                    event: 'expand_offices_done',
-                    data: {
-                      initGeneration,
-                      brandId: brandId ?? null,
-                      rootId,
-                      count: offices.length,
-                    },
-                  })
-                  pushDebugEvent('expand_offices_done', {
-                    initGeneration,
-                    rootId,
-                    count: offices.length,
-                  })
-                })
-                .catch((expandError) => {
-                  if (cancelled || expandAbortController.signal.aborted) return
-                  countryOfficesExpandedRef.current = false
-                  logCartDebug({
-                    scope: 'cdek-widget',
-                    event: 'expand_offices_failed',
-                    level: 'warn',
-                    error: expandError,
-                    data: { initGeneration, brandId: brandId ?? null, rootId },
-                  })
-                  pushDebugEvent('expand_offices_failed', { initGeneration, rootId })
-                })
-            })
+            }
           })
         },
         onCalculate(tariffs: unknown) {
@@ -560,6 +596,7 @@ export function CdekWidget({
       if (initTimeoutId != null) clearTimeout(initTimeoutId)
       expandAbortController.abort()
       removeMapExpandListener?.()
+      removeMobilePrefetch?.()
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null
