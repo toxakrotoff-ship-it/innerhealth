@@ -4,6 +4,7 @@ import { ArrowUpRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import type { ContentBlockResolved } from '@/services/content-block.service'
+import { getInnerHealthHeroPortraitAlt } from '@/lib/image-alt-text'
 
 interface HeroBlockProps {
   badge: ContentBlockResolved | null
@@ -149,9 +150,10 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
           >
             <Image
               src="/hero-portrait.png"
-              alt=""
-              fill
-              className="object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
+              alt={getInnerHealthHeroPortraitAlt()}
+              width={1008}
+              height={1016}
+              className="absolute inset-0 h-full w-full object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
               sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
               priority
               fetchPriority="high"

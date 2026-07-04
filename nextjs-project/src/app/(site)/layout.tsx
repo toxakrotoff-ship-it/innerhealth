@@ -48,36 +48,6 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-function createHashRedirectScript(hashRedirectsJson: string): string {
-  return `
-(() => {
-  const redirectMap = ${hashRedirectsJson};
-  const normalizedMap = new Map(Object.entries(redirectMap));
-  function toSourcePath(hash) {
-    const cleanHash = (hash || '').trim();
-    if (!cleanHash || cleanHash === '#') return null;
-    return cleanHash.startsWith('/') ? cleanHash : '/' + cleanHash;
-  }
-  function toTargetUrl(destination) {
-    return destination.startsWith('http')
-      ? destination
-      : window.location.origin + (destination.startsWith('/') ? '' : '/') + destination;
-  }
-  function applyHashRedirect() {
-    const sourcePath = toSourcePath(window.location.hash);
-    if (!sourcePath) return;
-    const destination = normalizedMap.get(sourcePath);
-    if (!destination) return;
-    const targetUrl = toTargetUrl(destination);
-    if (targetUrl === window.location.href) return;
-    window.location.replace(targetUrl);
-  }
-  applyHashRedirect();
-  window.addEventListener('hashchange', applyHashRedirect);
-})();
-`.trim()
-}
-
 /**
  * Synchronous layout shell so the root <div> is always the first node in the HTML.
  * Async data (e.g. JSON-LD) is rendered by child components to avoid hydration mismatch.
@@ -99,16 +69,17 @@ export default async function SiteLayout({
     return acc
   }, {})
   const hashRedirectsJson = JSON.stringify(hashRedirects).replace(/</g, '\\u003c')
-  const hashRedirectScript = createHashRedirectScript(hashRedirectsJson)
   const showVpnNotice = await shouldShowVpnNotice()
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 antialiased">
       <script
-        id="hash-redirect-bootstrap"
+        id="hash-redirect-data"
+        type="application/json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: hashRedirectScript }}
+        dangerouslySetInnerHTML={{ __html: hashRedirectsJson }}
       />
+      <script src="/scripts/hash-redirect-bootstrap.js" suppressHydrationWarning />
       <PageViewTracker />
       <CartOwnerSync />
       <CartGiftSync />

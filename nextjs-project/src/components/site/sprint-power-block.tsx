@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { CheckCircle, NavArrowRight } from 'iconoir-react'
 
 import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
+import { getSprintPowerMockupAlt } from '@/lib/image-alt-text'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 
@@ -36,7 +37,7 @@ export function SprintPowerBlock() {
                 <div className="relative h-full w-full">
                   <Image
                     src={sprintPowerMockup}
-                    alt=""
+                    alt={getSprintPowerMockupAlt()}
                     fill
                     className="object-contain object-center"
                     sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 40vw"

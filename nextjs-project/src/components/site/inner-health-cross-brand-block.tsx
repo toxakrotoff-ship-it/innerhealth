@@ -4,6 +4,7 @@ import { CheckCircle, NavArrowRight } from 'iconoir-react'
 
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
+import { getInnerHealthCrossBrandVisualAlt } from '@/lib/image-alt-text'
 
 export interface InnerHealthCrossBrandBlockProps {
   /** Main heading in the text column (e.g. «Inner Health»). */
@@ -66,7 +67,7 @@ export function InnerHealthCrossBrandBlock({
                   <div className="relative h-full w-full">
                     <Image
                       src="/images/sprint-power/cross-brand-inner-health.png"
-                      alt=""
+                      alt={getInnerHealthCrossBrandVisualAlt()}
                       fill
                       className="object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
                       sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 40vw"

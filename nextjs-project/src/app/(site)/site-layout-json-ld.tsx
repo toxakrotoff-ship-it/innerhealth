@@ -17,11 +17,15 @@ export async function SiteLayoutJsonLd() {
   })
   const brandConfig = getBrandSiteConfig(activeBrand)
   const brandUrl = getBrandSiteUrl(activeBrand)
+  const brandLogoPath =
+    activeBrand === 'sprint-power' ? '/sprint-power-mockup.png' : '/hero-portrait.png'
 
   const settings = await getSettingsMap(undefined, { brandId: activeBrand })
   const organizationJsonLd = buildOrganizationJsonLd(settings, {
     name: brandConfig.title,
     url: brandUrl,
+    logo: `${brandUrl.replace(/\/+$/, '')}${brandLogoPath}`,
+    telephone: brandConfig.contact.phone,
   })
   const webSiteJsonLd = buildWebSiteJsonLdWithOverrides(settings, {
     name: brandConfig.title,

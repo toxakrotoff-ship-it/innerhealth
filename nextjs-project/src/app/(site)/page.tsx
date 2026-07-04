@@ -18,6 +18,11 @@ import {
   getCategoryImageObjectPosition,
   resolveCategoryImage,
 } from '@/lib/catalog-categories'
+import {
+  getCategoryCardImageAlt,
+  getPostPreviewImageAlt,
+  getSprintPowerHomePromoAlt,
+} from '@/lib/image-alt-text'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { CheckCircle, NavArrowRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
@@ -607,7 +612,7 @@ function SprintPowerHome({
               <div className="absolute inset-x-0 top-0 h-[16rem] overflow-hidden sm:h-[18rem] md:hidden">
                 <Image
                   src="/images/sprint-power/sprint-power-promo-hero.jpg"
-                  alt=""
+                  alt={getSprintPowerHomePromoAlt()}
                   fill
                   priority
                   className="object-cover object-center opacity-84 brightness-[0.88] grayscale saturate-0 contrast-[1.12]"
@@ -617,7 +622,7 @@ function SprintPowerHome({
               </div>
               <Image
                 src="/images/sprint-power/sprint-power-promo-hero.jpg"
-                alt=""
+                alt={getSprintPowerHomePromoAlt()}
                 fill
                 priority
                 className="hidden object-cover object-[68%_center] opacity-78 brightness-[0.82] grayscale saturate-0 contrast-[1.12] md:block md:translate-x-[10%] md:translate-y-[6%] md:scale-[1.05]"
@@ -721,9 +726,10 @@ function SprintPowerHome({
                             <>
                               <Image
                                 src={bgImage}
-                                alt=""
-                                fill
-                                className={imagePosition}
+                                alt={getCategoryCardImageAlt(category.title)}
+                                width={1024}
+                                height={682}
+                                className={`absolute inset-0 h-full w-full object-cover ${imagePosition}`}
                                 sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 40vw"
                               />
                               <div
@@ -885,7 +891,7 @@ function SprintPowerHome({
                         {post.previewImage ? (
                           <Image
                             src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                            alt={post.title}
+                            alt={getPostPreviewImageAlt(post.title)}
                             fill
                             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                             sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 33vw"
@@ -949,7 +955,7 @@ function SprintPowerHome({
                         {post.previewImage ? (
                           <Image
                             src={post.previewImage.startsWith('/') ? post.previewImage : `/${post.previewImage}`}
-                            alt={post.title}
+                            alt={getPostPreviewImageAlt(post.title)}
                             fill
                             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                             sizes="(max-width: 640px) 92vw, (max-width: 1024px) 45vw, 33vw"
@@ -1276,9 +1282,10 @@ export default async function HomePage() {
                           <>
                             <Image
                               src={bgImage}
-                              alt=""
-                              fill
-                              className={imagePosition}
+                              alt={getCategoryCardImageAlt(cat.title)}
+                              width={1024}
+                              height={682}
+                              className={`absolute inset-0 h-full w-full object-cover rounded-2xl ${imagePosition}`}
                               sizes="(max-width: 768px) 50vw, 33vw"
                             />
                             <div
@@ -1371,7 +1378,7 @@ export default async function HomePage() {
                             <>
                               <Image
                                 src={post.previewImage}
-                                alt={post.title}
+                                alt={getPostPreviewImageAlt(post.title)}
                                 fill
                                 className="object-cover object-center"
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -1441,7 +1448,7 @@ export default async function HomePage() {
                             <>
                               <Image
                                 src={post.previewImage}
-                                alt={post.title}
+                                alt={getPostPreviewImageAlt(post.title)}
                                 fill
                                 className="object-cover object-center"
                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

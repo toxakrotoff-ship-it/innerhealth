@@ -46,6 +46,17 @@ function parseBooleanFlag(value: string | undefined): boolean {
   return normalized === '1' || normalized === 'true' || normalized === 'yes'
 }
 
+/** Schema.org is on by default; admin can opt out with 0 / false / no. */
+export function isSchemaOrgEnabled(settings: Record<string, string>): boolean {
+  const raw = settings.schema_org_enabled?.trim()
+  if (!raw) return true
+  const normalized = raw.toLowerCase()
+  if (normalized === '0' || normalized === 'false' || normalized === 'no') {
+    return false
+  }
+  return parseBooleanFlag(raw)
+}
+
 function parseSameAsLinks(raw: string | undefined): string[] | undefined {
   if (!raw) return undefined
   const items = raw
@@ -71,10 +82,9 @@ function parseSameAsLinks(raw: string | undefined): string[] | undefined {
 
 export function buildOrganizationJsonLd(
   settings: Record<string, string>,
-  overrides?: { name?: string; url?: string; logo?: string }
+  overrides?: { name?: string; url?: string; logo?: string; telephone?: string }
 ): OrganizationJsonLd | null {
-  const enabled = parseBooleanFlag(settings.schema_org_enabled)
-  if (!enabled) {
+  if (!isSchemaOrgEnabled(settings)) {
     return null
   }
 
@@ -87,7 +97,8 @@ export function buildOrganizationJsonLd(
 
   const url = overrides?.url?.trim() || settings.schema_org_url?.trim()
   const logo = overrides?.logo?.trim() || settings.schema_org_logo_url?.trim()
-  const telephone = settings.schema_org_phone?.trim()
+  const telephone =
+    settings.schema_org_phone?.trim() || overrides?.telephone?.trim()
   const addressRaw = settings.schema_org_address?.trim()
   const sameAs = parseSameAsLinks(settings.schema_org_social_links)
 
@@ -123,6 +134,10 @@ export function buildOrganizationJsonLd(
     jsonLd.sameAs = sameAs
   }
 
+  if (!jsonLd.name || !jsonLd.url) {
+    return null
+  }
+
   return jsonLd
 }
 
@@ -140,8 +155,7 @@ export function buildProductJsonLd(params: {
   url: string
   images: string[]
 }): ProductJsonLd | null {
-  const enabled = parseBooleanFlag(params.settings.schema_org_enabled)
-  if (!enabled) return null
+  if (!isSchemaOrgEnabled(params.settings)) return null
 
   const currency = params.settings.default_currency?.trim() || 'RUB'
   const images = params.images.filter(Boolean)
@@ -274,7 +288,7 @@ export function buildNewsArticleGeoStructuredData(params: {
   /** Plain text body extracted from editor content */
   articleBodyPlain: string
 }): Record<string, unknown> {
-  const schemaEnabled = parseBooleanFlag(params.settings.schema_org_enabled)
+  const schemaEnabled = isSchemaOrgEnabled(params.settings)
   const orgName =
     params.settings.schema_org_legal_name?.trim() ||
     params.settings.site_name?.trim() ||
@@ -426,8 +440,7 @@ interface FaqPageJsonLd {
  * WebSite + SearchAction for sitelinks search box (when base URL and name are configured).
  */
 export function buildWebSiteJsonLd(settings: Record<string, string>): WebSiteJsonLd | null {
-  const enabled = parseBooleanFlag(settings.schema_org_enabled)
-  if (!enabled) return null
+  if (!isSchemaOrgEnabled(settings)) return null
 
   const url = settings.schema_org_url?.trim()
   const name =
@@ -457,8 +470,7 @@ export function buildWebSiteJsonLdWithOverrides(
   settings: Record<string, string>,
   overrides?: { name?: string; url?: string }
 ): WebSiteJsonLd | null {
-  const enabled = parseBooleanFlag(settings.schema_org_enabled)
-  if (!enabled) return null
+  if (!isSchemaOrgEnabled(settings)) return null
 
   const url = overrides?.url?.trim() || settings.schema_org_url?.trim()
   const name =
@@ -494,8 +506,7 @@ export function buildFaqPageJsonLd(params: {
   settings: Record<string, string>
   items: { question: string; answerPlain: string }[]
 }): FaqPageJsonLd | null {
-  const enabled = parseBooleanFlag(params.settings.schema_org_enabled)
-  if (!enabled || params.items.length === 0) return null
+  if (!isSchemaOrgEnabled(params.settings) || params.items.length === 0) return null
 
   return {
     '@context': 'https://schema.org',

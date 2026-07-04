@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import type { MarketingBentoTile } from '@/types/marketing-bento-tile'
 import { cn } from '@/lib/utils'
+import { getMarketingBentoTileImageAlt } from '@/lib/image-alt-text'
 
 const PLACEHOLDER_GRADIENTS: readonly string[] = [
   'from-slate-800 via-slate-900 to-[#0B1222]',
@@ -54,7 +55,7 @@ function MarketingBentoTileView({
         <>
           <Image
             src={tile.imageSrc}
-            alt=""
+            alt={getMarketingBentoTileImageAlt(tile.title)}
             fill
             className={cn(
               'object-cover transition-transform duration-500 group-hover:scale-[1.03]',

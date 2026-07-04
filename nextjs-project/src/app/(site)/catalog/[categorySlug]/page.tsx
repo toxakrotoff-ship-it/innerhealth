@@ -16,6 +16,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { stripHtmlToPlainText } from '@/lib/plain-text'
+import { getCategoryHeroBannerAlt } from '@/lib/image-alt-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
@@ -304,7 +305,7 @@ export default async function CategoryPage({ params }: PageProps) {
           <div className="relative w-full aspect-3/1 min-h-[160px] sm:min-h-[200px]">
             <Image
               src={content.heroImage}
-              alt=""
+              alt={getCategoryHeroBannerAlt(content.heroTitle, content.heroSubtitle)}
               fill
               className="object-cover object-center"
               sizes="100vw"

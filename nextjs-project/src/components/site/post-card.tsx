@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { getPostPreviewImageAlt } from '@/lib/image-alt-text'
 
 interface PostCardProps {
   href: string
@@ -38,7 +39,7 @@ export function PostCard({
         {previewImage ? (
           <Image
             src={previewImage.startsWith('/') ? previewImage : `/${previewImage}`}
-            alt=""
+            alt={getPostPreviewImageAlt(title)}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
             sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, (max-width: 1919px) 33vw, 25vw"

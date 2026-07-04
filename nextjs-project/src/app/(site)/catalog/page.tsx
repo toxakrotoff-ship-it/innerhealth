@@ -15,6 +15,7 @@ import {
   getCategoryImageObjectPosition,
   resolveCategoryImage,
 } from '@/lib/catalog-categories'
+import { getCategoryCardImageAlt } from '@/lib/image-alt-text'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
@@ -254,7 +255,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         <>
                           <Image
                             src={bgImage}
-                            alt=""
+                            alt={getCategoryCardImageAlt(cat.title)}
                             fill
                             className={imagePosition}
                             sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}

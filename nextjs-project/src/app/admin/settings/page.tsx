@@ -144,7 +144,7 @@ const FIELDS: Array<{
   { key: 'site_name', label: 'Название сайта', type: 'text', placeholder: 'Inner Health', group: 'site' },
   { key: 'site_contact_email', label: 'Email для связи', type: 'text', placeholder: 'info@example.com', group: 'site' },
   { key: 'default_currency', label: 'Валюта по умолчанию', type: 'text', placeholder: 'RUB', group: 'site' },
-  { key: 'schema_org_enabled', label: 'Включить schema.org (1 = да)', type: 'text', placeholder: '1', group: 'site' },
+  { key: 'schema_org_enabled', label: 'Schema.org (по умолчанию вкл.; 0 / false / no — выкл.)', type: 'text', placeholder: 'пусто = вкл.', group: 'site' },
   { key: 'schema_org_organization_type', label: 'Тип организации (Organization, LocalBusiness...)', type: 'text', placeholder: 'Organization', group: 'site' },
   { key: 'schema_org_legal_name', label: 'Юридическое название для schema.org', type: 'text', group: 'site' },
   { key: 'schema_org_url', label: 'URL сайта (канонический)', type: 'text', placeholder: 'https://innerhealth.ru', group: 'site' },

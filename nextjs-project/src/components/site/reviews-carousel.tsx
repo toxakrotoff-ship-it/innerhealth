@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
+import { getReviewAttachmentAlt } from '@/lib/image-alt-text';
 
 export interface ReviewItem {
   id: string;
@@ -111,7 +112,7 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
               <div className="mt-4 overflow-hidden rounded-xl">
                 <Image
                   src={review.imageUrl}
-                  alt=""
+                  alt={getReviewAttachmentAlt(review.authorName)}
                   width={320}
                   height={240}
                   className="h-auto w-full object-cover"
