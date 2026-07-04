@@ -2,7 +2,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   attachCdekMapExpandListener,
-  shouldTriggerExpandOnPan,
   shouldTriggerExpandOnPinch,
 } from '@/lib/cdek-widget-map-expand'
 
@@ -10,11 +9,6 @@ describe('cdek-widget-map-expand', () => {
   it('detects pinch zoom out when finger distance shrinks', () => {
     expect(shouldTriggerExpandOnPinch(100, 90)).toBe(true)
     expect(shouldTriggerExpandOnPinch(100, 95)).toBe(false)
-  })
-
-  it('detects map pan beyond threshold', () => {
-    expect(shouldTriggerExpandOnPan(40, 20)).toBe(true)
-    expect(shouldTriggerExpandOnPan(10, 10)).toBe(false)
   })
 
   it('expands on zoom-out control click', () => {
@@ -32,23 +26,41 @@ describe('cdek-widget-map-expand', () => {
     expect(onExpand).toHaveBeenCalledTimes(1)
   })
 
-  it('expands after touch pan on the map', () => {
+  it('ignores wheel zoom on mobile layout', () => {
+    const hostEl = document.createElement('div')
+    hostEl.classList.add('cdek-widget-host--mobile')
+    const onExpand = vi.fn()
+
+    attachCdekMapExpandListener(hostEl, onExpand, { isMobile: true })
+
+    hostEl.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true }))
+
+    expect(onExpand).not.toHaveBeenCalled()
+  })
+
+  it('expands after pinch zoom out on touch', () => {
     const hostEl = document.createElement('div')
     const onExpand = vi.fn()
-    attachCdekMapExpandListener(hostEl, onExpand)
+    attachCdekMapExpandListener(hostEl, onExpand, { isMobile: true })
 
     hostEl.dispatchEvent(
       new TouchEvent('touchstart', {
         bubbles: true,
         cancelable: true,
-        touches: [{ clientX: 0, clientY: 0 } as Touch],
+        touches: [
+          { clientX: 0, clientY: 0 } as Touch,
+          { clientX: 100, clientY: 0 } as Touch,
+        ],
       })
     )
     hostEl.dispatchEvent(
       new TouchEvent('touchmove', {
         bubbles: true,
         cancelable: true,
-        touches: [{ clientX: 60, clientY: 0 } as Touch],
+        touches: [
+          { clientX: 0, clientY: 0 } as Touch,
+          { clientX: 80, clientY: 0 } as Touch,
+        ],
       })
     )
 

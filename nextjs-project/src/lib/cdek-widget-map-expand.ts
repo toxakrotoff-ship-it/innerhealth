@@ -1,6 +1,5 @@
 const ZOOM_OUT_WHEEL_DELTA = 4
 const PINCH_ZOOM_OUT_RATIO = 0.92
-const PAN_EXPAND_THRESHOLD_PX = 40
 
 export function shouldTriggerExpandOnPinch(
   previousDistance: number,
@@ -9,10 +8,6 @@ export function shouldTriggerExpandOnPinch(
 ): boolean {
   if (previousDistance <= 0 || currentDistance <= 0) return false
   return currentDistance < previousDistance * ratio
-}
-
-export function shouldTriggerExpandOnPan(deltaX: number, deltaY: number): boolean {
-  return Math.hypot(deltaX, deltaY) >= PAN_EXPAND_THRESHOLD_PX
 }
 
 export function getTouchPairDistance(touches: TouchList): number {
@@ -39,13 +34,16 @@ function isZoomOutControl(target: Element): boolean {
 
 export function attachCdekMapExpandListener(
   hostEl: HTMLElement,
-  onExpand: () => void
+  onExpand: () => void,
+  options?: { isMobile?: boolean }
 ): () => void {
+  const isMobile =
+    options?.isMobile ?? hostEl.closest('.cdek-widget-host--mobile') != null
+
   let triggered = false
   let wheelDelta = 0
   let wheelResetTimer: ReturnType<typeof setTimeout> | null = null
   let lastPinchDistance = 0
-  let panOrigin: { x: number; y: number } | null = null
 
   function triggerExpand() {
     if (triggered) return
@@ -57,11 +55,10 @@ export function attachCdekMapExpandListener(
     lastPinchDistance = 0
   }
 
-  function resetPanTracking() {
-    panOrigin = null
-  }
-
   function onWheel(event: WheelEvent) {
+    // Mobile layout in DevTools still emits wheel; real phones use pinch instead.
+    if (isMobile) return
+
     if (event.deltaY <= 0) {
       wheelDelta = 0
       return
@@ -87,39 +84,20 @@ export function attachCdekMapExpandListener(
 
   function onTouchStart(event: TouchEvent) {
     if (event.touches.length === 2) {
-      resetPanTracking()
       lastPinchDistance = getTouchPairDistance(event.touches)
       return
     }
-
-    if (event.touches.length === 1) {
-      resetPinchTracking()
-      const touch = event.touches[0]
-      if (!touch) return
-      panOrigin = { x: touch.clientX, y: touch.clientY }
-    }
+    resetPinchTracking()
   }
 
   function onTouchMove(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      resetPanTracking()
-      const currentDistance = getTouchPairDistance(event.touches)
-      if (shouldTriggerExpandOnPinch(lastPinchDistance, currentDistance)) {
-        triggerExpand()
-      }
-      lastPinchDistance = currentDistance
-      return
-    }
+    if (event.touches.length !== 2) return
 
-    if (panOrigin && event.touches.length === 1) {
-      const touch = event.touches[0]
-      if (!touch) return
-      const deltaX = touch.clientX - panOrigin.x
-      const deltaY = touch.clientY - panOrigin.y
-      if (shouldTriggerExpandOnPan(deltaX, deltaY)) {
-        triggerExpand()
-      }
+    const currentDistance = getTouchPairDistance(event.touches)
+    if (shouldTriggerExpandOnPinch(lastPinchDistance, currentDistance)) {
+      triggerExpand()
     }
+    lastPinchDistance = currentDistance
   }
 
   function onTouchEnd(event: TouchEvent) {
@@ -127,20 +105,7 @@ export function attachCdekMapExpandListener(
       lastPinchDistance = getTouchPairDistance(event.touches)
       return
     }
-
     resetPinchTracking()
-
-    if (event.touches.length === 1) {
-      const touch = event.touches[0]
-      if (!touch) {
-        resetPanTracking()
-        return
-      }
-      panOrigin = { x: touch.clientX, y: touch.clientY }
-      return
-    }
-
-    resetPanTracking()
   }
 
   const listenerOptions: AddEventListenerOptions = { passive: true, capture: true }

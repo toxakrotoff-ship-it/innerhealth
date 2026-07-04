@@ -20,7 +20,6 @@ import {
   COUNTRY_OFFICES_MOBILE_CONCURRENCY,
   COUNTRY_OFFICES_DESKTOP_CONCURRENCY,
 } from '@/lib/cdek-widget-country-offices'
-import { scheduleMobileCountryOfficesPrefetch } from '@/lib/cdek-widget-mobile-prefetch'
 import { runWhenIdle } from '@/lib/run-when-idle'
 import { attachCdekMapExpandListener } from '@/lib/cdek-widget-map-expand'
 import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
@@ -79,6 +78,7 @@ function parseWidgetInt(value: unknown): number {
 
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_INIT_TIMEOUT_MS = 45_000
+const OFFICES_MAP_SETTLE_MS = 700
 
 const CDEK_WIDGET_MOBILE_BREAKPOINT_PX = 555
 
@@ -184,7 +184,6 @@ export function CdekWidget({
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
     let removeMapExpandListener: (() => void) | null = null
-    let removeMobilePrefetch: (() => void) | null = null
     const expandAbortController = new AbortController()
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
     let widgetReady = false
@@ -379,6 +378,11 @@ export function CdekWidget({
                 const widget = widgetRef.current
                 if (!widget?.updateOfficesRaw) return
 
+                await new Promise<void>((resolve) => {
+                  setTimeout(resolve, OFFICES_MAP_SETTLE_MS)
+                })
+                if (cancelled || expandAbortController.signal.aborted) return
+
                 await runWhenIdle(async () => {
                   if (cancelled || expandAbortController.signal.aborted) return
                   await widget.updateOfficesRaw!(accumulated)
@@ -420,21 +424,15 @@ export function CdekWidget({
             if (cancelled) return
             removeMobileLayoutSync?.()
             removeMobileLayoutSync = applyCdekWidgetMobileLayout(hostEl)
+            const isMobileLayout = hostEl.classList.contains('cdek-widget-host--mobile')
 
             removeMapExpandListener?.()
             const mapRoot = hostEl.querySelector<HTMLElement>(`#${rootId}`) ?? hostEl
-            removeMapExpandListener = attachCdekMapExpandListener(mapRoot, expandCountryOffices)
-
-            removeMobilePrefetch?.()
-            if (hostEl.classList.contains('cdek-widget-host--mobile')) {
-              const mapViewport =
-                hostEl.querySelector<HTMLElement>('.cdek-widget-viewport') ?? mapRoot
-              removeMobilePrefetch = scheduleMobileCountryOfficesPrefetch({
-                target: mapViewport,
-                signal: expandAbortController.signal,
-                onPrefetch: expandCountryOffices,
-              })
-            }
+            removeMapExpandListener = attachCdekMapExpandListener(
+              mapRoot,
+              expandCountryOffices,
+              { isMobile: isMobileLayout }
+            )
           })
         },
         onCalculate(tariffs: unknown) {
@@ -596,7 +594,6 @@ export function CdekWidget({
       if (initTimeoutId != null) clearTimeout(initTimeoutId)
       expandAbortController.abort()
       removeMapExpandListener?.()
-      removeMobilePrefetch?.()
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null
@@ -669,49 +666,6 @@ export function CdekWidget({
     setIsReady(false)
     setInstanceKey(Math.random().toString(16).slice(2))
   }
-
-  const handleRetryRef = useRef(handleRetry)
-  handleRetryRef.current = handleRetry
-
-  useEffect(() => {
-    if (!isReady || error) return
-    const hostEl = hostRef.current
-    if (!hostEl) return
-
-    let autoRetried = false
-
-    function hasMapLoadError(): boolean {
-      const text = hostEl?.textContent ?? ''
-      return (
-        text.includes('непредвиденная ошибка') ||
-        text.includes('при загрузке карты') ||
-        text.includes('ошибка при загрузке карты')
-      )
-    }
-
-    function tryAutoRetry() {
-      if (autoRetried || !hasMapLoadError()) return
-      autoRetried = true
-      logCartDebug({
-        scope: 'cdek-widget',
-        event: 'map_error_auto_retry',
-        level: 'warn',
-      })
-      pushDebugEvent('map_error_auto_retry')
-      handleRetryRef.current()
-    }
-
-    const observer = new MutationObserver(() => {
-      tryAutoRetry()
-    })
-
-    observer.observe(hostEl, { childList: true, subtree: true, characterData: true })
-    tryAutoRetry()
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [isReady, error, rootId])
 
   return (
     <div
