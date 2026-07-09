@@ -53,6 +53,36 @@ function createId(): string {
   return `row-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function createEmptyRow(): CharacteristicRow {
+  return {
+    id: createId(),
+    key: '',
+    value: '',
+    keyMode: 'custom',
+  }
+}
+
+function createDefaultRows(): CharacteristicRow[] {
+  return [
+    {
+      id: createId(),
+      key: 'Состав',
+      value: '',
+      keyMode: 'preset',
+    },
+  ]
+}
+
+function mapParsedRows(parsed: Array<{ key: string; value: string }>): CharacteristicRow[] {
+  if (parsed.length === 0) return createDefaultRows()
+  return parsed.map((p) => ({
+    id: createId(),
+    key: p.key,
+    value: p.value,
+    keyMode: PRESET_CHARACTERISTICS_SET.has(p.key) ? 'preset' : 'custom',
+  }))
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -147,26 +177,7 @@ function serializeCharacteristicsHtml(rows: CharacteristicRow[]): string {
 
 export function ProductCharacteristicsEditor({ value, onChange }: ProductCharacteristicsEditorProps) {
   const lastEmittedHtmlRef = useRef<string>('')
-  const initialRows = useMemo(() => {
-    const parsed = parseCharacteristicsHtml(value)
-    const mapped: CharacteristicRow[] =
-      parsed.length > 0
-        ? parsed.map((p) => ({
-            id: createId(),
-            key: p.key,
-            value: p.value,
-            keyMode: PRESET_CHARACTERISTICS_SET.has(p.key) ? 'preset' : 'custom',
-          }))
-        : [
-            {
-              id: createId(),
-              key: '',
-              value: '',
-              keyMode: 'custom',
-            },
-          ]
-    return mapped
-  }, []) // only for first mount
+  const initialRows = useMemo(() => mapParsedRows(parseCharacteristicsHtml(value)), []) // only for first mount
 
   const [rows, setRows] = useState<CharacteristicRow[]>(initialRows)
   const sensors = useSensors(
@@ -178,24 +189,7 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
   useEffect(() => {
     // Если parent обновил HTML извне (например, сменили товар) — пересобираем строки.
     if (value === lastEmittedHtmlRef.current) return
-    const parsed = parseCharacteristicsHtml(value)
-    setRows(
-      parsed.length > 0
-        ? parsed.map((p) => ({
-            id: createId(),
-            key: p.key,
-            value: p.value,
-            keyMode: PRESET_CHARACTERISTICS_SET.has(p.key) ? 'preset' : 'custom',
-          }))
-        : [
-            {
-              id: createId(),
-              key: '',
-              value: '',
-              keyMode: 'custom',
-            },
-          ]
-    )
+    setRows(mapParsedRows(parseCharacteristicsHtml(value)))
   }, [value])
 
   const availableKeys = useMemo(() => {
@@ -214,29 +208,14 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
   }, [serializedHtml, onChange])
 
   const addRow = () => {
-    setRows((prev) => [
-      ...prev,
-      {
-        id: createId(),
-        key: '',
-        value: '',
-        keyMode: 'custom',
-      },
-    ])
+    setRows((prev) => [...prev, createEmptyRow()])
   }
 
   const deleteRow = (id: string) => {
     setRows((prev) => {
       const next = prev.filter((r) => r.id !== id)
       if (next.length > 0) return next
-      return [
-        {
-          id: createId(),
-          key: '',
-          value: '',
-          keyMode: 'custom',
-        },
-      ]
+      return createDefaultRows()
     })
   }
 
@@ -251,8 +230,26 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
     })
   }
 
+  const hasCompositionRow = rows.some((row) => row.key.trim() === 'Состав')
+
+  const addCompositionRow = () => {
+    setRows((prev) => [
+      {
+        id: createId(),
+        key: 'Состав',
+        value: '',
+        keyMode: 'preset',
+      },
+      ...prev,
+    ])
+  }
+
   return (
     <div className="space-y-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Строки таблицы характеристик. Перетащите за иконку, чтобы изменить порядок. «Состав» обычно
+        идёт первой строкой.
+      </p>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
           {rows.map((row) => (
@@ -270,7 +267,12 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
         </SortableContext>
       </DndContext>
 
-      <div className="flex">
+      <div className="flex flex-wrap gap-2">
+        {!hasCompositionRow && (
+          <Button type="button" variant="secondary" onClick={addCompositionRow}>
+            Добавить «Состав»
+          </Button>
+        )}
         <Button type="button" variant="secondary" onClick={addRow}>
           Добавить характеристику
         </Button>

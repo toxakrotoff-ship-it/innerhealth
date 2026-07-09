@@ -65,6 +65,8 @@ model Product {
   tab2Title                            String?
   tab3Title                            String?
   tab4Title                            String?
+  /// Динамические табы карточки товара: [{ id, title, content, editorType }]
+  tabs                                 Json?
   /// Упорядоченный список URL изображений галереи (первое = основное)
   photos                               Json?
   /// Цена при применении промокода (если задана — используется для строки заказа при скидке)

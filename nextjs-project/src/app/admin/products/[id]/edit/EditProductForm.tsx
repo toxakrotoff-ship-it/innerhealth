@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ProductEditorForm, createEmptyProductEditorValues, type ProductEditorFormValues, type ProductEditorSubmitPayload } from '../../components/ProductEditorForm';
 import type { ProductGalleryEditorPhoto } from '../../components/ProductGalleryEditor';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
+import { productTabsForEditor } from '@/lib/product-tabs';
 
 interface ProductResponse {
   id: string;
@@ -25,6 +26,7 @@ interface ProductResponse {
   tab2Title: string | null;
   tab3Title: string | null;
   tab4Title: string | null;
+  tabs?: unknown;
   photo: string | null;
   photos?: unknown;
   priceOld: number | null;
@@ -84,14 +86,7 @@ function mapProductToFormValues(
     quantity: product.quantity ?? null,
     description: product.description || '',
     text: product.text || '',
-    tab1: product.tab1 || '',
-    tab2: product.tab2 || '',
-    tab3: product.tab3 || '',
-    tab4: product.tab4 || '',
-    tab1Title: product.tab1Title || '',
-    tab2Title: product.tab2Title || '',
-    tab3Title: product.tab3Title || '',
-    tab4Title: product.tab4Title || '',
+    tabs: productTabsForEditor(product),
     photo: product.photo || '',
     priceOld: product.priceOld || null,
     discountPrice: product.discountPrice || null,

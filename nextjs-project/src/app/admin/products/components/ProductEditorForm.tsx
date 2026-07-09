@@ -9,8 +9,14 @@ import { sanitizeProductTitleInput } from '@/lib/sanitize-text';
 import { usePreventLeaveWhenDirty } from '@/hooks/use-prevent-leave-when-dirty';
 import { ProductGalleryEditor } from './ProductGalleryEditor';
 import type { ProductGalleryEditorPhoto } from './ProductGalleryEditor';
-import { ProductCharacteristicsEditor } from './ProductCharacteristicsEditor';
 import { ProductRichTextEditor } from './ProductRichTextEditor';
+import { ProductTabsEditor } from './ProductTabsEditor';
+import {
+  sanitizeProductTabEditorItems,
+  serializeProductTabsForStorage,
+  syncLegacyTabFieldsFromTabs,
+  type ProductTabEditorItem,
+} from '@/lib/product-tabs';
 
 type AdminBrand = 'inner' | 'sprint-power';
 
@@ -24,14 +30,7 @@ export interface ProductEditorFormValues {
   quantity: number | null;
   description: string;
   text: string;
-  tab1: string;
-  tab2: string;
-  tab3: string;
-  tab4: string;
-  tab1Title: string;
-  tab2Title: string;
-  tab3Title: string;
-  tab4Title: string;
+  tabs: ProductTabEditorItem[];
   photo: string;
   priceOld: number | null;
   discountPrice: number | null;
@@ -60,6 +59,7 @@ export interface ProductEditorSubmitPayload {
   quantity: number | null;
   description: string | null;
   text: string | null;
+  tabs: ProductTabEditorItem[] | null;
   tab1: string | null;
   tab2: string | null;
   tab3: string | null;
@@ -102,7 +102,7 @@ interface ProductEditorFormProps {
   onSubmit: (payload: ProductEditorSubmitPayload) => Promise<void>;
 }
 
-const textFieldsToSanitize = ['tab1Title', 'tab2Title', 'tab3Title', 'tab4Title'];
+const textFieldsToSanitize: string[] = [];
 
 export function createEmptyProductEditorValues(
   activeBrand: AdminBrand | null
@@ -117,14 +117,7 @@ export function createEmptyProductEditorValues(
     quantity: null,
     description: '',
     text: '',
-    tab1: '',
-    tab2: '',
-    tab3: '',
-    tab4: '',
-    tab1Title: '',
-    tab2Title: '',
-    tab3Title: '',
-    tab4Title: '',
+    tabs: [],
     photo: '',
     priceOld: null,
     discountPrice: null,
@@ -205,14 +198,7 @@ export function ProductEditorForm({
       hasString(p.sku) ||
       hasString(p.seoTitle) ||
       hasString(p.seoDescr) ||
-      hasString(p.tab1) ||
-      hasString(p.tab2) ||
-      hasString(p.tab3) ||
-      hasString(p.tab4) ||
-      hasString(p.tab1Title) ||
-      hasString(p.tab2Title) ||
-      hasString(p.tab3Title) ||
-      hasString(p.tab4Title) ||
+      p.tabs.length > 0 ||
       hasNumber(p.weight)
     );
   }, [formData]);
@@ -249,6 +235,10 @@ export function ProductEditorForm({
       }))
       .filter((entry) => Boolean(entry.url));
 
+    const sanitizedTabs = sanitizeProductTabEditorItems(formData.tabs);
+    const storedTabs = serializeProductTabsForStorage(sanitizedTabs);
+    const legacyTabs = syncLegacyTabFieldsFromTabs(storedTabs);
+
     return {
       brand: formData.brand,
       parentUid: formData.parentUid.trim() ? formData.parentUid.trim() : null,
@@ -259,14 +249,15 @@ export function ProductEditorForm({
       quantity: formData.quantity,
       description: formData.description || null,
       text: formData.text || null,
-      tab1: formData.tab1 || null,
-      tab2: formData.tab2 || null,
-      tab3: formData.tab3 || null,
-      tab4: formData.tab4 || null,
-      tab1Title: formData.tab1Title || null,
-      tab2Title: formData.tab2Title || null,
-      tab3Title: formData.tab3Title || null,
-      tab4Title: formData.tab4Title || null,
+      tabs: storedTabs.length > 0 ? storedTabs : null,
+      tab1: legacyTabs.tab1,
+      tab2: legacyTabs.tab2,
+      tab3: legacyTabs.tab3,
+      tab4: legacyTabs.tab4,
+      tab1Title: legacyTabs.tab1Title,
+      tab2Title: legacyTabs.tab2Title,
+      tab3Title: legacyTabs.tab3Title,
+      tab4Title: legacyTabs.tab4Title,
       photo: normalizedPhotos[0]?.url ?? (formData.photo.trim() || null),
       photos: normalizedPhotos.length > 0 ? normalizedPhotos : null,
       priceOld: formData.priceOld,
@@ -655,74 +646,20 @@ export function ProductEditorForm({
             />
           </div>
 
-          <div className="space-y-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Табы на карточке товара: укажите название и содержимое каждого таба (пустой таб не
-              показывается).
-            </p>
-            <div className="space-y-3">
-              <label className="block text-sm text-gray-600 dark:text-gray-400">Таб 1</label>
-              <input
-                type="text"
-                name="tab1Title"
-                value={formData.tab1Title}
-                onChange={handleChange}
-                className="form-input w-full max-w-md"
-                placeholder="Например: Преимущества"
-              />
-              <ProductRichTextEditor
-                value={formData.tab1}
-                onChange={(html) => setFormData((prev) => ({ ...prev, tab1: html }))}
-                placeholder="Содержимое таба (списки, жирный текст, фото)"
-              />
+          <div className="space-y-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Табы на карточке товара
+              </p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Добавляйте любое количество табов и меняйте их порядок перетаскиванием. Пустые табы
+                на сайте не показываются.
+              </p>
             </div>
-            <div className="space-y-3">
-              <label className="block text-sm text-gray-600 dark:text-gray-400">Таб 2</label>
-              <input
-                type="text"
-                name="tab2Title"
-                value={formData.tab2Title}
-                onChange={handleChange}
-                className="form-input w-full max-w-md"
-                placeholder="Например: Состав"
-              />
-              <ProductRichTextEditor
-                value={formData.tab2}
-                onChange={(html) => setFormData((prev) => ({ ...prev, tab2: html }))}
-                placeholder="Содержимое таба"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-sm text-gray-600 dark:text-gray-400">Таб 3</label>
-              <input
-                type="text"
-                name="tab3Title"
-                value={formData.tab3Title}
-                onChange={handleChange}
-                className="form-input w-full max-w-md"
-                placeholder="Например: Способ применения и дозировка"
-              />
-              <ProductRichTextEditor
-                value={formData.tab3}
-                onChange={(html) => setFormData((prev) => ({ ...prev, tab3: html }))}
-                placeholder="Содержимое таба"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-sm text-gray-600 dark:text-gray-400">Таб 4</label>
-              <input
-                type="text"
-                name="tab4Title"
-                value={formData.tab4Title}
-                onChange={handleChange}
-                className="form-input w-full max-w-md"
-                placeholder="Например: Характеристики"
-              />
-              <ProductCharacteristicsEditor
-                value={formData.tab4}
-                onChange={(html) => setFormData((prev) => ({ ...prev, tab4: html }))}
-              />
-            </div>
+            <ProductTabsEditor
+              value={formData.tabs}
+              onChange={(tabs) => setFormData((prev) => ({ ...prev, tabs }))}
+            />
           </div>
 
           <div className="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
