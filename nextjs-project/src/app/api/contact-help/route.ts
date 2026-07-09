@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         )
       }
       const phoneValidation = validatePhoneRu(phone)
-      if (!phoneValidation.valid) {
+      if (phoneValidation.valid === false) {
         return NextResponse.json(
           { error: phoneValidation.message },
           { status: 400 }
