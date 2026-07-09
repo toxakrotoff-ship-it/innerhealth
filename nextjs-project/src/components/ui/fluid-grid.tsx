@@ -244,14 +244,15 @@ export const GridContent = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols
       ref={ref}
       cols={1}
       colsTablet={2}
-      colsDesktop={2}
-      colsXl={3}
-      cols2xl={3}
+      colsDesktop={3}
+      colsXl={4}
+      cols2xl={4}
       cols3xl={4}
       cols4xl={5}
-      cols5xl={6}
-      cols6xl={8}
-      gap={8}
+      cols5xl={5}
+      cols6xl={6}
+      gap={4}
+      adaptiveGap={false}
       {...props}
     />
   )

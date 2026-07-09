@@ -3,6 +3,23 @@ import { POST } from './route'
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('next/server', async () => {
+  const actual = await vi.importActual<typeof import('next/server')>('next/server')
+  return {
+    ...actual,
+    after: (fn: () => unknown) => {
+      try {
+        const result = fn()
+        if (result && typeof (result as Promise<unknown>).then === 'function') {
+          void (result as Promise<unknown>).catch(() => {})
+        }
+      } catch {
+        // ignore: tests assert on response, not background side-effects
+      }
+    },
+  }
+})
+
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit: vi.fn(() => ({ success: true, remaining: 5, resetIn: 60 })),
   getClientIdentifier: vi.fn(() => 'test-client'),
@@ -96,12 +113,75 @@ describe('POST /api/contact-help', () => {
           name: 'John Doe',
           email: 'user@example.com',
           phone: '+79991234567',
-          message: 'коротко',
+          message: 'кор',
         }),
       })
     )
 
     expect(res.status).toBe(400)
-    expect(await res.json()).toEqual({ error: 'Вопрос: от 10 до 2000 символов.' })
+    expect(await res.json()).toEqual({ error: 'Вопрос: от 5 до 2000 символов.' })
+  })
+
+  it('requires email or phone', async () => {
+    const res = await POST(
+      new Request('http://x/api/contact-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'John Doe',
+          email: '',
+          phone: '',
+          message: 'Нужна помощь с заказом',
+        }),
+      })
+    )
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Укажите email или номер телефона.' })
+  })
+
+  it('accepts email without phone', async () => {
+    const { createContactHelpLead } = await import('@/services/contact-help.service')
+    const res = await POST(
+      new Request('http://x/api/contact-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'John Doe',
+          email: 'user@example.com',
+          phone: '',
+          message: 'Нужна помощь с заказом',
+        }),
+      })
+    )
+
+    expect(res.status).toBe(200)
+    expect(createContactHelpLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'user@example.com',
+        phone: '',
+      }),
+      expect.anything()
+    )
+  })
+
+  it('rejects incomplete phone numbers', async () => {
+    const res = await POST(
+      new Request('http://x/api/contact-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'John Doe',
+          email: '',
+          phone: '+79',
+          message: 'Нужна помощь с заказом',
+        }),
+      })
+    )
+
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({
+      error: 'Введите полный номер: +7 (999) 999-99-99',
+    })
   })
 })

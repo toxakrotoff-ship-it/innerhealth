@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
-import { FluidGrid } from '@/components/ui/fluid-grid'
+import { GridContent } from '@/components/ui/fluid-grid'
 import { Heading1 } from '@/components/ui/responsive-text'
 import { PostCard } from '@/components/site/post-card'
 import { getPostPathByType } from '@/lib/post-url'
@@ -112,17 +112,7 @@ export default async function InformaciyaPage() {
           </section>
         )}
         {posts.length > 0 ? (
-          <FluidGrid
-            minItemWidth={260}
-            gap="lg"
-            cols={1}
-            colsTablet={2}
-            colsDesktop={2}
-            colsXl={3}
-            cols2xl={3}
-            cols3xl={4}
-            className="auto-rows-min gap-4 sm:gap-5 md:gap-6"
-          >
+          <GridContent className="auto-rows-min">
             {posts.map((post) => (
               <PostCard
                 key={post.id}
@@ -132,9 +122,10 @@ export default async function InformaciyaPage() {
                 typeLabel="Статья"
                 isSprintTheme={isSprintTheme}
                 actionLabel={isSprintTheme ? 'Читать материал' : 'Открыть статью'}
+                variant="compact"
               />
             ))}
-          </FluidGrid>
+          </GridContent>
         ) : (
           <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>Пока нет статей.</p>
         )}

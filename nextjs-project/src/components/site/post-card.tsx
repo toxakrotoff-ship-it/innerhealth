@@ -10,6 +10,8 @@ interface PostCardProps {
   typeLabel: string
   isSprintTheme?: boolean
   actionLabel?: string
+  /** Компактный вид для плотных сеток на страницах списков */
+  variant?: 'default' | 'compact'
 }
 
 export function PostCard({
@@ -19,12 +21,16 @@ export function PostCard({
   typeLabel,
   isSprintTheme = false,
   actionLabel,
+  variant = 'default',
 }: PostCardProps) {
+  const isCompact = variant === 'compact'
+
   return (
     <Link
       href={href}
       className={cn(
-        'group flex h-full flex-col overflow-hidden rounded-2xl border transition-all',
+        'group flex h-full flex-col overflow-hidden border transition-all',
+        isCompact ? 'rounded-xl' : 'rounded-2xl',
         isSprintTheme
           ? 'border-[#1B2946] bg-[#0F172A] hover:border-[#3B82F6] hover:shadow-[0_0_0_1px_rgba(59,130,246,0.25)]'
           : 'border-gray-200 bg-white hover:border-action-blue hover:shadow-sm'
@@ -32,7 +38,8 @@ export function PostCard({
     >
       <div
         className={cn(
-          'relative aspect-[4/3] w-full shrink-0 overflow-hidden lg:aspect-[16/11]',
+          'relative w-full shrink-0 overflow-hidden',
+          isCompact ? 'aspect-[3/2]' : 'aspect-[4/3] lg:aspect-[16/11]',
           isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
         )}
       >
@@ -42,12 +49,17 @@ export function PostCard({
             alt={getPostPreviewImageAlt(title)}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, (max-width: 1919px) 33vw, 25vw"
+            sizes={
+              isCompact
+                ? '(max-width: 767px) 100vw, (max-width: 1023px) 50vw, (max-width: 1535px) 33vw, 25vw'
+                : '(max-width: 767px) 100vw, (max-width: 1279px) 50vw, (max-width: 1919px) 33vw, 25vw'
+            }
           />
         ) : (
           <span
             className={cn(
-              'absolute inset-0 flex items-center justify-center text-sm',
+              'absolute inset-0 flex items-center justify-center',
+              isCompact ? 'text-xs' : 'text-sm',
               isSprintTheme ? 'text-slate-500' : 'text-gray-400'
             )}
           >
@@ -55,10 +67,16 @@ export function PostCard({
           </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col justify-between gap-3 p-4 lg:p-5">
+      <div
+        className={cn(
+          'flex flex-1 flex-col justify-between',
+          isCompact ? 'gap-2 p-3' : 'gap-3 p-4 lg:p-5'
+        )}
+      >
         <span
           className={cn(
-            'line-clamp-2 text-base font-semibold leading-6 transition-colors',
+            'line-clamp-2 font-semibold transition-colors',
+            isCompact ? 'text-sm leading-5' : 'text-base leading-6',
             isSprintTheme ? 'text-slate-100 group-hover:text-[#9CC0FF]' : 'text-text group-hover:text-action-blue'
           )}
         >
@@ -66,7 +84,8 @@ export function PostCard({
         </span>
         <span
           className={cn(
-            'text-sm font-medium',
+            'font-medium',
+            isCompact ? 'text-xs' : 'text-sm',
             isSprintTheme ? 'text-[#7AA2FF]' : 'text-slate-500'
           )}
         >

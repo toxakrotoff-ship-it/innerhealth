@@ -38,5 +38,14 @@ describe("phone-mask", () => {
     it("formats an autofilled +7XXXXXXXXXX number as +7 (XXX) XXX-XX-XX", () => {
       expect(applyPhoneMask("+79104398540")).toBe("+7 (910) 439-85-40");
     });
+
+    it("does not duplicate +7 when pasted onto an existing +7 prefix", () => {
+      expect(applyPhoneMask("+7+79991234567")).toBe("+7 (999) 123-45-67");
+    });
+
+    it("does not duplicate country code when typing 7 after autofilled +7", () => {
+      expect(applyPhoneMask("+77")).toBe("+7");
+      expect(applyPhoneMask("+79")).toBe("+7 (9");
+    });
   });
 });

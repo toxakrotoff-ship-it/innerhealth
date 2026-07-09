@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
-import { FluidGrid } from '@/components/ui/fluid-grid'
+import { GridContent } from '@/components/ui/fluid-grid'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
@@ -74,18 +74,7 @@ export default async function NewsListPage() {
         )}
         <ScalableSpacing size="lg" />
         {posts.length > 0 ? (
-          <FluidGrid
-            minItemWidth={260}
-            gap="lg"
-            cols={1}
-            colsTablet={2}
-            colsDesktop={2}
-            colsXl={3}
-            cols2xl={3}
-            cols3xl={4}
-            cols4xl={4}
-            className="auto-rows-min gap-4 sm:gap-5 md:gap-6"
-          >
+          <GridContent className="auto-rows-min">
             {posts.map((post) => (
               <PostCard
                 key={post.id}
@@ -95,9 +84,10 @@ export default async function NewsListPage() {
                 typeLabel="Новость"
                 isSprintTheme={isSprintTheme}
                 actionLabel="Открыть новость"
+                variant="compact"
               />
             ))}
-          </FluidGrid>
+          </GridContent>
         ) : (
           <ResponsiveText as="p" variant="base" color={isSprintTheme ? 'primary' : 'secondary'}>
             Пока нет новостей.

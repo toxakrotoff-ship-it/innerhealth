@@ -10,14 +10,18 @@ const RU_COUNTRY_CODE = '7'
 
 /** Извлекает цифры из строки; если первая 8 — заменяет на 7. */
 export function getPhoneDigits(value: string): string {
-  const digits = value.replace(/\D/g, '')
+  let digits = value.replace(/\D/g, '')
   if (digits.length > 0 && digits[0] === '8') {
-    return RU_COUNTRY_CODE + digits.slice(1)
+    digits = RU_COUNTRY_CODE + digits.slice(1)
   }
   if (digits.length === RU_PHONE_DIGITS_LENGTH - 1 && digits[0] === '9') {
-    return RU_COUNTRY_CODE + digits
+    digits = RU_COUNTRY_CODE + digits
   }
-  return digits
+  // Поле уже содержит +7, а пользователь вводит/вставляет номер с кодом страны — убираем дубль.
+  while (digits.length > 1 && digits.startsWith('77')) {
+    digits = digits.slice(1)
+  }
+  return digits.slice(0, RU_PHONE_DIGITS_LENGTH)
 }
 
 /**

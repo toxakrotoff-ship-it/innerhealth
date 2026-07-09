@@ -4,6 +4,7 @@ import { notifyMaxForm } from '@/lib/max-notify'
 import { sendContactHelpNotification } from '@/lib/email'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
+import { getPhoneDigits, validatePhoneRu } from '@/lib/phone-mask'
 import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
 import * as contactHelpService from '@/services/contact-help.service'
 import * as userService from '@/services/user.service'
@@ -15,7 +16,7 @@ const nameMin = 2
 const nameMax = 120
 const emailMax = 320
 const phoneMax = 30
-const messageMin = 10
+const messageMin = 5
 const messageMax = 2000
 
 export async function POST(request: Request) {
@@ -51,24 +52,46 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    if (!email || email.length > emailMax) {
+    const hasEmail = email.length > 0
+    const hasPhone = getPhoneDigits(phone).length > 1
+
+    if (!hasEmail && !hasPhone) {
       return NextResponse.json(
-        { error: 'Укажите корректный email.' },
+        { error: 'Укажите email или номер телефона.' },
         { status: 400 }
       )
     }
-    const emailValidation = await validatePublicEmailDomain(email)
-    if (!emailValidation.valid) {
-      return NextResponse.json(
-        { error: emailValidation.userMessage || 'Укажите корректный email.' },
-        { status: 400 }
-      )
+
+    if (hasEmail) {
+      if (email.length > emailMax) {
+        return NextResponse.json(
+          { error: 'Укажите корректный email.' },
+          { status: 400 }
+        )
+      }
+      const emailValidation = await validatePublicEmailDomain(email)
+      if (!emailValidation.valid) {
+        return NextResponse.json(
+          { error: emailValidation.userMessage || 'Укажите корректный email.' },
+          { status: 400 }
+        )
+      }
     }
-    if (!phone || phone.length > phoneMax) {
-      return NextResponse.json(
-        { error: 'Укажите номер телефона.' },
-        { status: 400 }
-      )
+
+    if (hasPhone) {
+      if (phone.length > phoneMax) {
+        return NextResponse.json(
+          { error: 'Укажите номер телефона.' },
+          { status: 400 }
+        )
+      }
+      const phoneValidation = validatePhoneRu(phone)
+      if (!phoneValidation.valid) {
+        return NextResponse.json(
+          { error: phoneValidation.message },
+          { status: 400 }
+        )
+      }
     }
     if (message.length < messageMin || message.length > messageMax) {
       return NextResponse.json(
@@ -77,11 +100,14 @@ export async function POST(request: Request) {
       )
     }
 
+    const normalizedEmail = hasEmail ? email : ''
+    const normalizedPhone = hasPhone ? phone : ''
+
     await contactHelpService.createContactHelpLead(
       {
         name,
-        email,
-        phone,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         message,
       },
       brandId
@@ -91,8 +117,8 @@ export async function POST(request: Request) {
       formName: 'Вопрос с сайта',
       fields: {
         Имя: name,
-        Email: email,
-        Телефон: phone,
+        ...(normalizedEmail ? { Email: normalizedEmail } : {}),
+        ...(normalizedPhone ? { Телефон: normalizedPhone } : {}),
         Вопрос: message,
       },
       brandId,
@@ -104,8 +130,8 @@ export async function POST(request: Request) {
       const adminEmails = await userService.getAdminNotificationEmails()
       await sendContactHelpNotification(adminEmails, {
         name,
-        email,
-        phone,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         message,
         brandId,
       })
