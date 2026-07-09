@@ -21,6 +21,10 @@ const CookieConsent = nextDynamic(
   () => import('@/components/site/cookie-consent').then((m) => ({ default: m.CookieConsent }))
 )
 
+const ContactHelpWidget = nextDynamic(
+  () => import('@/components/site/contact-help-widget').then((m) => ({ default: m.ContactHelpWidget }))
+)
+
 /** Не пререндерим страницы при сборке — в Docker build нет доступа к БД (ECONNREFUSED). */
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +94,7 @@ export default async function SiteLayout({
       </main>
       <SiteFooter brandId={activeBrand} />
       <BackToTopButton />
+      <ContactHelpWidget brandId={activeBrand} />
       <SiteLayoutJsonLd />
       <CartDrawer />
       <CookieConsent brandId={activeBrand} />

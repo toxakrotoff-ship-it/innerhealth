@@ -130,6 +130,7 @@ function isNavGroup(entry: NavEntry): entry is NavGroupEntry {
 const crmChildren: NavItemEntry[] = [
   { path: 'orders', label: 'Заказы (CRM)', icon: icons.orders },
   { path: 'quick-orders', label: 'Быстрые заявки', icon: icons.orders },
+  { path: 'contact-help', label: 'Вопросы с сайта', icon: icons.reviews },
   { path: 'tilda-leads', label: 'Заявки с Тильды', icon: icons.tilda },
   { path: 'partnership', label: 'Сотрудничество', icon: icons.partnership },
   { path: 'b2b', label: 'B2B', icon: icons.partnership },
@@ -221,6 +222,7 @@ function getItemIsActive(
   if (itemPath === 'faq') return pathname === `${prefix}faq`
   if (itemPath === 'leads-export') return pathname === `${prefix}leads-export`
   if (itemPath === 'quick-orders') return pathname === `${prefix}quick-orders`
+  if (itemPath === 'contact-help') return pathname === `${prefix}contact-help`
   if (itemPath === 'content') return pathname === `${prefix}content`
   if (itemPath === 'seo-hubs') return pathname.startsWith(`${prefix}seo-hubs`)
   if (itemPath === 'settings') return pathname === `${prefix}settings`

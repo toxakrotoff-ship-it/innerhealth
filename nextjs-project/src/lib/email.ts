@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 
+import type { BrandId } from '@/lib/brand/brand'
 import { formatOrderLabel } from '@/lib/order-label'
 
 const DEFAULT_PUBLIC_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://innerhaealth.inetrnet.pp.ru'
@@ -1098,6 +1099,116 @@ export async function sendCustomerCdekTrackNotification(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[email] Send customer CDEK track notification error:', message)
+    return { ok: false, error: message }
+  }
+}
+
+export interface ContactHelpEmailPayload {
+  name: string
+  email: string
+  phone: string
+  message: string
+  brandId?: BrandId
+}
+
+function labelForBrandEmail(brandId?: BrandId): string {
+  return brandId === 'sprint-power' ? 'Sprint Power' : 'Inner Health'
+}
+
+/**
+ * Уведомление админам о заявке с плавающего виджета «Остались вопросы?».
+ * No-op if SMTP is not configured or toEmails is empty.
+ */
+export async function sendContactHelpNotification(
+  toEmails: string[],
+  payload: ContactHelpEmailPayload
+): Promise<{ ok: boolean; error?: string }> {
+  const unique = Array.from(new Set(toEmails.map((e) => e.trim().toLowerCase()).filter(Boolean)))
+  if (unique.length === 0) return { ok: true }
+  if (!process.env.SMTP_HOST) {
+    console.warn('[email] SMTP not configured; contact help notification not sent')
+    return { ok: false, error: 'Отправка писем не настроена (SMTP_HOST)' }
+  }
+  const portNum = Number(process.env.SMTP_PORT ?? 587)
+  const useSecure = process.env.SMTP_SECURE === 'true'
+  const tlsServername = process.env.SMTP_SERVERNAME ?? process.env.SMTP_HOST ?? undefined
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: portNum,
+    secure: useSecure,
+    auth:
+      process.env.SMTP_USER && process.env.SMTP_PASS
+        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        : undefined,
+    tls: {
+      rejectUnauthorized: true,
+      servername: tlsServername,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+  })
+
+  const storefront = labelForBrandEmail(payload.brandId)
+  const subject = `Новый вопрос с сайта — ${storefront}`
+  const text = [
+    'Новая заявка с плавающего виджета «Остались вопросы?»',
+    `Витрина: ${storefront}`,
+    `Имя: ${payload.name}`,
+    `Email: ${payload.email}`,
+    `Телефон: ${payload.phone}`,
+    `Вопрос: ${payload.message}`,
+  ].join('\n')
+  const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:26px 28px;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);text-align:center;">
+              <h1 style="margin:0;font-size:22px;line-height:1.2;font-weight:700;color:#ffffff;">Новый вопрос с сайта</h1>
+              <p style="margin:8px 0 0;font-size:14px;color:#dbeafe;">${escapeHtml(storefront)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;">
+              <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Имя:</strong> ${escapeHtml(payload.name)}</p>
+              <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Email:</strong> <a href="mailto:${escapeHtml(payload.email)}">${escapeHtml(payload.email)}</a></p>
+              <p style="margin:0 0 16px;font-size:14px;color:#374151;"><strong>Телефон:</strong> ${escapeHtml(payload.phone)}</p>
+              <div style="padding:16px;border-radius:10px;background-color:#f9fafb;border:1px solid #e5e7eb;">
+                <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;">Вопрос</p>
+                <p style="margin:0;font-size:15px;line-height:1.6;color:#111827;white-space:pre-wrap;">${escapeHtml(payload.message)}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim()
+
+  try {
+    await transporter.sendMail({
+      from: SUPPORT_FROM,
+      replyTo: payload.email || REPLY_TO,
+      to: unique,
+      subject,
+      text,
+      html,
+    })
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[email] Send contact help notification error:', message)
     return { ok: false, error: message }
   }
 }

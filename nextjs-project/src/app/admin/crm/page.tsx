@@ -6,6 +6,7 @@ import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 const sections = [
   { path: 'orders', label: 'Заказы (CRM)', description: 'Заказы из корзины' },
   { path: 'quick-orders', label: 'Быстрые заявки', description: 'Заявки «Купить в 1 клик»' },
+  { path: 'contact-help', label: 'Вопросы с сайта', description: 'Заявки с плавающего виджета' },
   { path: 'tilda-leads', label: 'Заявки с Тильды', description: 'Лиды с форм Тильды' },
   { path: 'partnership', label: 'Сотрудничество', description: 'Заявки на сотрудничество' },
   { path: 'leads-export', label: 'Выгрузка лидов', description: 'Экспорт лидов' },

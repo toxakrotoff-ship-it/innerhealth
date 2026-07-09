@@ -62,19 +62,8 @@ function createEmptyRow(): CharacteristicRow {
   }
 }
 
-function createDefaultRows(): CharacteristicRow[] {
-  return [
-    {
-      id: createId(),
-      key: 'Состав',
-      value: '',
-      keyMode: 'preset',
-    },
-  ]
-}
-
 function mapParsedRows(parsed: Array<{ key: string; value: string }>): CharacteristicRow[] {
-  if (parsed.length === 0) return createDefaultRows()
+  if (parsed.length === 0) return [createEmptyRow()]
   return parsed.map((p) => ({
     id: createId(),
     key: p.key,
@@ -215,7 +204,7 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
     setRows((prev) => {
       const next = prev.filter((r) => r.id !== id)
       if (next.length > 0) return next
-      return createDefaultRows()
+      return [createEmptyRow()]
     })
   }
 
@@ -230,25 +219,10 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
     })
   }
 
-  const hasCompositionRow = rows.some((row) => row.key.trim() === 'Состав')
-
-  const addCompositionRow = () => {
-    setRows((prev) => [
-      {
-        id: createId(),
-        key: 'Состав',
-        value: '',
-        keyMode: 'preset',
-      },
-      ...prev,
-    ])
-  }
-
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-500 dark:text-gray-400">
-        Строки таблицы характеристик. Перетащите за иконку, чтобы изменить порядок. «Состав» обычно
-        идёт первой строкой.
+        Строки таблицы характеристик. Перетащите за иконку, чтобы изменить порядок.
       </p>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
@@ -267,12 +241,7 @@ export function ProductCharacteristicsEditor({ value, onChange }: ProductCharact
         </SortableContext>
       </DndContext>
 
-      <div className="flex flex-wrap gap-2">
-        {!hasCompositionRow && (
-          <Button type="button" variant="secondary" onClick={addCompositionRow}>
-            Добавить «Состав»
-          </Button>
-        )}
+      <div className="flex">
         <Button type="button" variant="secondary" onClick={addRow}>
           Добавить характеристику
         </Button>

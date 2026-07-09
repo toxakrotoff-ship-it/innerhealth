@@ -572,6 +572,19 @@ model B2bLead {
   @@index([brand, createdAt])
 }
 
+/// Заявки с плавающего виджета «Остались вопросы?».
+model ContactHelpLead {
+  id        String   @id @default(cuid())
+  brand     String   @default("inner")
+  name      String
+  email     String
+  phone     String
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([brand, createdAt])
+}
+
 /// FAQ по брендам для страницы /faq.
 model Faq {
   id          String   @id @default(cuid())
