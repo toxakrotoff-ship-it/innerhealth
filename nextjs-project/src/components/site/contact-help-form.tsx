@@ -47,7 +47,7 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
 
     if (hasPhone) {
       const phoneCheck = validatePhoneRu(phone)
-      if (!phoneCheck.valid) {
+      if (phoneCheck.valid === false) {
         setPhoneError(phoneCheck.message)
         isValid = false
       }
@@ -55,7 +55,7 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
 
     if (hasEmail) {
       const emailCheck = validateEmail(trimmedEmail)
-      if (!emailCheck.valid) {
+      if (emailCheck.valid === false) {
         setEmailError(emailCheck.message)
         isValid = false
       }
@@ -171,7 +171,7 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
           onBlur={() => {
             if (phoneDigits.length > 1) {
               const result = validatePhoneRu(phone)
-              setPhoneError(result.valid ? '' : result.message)
+              setPhoneError(result.valid === false ? result.message : '')
             }
           }}
           disabled={status === 'loading'}
@@ -202,7 +202,7 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
           onBlur={() => {
             if (hasEmail) {
               const result = validateEmail(trimmedEmail)
-              setEmailError(result.valid ? '' : result.message)
+              setEmailError(result.valid === false ? result.message : '')
             }
           }}
           disabled={status === 'loading'}
