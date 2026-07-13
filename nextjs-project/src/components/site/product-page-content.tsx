@@ -229,7 +229,7 @@ export function ProductPageContent({
         >
           <Heading1
             className={cn(
-              'min-w-0 max-w-full break-words [overflow-wrap:anywhere] hyphens-auto leading-[0.92] max-sm:text-[2.65rem]',
+              'min-w-0 max-w-full break-words leading-[0.96] max-sm:text-[2.2rem] max-sm:font-semibold',
               isSprintTheme && 'text-slate-100'
             )}
           >
