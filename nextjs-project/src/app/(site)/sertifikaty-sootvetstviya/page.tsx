@@ -111,8 +111,6 @@ export default async function CertificatesPage() {
           </h1>
         </header>
 
-        <GalleryBlock images={galleryImages} />
-
         <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
           <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
@@ -135,6 +133,18 @@ export default async function CertificatesPage() {
 
           <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
+              {declarationsTitle}
+            </h2>
+            <p className="mb-4">
+              {declarationsP1}
+            </p>
+            <p className="text-gray-600 text-sm">
+              {declarationsNote}
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-text mb-4">
               {productCertificatesTitle}
             </h2>
             <p className="mb-4">
@@ -145,17 +155,7 @@ export default async function CertificatesPage() {
             </p>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
-              {declarationsTitle}
-            </h2>
-            <p className="mb-4">
-              {declarationsP1}
-            </p>
-            <p className="text-gray-600 text-sm">
-              {declarationsNote}
-            </p>
-          </section>
+          <GalleryBlock images={galleryImages} />
 
           <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">

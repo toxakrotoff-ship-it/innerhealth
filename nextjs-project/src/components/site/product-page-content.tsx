@@ -222,13 +222,28 @@ export function ProductPageContent({
         </div>
         <div
           className={cn(
+            'min-w-0',
             isSprintTheme &&
               'rounded-2xl border border-slate-700/70 bg-slate-900/35 p-5 sm:p-6 lg:self-start'
           )}
         >
-          <Heading1 className={isSprintTheme ? 'text-slate-100' : undefined}>{product.title}</Heading1>
+          <Heading1
+            className={cn(
+              'min-w-0 max-w-full break-words [overflow-wrap:anywhere] hyphens-auto leading-[0.92] max-sm:text-[2.65rem]',
+              isSprintTheme && 'text-slate-100'
+            )}
+          >
+            {product.title}
+          </Heading1>
           {product.sku?.trim() && (
-            <p className={`mt-2 text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>SKU: {product.sku.trim()}</p>
+            <p
+              className={cn(
+                'mt-2 min-w-0 break-words [overflow-wrap:anywhere] text-sm',
+                isSprintTheme ? 'text-slate-400' : 'text-gray-600'
+              )}
+            >
+              SKU: {product.sku.trim()}
+            </p>
           )}
           <div className="mt-3">
             <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${stock.className}`}>
