@@ -517,6 +517,8 @@ model GiftPromotion {
   cartTotalCalculationMode     String?
   giftQuantityMode             String
   maxGiftsPerOrder             Int?
+  exclusionGroup               String?
+  priority                     Int         @default(0)
   promoProductInteractionMode  String?
   promoCodeInteractionMode     String?
   autoRemoveWhenConditionFails Boolean     @default(true)

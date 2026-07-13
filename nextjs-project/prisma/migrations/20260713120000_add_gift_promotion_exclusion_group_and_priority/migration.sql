@@ -1,0 +1,3 @@
+ALTER TABLE "GiftPromotion"
+ADD COLUMN "exclusionGroup" TEXT,
+ADD COLUMN "priority" INTEGER NOT NULL DEFAULT 0;

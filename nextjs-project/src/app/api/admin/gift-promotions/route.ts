@@ -17,6 +17,8 @@ const createSchema = z.object({
   minCartTotal: z.number().min(0).nullable().optional(),
   giftQuantityMode: z.enum(['ONE_PER_ORDER', 'PER_TRIGGER']),
   maxGiftsPerOrder: z.number().int().min(0).nullable().optional(),
+  exclusionGroup: z.string().trim().nullable().optional(),
+  priority: z.number().int().min(0).optional(),
   promoProductInteractionMode: z
     .enum(['BLOCK_IF_PROMO_PRODUCTS_PRESENT', 'ALWAYS_ALLOW'])
     .nullable()
@@ -46,6 +48,8 @@ const updateSchema = z.object({
   minCartTotal: z.number().min(0).nullable().optional(),
   giftQuantityMode: z.enum(['ONE_PER_ORDER', 'PER_TRIGGER']).optional(),
   maxGiftsPerOrder: z.number().int().min(0).nullable().optional(),
+  exclusionGroup: z.string().trim().nullable().optional(),
+  priority: z.number().int().min(0).optional(),
   promoProductInteractionMode: z
     .enum(['BLOCK_IF_PROMO_PRODUCTS_PRESENT', 'ALWAYS_ALLOW'])
     .nullable()
@@ -128,6 +132,8 @@ export async function POST(request: Request) {
         minCartTotal: data.triggerType === 'CART_TOTAL' ? data.minCartTotal ?? 0 : null,
         giftQuantityMode: data.giftQuantityMode,
         maxGiftsPerOrder: data.maxGiftsPerOrder ?? null,
+        exclusionGroup: data.exclusionGroup?.trim() ? data.exclusionGroup.trim() : null,
+        priority: data.priority ?? 0,
         promoProductInteractionMode: data.promoProductInteractionMode ?? null,
         promoCodeInteractionMode: data.promoCodeInteractionMode ?? null,
         autoRemoveWhenConditionFails: data.autoRemoveWhenConditionFails ?? true,
@@ -215,6 +221,13 @@ export async function PUT(request: Request) {
             : null,
         giftQuantityMode: data.giftQuantityMode ?? existing.giftQuantityMode,
         maxGiftsPerOrder: data.maxGiftsPerOrder ?? existing.maxGiftsPerOrder,
+        exclusionGroup:
+          data.exclusionGroup !== undefined
+            ? data.exclusionGroup?.trim()
+              ? data.exclusionGroup.trim()
+              : null
+            : existing.exclusionGroup,
+        priority: data.priority ?? existing.priority,
         promoProductInteractionMode: data.promoProductInteractionMode ?? existing.promoProductInteractionMode,
         promoCodeInteractionMode: data.promoCodeInteractionMode ?? existing.promoCodeInteractionMode,
         autoRemoveWhenConditionFails:
@@ -264,4 +277,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete gift promotion' }, { status: 500 })
   }
 }
-

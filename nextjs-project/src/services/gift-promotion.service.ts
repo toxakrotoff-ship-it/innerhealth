@@ -17,6 +17,8 @@ export interface GiftPromotionForCalculation {
   minCartTotal: number | null
   giftQuantityMode: string
   maxGiftsPerOrder: number | null
+  exclusionGroup: string | null
+  priority: number
   promoProductInteractionMode: string | null
   promoCodeInteractionMode: string | null
 }
@@ -34,6 +36,10 @@ export interface CalculatedGiftLine {
   giftPromotionId: string
 }
 
+interface EligibleGiftPromotion extends GiftPromotionForCalculation {
+  giftQuantity: number
+}
+
 function isPromotionActive(promo: GiftPromotionForCalculation, now: Date): boolean {
   if (promo.status !== 'enabled') return false
   if (promo.validFrom && now < promo.validFrom) return false
@@ -47,6 +53,7 @@ export async function getActiveGiftPromotions(
 ): Promise<GiftPromotionForCalculation[]> {
   const raw = await prisma.giftPromotion.findMany({
     where: { brand: resolveDbBrand(brandId) },
+    orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
   })
   return raw
     .map<GiftPromotionForCalculation>((p) => ({
@@ -62,26 +69,52 @@ export async function getActiveGiftPromotions(
       minCartTotal: p.minCartTotal ?? null,
       giftQuantityMode: p.giftQuantityMode,
       maxGiftsPerOrder: p.maxGiftsPerOrder ?? null,
+      exclusionGroup: p.exclusionGroup ?? null,
+      priority: p.priority,
       promoProductInteractionMode: p.promoProductInteractionMode ?? null,
       promoCodeInteractionMode: p.promoCodeInteractionMode ?? null,
     }))
     .filter((p) => isPromotionActive(p, now))
 }
 
-export async function calculateGiftsForOrder(params: {
+function compareEligiblePromotions(
+  left: EligibleGiftPromotion,
+  right: EligibleGiftPromotion,
+  leftIndex: number,
+  rightIndex: number
+): number {
+  if (left.priority !== right.priority) {
+    return right.priority - left.priority
+  }
+
+  const leftTriggerStrength =
+    left.triggerType === 'CART_TOTAL'
+      ? left.minCartTotal ?? 0
+      : left.triggerProductMinQty ?? 0
+  const rightTriggerStrength =
+    right.triggerType === 'CART_TOTAL'
+      ? right.minCartTotal ?? 0
+      : right.triggerProductMinQty ?? 0
+
+  if (leftTriggerStrength !== rightTriggerStrength) {
+    return rightTriggerStrength - leftTriggerStrength
+  }
+
+  return leftIndex - rightIndex
+}
+
+export function calculateGiftLinesFromPromotions(params: {
+  promotions: GiftPromotionForCalculation[]
   items: OrderItemForGiftCalculation[]
   hasPromoCode: boolean
-  brandId?: BrandId | null
-}): Promise<CalculatedGiftLine[]> {
-  const now = new Date()
-  const promotions = await getActiveGiftPromotions(now, params.brandId ?? null)
-  if (promotions.length === 0) return []
+}): CalculatedGiftLine[] {
+  if (params.promotions.length === 0) return []
 
   const hasPromoProducts = params.items.some((i) => i.hasPromoPrice)
   const baseTotal = params.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
-  const result: CalculatedGiftLine[] = []
+  const eligible: EligibleGiftPromotion[] = []
 
-  for (const promo of promotions) {
+  for (const promo of params.promotions) {
     if (promo.promoProductInteractionMode === 'BLOCK_IF_PROMO_PRODUCTS_PRESENT' && hasPromoProducts) {
       continue
     }
@@ -130,14 +163,67 @@ export async function calculateGiftsForOrder(params: {
       continue
     }
 
-    result.push({
-      giftProductId: promo.giftProductId,
-      quantity: giftQty,
-      giftPromotionId: promo.id,
+    eligible.push({
+      ...promo,
+      giftQuantity: giftQty,
     })
   }
 
-  return result
+  const selectedPromotionIds = new Set<string>()
+
+  for (const promo of eligible) {
+    const group = promo.exclusionGroup?.trim()
+    if (!group) {
+      selectedPromotionIds.add(promo.id)
+    }
+  }
+
+  const promosByGroup = new Map<string, EligibleGiftPromotion[]>()
+  for (const promo of eligible) {
+    const group = promo.exclusionGroup?.trim()
+    if (!group) continue
+    const existing = promosByGroup.get(group)
+    if (existing) {
+      existing.push(promo)
+    } else {
+      promosByGroup.set(group, [promo])
+    }
+  }
+
+  for (const groupedPromos of promosByGroup.values()) {
+    let winner = groupedPromos[0]
+    for (let index = 1; index < groupedPromos.length; index += 1) {
+      const candidate = groupedPromos[index]
+      const winnerIndex = eligible.findIndex((promo) => promo.id === winner.id)
+      const candidateIndex = eligible.findIndex((promo) => promo.id === candidate.id)
+      if (compareEligiblePromotions(candidate, winner, candidateIndex, winnerIndex) < 0) {
+        winner = candidate
+      }
+    }
+    selectedPromotionIds.add(winner.id)
+  }
+
+  return eligible
+    .filter((promo) => selectedPromotionIds.has(promo.id))
+    .map((promo) => ({
+      giftProductId: promo.giftProductId,
+      quantity: promo.giftQuantity,
+      giftPromotionId: promo.id,
+    }))
+}
+
+export async function calculateGiftsForOrder(params: {
+  items: OrderItemForGiftCalculation[]
+  hasPromoCode: boolean
+  brandId?: BrandId | null
+}): Promise<CalculatedGiftLine[]> {
+  const now = new Date()
+  const promotions = await getActiveGiftPromotions(now, params.brandId ?? null)
+  return calculateGiftLinesFromPromotions({
+    promotions,
+    items: params.items,
+    hasPromoCode: params.hasPromoCode,
+  })
 }
 
 /** Same visibility window as {@link getPublicGiftPromotions} (for counts / listing). */

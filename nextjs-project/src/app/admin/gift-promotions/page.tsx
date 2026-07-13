@@ -18,6 +18,8 @@ interface GiftPromotion {
   minCartTotal: number | null
   giftQuantityMode: 'ONE_PER_ORDER' | 'PER_TRIGGER'
   maxGiftsPerOrder: number | null
+  exclusionGroup: string | null
+  priority: number
   promoProductInteractionMode: 'BLOCK_IF_PROMO_PRODUCTS_PRESENT' | 'ALWAYS_ALLOW' | null
   promoCodeInteractionMode: 'ALLOW_WITH_PROMOCODE' | 'BLOCK_IF_PROMOCODE_PRESENT' | null
   autoRemoveWhenConditionFails: boolean
@@ -43,6 +45,8 @@ interface FormState {
   minCartTotal: string
   giftQuantityMode: 'ONE_PER_ORDER' | 'PER_TRIGGER'
   maxGiftsPerOrder: string
+  exclusionGroup: string
+  priority: string
   promoProductInteractionMode: 'BLOCK_IF_PROMO_PRODUCTS_PRESENT' | 'ALWAYS_ALLOW'
   promoCodeInteractionMode: 'ALLOW_WITH_PROMOCODE' | 'BLOCK_IF_PROMOCODE_PRESENT'
   autoRemoveWhenConditionFails: boolean
@@ -67,6 +71,8 @@ const initialForm: FormState = {
   minCartTotal: '',
   giftQuantityMode: 'ONE_PER_ORDER',
   maxGiftsPerOrder: '',
+  exclusionGroup: '',
+  priority: '0',
   promoProductInteractionMode: 'ALWAYS_ALLOW',
   promoCodeInteractionMode: 'ALLOW_WITH_PROMOCODE',
   autoRemoveWhenConditionFails: true,
@@ -166,6 +172,8 @@ export default function GiftPromotionsPage() {
       minCartTotal: p.minCartTotal?.toString() ?? '',
       giftQuantityMode: p.giftQuantityMode,
       maxGiftsPerOrder: p.maxGiftsPerOrder?.toString() ?? '',
+      exclusionGroup: p.exclusionGroup ?? '',
+      priority: p.priority.toString(),
       promoProductInteractionMode: p.promoProductInteractionMode ?? 'ALWAYS_ALLOW',
       promoCodeInteractionMode: p.promoCodeInteractionMode ?? 'ALLOW_WITH_PROMOCODE',
       autoRemoveWhenConditionFails: p.autoRemoveWhenConditionFails,
@@ -187,6 +195,7 @@ export default function GiftPromotionsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    const parsedPriority = Number.parseInt(form.priority || '0', 10)
 
     const payload = {
       ...(editing ? { id: editing.id } : {}),
@@ -202,6 +211,8 @@ export default function GiftPromotionsPage() {
       minCartTotal: form.triggerType === 'CART_TOTAL' ? Number.parseFloat(form.minCartTotal || '0') : null,
       giftQuantityMode: form.giftQuantityMode,
       maxGiftsPerOrder: form.maxGiftsPerOrder ? Number.parseInt(form.maxGiftsPerOrder, 10) : null,
+      exclusionGroup: form.exclusionGroup.trim() || null,
+      priority: Number.isFinite(parsedPriority) && parsedPriority >= 0 ? parsedPriority : 0,
       promoProductInteractionMode: form.promoProductInteractionMode,
       promoCodeInteractionMode: form.promoCodeInteractionMode,
       autoRemoveWhenConditionFails: form.autoRemoveWhenConditionFails,
@@ -521,6 +532,42 @@ export default function GiftPromotionsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Группа исключения
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={form.exclusionGroup}
+                    onChange={(e) =>
+                      setForm({ ...form, exclusionGroup: e.target.value })
+                    }
+                    placeholder="Например: cart-total-gifts"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Акции с одинаковой группой не суммируются: останется только одна, с более высоким приоритетом.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Приоритет
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-input"
+                    value={form.priority}
+                    onChange={(e) =>
+                      setForm({ ...form, priority: e.target.value })
+                    }
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Чем выше число, тем сильнее акция внутри одной группы исключения.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Акционные товары
                   </label>
                   <select
@@ -731,6 +778,11 @@ export default function GiftPromotionsPage() {
                           <span className="text-xs text-gray-500">
                             Подарок: {p.giftProductId}
                           </span>
+                          {p.exclusionGroup && (
+                            <span className="text-xs text-gray-500">
+                              Группа: {p.exclusionGroup} · Приоритет: {p.priority}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -792,4 +844,3 @@ export default function GiftPromotionsPage() {
     </div>
   )
 }
-
