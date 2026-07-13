@@ -92,7 +92,7 @@ function linePageJsonForWrite(
   return value as Prisma.InputJsonValue;
 }
 
-/** Клиент не может подставить Sprint-поля при админке Inner — выкидываем до zod/Prisma. */
+/** Клиент не может подставить Sprint-специфичные поля при админке Inner — выкидываем до zod/Prisma. */
 function stripSprintOnlyCategoryFields<T extends Partial<CategoryInput> | CategoryInput>(
   payload: T,
   brandId: BrandId
@@ -100,7 +100,6 @@ function stripSprintOnlyCategoryFields<T extends Partial<CategoryInput> | Catego
   if (isSprintPowerBrand(brandId)) return payload;
   const rest = { ...(payload as Record<string, unknown>) };
   delete rest.catalogTeaser;
-  delete rest.linePageBodyRichJson;
   delete rest.featuredProductId;
   delete rest.showLegacyLinePageBlocks;
   return rest as T;
@@ -132,6 +131,7 @@ const innerCategoryAdminListSelect = {
   sortOrder: true,
   parentId: true,
   showInCategoriesBlock: true,
+  linePageBodyRichJson: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.CategorySelect;
@@ -150,7 +150,10 @@ function mapInnerCategoryAdminListRow(row: InnerCategoryAdminListRow): Category 
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
     catalogTeaser: null,
-    linePageBodyRichJson: null,
+    linePageBodyRichJson:
+      row.linePageBodyRichJson != null
+        ? (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue)
+        : null,
     featuredProductId: null,
     showLegacyLinePageBlocks: false,
     createdAt: row.createdAt.toISOString(),
@@ -500,7 +503,7 @@ export async function createCategory(
       showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
     });
 
-    if (isSprintPowerBrand(effectiveBrandId)) {
+    if (parsed.linePageBodyRichJson !== undefined) {
       assertSprintLinePageBodyWithinLimit(parsed.linePageBodyRichJson);
     }
 
@@ -612,7 +615,7 @@ export async function updateCategory(
       showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
     });
 
-    if (isSprintPowerBrand(effectiveBrandId) && parsed.linePageBodyRichJson !== undefined) {
+    if (parsed.linePageBodyRichJson !== undefined) {
       assertSprintLinePageBodyWithinLimit(parsed.linePageBodyRichJson);
     }
 

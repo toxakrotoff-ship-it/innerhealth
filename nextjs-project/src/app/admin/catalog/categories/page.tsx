@@ -28,6 +28,7 @@ import {
   getDescendantCategoryIds,
   type FlatCategoryTreeNode,
 } from '@/lib/category-tree';
+import { getCategoryPageContentDoc } from '@/content/category-descriptions';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
 import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
@@ -235,13 +236,13 @@ export default function AdminCategoriesPage() {
           sortOrder: formData.sortOrder,
           parentId: formData.parentId || null,
           showInCategoriesBlock: formData.showInCategoriesBlock,
+          linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+            ? undefined
+            : lineDocToJsonValue(formData.linePageBodyRichJson),
           ...(activeBrand === 'sprint-power'
             ? {
                 catalogTeaser: formData.catalogTeaser.trim() || null,
                 featuredProductId: formData.featuredProductId.trim() || null,
-                linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
-                  ? undefined
-                  : lineDocToJsonValue(formData.linePageBodyRichJson),
                 showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
@@ -284,13 +285,13 @@ export default function AdminCategoriesPage() {
           sortOrder: formData.sortOrder,
           parentId: formData.parentId || null,
           showInCategoriesBlock: formData.showInCategoriesBlock,
+          linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
+            ? null
+            : lineDocToJsonValue(formData.linePageBodyRichJson),
           ...(activeBrand === 'sprint-power'
             ? {
                 catalogTeaser: formData.catalogTeaser.trim() || null,
                 featuredProductId: formData.featuredProductId.trim() || null,
-                linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
-                  ? null
-                  : lineDocToJsonValue(formData.linePageBodyRichJson),
                 showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
@@ -341,6 +342,9 @@ export default function AdminCategoriesPage() {
       if (obj.type === 'doc' && Array.isArray(obj.content)) {
         lineDoc = rawLine as JSONContent;
       }
+    }
+    if (isEmptyLineDoc(lineDoc)) {
+      lineDoc = getCategoryPageContentDoc(category.slug, activeBrand) ?? EMPTY_LINE_DOC;
     }
     setFormData({
       title: category.title,
@@ -580,7 +584,7 @@ export default function AdminCategoriesPage() {
               {activeBrand === 'sprint-power' ? (
                 <>
                   <p className="text-xs text-slate-700 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
-                    Ниже — только витрина Sprint Power (главная и страница категории). На Inner Health эти данные не показываются и при сохранении категорий Inner в БД не записываются.
+                    Ниже — Sprint-специфичные поля для главной и страницы категории. Для Inner Health из этого блока не используются тизер, товар линейки и переключатель старых блоков.
                   </p>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -645,7 +649,22 @@ export default function AdminCategoriesPage() {
                     />
                   </div>
                 </>
-              ) : null}
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Текст под сеткой каталога (страница категории)
+                  </label>
+                  <SprintCategoryLineEditor
+                    key={editingCategory?.id ?? (isCreating ? 'create' : 'idle')}
+                    value={formData.linePageBodyRichJson}
+                    onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
+                    placeholder="Заголовок, списки и абзацы для нижнего блока категории…"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Старый текст из кода подставится сюда при открытии категории. После сохранения этот блок будет редактироваться уже из админки.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -8,7 +8,7 @@ import { ProductCard } from '@/components/site/product-card'
 import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
-import { getCategoryPageContent } from '@/content/category-descriptions'
+import { getCategoryPageContent, getCategoryPageContentDoc } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
@@ -43,6 +43,7 @@ import { BCAA6000_INFO_CELLS } from '@/content/bcaa6000-category-info'
 import { cn } from '@/lib/utils'
 import { NutrientCategoryUsageComposition } from '@/components/site/nutrient-category-usage-composition'
 import { NutrientCategoryBenefitsBento } from '@/components/site/nutrient-category-benefits-bento'
+import { extractPlainTextFromTipTap } from '@/lib/tiptap-plain-text'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -108,7 +109,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
   const category = await prisma.category.findUnique({
     where: { brand_slug: { brand: resolveDbBrand(activeBrand), slug: categorySlug } },
-    select: { title: true },
+    select: { title: true, linePageBodyRichJson: true },
   })
   if (!category) {
     return {}
@@ -117,7 +118,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const content = getCategoryPageContent(categorySlug, activeBrand)
   const brandSite = getBrandSiteConfig(activeBrand)
   let description = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
-  if (content?.paragraphs?.length) {
+  const linePageText = extractPlainTextFromTipTap(category.linePageBodyRichJson, 158)
+  const fallbackContentDoc = getCategoryPageContentDoc(categorySlug, activeBrand)
+  const fallbackContentText = fallbackContentDoc
+    ? extractPlainTextFromTipTap(fallbackContentDoc, 158)
+    : ''
+  if (linePageText) {
+    description = linePageText
+  } else if (fallbackContentText) {
+    description = fallbackContentText
+  } else if (content?.paragraphs?.length) {
     description = stripHtmlToPlainText(content.paragraphs[0] ?? '', 158)
   } else if (content?.bullets?.length) {
     description = stripHtmlToPlainText(content.bullets.join(' '), 158)
@@ -287,10 +297,11 @@ export default async function CategoryPage({ params }: PageProps) {
   const listingItems = groupProductsForListing(products)
   const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
   const content = getCategoryPageContent(categorySlug, activeBrand)
+  const fallbackDescriptionDoc = getCategoryPageContentDoc(categorySlug, activeBrand)
   const hasHero = Boolean(content?.heroImage)
-  const hasDescription =
-    content &&
-    (Boolean(content.bullets?.length) || Boolean(content.paragraphs?.length))
+  const hasEditableDescription = hasNonEmptyTipTapDoc(category.linePageBodyRichJson)
+  const descriptionDocRaw =
+    hasEditableDescription && !isSprintTheme ? category.linePageBodyRichJson : fallbackDescriptionDoc
 
   const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date(), activeBrand) : []
 
@@ -644,28 +655,17 @@ export default async function CategoryPage({ params }: PageProps) {
               <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
             )}
 
-          {/* Описание раздела под каталогом */}
-          {hasDescription && content && (
+          {descriptionDocRaw && (
             <div className={`mt-12 pt-10 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200'}`}>
-              {content.descriptionHeading && (
-                <h2 className={`text-xl font-bold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-                  {content.descriptionHeading}
-                </h2>
-              )}
-              {content.bullets && content.bullets.length > 0 && (
-                <ul className={`list-disc list-inside space-y-2 mb-6 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
-                  {content.bullets.map((bullet, i) => (
-                    <li key={i}>{bullet}</li>
-                  ))}
-                </ul>
-              )}
-              {content.paragraphs && content.paragraphs.length > 0 && (
-                <div className={`space-y-3 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
-                  {content.paragraphs.map((paragraph, i) => (
-                    <p key={i}>{paragraph}</p>
-                  ))}
-                </div>
-              )}
+              <TipTapDocRenderer
+                raw={descriptionDocRaw}
+                tone={isSprintTheme ? 'dark' : 'light'}
+                className={
+                  isSprintTheme
+                    ? 'prose-invert max-w-none text-slate-300 prose-headings:text-slate-100 prose-strong:text-slate-100 prose-hr:border-slate-600 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline'
+                    : 'max-w-none text-gray-700 prose-headings:text-text prose-strong:text-text prose-a:text-action-blue prose-a:no-underline hover:prose-a:underline'
+                }
+              />
             </div>
           )}
         </AdaptiveContainer>

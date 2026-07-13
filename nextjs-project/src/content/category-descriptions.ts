@@ -5,6 +5,7 @@
  * Записи с копирайтом Inner Health не показываются на витрине Sprint Power — см. `getCategoryPageContent`.
  */
 
+import type { JSONContent } from '@tiptap/core'
 import type { BrandId } from '@/lib/brand/brand'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
@@ -126,4 +127,54 @@ export function getCategoryPageContent(
     return undefined
   }
   return entry
+}
+
+function textNode(value: string): JSONContent {
+  return { type: 'text', text: value }
+}
+
+function paragraph(value: string): JSONContent {
+  return { type: 'paragraph', content: [textNode(value)] }
+}
+
+function heading(value: string): JSONContent {
+  return { type: 'heading', attrs: { level: 2 }, content: [textNode(value)] }
+}
+
+function bulletList(items: string[]): JSONContent {
+  return {
+    type: 'bulletList',
+    content: items.map((item) => ({
+      type: 'listItem',
+      content: [paragraph(item)],
+    })),
+  }
+}
+
+export function buildCategoryPageContentDoc(content: CategoryPageContent): JSONContent {
+  const blocks: JSONContent[] = []
+
+  if (content.descriptionHeading?.trim()) {
+    blocks.push(heading(content.descriptionHeading.trim()))
+  }
+  if (content.bullets?.length) {
+    blocks.push(bulletList(content.bullets))
+  }
+  if (content.paragraphs?.length) {
+    blocks.push(...content.paragraphs.map((item) => paragraph(item)))
+  }
+
+  return { type: 'doc', content: blocks }
+}
+
+export function getCategoryPageContentDoc(
+  slug: string,
+  brandId?: BrandId | null
+): JSONContent | null {
+  const content = getCategoryPageContent(slug, brandId)
+  if (!content) return null
+  if (!content.descriptionHeading && !content.bullets?.length && !content.paragraphs?.length) {
+    return null
+  }
+  return buildCategoryPageContentDoc(content)
 }
