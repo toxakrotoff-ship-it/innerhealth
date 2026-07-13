@@ -78,6 +78,7 @@ export default async function SeoHubPage({ params }: PageProps) {
             isPreorderEnabled: true,
             brand: true,
             sku: true,
+            weight: true,
           },
         })
       : []
@@ -129,6 +130,7 @@ export default async function SeoHubPage({ params }: PageProps) {
                     title={p.title}
                     brand={p.brand}
                     sku={p.sku}
+                    weight={p.weight}
                     price={p.price}
                     priceOld={p.priceOld}
                     photo={p.photo}

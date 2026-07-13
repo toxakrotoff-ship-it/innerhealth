@@ -47,6 +47,7 @@ describe('ProductCard', () => {
         id="p-1"
         title="ОченьДлинноеНазваниеТовараБезПробеловЧтобыПроверитьПеренос"
         sku="SKU-SUPER-LONG-WITHOUT-SPACES-1234567890"
+        weight={210}
         showSku
         price={2600}
         slug="broth"
@@ -64,5 +65,7 @@ describe('ProductCard', () => {
 
     const addToCart = screen.getByText('Товар закончился')
     expect(addToCart.className).toContain('w-full')
+
+    expect(screen.getByText('210 г')).toBeInTheDocument()
   })
 })

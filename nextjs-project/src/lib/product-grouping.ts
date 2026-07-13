@@ -4,6 +4,7 @@ export interface ProductVariantForListing {
   title: string
   brand: string | null
   sku: string | null
+  weight?: number | null
   price: number
   priceOld: number | null
   quantity?: number | null
@@ -78,6 +79,13 @@ export function getBaseTitleAndFlavorLabel(title: string): { baseTitle: string; 
   }
 
   return { baseTitle: normalized, flavorLabel: null }
+}
+
+export function getProductListingSizeLabel(title: string, weight?: number | null): string | null {
+  const { flavorLabel } = getBaseTitleAndFlavorLabel(title)
+  if (flavorLabel) return flavorLabel
+  if (typeof weight === 'number' && Number.isFinite(weight) && weight > 0) return `${weight} г`
+  return null
 }
 
 export function pickDefaultVariant(variants: ProductVariantForListing[]): ProductVariantForListing {

@@ -15,6 +15,7 @@ interface RecentlyViewedProductItem {
   title: string;
   brand: string | null;
   sku: string | null;
+  weight: number | null;
   price: number;
   priceOld: number | null;
   photo: string | null;
@@ -68,6 +69,7 @@ export function RecentlyViewedProducts({
             title={product.title}
             brand={product.brand}
             sku={product.sku}
+            weight={product.weight}
             price={product.price}
             priceOld={product.priceOld}
             photo={product.photo}

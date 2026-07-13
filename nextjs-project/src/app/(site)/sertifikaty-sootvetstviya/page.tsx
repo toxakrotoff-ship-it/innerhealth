@@ -34,11 +34,6 @@ export default async function CertificatesPage() {
   const blocks = await getResolvedBlocksForPage('certificates', brandId)
 
   const title = getBlockText(blocks, 'certificates.title', 'Сертификаты соответствия')
-  const subtitle = getBlockText(
-    blocks,
-    'certificates.subtitle',
-    'Документы, подтверждающие качество и соответствие продукции требованиям безопасности'
-  )
 
   const aboutTitle = getBlockText(blocks, 'certificates.section.about.title', 'О документах')
   const aboutP1 = getBlockText(
@@ -114,9 +109,6 @@ export default async function CertificatesPage() {
           <h1 className="text-3xl sm:text-4xl font-bold text-text">
             {title}
           </h1>
-          <p className="mt-2 text-gray-500 text-sm">
-            {subtitle}
-          </p>
         </header>
 
         <GalleryBlock images={galleryImages} />
@@ -143,18 +135,6 @@ export default async function CertificatesPage() {
 
           <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-text mb-4">
-              {declarationsTitle}
-            </h2>
-            <p className="mb-4">
-              {declarationsP1}
-            </p>
-            <p className="text-gray-600 text-sm">
-              {declarationsNote}
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
               {productCertificatesTitle}
             </h2>
             <p className="mb-4">
@@ -162,6 +142,18 @@ export default async function CertificatesPage() {
             </p>
             <p className="text-gray-600 text-sm">
               {productCertificatesNote}
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-text mb-4">
+              {declarationsTitle}
+            </h2>
+            <p className="mb-4">
+              {declarationsP1}
+            </p>
+            <p className="text-gray-600 text-sm">
+              {declarationsNote}
             </p>
           </section>
 

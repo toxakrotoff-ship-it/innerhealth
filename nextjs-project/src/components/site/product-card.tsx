@@ -10,12 +10,14 @@ import { ProductQuickView } from '@/components/site/product-quick-view'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
+import { getProductListingSizeLabel } from '@/lib/product-grouping'
 
 interface ProductCardProps {
   id: string
   title: string
   brand?: string | null
   sku?: string | null
+  weight?: number | null
   showSku?: boolean
   price: number
   priceOld?: number | null
@@ -42,6 +44,7 @@ export function ProductCard({
   title,
   brand,
   sku,
+  weight = null,
   showSku = true,
   price,
   priceOld,
@@ -79,6 +82,7 @@ export function ProductCard({
     : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
   const mobilePhotoFitClass = cn('max-sm:object-cover max-sm:object-center')
+  const sizeLabel = getProductListingSizeLabel(title, weight)
 
   const updateStyles = () => {
     if (ref.current) {
@@ -186,7 +190,20 @@ export function ProductCard({
               {title}
             </h3>
 
-            <div className="mt-1 flex shrink-0 items-baseline gap-2">
+            {sizeLabel ? (
+              <p
+                className={cn(
+                  'mt-2 inline-flex w-fit max-w-full rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none',
+                  isSprintTheme
+                    ? 'border-slate-600 bg-slate-800 text-slate-200'
+                    : 'border-blue-100 bg-blue-50 text-action-blue'
+                )}
+              >
+                {sizeLabel}
+              </p>
+            ) : null}
+
+            <div className="mt-2 flex shrink-0 items-baseline gap-2">
               <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
                 {price.toLocaleString('ru-RU')} ₽
               </span>

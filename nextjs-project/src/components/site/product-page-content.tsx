@@ -342,6 +342,7 @@ export function ProductPageContent({
                     title={item.product.title}
                     brand={item.product.brand}
                     sku={item.product.sku}
+                    weight={item.product.weight}
                     price={item.product.price}
                     priceOld={item.product.priceOld}
                     photo={item.product.photo}

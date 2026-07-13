@@ -1175,6 +1175,7 @@ export default async function HomePage() {
                         title={newProducts[0].title}
                         brand={newProducts[0].brand}
                         sku={newProducts[0].sku}
+                        weight={newProducts[0].weight}
                         price={newProducts[0].price}
                         priceOld={newProducts[0].priceOld}
                         photo={newProducts[0].photo}
@@ -1213,6 +1214,7 @@ export default async function HomePage() {
                       title={p.title}
                       brand={p.brand}
                       sku={p.sku}
+                      weight={p.weight}
                       price={p.price}
                       priceOld={p.priceOld}
                       photo={p.photo}
