@@ -190,7 +190,7 @@ export function calculateGiftLinesFromPromotions(params: {
     }
   }
 
-  for (const groupedPromos of promosByGroup.values()) {
+  for (const groupedPromos of Array.from(promosByGroup.values())) {
     let winner = groupedPromos[0]
     for (let index = 1; index < groupedPromos.length; index += 1) {
       const candidate = groupedPromos[index]
