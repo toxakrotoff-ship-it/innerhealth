@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { JSONContent } from '@tiptap/core'
+import { NavArrowDown } from 'iconoir-react'
 import Button from '@/components/ui/button'
 import { RichTextEditor } from '../news/components/RichTextEditor'
 import { CoverImageDropzone } from '../news/components/CoverImageDropzone'
@@ -41,6 +42,17 @@ interface BlockGroup {
   title: string
   hint: string
   blocks: ContentBlockAdmin[]
+}
+
+interface BlockPresentationMeta {
+  shortTitle: string
+  helper: string
+}
+
+interface BlockTypeBadgeMeta {
+  code: string
+  label: string
+  className: string
 }
 
 const PAGES: Array<{ id: string; label: string }> = [
@@ -230,6 +242,199 @@ function getBlockPlaceholder(key: string): string | undefined {
   return undefined
 }
 
+function getBlockTypeBadgeMeta(block: ContentBlockAdmin): BlockTypeBadgeMeta {
+  if (isBooleanKey(block.key)) {
+    return {
+      code: 'ON',
+      label: 'Переключатель',
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    }
+  }
+  if (block.key.endsWith('.href')) {
+    return {
+      code: 'URL',
+      label: 'Ссылка',
+      className: 'bg-sky-50 text-sky-700 border-sky-200',
+    }
+  }
+  if (block.key.endsWith('.src')) {
+    return {
+      code: 'IMG',
+      label: 'Изображение',
+      className: 'bg-violet-50 text-violet-700 border-violet-200',
+    }
+  }
+  if (block.key.endsWith('.alt')) {
+    return {
+      code: 'ALT',
+      label: 'Описание изображения',
+      className: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+    }
+  }
+  if (block.key.endsWith('.categorySlug')) {
+    return {
+      code: 'CAT',
+      label: 'Категория',
+      className: 'bg-amber-50 text-amber-700 border-amber-200',
+    }
+  }
+  if (block.key.endsWith('.sortOrder')) {
+    return {
+      code: 'ORD',
+      label: 'Порядок',
+      className: 'bg-orange-50 text-orange-700 border-orange-200',
+    }
+  }
+  if (block.type === 'rich') {
+    return {
+      code: 'RT',
+      label: 'Rich text',
+      className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    }
+  }
+  return {
+    code: 'TXT',
+    label: 'Текст',
+    className: 'bg-slate-100 text-slate-700 border-slate-200',
+  }
+}
+
+function getBlockPreviewValue(block: ContentBlockAdmin): string {
+  if (isBooleanKey(block.key)) {
+    return parseBooleanText(block.text, false) ? 'Показывается на витрине' : 'Скрыто на витрине'
+  }
+
+  const sourceValue =
+    block.type === 'rich'
+      ? ''
+      : block.text?.trim() || block.defaultText?.trim() || ''
+
+  if (sourceValue.length === 0) {
+    return 'Значение пока не заполнено'
+  }
+
+  if (block.key.endsWith('.href')) {
+    return `Переход: ${sourceValue}`
+  }
+  if (block.key.endsWith('.src')) {
+    return 'Изображение задано'
+  }
+  if (block.key.endsWith('.alt')) {
+    return sourceValue
+  }
+  if (block.key.endsWith('.categorySlug')) {
+    return `Категория: ${sourceValue}`
+  }
+  if (block.key.endsWith('.sortOrder')) {
+    return `Порядок: ${sourceValue}`
+  }
+
+  return sourceValue
+}
+
+function stripTechnicalSuffix(label: string): string {
+  return label
+    .replace(/\s*\(1\s*\/\s*да\s*\/\s*on\)\s*$/i, '')
+    .replace(/\s*—\s*показывать\s*$/i, '')
+    .trim()
+}
+
+function toSentenceCase(value: string): string {
+  if (!value) return value
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function getReadableEntityName(key: string): string {
+  if (key.includes('badge')) return 'бейдж'
+  if (key.includes('title.highlight')) return 'выделенное слово'
+  if (key.includes('title')) return 'заголовок'
+  if (key.includes('subtitle')) return 'подзаголовок'
+  if (key.includes('description')) return 'описание'
+  if (key.includes('cta.label')) return 'текст кнопки'
+  if (key.includes('cta.href')) return 'ссылку кнопки'
+  if (key.includes('image.alt')) return 'alt-текст изображения'
+  if (key.includes('image.src')) return 'изображение'
+  if (key.includes('categorySlug')) return 'категорию'
+  if (key.includes('sortOrder')) return 'порядок'
+  if (key.includes('isVisible')) return 'видимость'
+  return 'поле'
+}
+
+function getBlockPresentationMeta(block: ContentBlockAdmin): BlockPresentationMeta {
+  const groupTitle = getBlockGroupMeta(block.key).title
+  const cleanedLabel = stripTechnicalSuffix(block.label)
+  const withoutGroupPrefix = cleanedLabel.replace(new RegExp(`^${groupTitle}\\s*[—-]\\s*`, 'i'), '').trim()
+  const shortTitle = withoutGroupPrefix || cleanedLabel || block.key
+
+  if (block.key.includes('isVisible')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle.replace(/^показывать\s+/i, '')),
+      helper: 'Переключатель: показывать или скрыть элемент на витрине',
+    }
+  }
+
+  if (block.key.endsWith('.href')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Ссылка: куда попадёт пользователь после клика',
+    }
+  }
+
+  if (block.key.endsWith('.alt')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Описание изображения для доступности и SEO',
+    }
+  }
+
+  if (block.key.endsWith('.src')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Источник изображения: загрузите файл или укажите URL',
+    }
+  }
+
+  if (block.key.endsWith('.categorySlug')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Выбор категории, с которой будет связан этот блок',
+    }
+  }
+
+  if (block.key.endsWith('.sortOrder')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Число: чем меньше значение, тем выше элемент в списке',
+    }
+  }
+
+  if (block.type === 'rich') {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Расширенный текстовый блок с форматированием',
+    }
+  }
+
+  if (block.key.startsWith('hero.')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: `Поле Hero: меняет ${getReadableEntityName(block.key)} на первом экране`,
+    }
+  }
+
+  if (block.key.startsWith('home.directions.')) {
+    return {
+      shortTitle: toSentenceCase(shortTitle),
+      helper: 'Поле карточки направления на главной странице',
+    }
+  }
+
+  return {
+    shortTitle: toSentenceCase(shortTitle),
+    helper: `Поле контента: меняет ${getReadableEntityName(block.key)} на странице`,
+  }
+}
+
 export default function AdminContentPage() {
   const [page, setPage] = useState<string>('home')
   const [blocks, setBlocks] = useState<ContentBlockAdmin[]>([])
@@ -240,6 +445,7 @@ export default function AdminContentPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.key === selectedKey) ?? blocks[0],
@@ -249,6 +455,11 @@ export default function AdminContentPage() {
   const dirtyCount = useMemo(
     () => blocks.filter((block) => block.isDirty).length,
     [blocks]
+  )
+
+  const selectedGroupId = useMemo(
+    () => (selectedBlock ? getBlockGroupMeta(selectedBlock.key).id : null),
+    [selectedBlock]
   )
 
   const groupedBlocks = useMemo((): BlockGroup[] => {
@@ -276,6 +487,11 @@ export default function AdminContentPage() {
     return Array.from(groups.values())
   }, [blocks, searchQuery])
 
+  const selectedPresentation = useMemo(
+    () => (selectedBlock ? getBlockPresentationMeta(selectedBlock) : null),
+    [selectedBlock]
+  )
+
   useEffect(() => {
     void loadBlocks(page)
   }, [page])
@@ -288,6 +504,12 @@ export default function AdminContentPage() {
 
     void loadCategoryOptions()
   }, [page])
+
+  useEffect(() => {
+    if (selectedGroupId) {
+      setExpandedGroupId(selectedGroupId)
+    }
+  }, [selectedGroupId])
 
   async function loadBlocks(currentPage: string) {
     try {
@@ -306,6 +528,7 @@ export default function AdminContentPage() {
       setBlocks(mapped)
       setSelectedKey(mapped[0]?.key ?? null)
       setSearchQuery('')
+      setExpandedGroupId(mapped[0] ? getBlockGroupMeta(mapped[0].key).id : null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка')
       setBlocks([])
@@ -444,10 +667,14 @@ export default function AdminContentPage() {
   }
 
   return (
-    <div className="admin-container bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef4ff_100%)]">
+    <div className="admin-container bg-slate-50">
       <div className="admin-content">
-        <div className="mb-6 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/70 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.09),transparent_46%),radial-gradient(circle_at_top_right,rgba(191,219,254,0.18),transparent_34%)]"
+            aria-hidden
+          />
+          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700">
                 Контент-редактор
@@ -479,7 +706,7 @@ export default function AdminContentPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="relative z-10 mt-4 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select
               className="form-input w-full rounded-2xl border-slate-200 bg-white"
               value={page}
@@ -517,14 +744,34 @@ export default function AdminContentPage() {
           <p className="text-gray-500">Для этой страницы пока нет блоков.</p>
         ) : (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)] items-start">
-            <aside className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
-              <div>
-                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Группы блоков
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Сначала выберите смысловую секцию, потом конкретное поле.
-                </p>
+            <aside className="space-y-4 rounded-3xl border border-white/70 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Группы блоков
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Сначала выберите смысловую секцию, потом конкретное поле.
+                  </p>
+                </div>
+                {groupedBlocks.length > 1 ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGroupId('__all__')}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
+                    >
+                      Развернуть все
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGroupId(selectedGroupId)}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-blue-200 hover:text-blue-700"
+                    >
+                      Свернуть все
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               {groupedBlocks.length === 0 ? (
@@ -532,72 +779,114 @@ export default function AdminContentPage() {
                   По запросу ничего не найдено.
                 </div>
               ) : (
-                groupedBlocks.map((group) => (
-                  <div key={group.id} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{group.title}</div>
-                        <div className="text-xs text-slate-500">{group.hint}</div>
-                      </div>
-                      <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-slate-500">
-                        {group.blocks.length}
-                      </span>
-                    </div>
+                groupedBlocks.map((group) => {
+                  const isExpanded =
+                    expandedGroupId === '__all__' || expandedGroupId === group.id
+                  const dirtyInGroup = group.blocks.filter((block) => block.isDirty).length
+                  return (
+                    <div key={group.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/80">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedGroupId(isExpanded ? null : group.id)}
+                        className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-900">{group.title}</div>
+                          <div className="mt-1 text-xs text-slate-500">{group.hint}</div>
+                          {dirtyInGroup > 0 ? (
+                            <div className="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-800">
+                              Изменено: {dirtyInGroup}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-slate-500">
+                            {group.blocks.length}
+                          </span>
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm">
+                            <NavArrowDown
+                              className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                              aria-hidden
+                            />
+                          </span>
+                        </div>
+                      </button>
 
-                    <div className="space-y-2">
-                      {group.blocks.map((b) => {
-                        const isActive = selectedBlock?.key === b.key
-                        return (
-                          <button
-                            key={b.key}
-                            type="button"
-                            onClick={() => setSelectedKey(b.key)}
-                            className={`w-full rounded-2xl border px-3 py-3 text-left text-sm transition ${
-                              isActive
-                                ? 'border-blue-500 bg-blue-50 text-blue-950 shadow-sm'
-                                : 'border-white bg-white hover:border-blue-200 hover:bg-blue-50/40'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="truncate font-medium">{b.label}</div>
-                                <div className="mt-1 truncate text-xs text-slate-500">{b.key}</div>
-                              </div>
-                              <span
-                                className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
-                                  b.isDirty
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : b.isInherited
-                                      ? 'bg-slate-100 text-slate-600'
-                                      : 'bg-emerald-100 text-emerald-700'
+                      {isExpanded ? (
+                        <div className="space-y-2 border-t border-slate-200 px-3 py-3">
+                          {group.blocks.map((b) => {
+                            const isActive = selectedBlock?.key === b.key
+                            const presentation = getBlockPresentationMeta(b)
+                            const typeBadge = getBlockTypeBadgeMeta(b)
+                            return (
+                              <button
+                                key={b.key}
+                                type="button"
+                                onClick={() => setSelectedKey(b.key)}
+                                className={`w-full rounded-2xl border px-3 py-3 text-left text-sm transition ${
+                                  isActive
+                                    ? 'border-blue-500 bg-blue-50 text-blue-950 shadow-sm'
+                                    : 'border-white bg-white hover:border-blue-200 hover:bg-blue-50/40'
                                 }`}
                               >
-                                {b.isDirty ? 'Изменён' : b.isInherited ? 'Default' : 'Override'}
-                              </span>
-                            </div>
-                          </button>
-                        )
-                      })}
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${typeBadge.className}`}>
+                                        {typeBadge.code}
+                                      </span>
+                                      <div className="truncate font-medium">{presentation.shortTitle}</div>
+                                    </div>
+                                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">{presentation.helper}</div>
+                                    <div className="mt-2 line-clamp-2 rounded-xl bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                                      {getBlockPreviewValue(b)}
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
+                                      b.isDirty
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : b.isInherited
+                                          ? 'bg-slate-100 text-slate-600'
+                                          : 'bg-emerald-100 text-emerald-700'
+                                    }`}
+                                  >
+                                    {b.isDirty ? 'Изменён' : b.isInherited ? 'Default' : 'Override'}
+                                  </span>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </aside>
 
             {selectedBlock && (
               <section className="space-y-6 self-start xl:sticky xl:top-6">
-                <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                <div className="rounded-3xl border border-white/70 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
                         {getBlockGroupMeta(selectedBlock.key).title}
                       </div>
                       <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                        {selectedBlock.label}
+                        {selectedPresentation?.shortTitle ?? selectedBlock.label}
                       </h2>
-                      <p className="mt-2 break-all text-sm text-slate-500">
-                        Ключ: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[12px]">{selectedBlock.key}</code>
+                      <p className="mt-2 text-sm text-slate-600">
+                        {selectedPresentation?.helper}
                       </p>
+                      <details className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        <summary className="cursor-pointer select-none font-medium text-slate-700">
+                          Технические детали
+                        </summary>
+                        <div className="mt-2 break-all text-sm text-slate-500">
+                          Ключ: <code className="rounded bg-white px-1.5 py-0.5 text-[12px]">{selectedBlock.key}</code>
+                        </div>
+                      </details>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -656,7 +945,7 @@ export default function AdminContentPage() {
                   </div>
                 ) : null}
 
-                <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                <div className="rounded-3xl border border-white/70 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-slate-900">Редактирование</h3>
                     <p className="mt-1 text-sm text-slate-500">
@@ -808,7 +1097,7 @@ export default function AdminContentPage() {
                 </div>
 
                 {selectedBlock.key !== 'categories.fontVariant' && (
-                  <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                  <div className="rounded-3xl border border-white/70 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-slate-900">Оформление текста</h3>
                       <p className="mt-1 text-sm text-slate-500">
