@@ -4,16 +4,9 @@ const findRedirectByPath = vi.fn()
 let mockedHeaders = new Headers({
   host: 'innerhealth.ru',
 })
-const notFound = vi.fn(() => {
-  throw new Error('NEXT_NOT_FOUND')
-})
 
 vi.mock('next/headers', () => ({
   headers: async () => mockedHeaders,
-}))
-
-vi.mock('next/navigation', () => ({
-  notFound,
 }))
 
 vi.mock('@/services/redirect.service', () => ({
@@ -26,7 +19,6 @@ describe('legacy redirect fallback route', () => {
       host: 'innerhealth.ru',
     })
     findRedirectByPath.mockReset()
-    notFound.mockClear()
   })
 
   it('returns configured redirect status and destination for legacy paths', async () => {
@@ -80,8 +72,10 @@ describe('legacy redirect fallback route', () => {
     findRedirectByPath.mockResolvedValueOnce(null)
 
     const { GET } = await import('./route')
+    const response = await GET(new Request('https://innerhealth.ru/missing'))
 
-    await expect(GET(new Request('https://innerhealth.ru/missing'))).rejects.toThrow('NEXT_NOT_FOUND')
-    expect(notFound).toHaveBeenCalled()
+    expect(response.status).toBe(404)
+    expect(response.headers.get('content-type')).toContain('text/html')
+    await expect(response.text()).resolves.toContain('Похоже, мы свернули не туда.')
   })
 })
