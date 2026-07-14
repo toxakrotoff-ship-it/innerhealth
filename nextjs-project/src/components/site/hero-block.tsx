@@ -10,16 +10,44 @@ interface HeroBlockProps {
   badge: ContentBlockResolved | null
   title: ContentBlockResolved | null
   subtitle: ContentBlockResolved | null
+  description?: ContentBlockResolved | null
   highlight: ContentBlockResolved | null
+  ctaLabel?: string
+  ctaHref?: string
+  imageSrc?: string | null
+  imageAlt?: string
+  showBadge?: boolean
+  showSubtitle?: boolean
+  showDescription?: boolean
+  showPrimaryCta?: boolean
+  showImage?: boolean
 }
 
-export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps) {
+export function HeroBlock({
+  badge,
+  title,
+  subtitle,
+  description,
+  highlight,
+  ctaLabel = 'ПЕРЕЙТИ В КАТАЛОГ',
+  ctaHref = '/catalog',
+  imageSrc = '/hero-portrait.png',
+  imageAlt = getInnerHealthHeroPortraitAlt(),
+  showBadge = true,
+  showSubtitle = true,
+  showDescription = true,
+  showPrimaryCta = true,
+  showImage = true,
+}: HeroBlockProps) {
 
   const badgeText = badge?.text ?? 'НОВЫЙ СТАНДАРТ БИОДОБАВОК'
   const titleText = title?.text ?? 'Функциональное\nпитание для\nтвоего\nбаланса.'
   const subtitleText =
     subtitle?.text ??
     'Мы объединили чистоту натуральных ингредиентов и высокие технологии для поддержания вашего здоровья на клеточном уровне.'
+  const descriptionText =
+    description?.text ??
+    'Понятные составы, удобные форматы и подробная информация о каждом продукте.'
 
   const highlightWord = (highlight?.text?.trim() ?? 'твоего').toLowerCase()
   const highlightWordLen = highlightWord.length
@@ -100,10 +128,12 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
           variant="fade-up"
           className="min-h-0 max-w-full space-y-4 px-4 py-6 sm:max-w-xl sm:space-y-6 sm:px-0 sm:py-8 lg:max-w-2xl lg:space-y-8 lg:py-12 xl:max-w-3xl 3xl:max-w-4xl"
         >
-          <div className={`${badgeClassName} 3xl:text-sm 3xl:px-4 3xl:py-1.5`}>
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
-            {badgeText}
-          </div>
+          {showBadge ? (
+            <div className={`${badgeClassName} 3xl:text-sm 3xl:px-4 3xl:py-1.5`}>
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
+              {badgeText}
+            </div>
+          ) : null}
           <h1
             className={`text-fluid-hero font-display tracking-tighter max-w-full w-full ${titleWeightClass}`}
           >
@@ -113,19 +143,30 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
               </span>
             ))}
           </h1>
-          <p
-            className={`text-fluid-subtitle text-slate-300 max-w-fluid ${subtitleWeightClass}`}
-          >
-            {subtitleText}
-          </p>
-          <div className="flex flex-wrap gap-3 pt-4 sm:gap-4 3xl:gap-5">
-            <Link
-              href="/catalog"
-              className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-blue-50 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
+          {showSubtitle ? (
+            <p
+              className={`text-xl text-white/90 max-w-3xl ${subtitleWeightClass}`}
             >
-              ПЕРЕЙТИ В КАТАЛОГ
-              <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
-            </Link>
+              {subtitleText}
+            </p>
+          ) : null}
+          {showDescription ? (
+            <p
+              className={`text-fluid-subtitle text-slate-300 max-w-fluid ${subtitleWeightClass}`}
+            >
+              {descriptionText}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-3 pt-4 sm:gap-4 3xl:gap-5">
+            {showPrimaryCta ? (
+              <Link
+                href={ctaHref}
+                className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-blue-50 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
+              >
+                {ctaLabel}
+                <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
+              </Link>
+            ) : null}
             <Link
               href="/sertifikaty-sootvetstviya"
               className="desktop-button-scale rounded-full border border-white/10 bg-white/10 px-7 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/15 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
@@ -136,36 +177,38 @@ export function HeroBlock({ badge, title, subtitle, highlight }: HeroBlockProps)
         </ScrollReveal>
       </AdaptiveContainer>
 
-      <div
-        className="absolute right-0 bottom-0 w-full lg:w-1/2 h-[60vh] sm:h-[70vh] lg:h-full pointer-events-none"
-        aria-hidden
-      >
-        <div className="relative w-full h-full">
-          <div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              maskImage: 'linear-gradient(to left, black 40%, transparent)',
-              WebkitMaskImage: 'linear-gradient(to left, black 40%, transparent)',
-            }}
-          >
-            <Image
-              src="/hero-portrait.png"
-              alt={getInnerHealthHeroPortraitAlt()}
-              width={1008}
-              height={1016}
-              className="absolute inset-0 h-full w-full object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
-              sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
-              priority
-              fetchPriority="high"
-              style={{ imageOrientation: 'none' }}
+      {showImage && imageSrc ? (
+        <div
+          className="absolute right-0 bottom-0 w-full lg:w-1/2 h-[60vh] sm:h-[70vh] lg:h-full pointer-events-none"
+          aria-hidden
+        >
+          <div className="relative w-full h-full">
+            <div
+              className="absolute inset-0 w-full h-full"
+              style={{
+                maskImage: 'linear-gradient(to left, black 40%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to left, black 40%, transparent)',
+              }}
+            >
+              <Image
+                src={imageSrc}
+                alt={imageAlt}
+                width={1008}
+                height={1016}
+                className="absolute inset-0 h-full w-full object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
+                sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
+                priority
+                fetchPriority="high"
+                style={{ imageOrientation: 'none' }}
+              />
+            </div>
+            <div
+              className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-blue-500/20 blur-[80px] sm:blur-[120px] rounded-full"
+              aria-hidden
             />
           </div>
-          <div
-            className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-blue-500/20 blur-[80px] sm:blur-[120px] rounded-full"
-            aria-hidden
-          />
         </div>
-      </div>
+      ) : null}
     </section>
   )
 }

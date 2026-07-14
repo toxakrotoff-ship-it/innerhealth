@@ -29,6 +29,13 @@ interface ContentBlockAdmin {
   fontWeight: string
 }
 
+interface CategoryOption {
+  id: string
+  title: string
+  slug: string
+  href: string
+}
+
 const PAGES: Array<{ id: string; label: string }> = [
   { id: 'home', label: 'Главная' },
   { id: 'about', label: 'О нас' },
@@ -75,6 +82,32 @@ const FONT_WEIGHT_OPTIONS: Array<{ value: string; label: string }> = [
 ]
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [] }
+
+function parseBooleanText(value: string | null | undefined, fallback = false): boolean {
+  if (value == null) return fallback
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return fallback
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'y' || normalized === 'on' || normalized === 'да'
+}
+
+function isImageSrcKey(key: string): boolean {
+  return key.endsWith('.image.src') ||
+    key.endsWith('.image1.src') ||
+    key.endsWith('.image2.src') ||
+    (key.includes('.gallery.image') && key.endsWith('.src'))
+}
+
+function isBooleanKey(key: string): boolean {
+  return key.endsWith('.isVisible')
+}
+
+function isSortOrderKey(key: string): boolean {
+  return key.endsWith('.sortOrder')
+}
+
+function isCategorySlugKey(key: string): boolean {
+  return key.endsWith('.categorySlug')
+}
 
 async function readApiError(response: Response, fallback: string): Promise<string> {
   try {
@@ -137,6 +170,7 @@ export default function AdminContentPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.key === selectedKey) ?? blocks[0],
@@ -145,6 +179,15 @@ export default function AdminContentPage() {
 
   useEffect(() => {
     void loadBlocks(page)
+  }, [page])
+
+  useEffect(() => {
+    if (page !== 'home') {
+      setCategoryOptions([])
+      return
+    }
+
+    void loadCategoryOptions()
   }, [page])
 
   async function loadBlocks(currentPage: string) {
@@ -169,6 +212,17 @@ export default function AdminContentPage() {
       setSelectedKey(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function loadCategoryOptions() {
+    try {
+      const res = await fetch('/api/admin/content-link-suggest?q=&limit=50')
+      if (!res.ok) return
+      const data = (await res.json()) as { categories?: CategoryOption[] }
+      setCategoryOptions(Array.isArray(data.categories) ? data.categories : [])
+    } catch {
+      setCategoryOptions([])
     }
   }
 
@@ -387,10 +441,14 @@ export default function AdminContentPage() {
                 {selectedBlock.type === 'short' ? (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {selectedBlock.key.endsWith('.image1.src') ||
-                      selectedBlock.key.endsWith('.image2.src') ||
-                      selectedBlock.key.includes('.gallery.image') && selectedBlock.key.endsWith('.src')
+                      {isImageSrcKey(selectedBlock.key)
                         ? 'URL изображения'
+                        : isBooleanKey(selectedBlock.key)
+                          ? 'Видимость'
+                          : isSortOrderKey(selectedBlock.key)
+                            ? 'Порядок'
+                            : isCategorySlugKey(selectedBlock.key)
+                              ? 'Категория'
                         : 'Текст'}
                     </label>
                     {selectedBlock.key === 'hero.title' && (
@@ -403,9 +461,7 @@ export default function AdminContentPage() {
                         Впишите слово из заголовка выше — именно оно будет выделено цветом на сайте. Цвет задаётся ниже.
                       </p>
                     )}
-                    {((selectedBlock.key === 'about.image1.src' ||
-                      selectedBlock.key === 'about.image2.src') ||
-                      (selectedBlock.key.includes('.gallery.image') && selectedBlock.key.endsWith('.src'))) && (
+                    {isImageSrcKey(selectedBlock.key) && (
                       <>
                         <CoverImageDropzone
                           value={selectedBlock.text}
@@ -456,6 +512,48 @@ export default function AdminContentPage() {
                           Коллаген · Грибная коллекция
                         </p>
                       </>
+                    ) : isBooleanKey(selectedBlock.key) ? (
+                      <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={parseBooleanText(selectedBlock.text, false)}
+                          onChange={(e) =>
+                            updateBlock(selectedBlock.key, {
+                              text: e.target.checked ? '1' : '0',
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-700">Показывать элемент на витрине</span>
+                      </label>
+                    ) : isSortOrderKey(selectedBlock.key) ? (
+                      <input
+                        className="form-input w-full"
+                        type="number"
+                        step={1}
+                        value={selectedBlock.text}
+                        onChange={(e) =>
+                          updateBlock(selectedBlock.key, {
+                            text: e.target.value,
+                          })
+                        }
+                      />
+                    ) : isCategorySlugKey(selectedBlock.key) ? (
+                      <select
+                        className="form-input w-full"
+                        value={selectedBlock.text}
+                        onChange={(e) =>
+                          updateBlock(selectedBlock.key, {
+                            text: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">Не выбрано</option>
+                        {categoryOptions.map((option) => (
+                          <option key={option.id} value={option.slug}>
+                            {option.title} ({option.slug})
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <textarea
                         className="form-input w-full"
@@ -474,7 +572,7 @@ export default function AdminContentPage() {
                         placeholder={
                           selectedBlock.key === 'hero.title.highlight'
                             ? 'Например: твоего'
-                            : selectedBlock.key.startsWith('about.image')
+                            : isImageSrcKey(selectedBlock.key)
                               ? 'Например: /images/o-nas/face-lift.jpg'
                               : undefined
                         }

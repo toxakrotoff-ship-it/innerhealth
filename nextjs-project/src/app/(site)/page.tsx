@@ -41,13 +41,15 @@ import { FaqAccordion } from '@/components/site/faq-accordion'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
-import {
-  formatAktsiiCatalogBlockSubtitleRu,
-  formatProductsCountRu,
-} from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { buildHomeMetadata } from './home-metadata'
 import type { JSONContent } from '@tiptap/core'
+import {
+  resolveInnerHomeDirectionsContent,
+  resolveInnerHomeHeroContent,
+  resolveInnerHomeSectionOrder,
+} from '@/lib/home-page-content'
+import { InnerHomeDirectionsSection } from '@/components/site/inner-home-directions-section'
 
 const SprintPowerBlock = nextDynamic(
   () => import('@/components/site/sprint-power-block').then((m) => ({ default: m.SprintPowerBlock })),
@@ -241,23 +243,10 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
   const [categories, publicGiftPromotionCount] = await Promise.all([
     (async (): Promise<HomeCategoryWithProductCount[]> => {
       try {
-        const categoriesForBlock = await withTimeout(
-          prisma.category.findMany({
-            where: { showInCategoriesBlock: true, isPublished: true, ...categoryScopeWhere },
-            orderBy: { sortOrder: 'asc' },
-            include: HOME_CATEGORY_CATALOG_INCLUDE,
-          }),
-          dbTimeoutMs,
-          emptyCategories
-        )
-
-        if (categoriesForBlock.length > 0) return categoriesForBlock
-
-        // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
-        return withTimeout(
+        return await withTimeout(
           prisma.category.findMany({
             where: { isPublished: true, ...categoryScopeWhere },
-            orderBy: { sortOrder: 'asc' },
+            orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
             include: HOME_CATEGORY_CATALOG_INCLUDE,
           }),
           dbTimeoutMs,
@@ -1079,32 +1068,27 @@ export default async function HomePage() {
     )
   }
 
-  const { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount } =
+  const { categories, newProducts, newsPosts, articlePosts, reviews } =
     await getHomeData(activeBrand)
   const emptyInnerContentBlocks = [] as ContentBlockResolved[]
-  const [homeBlocks, catalogBlocks, popup] = await Promise.all([
+  const [homeBlocks, popup] = await Promise.all([
     withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptyInnerContentBlocks),
-    withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptyInnerContentBlocks),
     withTimeout(getActiveSitePopup({ brandId: activeBrand }), dbTimeoutMs, null),
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
   const newsSubtitle = getBlockByKey(homeBlocks, 'home.news.subtitle')
-  const catalogSubtitle = getBlockByKey(homeBlocks, 'home.catalog.subtitle')
   const articlesSubtitle = getBlockByKey(homeBlocks, 'home.articles.subtitle')
   const reviewsSubtitle = getBlockByKey(homeBlocks, 'home.reviews.subtitle')
-  const categoriesFontBlock = getBlockByKey(catalogBlocks, 'categories.fontVariant')
 
   const heroBadge = getBlockByKey(homeBlocks, 'hero.badge')
   const heroTitle = getBlockByKey(homeBlocks, 'hero.title')
   const heroSubtitle = getBlockByKey(homeBlocks, 'hero.subtitle')
+  const heroDescription = getBlockByKey(homeBlocks, 'hero.description')
   const heroHighlight = getBlockByKey(homeBlocks, 'hero.title.highlight')
-  const categoryTitleFont =
-    categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
-      ? 'font-sans'
-      : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
-        ? 'font-script'
-        : 'font-display'
+  const heroContent = resolveInnerHomeHeroContent(homeBlocks)
+  const directionsContent = resolveInnerHomeDirectionsContent(homeBlocks, categories)
+  const sectionOrder = resolveInnerHomeSectionOrder(homeBlocks)
 
   const howToOrder = getHowToOrderContent(homeBlocks)
   const showHomeNewsSection =
@@ -1113,6 +1097,292 @@ export default async function HomePage() {
   const showHomeArticlesSection =
     articlePosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.articles.showWhenEmpty')?.text)
+
+  const directionsSection = directionsContent.items.length > 0 ? (
+    <>
+      <InnerHomeDirectionsSection
+        title={directionsContent.title}
+        subtitle={directionsContent.subtitle}
+        ctaLabel={directionsContent.ctaLabel}
+        ctaHref={directionsContent.ctaHref}
+        items={directionsContent.items}
+      />
+      <SpacingVertical size="lg" />
+    </>
+  ) : null
+
+  const newArrivalsSection =
+    newProducts.length > 0 ? (
+      <>
+        <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
+          <AdaptiveContainer maxWidth="default">
+            <div className="flex justify-between items-end mb-10 sm:mb-12">
+              <div className="space-y-1">
+                <Heading2 className="font-semibold tracking-tighter text-slate-900">
+                  Новинки ассортимента
+                </Heading2>
+                <p className="max-w-md text-sm font-semibold text-slate-500 2xl:text-base 3xl:text-lg">
+                  {newSubtitle?.text ??
+                    'Самые актуальные разработки для вашего здоровья и энергии'}
+                </p>
+              </div>
+              <Link
+                href="/catalog"
+                className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm"
+              >
+                СМОТРЕТЬ ВСЁ <NavArrowRight className="w-4 h-4" aria-hidden />
+              </Link>
+            </div>
+            {newProducts.length <= 1 ? (
+              <div className="flex justify-center">
+                {newProducts[0] && (
+                  <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
+                    <ProductCard
+                      key={newProducts[0].id}
+                      id={newProducts[0].id}
+                      title={newProducts[0].title}
+                      brand={newProducts[0].brand}
+                      sku={newProducts[0].sku}
+                      weight={newProducts[0].weight}
+                      price={newProducts[0].price}
+                      priceOld={newProducts[0].priceOld}
+                      photo={newProducts[0].photo}
+                      photos={'photos' in newProducts[0] ? newProducts[0].photos : undefined}
+                      slug={newProducts[0].slug}
+                      quantity={newProducts[0].quantity}
+                      isPreorderEnabled={newProducts[0].isPreorderEnabled}
+                      priority
+                      blurDataURL={
+                        'photos' in newProducts[0]
+                          ? getFirstPhotoBlurDataURL(newProducts[0].photos)
+                          : undefined
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <FluidGrid
+                cols={Math.min(2, newProducts.length || 1)}
+                colsTablet={Math.min(3, newProducts.length || 1)}
+                colsDesktop={Math.min(4, newProducts.length || 1)}
+                colsXl={5}
+                cols2xl={5}
+                cols3xl={6}
+                cols4xl={6}
+                gap="6"
+                adaptiveGap={false}
+                className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+                justify={newProducts.length < 4 ? 'center' : 'start'}
+              >
+                {newProducts.map((p, index) => (
+                  <ProductCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    brand={p.brand}
+                    sku={p.sku}
+                    weight={p.weight}
+                    price={p.price}
+                    priceOld={p.priceOld}
+                    photo={p.photo}
+                    photos={'photos' in p ? p.photos : undefined}
+                    slug={p.slug}
+                    quantity={p.quantity}
+                    isPreorderEnabled={p.isPreorderEnabled}
+                    priority={index < 2}
+                    blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                  />
+                ))}
+              </FluidGrid>
+            )}
+          </AdaptiveContainer>
+        </section>
+        <SpacingVertical size="lg" />
+      </>
+    ) : null
+
+  const howToOrderSection = (
+    <>
+      <HowToOrderSteps
+        showBorders={newProducts.length > 0}
+        title={howToOrder.title}
+        steps={howToOrder.steps}
+      />
+      {(showHomeNewsSection || showHomeArticlesSection) && <SpacingVertical size="lg" />}
+    </>
+  )
+
+  const newsSection = showHomeNewsSection ? (
+    <>
+      <section
+        id="news"
+        className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 scroll-mt-24"
+      >
+        <AdaptiveContainer maxWidth="default">
+          <div className="flex justify-between items-end mb-10 sm:mb-12">
+            <div className="space-y-1">
+              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
+              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
+              </p>
+            </div>
+            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+              ВСЕ НОВОСТИ
+              <NavArrowRight className="w-4 h-4" aria-hidden />
+            </Link>
+          </div>
+          {newsPosts.length > 0 ? (
+            <ScrollReveal as="div" variant="fade-up">
+              <FluidGrid cols={1} colsTablet={2} colsDesktop={3} colsXl={3} cols2xl={3} cols3xl={3} cols4xl={3} gap={4} adaptiveGap>
+                {newsPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/news/${post.slug}`}
+                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                  >
+                    <TiltCard>
+                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                        {post.previewImage && (
+                          <>
+                            <Image
+                              src={post.previewImage}
+                              alt={getPostPreviewImageAlt(post.title)}
+                              fill
+                              className="object-cover object-center"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                            <div
+                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                              aria-hidden
+                            />
+                          </>
+                        )}
+                        <div className="relative z-10 max-w-xs">
+                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                            {post.title}
+                          </span>
+                        </div>
+                      </div>
+                    </TiltCard>
+                  </Link>
+                ))}
+              </FluidGrid>
+            </ScrollReveal>
+          ) : (
+            <p className="text-gray-500">Пока нет новостей.</p>
+          )}
+        </AdaptiveContainer>
+      </section>
+      {showHomeArticlesSection ? <SpacingVertical size="lg" /> : null}
+    </>
+  ) : null
+
+  const articlesSection = showHomeArticlesSection ? (
+    <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+      <AdaptiveContainer maxWidth="default">
+        <div className="flex justify-between items-end mb-10 sm:mb-12">
+          <div className="space-y-1">
+            <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
+            <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+              {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
+            </p>
+          </div>
+          <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+            ВСЕ СТАТЬИ
+            <NavArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </div>
+        {articlePosts.length > 0 ? (
+          <ScrollReveal as="div" variant="fade-up">
+            <FluidGrid cols={1} colsTablet={2} colsDesktop={3} colsXl={3} cols2xl={3} cols3xl={3} cols4xl={3} gap={4} adaptiveGap>
+              {articlePosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/informaciya/${post.slug}`}
+                  className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                >
+                  <TiltCard>
+                    <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                      {post.previewImage && (
+                        <>
+                          <Image
+                            src={post.previewImage}
+                            alt={getPostPreviewImageAlt(post.title)}
+                            fill
+                            className="object-cover object-center"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          />
+                          <div
+                            className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                            aria-hidden
+                          />
+                        </>
+                      )}
+                      <div className="relative z-10 max-w-xs">
+                        <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                          {post.title}
+                        </span>
+                      </div>
+                    </div>
+                  </TiltCard>
+                </Link>
+              ))}
+            </FluidGrid>
+          </ScrollReveal>
+        ) : (
+          <p className="text-gray-500">Пока нет статей.</p>
+        )}
+      </AdaptiveContainer>
+    </section>
+  ) : null
+
+  const reviewsSection = (
+    <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+      <AdaptiveContainer maxWidth="default">
+        <div className="flex justify-between items-end mb-10 sm:mb-12">
+          <div className="space-y-1">
+            <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
+            <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+              {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
+            </p>
+          </div>
+          <Link href="/otzyvy" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+            ВСЕ ОТЗЫВЫ <NavArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </div>
+        {reviews.length > 0 ? (
+          <div className="space-y-10">
+            <ReviewsCarousel reviews={reviews} />
+            <ReviewCtaBlock />
+          </div>
+        ) : (
+          <ReviewCtaBlock />
+        )}
+      </AdaptiveContainer>
+    </section>
+  )
+
+  const orderedSections = sectionOrder
+    .map((sectionId) => {
+      switch (sectionId) {
+        case 'directions':
+          return directionsSection
+        case 'newArrivals':
+          return newArrivalsSection
+        case 'howToOrder':
+          return howToOrderSection
+        case 'news':
+          return newsSection
+        case 'articles':
+          return articlesSection
+        case 'reviews':
+          return reviewsSection
+        default:
+          return null
+      }
+    })
+    .filter(Boolean)
 
   return (
     <div>
@@ -1134,377 +1404,28 @@ export default async function HomePage() {
             : null
         }
       />
-      <HeroBlock
-        badge={heroBadge}
-        title={heroTitle}
-        subtitle={heroSubtitle}
-        highlight={heroHighlight}
-      />
+      {heroContent.isVisible ? (
+        <HeroBlock
+          badge={heroBadge}
+          title={heroTitle}
+          subtitle={heroSubtitle}
+          description={heroDescription}
+          highlight={heroHighlight}
+          ctaLabel={heroContent.ctaLabel}
+          ctaHref={heroContent.ctaHref}
+          imageSrc={heroContent.imageSrc}
+          imageAlt={heroContent.imageAlt}
+          showBadge={heroContent.showBadge}
+          showSubtitle={heroContent.showSubtitle}
+          showDescription={heroContent.showDescription}
+          showPrimaryCta={heroContent.showPrimaryCta}
+          showImage={heroContent.showImage}
+        />
+      ) : null}
 
       {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
-
-      {newProducts.length > 0 && (
-        <>
-          {/* Новинки — фоны сохраняем */}
-          <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
-            <AdaptiveContainer maxWidth="default">
-              <div className="flex justify-between items-end mb-10 sm:mb-12">
-                <div className="space-y-1">
-                  <Heading2 className="font-semibold tracking-tighter text-slate-900">
-                    Новинки ассортимента
-                  </Heading2>
-                  <p className="max-w-md text-sm font-semibold text-slate-500 2xl:text-base 3xl:text-lg">
-                    {newSubtitle?.text ??
-                      'Самые актуальные разработки для вашего здоровья и энергии'}
-                  </p>
-                </div>
-                <Link
-                  href="/catalog"
-                  className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm"
-                >
-                  СМОТРЕТЬ ВСЁ <NavArrowRight className="w-4 h-4" aria-hidden />
-                </Link>
-              </div>
-              {newProducts.length <= 1 ? (
-                <div className="flex justify-center">
-                  {newProducts[0] && (
-                    <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
-                      <ProductCard
-                        key={newProducts[0].id}
-                        id={newProducts[0].id}
-                        title={newProducts[0].title}
-                        brand={newProducts[0].brand}
-                        sku={newProducts[0].sku}
-                        weight={newProducts[0].weight}
-                        price={newProducts[0].price}
-                        priceOld={newProducts[0].priceOld}
-                        photo={newProducts[0].photo}
-                        photos={'photos' in newProducts[0] ? newProducts[0].photos : undefined}
-                        slug={newProducts[0].slug}
-                        quantity={newProducts[0].quantity}
-                        isPreorderEnabled={newProducts[0].isPreorderEnabled}
-                        priority
-                        blurDataURL={
-                          'photos' in newProducts[0]
-                            ? getFirstPhotoBlurDataURL(newProducts[0].photos)
-                            : undefined
-                        }
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <FluidGrid
-                  cols={Math.min(2, newProducts.length || 1)}
-                  colsTablet={Math.min(3, newProducts.length || 1)}
-                  colsDesktop={Math.min(4, newProducts.length || 1)}
-                  colsXl={5}
-                  cols2xl={5}
-                  cols3xl={6}
-                  cols4xl={6}
-                  gap="6"
-                  adaptiveGap={false}
-                  className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
-                  justify={newProducts.length < 4 ? 'center' : 'start'}
-                >
-                  {newProducts.map((p, index) => (
-                    <ProductCard
-                      key={p.id}
-                      id={p.id}
-                      title={p.title}
-                      brand={p.brand}
-                      sku={p.sku}
-                      weight={p.weight}
-                      price={p.price}
-                      priceOld={p.priceOld}
-                      photo={p.photo}
-                      photos={'photos' in p ? p.photos : undefined}
-                      slug={p.slug}
-                      quantity={p.quantity}
-                      isPreorderEnabled={p.isPreorderEnabled}
-                      priority={index < 2}
-                      blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
-                    />
-                  ))}
-                </FluidGrid>
-              )}
-            </AdaptiveContainer>
-          </section>
-        </>
-      )}
-      {newProducts.length > 0 && <SpacingVertical size="lg" />}
-
-      {/* Разделы каталога — фоны карточек сохраняем */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
-        <AdaptiveContainer maxWidth="default">
-          <ScrollReveal
-            as="div"
-            variant="fade-up"
-            className="flex justify-between items-end mb-10 sm:mb-12"
-          >
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">
-                Разделы каталога
-              </Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {catalogSubtitle?.text ??
-                  'Выберите категорию для быстрого поиска нужного продукта'}
-              </p>
-            </div>
-          </ScrollReveal>
-          <ScrollReveal
-            as="div"
-            variant="fade-up"
-          >
-            <FluidGrid
-              cols={2}
-              colsTablet={3}
-              colsDesktop={3}
-              colsXl={3}
-              cols2xl={3}
-              cols3xl={3}
-              cols4xl={3}
-              gap={4}
-              adaptiveGap
-            >
-            {filterCatalogBlockCategories(categories, { brandId: activeBrand }).map((cat) => {
-                const bgImage = resolveCategoryImage(cat.slug, cat.image)
-                const imagePosition = getCategoryImageObjectPosition(cat.slug)
-                return (
-                  <Link
-                    key={cat.id}
-                    href={`/catalog/${cat.slug}`}
-                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                  >
-                    <TiltCard>
-                      <div
-                        className={`desktop-card-scale relative flex flex-col items-center justify-center overflow-hidden rounded-2xl text-center ${!bgImage ? 'bg-soft-background' : ''}`}
-                      >
-                        {bgImage && (
-                          <>
-                            <Image
-                              src={bgImage}
-                              alt={getCategoryCardImageAlt(cat.title)}
-                              width={1024}
-                              height={682}
-                              className={`absolute inset-0 h-full w-full object-cover rounded-2xl ${imagePosition}`}
-                              sizes="(max-width: 768px) 50vw, 33vw"
-                            />
-                            <div
-                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
-                              aria-hidden
-                            />
-                          </>
-                        )}
-                        <span
-                          className={`relative z-10 block text-lg font-medium drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${bgImage ? 'text-white' : 'text-text'}`}
-                        >
-                          {cat.title}
-                        </span>
-                        <span
-                          className={`relative z-10 mt-1 text-sm font-medium drop-shadow 2xl:text-base ${categoryTitleFont} ${bgImage ? 'text-white/90' : 'text-gray-500'}`}
-                        >
-                          {cat.slug === 'aktsii'
-                            ? formatAktsiiCatalogBlockSubtitleRu(
-                                cat._count.products,
-                                publicGiftPromotionCount
-                              )
-                            : formatProductsCountRu(cat._count.products)}
-                        </span>
-                      </div>
-                    </TiltCard>
-                  </Link>
-                )
-              })}
-            </FluidGrid>
-          </ScrollReveal>
-          <div className="mt-8 text-center">
-            <Link
-              href="/catalog"
-              className="desktop-button-scale inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue 2xl:text-base 3xl:px-10 3xl:py-5"
-            >
-              СМОТРЕТЬ ВЕСЬ КАТАЛОГ <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-        </AdaptiveContainer>
-      </section>
-      <SpacingVertical size="lg" />
-
-      <HowToOrderSteps
-        showBorders={newProducts.length > 0}
-        title={howToOrder.title}
-        steps={howToOrder.steps}
-      />
-      {(showHomeNewsSection || showHomeArticlesSection) && <SpacingVertical size="lg" />}
-
-      {showHomeNewsSection ? (
-        <section
-          id="news"
-          className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 scroll-mt-24"
-        >
-          <AdaptiveContainer maxWidth="default">
-            <div className="flex justify-between items-end mb-10 sm:mb-12">
-              <div className="space-y-1">
-                <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-                <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                  {newsSubtitle?.text ?? 'Актуальные события и обновления'}
-                </p>
-              </div>
-              <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-                ВСЕ НОВОСТИ
-                <NavArrowRight className="w-4 h-4" aria-hidden />
-              </Link>
-            </div>
-            {newsPosts.length > 0 ? (
-              <ScrollReveal as="div" variant="fade-up">
-                <FluidGrid
-                  cols={1}
-                  colsTablet={2}
-                  colsDesktop={3}
-                  colsXl={3}
-                  cols2xl={3}
-                  cols3xl={3}
-                  cols4xl={3}
-                  gap={4}
-                  adaptiveGap
-                >
-                  {newsPosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/news/${post.slug}`}
-                      className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                    >
-                      <TiltCard>
-                        <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                          {post.previewImage && (
-                            <>
-                              <Image
-                                src={post.previewImage}
-                                alt={getPostPreviewImageAlt(post.title)}
-                                fill
-                                className="object-cover object-center"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                              />
-                              <div
-                                className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
-                                aria-hidden
-                              />
-                            </>
-                          )}
-                          <div className="relative z-10 max-w-xs">
-                            <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                              {post.title}
-                            </span>
-                          </div>
-                        </div>
-                      </TiltCard>
-                    </Link>
-                  ))}
-                </FluidGrid>
-              </ScrollReveal>
-            ) : (
-              <p className="text-gray-500">Пока нет новостей.</p>
-            )}
-          </AdaptiveContainer>
-        </section>
-      ) : null}
-      {showHomeNewsSection && showHomeArticlesSection ? <SpacingVertical size="lg" /> : null}
-
-      {showHomeArticlesSection ? (
-        <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
-          <AdaptiveContainer maxWidth="default">
-            <div className="flex justify-between items-end mb-10 sm:mb-12">
-              <div className="space-y-1">
-                <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
-                <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                  {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
-                </p>
-              </div>
-              <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-                ВСЕ СТАТЬИ
-                <NavArrowRight className="w-4 h-4" aria-hidden />
-              </Link>
-            </div>
-            {articlePosts.length > 0 ? (
-              <ScrollReveal as="div" variant="fade-up">
-                <FluidGrid
-                  cols={1}
-                  colsTablet={2}
-                  colsDesktop={3}
-                  colsXl={3}
-                  cols2xl={3}
-                  cols3xl={3}
-                  cols4xl={3}
-                  gap={4}
-                  adaptiveGap
-                >
-                  {articlePosts.map((post) => (
-                    <Link
-                      key={post.id}
-                      href={`/informaciya/${post.slug}`}
-                      className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                    >
-                      <TiltCard>
-                        <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                          {post.previewImage && (
-                            <>
-                              <Image
-                                src={post.previewImage}
-                                alt={getPostPreviewImageAlt(post.title)}
-                                fill
-                                className="object-cover object-center"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                              />
-                              <div
-                                className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
-                                aria-hidden
-                              />
-                            </>
-                          )}
-                          <div className="relative z-10 max-w-xs">
-                            <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                              {post.title}
-                            </span>
-                          </div>
-                        </div>
-                      </TiltCard>
-                    </Link>
-                  ))}
-                </FluidGrid>
-              </ScrollReveal>
-            ) : (
-              <p className="text-gray-500">Пока нет статей.</p>
-            )}
-          </AdaptiveContainer>
-        </section>
-      ) : null}
-      {/* No SpacingVertical here: margin would show main’s bg-white between two bg-slate-50 sections */}
-
-      {/* Отзывы */}
-      <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
-              </p>
-            </div>
-            <Link href="/otzyvy" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ ОТЗЫВЫ <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {reviews.length > 0 ? (
-            <div className="space-y-10">
-              <ReviewsCarousel reviews={reviews} />
-              <ReviewCtaBlock />
-            </div>
-          ) : (
-            <ReviewCtaBlock />
-          )}
-        </AdaptiveContainer>
-      </section>
+      {orderedSections}
 
       {/* Блок Sprint Power */}
       <SprintPowerBlock />
