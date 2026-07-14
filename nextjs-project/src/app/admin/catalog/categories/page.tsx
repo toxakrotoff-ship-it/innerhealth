@@ -77,9 +77,18 @@ interface CategoryRowProps {
   categoryNode: FlatCategoryTreeNode;
   onEdit: (category: Category) => void;
   onDelete: (id: string) => void;
+  onToggleVisibility: (category: Category) => void;
+  isVisibilityPending: boolean;
 }
 
-function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowProps) {
+function CategoryRow({
+  category,
+  categoryNode,
+  onEdit,
+  onDelete,
+  onToggleVisibility,
+  isVisibilityPending,
+}: CategoryRowProps) {
   const {
     attributes,
     listeners,
@@ -124,12 +133,29 @@ function CategoryRow({ category, categoryNode, onEdit, onDelete }: CategoryRowPr
               <span>slug: {category.slug}</span>
               <span>сортировка: {category.sortOrder ?? 0}</span>
               <span title="Показывать в блоке категорий на главной">
-                {category.showInCategoriesBlock ? 'В блоке на главной' : 'Скрыта из блока'}
+                {category.showInCategoriesBlock ? 'На витрине' : 'Скрыта с витрины'}
               </span>
             </div>
           </div>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onToggleVisibility(category)}
+            disabled={isVisibilityPending}
+            className={cn(
+              category.showInCategoriesBlock
+                ? 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+            )}
+          >
+            {isVisibilityPending
+              ? 'Сохранение…'
+              : category.showInCategoriesBlock
+                ? 'Скрыть'
+                : 'Показать'}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => onEdit(category)}>
             Ред.
           </Button>
@@ -164,6 +190,7 @@ export default function AdminCategoriesPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   /** Ошибки сохранения / удаления / порядка — баннер, список остаётся доступен */
   const [actionError, setActionError] = useState<string | null>(null);
+  const [visibilityPendingId, setVisibilityPendingId] = useState<string | null>(null);
 
   const categoryTree = useMemo(() => {
     return buildCategoryTree(
@@ -324,11 +351,37 @@ export default function AdminCategoriesPage() {
     if (!confirm('Вы уверены, что хотите удалить эту категорию?')) return;
     try {
       await deleteCategory(id, { brandId: activeBrand });
-      setCategories(categories.filter(cat => cat.id !== id));
+      setCategories((prev) => prev.filter((cat) => cat.id !== id));
       setActionError(null);
     } catch (error) {
       console.error('Error deleting category:', error);
       setActionError(formatCategoryActionError('Ошибка при удалении категории:', error));
+    }
+  };
+
+  const handleToggleCategoryVisibility = async (category: Category) => {
+    try {
+      setVisibilityPendingId(category.id);
+      await updateCategory(
+        category.id,
+        {
+          showInCategoriesBlock: !(category.showInCategoriesBlock ?? true),
+        },
+        { brandId: activeBrand }
+      );
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.id === category.id
+            ? { ...item, showInCategoriesBlock: !(category.showInCategoriesBlock ?? true) }
+            : item
+        )
+      );
+      setActionError(null);
+    } catch (error) {
+      console.error('Error toggling category visibility:', error);
+      setActionError(formatCategoryActionError('Ошибка изменения видимости категории:', error));
+    } finally {
+      setVisibilityPendingId(null);
     }
   };
 
@@ -734,6 +787,8 @@ export default function AdminCategoriesPage() {
                       categoryNode={categoryNode}
                       onEdit={handleEditCategory}
                       onDelete={handleDeleteCategory}
+                      onToggleVisibility={handleToggleCategoryVisibility}
+                      isVisibilityPending={visibilityPendingId === category.id}
                     />
                   );
                 })}
