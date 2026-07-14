@@ -119,7 +119,7 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
 }
 
 /** Редиректы из БД (Tilda → сайт): запрос к /api/redirect-check, при совпадении — 301 и др. */
-async function applyRedirectIfMatched(request: Request): Promise<NextResponse | null> {
+export async function applyRedirectIfMatched(request: Request): Promise<NextResponse | null> {
   const adminSecretPath = getAdminSecretPath()
   // In dev, avoid internal self-fetch in proxy to prevent local startup hangs.
   if (process.env.NODE_ENV !== 'production') return null
