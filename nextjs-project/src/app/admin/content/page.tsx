@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { JSONContent } from '@tiptap/core'
 import { NavArrowDown } from 'iconoir-react'
 import Button from '@/components/ui/button'
@@ -446,6 +446,7 @@ export default function AdminContentPage() {
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
+  const editorTopRef = useRef<HTMLDivElement | null>(null)
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.key === selectedKey) ?? blocks[0],
@@ -510,6 +511,21 @@ export default function AdminContentPage() {
       setExpandedGroupId(selectedGroupId)
     }
   }, [selectedGroupId])
+
+  useEffect(() => {
+    if (!selectedKey) return
+    if (typeof window === 'undefined') return
+
+    const shouldJumpToEditor = window.matchMedia('(max-width: 1279px)').matches
+    if (!shouldJumpToEditor) return
+
+    window.requestAnimationFrame(() => {
+      editorTopRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }, [selectedKey])
 
   async function loadBlocks(currentPage: string) {
     try {
@@ -671,7 +687,7 @@ export default function AdminContentPage() {
       <div className="admin-content">
         <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/70 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
           <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.09),transparent_46%),radial-gradient(circle_at_top_right,rgba(191,219,254,0.18),transparent_34%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_40%),radial-gradient(circle_at_top_right,rgba(191,219,254,0.20),transparent_32%),linear-gradient(180deg,rgba(239,246,255,0.95)_0%,rgba(255,255,255,0.9)_55%,rgba(255,255,255,1)_100%)]"
             aria-hidden
           />
           <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -835,10 +851,17 @@ export default function AdminContentPage() {
                                       <span className={`inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${typeBadge.className}`}>
                                         {typeBadge.code}
                                       </span>
-                                      <div className="truncate font-medium">{presentation.shortTitle}</div>
+                                      <div className="truncate font-medium" title={presentation.shortTitle}>
+                                        {presentation.shortTitle}
+                                      </div>
                                     </div>
-                                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">{presentation.helper}</div>
-                                    <div className="mt-2 line-clamp-2 rounded-xl bg-slate-50 px-2.5 py-2 text-xs text-slate-600">
+                                    <div className="mt-1 line-clamp-1 text-xs text-slate-500" title={presentation.helper}>
+                                      {presentation.helper}
+                                    </div>
+                                    <div
+                                      className="mt-2 line-clamp-2 rounded-xl bg-slate-50 px-2.5 py-2 text-xs text-slate-600"
+                                      title={getBlockPreviewValue(b)}
+                                    >
                                       {getBlockPreviewValue(b)}
                                     </div>
                                   </div>
@@ -867,6 +890,7 @@ export default function AdminContentPage() {
 
             {selectedBlock && (
               <section className="space-y-6 self-start xl:sticky xl:top-6">
+                <div ref={editorTopRef} aria-hidden />
                 <div className="rounded-3xl border border-white/70 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
