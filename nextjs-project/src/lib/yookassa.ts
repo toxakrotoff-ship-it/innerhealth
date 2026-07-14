@@ -161,6 +161,7 @@ export async function getYookassaPayment(
   paymentId: string,
   credentials?: YookassaCredentials | null
 ): Promise<{ status: string; metadata?: { orderId?: string } } | null> {
+  if (credentials === null) return null
   const creds = getCredentials(credentials)
   const auth = buildAuthHeader(creds)
   const res = await fetch(`${YOOKASSA_API}/payments/${paymentId}`, {
@@ -186,6 +187,9 @@ export async function checkYookassaConnection(
   credentials?: YookassaCredentials | null
 ): Promise<YookassaConnectionCheck> {
   try {
+    if (credentials === null) {
+      return { ok: false, error: 'Учётные данные ЮKassa не заданы' }
+    }
     const creds = getCredentials(credentials)
     const auth = buildAuthHeader(creds)
     const res = await fetch(`${YOOKASSA_API}/payments?limit=1`, {

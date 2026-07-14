@@ -169,17 +169,9 @@ export async function POST(request: Request) {
     })
 
     const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
-    const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
-    const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
-    const hasYookassaFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
-    const hasYookassaFromEnv =
-      typeof process.env.YOOKASSA_SHOP_ID === 'string' &&
-      process.env.YOOKASSA_SHOP_ID.length > 0 &&
-      typeof process.env.YOOKASSA_SECRET_KEY === 'string' &&
-      process.env.YOOKASSA_SECRET_KEY.length > 0
-    const hasYookassa = hasYookassaFromAdmin || hasYookassaFromEnv
+    const yookassaCredentials = await settingsService.getYookassaCredentials({ brandId })
 
-    if (hasYookassa) {
+    if (yookassaCredentials) {
       try {
         const baseUrl = getBaseUrl()
         const vatCodeGoods = parseVatCode(yookassaSettings.yookassa_receipt_vat_code, 1)
@@ -201,10 +193,6 @@ export async function POST(request: Request) {
           deliverySum,
           vatCodeDelivery
         )
-        const credentials =
-          hasYookassaFromAdmin
-            ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin }
-            : undefined
         const { paymentId, confirmationUrl } = await createYookassaPayment({
           amount: total,
           description: `Заказ №${order.orderNumber ?? order.id}`,
@@ -213,7 +201,7 @@ export async function POST(request: Request) {
           receiptItems: receiptWithDelivery,
           returnUrl: `${baseUrl}/cart?payment=success`,
           idempotenceKey: randomUUID(),
-          credentials,
+          credentials: yookassaCredentials,
         })
         await orderService.updateOrder(order.id, { yookassaPaymentId: paymentId })
         return NextResponse.json(

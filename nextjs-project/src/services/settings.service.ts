@@ -210,6 +210,22 @@ export async function getYookassaSettingsMap(options: SettingsScopeOptions = {})
   return getSettingsMap(YOOKASSA_KEYS, options);
 }
 
+/**
+ * Учётные данные ЮKassa: только из настроек админки (SiteSetting).
+ * Brand-scoped чтение уже умеет fallback в global через getSettingsMap.
+ * Намеренно НЕ используем env fallback, чтобы не получить неожиданный тестовый/чужой контур.
+ */
+export async function getYookassaCredentials(options: SettingsScopeOptions = {}): Promise<{
+  shopId: string;
+  secretKey: string;
+} | null> {
+  const map = await getYookassaSettingsMap(options)
+  const shopId = (map.yookassa_shop_id ?? '').trim()
+  const secretKey = (map.yookassa_secret_key ?? '').trim()
+  if (!shopId || !secretKey) return null
+  return { shopId, secretKey }
+}
+
 /** Telegram bot token: из настроек админки или TELEGRAM_BOT_TOKEN. Для уведомлений и link-code. */
 export async function getTelegramBotToken(options: SettingsScopeOptions = {}): Promise<string | undefined> {
   const fromEnv = process.env.TELEGRAM_BOT_TOKEN?.trim();

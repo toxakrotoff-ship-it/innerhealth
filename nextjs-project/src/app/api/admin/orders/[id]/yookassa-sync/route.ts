@@ -53,11 +53,7 @@ export async function POST(
     },
     'admin-sync',
     async (brandId) => {
-      const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
-      const shopId = (yookassaSettings.yookassa_shop_id ?? '').trim()
-      const secretKey = (yookassaSettings.yookassa_secret_key ?? '').trim()
-      if (!shopId || !secretKey) return undefined
-      return { shopId, secretKey }
+      return await settingsService.getYookassaCredentials({ brandId })
     }
   )
 

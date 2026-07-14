@@ -95,7 +95,7 @@ interface SyncCandidate {
 export async function syncOnePendingOrder(
   candidate: SyncCandidate,
   source: OrderPaymentTransitionSource,
-  credentialsResolver: (brandId: BrandId) => Promise<{ shopId: string; secretKey: string } | undefined>
+  credentialsResolver: (brandId: BrandId) => Promise<{ shopId: string; secretKey: string } | null>
 ): Promise<SyncOnePendingOrderResult> {
   const previousOrderStatus = candidate.status
   const paymentId = candidate.yookassaPaymentId
@@ -204,16 +204,12 @@ export async function syncPendingOrdersBatch(
     brandId: options.brandId ?? null,
   })
 
-  const credentialsByBrand = new Map<BrandId, { shopId: string; secretKey: string } | undefined>()
+  const credentialsByBrand = new Map<BrandId, { shopId: string; secretKey: string } | null>()
 
   async function getCredentialsForBrand(brand: BrandId) {
     const cached = credentialsByBrand.get(brand)
     if (cached !== undefined) return cached
-    const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: brand })
-    const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
-    const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
-    const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
-    const credentials = hasFromAdmin ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin } : undefined
+    const credentials = await settingsService.getYookassaCredentials({ brandId: brand })
     credentialsByBrand.set(brand, credentials)
     return credentials
   }

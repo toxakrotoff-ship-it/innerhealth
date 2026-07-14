@@ -761,8 +761,8 @@ export default function AdminContentPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)] items-start">
             <aside className="space-y-4 rounded-3xl border border-white/70 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Группы блоков
                   </h2>
@@ -771,7 +771,7 @@ export default function AdminContentPage() {
                   </p>
                 </div>
                 {groupedBlocks.length > 1 ? (
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => setExpandedGroupId('__all__')}

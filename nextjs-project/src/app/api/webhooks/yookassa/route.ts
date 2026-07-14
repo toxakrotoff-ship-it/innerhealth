@@ -96,14 +96,8 @@ export async function POST(request: Request) {
     const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
     let payment: { status: string } | null = null
     try {
-      const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId: orderBrandId })
-      const shopIdFromAdmin = (yookassaSettings.yookassa_shop_id ?? '').trim()
-      const secretKeyFromAdmin = (yookassaSettings.yookassa_secret_key ?? '').trim()
-      const hasFromAdmin = shopIdFromAdmin.length > 0 && secretKeyFromAdmin.length > 0
-      const credentials = hasFromAdmin
-        ? { shopId: shopIdFromAdmin, secretKey: secretKeyFromAdmin }
-        : undefined
-      payment = await getYookassaPayment(body.object.id, credentials)
+      const credentials = await settingsService.getYookassaCredentials({ brandId: orderBrandId })
+      payment = await getYookassaPayment(body.object.id, credentials ?? null)
     } catch (err) {
       console.error('[webhook/yookassa] GET payment verification failed', orderId, err)
       const errorMessage = err instanceof Error ? err.message : String(err)
