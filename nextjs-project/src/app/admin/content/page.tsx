@@ -36,6 +36,13 @@ interface CategoryOption {
   href: string
 }
 
+interface BlockGroup {
+  id: string
+  title: string
+  hint: string
+  blocks: ContentBlockAdmin[]
+}
+
 const PAGES: Array<{ id: string; label: string }> = [
   { id: 'home', label: 'Главная' },
   { id: 'about', label: 'О нас' },
@@ -162,6 +169,67 @@ function getSourceLabel(source: ValueSource): string {
   }
 }
 
+function getBlockGroupMeta(key: string): { id: string; title: string; hint: string } {
+  if (key.startsWith('hero.')) {
+    return { id: 'hero', title: 'Hero', hint: 'Первый экран, CTA и медиа' }
+  }
+  if (key.startsWith('home.directions.')) {
+    return { id: 'directions', title: 'Направления', hint: 'Три карточки товарных направлений' }
+  }
+  if (key.startsWith('home.new.')) {
+    return { id: 'new', title: 'Новинки', hint: 'Подписи и тексты секции новинок' }
+  }
+  if (key.startsWith('home.news.')) {
+    return { id: 'news', title: 'Новости', hint: 'Показ и подписи новостной секции' }
+  }
+  if (key.startsWith('home.articles.')) {
+    return { id: 'articles', title: 'Статьи', hint: 'Показ и подписи секции статей' }
+  }
+  if (key.startsWith('home.reviews.')) {
+    return { id: 'reviews', title: 'Отзывы', hint: 'Отзывы и призыв оставить отзыв' }
+  }
+  if (key.startsWith('home.sections.')) {
+    return { id: 'sections', title: 'Порядок секций', hint: 'Последовательность блоков на странице' }
+  }
+  if (key.startsWith('howToOrder.')) {
+    return { id: 'how-to-order', title: 'Как заказать', hint: 'FAQ / сценарий заказа' }
+  }
+  if (key.startsWith('seo.')) {
+    return { id: 'seo', title: 'SEO', hint: 'Заголовки, описание и OG' }
+  }
+  if (key.includes('.image')) {
+    return { id: 'images', title: 'Изображения', hint: 'Медиа и alt-тексты' }
+  }
+  if (key.includes('.cta') || key.endsWith('.href')) {
+    return { id: 'cta', title: 'Кнопки и ссылки', hint: 'Навигационные действия' }
+  }
+  if (key.startsWith('faq.')) {
+    return { id: 'faq', title: 'FAQ', hint: 'Тексты страницы вопросов' }
+  }
+  if (key.startsWith('contacts.')) {
+    return { id: 'contacts', title: 'Контакты', hint: 'Контактные данные и расписание' }
+  }
+  if (key.startsWith('footer.')) {
+    return { id: 'footer', title: 'Футер', hint: 'Юридические и банковские данные' }
+  }
+  return { id: 'other', title: 'Прочее', hint: 'Остальные блоки страницы' }
+}
+
+function getBlockFieldLabel(key: string): string {
+  if (isImageSrcKey(key)) return 'URL изображения'
+  if (isBooleanKey(key)) return 'Видимость'
+  if (isSortOrderKey(key)) return 'Порядок'
+  if (isCategorySlugKey(key)) return 'Категория'
+  return 'Текст'
+}
+
+function getBlockPlaceholder(key: string): string | undefined {
+  if (key === 'hero.title.highlight') return 'Например: твоего'
+  if (isImageSrcKey(key)) return 'Например: /images/o-nas/face-lift.jpg'
+  if (key.endsWith('.href')) return 'Например: /catalog или /catalog/bulony'
+  return undefined
+}
+
 export default function AdminContentPage() {
   const [page, setPage] = useState<string>('home')
   const [blocks, setBlocks] = useState<ContentBlockAdmin[]>([])
@@ -171,11 +239,42 @@ export default function AdminContentPage() {
   const [success, setSuccess] = useState(false)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.key === selectedKey) ?? blocks[0],
     [blocks, selectedKey]
   )
+
+  const dirtyCount = useMemo(
+    () => blocks.filter((block) => block.isDirty).length,
+    [blocks]
+  )
+
+  const groupedBlocks = useMemo((): BlockGroup[] => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    const filtered = normalizedQuery
+      ? blocks.filter((block) =>
+          `${block.label} ${block.key}`.toLowerCase().includes(normalizedQuery)
+        )
+      : blocks
+
+    const groups = new Map<string, BlockGroup>()
+    for (const block of filtered) {
+      const meta = getBlockGroupMeta(block.key)
+      const existing = groups.get(meta.id)
+      if (existing) {
+        existing.blocks.push(block)
+        continue
+      }
+      groups.set(meta.id, {
+        ...meta,
+        blocks: [block],
+      })
+    }
+
+    return Array.from(groups.values())
+  }, [blocks, searchQuery])
 
   useEffect(() => {
     void loadBlocks(page)
@@ -206,6 +305,7 @@ export default function AdminContentPage() {
 
       setBlocks(mapped)
       setSelectedKey(mapped[0]?.key ?? null)
+      setSearchQuery('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка')
       setBlocks([])
@@ -344,18 +444,44 @@ export default function AdminContentPage() {
   }
 
   return (
-    <div className="admin-container">
+    <div className="admin-container bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.08),transparent_26%),linear-gradient(180deg,#f8fafc_0%,#eef4ff_100%)]">
       <div className="admin-content">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Тексты страниц</h1>
-            <p className="text-gray-500 text-sm">
-              Выберите страницу, затем блок для редактирования текста, цветов и шрифта.
-            </p>
+        <div className="mb-6 rounded-3xl border border-white/70 bg-white/85 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700">
+                Контент-редактор
+              </div>
+              <h1 className="mb-1 text-3xl font-bold tracking-tight text-slate-900">
+                Управление текстами и блоками
+              </h1>
+              <p className="max-w-3xl text-sm text-slate-600">
+                Экран собран как рабочее место редактора: слева навигация по группам блоков, справа текущее значение, наследование и оформление. Необязательно знать ключи CMS, чтобы понять, что меняется.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[520px]">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Страница</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{PAGES.find((p) => p.id === page)?.label}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Блоков</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{blocks.length}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Изменено</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{dirtyCount}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Статус</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{saving ? 'Сохраняем…' : 'Готово к редактированию'}</div>
+              </div>
+            </div>
           </div>
-          <div className="w-full sm:w-auto">
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
             <select
-              className="form-input w-full sm:w-auto sm:min-w-[180px]"
+              className="form-input w-full rounded-2xl border-slate-200 bg-white"
               value={page}
               onChange={(e) => setPage(e.target.value)}
             >
@@ -365,6 +491,12 @@ export default function AdminContentPage() {
                 </option>
               ))}
             </select>
+            <input
+              className="form-input w-full rounded-2xl border-slate-200 bg-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Найти блок по названию или ключу"
+            />
           </div>
         </div>
 
@@ -384,41 +516,96 @@ export default function AdminContentPage() {
         ) : blocks.length === 0 ? (
           <p className="text-gray-500">Для этой страницы пока нет блоков.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] gap-6 items-start">
-            <aside className="space-y-2">
-              {blocks.map((b) => {
-                const isActive = selectedBlock?.key === b.key
-                return (
-                  <button
-                    key={b.key}
-                    type="button"
-                    onClick={() => setSelectedKey(b.key)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm ${
-                      isActive
-                        ? 'border-blue-500 bg-blue-50 text-blue-900'
-                        : 'border-gray-200 hover:border-blue-300'
-                    }`}
-                  >
-                    <div className="font-medium">{b.label}</div>
-                    <div className="text-xs text-gray-500">{b.key}</div>
-                  </button>
-                )
-              })}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[340px_minmax(0,1fr)] items-start">
+            <aside className="space-y-4 rounded-3xl border border-white/70 bg-white/90 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Группы блоков
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Сначала выберите смысловую секцию, потом конкретное поле.
+                </p>
+              </div>
+
+              {groupedBlocks.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                  По запросу ничего не найдено.
+                </div>
+              ) : (
+                groupedBlocks.map((group) => (
+                  <div key={group.id} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-900">{group.title}</div>
+                        <div className="text-xs text-slate-500">{group.hint}</div>
+                      </div>
+                      <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-slate-500">
+                        {group.blocks.length}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {group.blocks.map((b) => {
+                        const isActive = selectedBlock?.key === b.key
+                        return (
+                          <button
+                            key={b.key}
+                            type="button"
+                            onClick={() => setSelectedKey(b.key)}
+                            className={`w-full rounded-2xl border px-3 py-3 text-left text-sm transition ${
+                              isActive
+                                ? 'border-blue-500 bg-blue-50 text-blue-950 shadow-sm'
+                                : 'border-white bg-white hover:border-blue-200 hover:bg-blue-50/40'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="truncate font-medium">{b.label}</div>
+                                <div className="mt-1 truncate text-xs text-slate-500">{b.key}</div>
+                              </div>
+                              <span
+                                className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
+                                  b.isDirty
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : b.isInherited
+                                      ? 'bg-slate-100 text-slate-600'
+                                      : 'bg-emerald-100 text-emerald-700'
+                                }`}
+                              >
+                                {b.isDirty ? 'Изменён' : b.isInherited ? 'Default' : 'Override'}
+                              </span>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </aside>
 
             {selectedBlock && (
-              <section className="space-y-6 self-start md:sticky md:top-6">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      {selectedBlock.label}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs rounded-full border border-gray-200 px-2 py-0.5 text-gray-500">
+              <section className="space-y-6 self-start xl:sticky xl:top-6">
+                <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                      <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+                        {getBlockGroupMeta(selectedBlock.key).title}
+                      </div>
+                      <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+                        {selectedBlock.label}
+                      </h2>
+                      <p className="mt-2 break-all text-sm text-slate-500">
+                        Ключ: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[12px]">{selectedBlock.key}</code>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs rounded-full border border-gray-200 px-2 py-1 text-gray-500">
                         {selectedBlock.type === 'short' ? 'Короткий текст' : 'Rich text'}
                       </span>
                       <span
-                        className={`text-xs rounded-full border px-2 py-0.5 ${
+                        className={`text-xs rounded-full border px-2 py-1 ${
                           selectedBlock.isInherited
                             ? 'border-amber-200 bg-amber-50 text-amber-800'
                             : 'border-emerald-200 bg-emerald-50 text-emerald-800'
@@ -426,30 +613,61 @@ export default function AdminContentPage() {
                       >
                         {getSourceLabel(selectedBlock.valueSource)}
                       </span>
+                      {selectedBlock.isDirty ? (
+                        <span className="text-xs rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-blue-700">
+                          Есть несохранённые изменения
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Ключ: <code className="text-[11px]">{selectedBlock.key}</code>
-                  </p>
-                  {selectedBlock.isInherited && (
-                    <p className="mt-2 text-xs text-amber-700">
-                      Редактор показывает фактическое значение с витрины. Override для этого блока в бренде сейчас не сохранён.
-                    </p>
-                  )}
+
+                  <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Тип поля</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">{getBlockFieldLabel(selectedBlock.key)}</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Текущее состояние</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        {selectedBlock.isInherited ? 'Используется default' : 'Сохранён override'}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Когда меняется</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        После сохранения и revalidation
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {selectedBlock.type === 'short' ? (
+                {selectedBlock.isInherited ? (
+                  <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-900">
+                    <div className="font-semibold">Сейчас используется inherited/default значение</div>
+                    <p className="mt-1 text-amber-800">
+                      Это безопасный режим: витрина показывает рабочее значение, но для этого бренда override ещё не сохранён. Как только нажмёте «Сохранить как override», блок станет независимым.
+                    </p>
+                    {selectedBlock.defaultText ? (
+                      <div className="mt-3 rounded-2xl border border-amber-200 bg-white/70 px-3 py-3 text-xs text-slate-700">
+                        <div className="mb-1 font-medium text-slate-900">Default значение</div>
+                        <div className="whitespace-pre-wrap">{selectedBlock.defaultText}</div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Редактирование</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Сначала меняйте смысл блока, затем при необходимости его оформление.
+                    </p>
+                  </div>
+
+                  {selectedBlock.type === 'short' ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {isImageSrcKey(selectedBlock.key)
-                        ? 'URL изображения'
-                        : isBooleanKey(selectedBlock.key)
-                          ? 'Видимость'
-                          : isSortOrderKey(selectedBlock.key)
-                            ? 'Порядок'
-                            : isCategorySlugKey(selectedBlock.key)
-                              ? 'Категория'
-                        : 'Текст'}
+                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                      {getBlockFieldLabel(selectedBlock.key)}
                     </label>
                     {selectedBlock.key === 'hero.title' && (
                       <p className="text-xs text-gray-500 mb-1">
@@ -564,18 +782,12 @@ export default function AdminContentPage() {
                           if (node) autoResizeTextarea(node)
                         }}
                         value={selectedBlock.text}
-                        onChange={(e) =>
-                          updateBlock(selectedBlock.key, {
-                            text: e.target.value,
-                          })
-                        }
-                        placeholder={
-                          selectedBlock.key === 'hero.title.highlight'
-                            ? 'Например: твоего'
-                            : isImageSrcKey(selectedBlock.key)
-                              ? 'Например: /images/o-nas/face-lift.jpg'
-                              : undefined
-                        }
+                          onChange={(e) =>
+                            updateBlock(selectedBlock.key, {
+                              text: e.target.value,
+                            })
+                          }
+                        placeholder={getBlockPlaceholder(selectedBlock.key)}
                       />
                     )}
                   </div>
@@ -593,8 +805,16 @@ export default function AdminContentPage() {
                     />
                   </div>
                 )}
+                </div>
 
                 {selectedBlock.key !== 'categories.fontVariant' && (
+                  <div className="rounded-3xl border border-white/70 bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-slate-900">Оформление текста</h3>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Эти настройки меняют только визуальную подачу блока и не влияют на сам контент.
+                      </p>
+                    </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -679,9 +899,21 @@ export default function AdminContentPage() {
                       </p>
                     </div>
                   </div>
+                  </div>
                 )}
 
-                <div className="pt-2">
+                <div className="rounded-3xl border border-slate-200 bg-slate-900 p-5 text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+                  <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Действия</h3>
+                      <p className="text-sm text-slate-300">
+                        Сохранение создаёт override только для текущих изменённых полей.
+                      </p>
+                    </div>
+                    <div className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200">
+                      Несохранённых изменений: {dirtyCount}
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     <Button type="button" onClick={handleSave} disabled={saving}>
                       {saving ? 'Сохранение…' : 'Сохранить как override'}
