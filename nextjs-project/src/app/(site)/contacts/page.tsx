@@ -9,13 +9,17 @@ import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { buildContentPageMetadata } from '@/lib/seo'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
-  return {
-    title: `Контакты | ${siteTitle}`,
-    description: `Телефон, электронная почта и адрес шоурума ${siteTitle}. Москва, набережная Новикова-Прибоя. Режим работы.`,
-  }
+  const { brandId, siteTitle } = await getServerBrandContext()
+  return buildContentPageMetadata({
+    brandId,
+    page: 'contacts',
+    path: '/contacts',
+    fallbackTitle: 'Контакты',
+    fallbackDescription: `Телефон, электронная почта и адрес шоурума ${siteTitle}. Москва, набережная Новикова-Прибоя. Режим работы.`,
+  })
 }
 
 const breadcrumbItems = [

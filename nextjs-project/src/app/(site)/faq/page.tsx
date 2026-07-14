@@ -10,21 +10,19 @@ import { ResponsiveText, Heading1 } from '@/components/ui/responsive-text'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import { buildContentPageMetadata } from '@/lib/seo'
 
 export const revalidate = 86400
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
-  return {
-    title: 'Часто задаваемые вопросы',
-    description: `Ответы на популярные вопросы ${siteTitle}: доставка, оплата, товары, возврат и оформление заказа.`,
-    alternates: { canonical: '/faq' },
-    openGraph: {
-      title: `FAQ | ${siteTitle}`,
-      description: 'Часто задаваемые вопросы о магазине, доставке и заказах.',
-      url: '/faq',
-    },
-  }
+  const { brandId, siteTitle } = await getServerBrandContext()
+  return buildContentPageMetadata({
+    brandId,
+    page: 'faq',
+    path: '/faq',
+    fallbackTitle: 'Часто задаваемые вопросы',
+    fallbackDescription: `Ответы на популярные вопросы ${siteTitle}: доставка, оплата, товары, возврат и оформление заказа.`,
+  })
 }
 
 export default async function FaqPage() {

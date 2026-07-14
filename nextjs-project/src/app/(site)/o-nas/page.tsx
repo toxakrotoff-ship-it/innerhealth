@@ -8,6 +8,7 @@ import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { buildContentPageMetadata } from '@/lib/seo'
 
 const IMAGE_FACE_DEFAULT = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
@@ -15,12 +16,14 @@ const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
 export const revalidate = 86400
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
-  return {
-    title: `О нас | ${siteTitle}`,
-    description:
-      `${siteTitle} – инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Разработка и производство в России.`,
-  }
+  const { brandId, siteTitle } = await getServerBrandContext()
+  return buildContentPageMetadata({
+    brandId,
+    page: 'about',
+    path: '/o-nas',
+    fallbackTitle: 'О нас',
+    fallbackDescription: `${siteTitle} – инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Разработка и производство в России.`,
+  })
 }
 
 export default async function AboutPage() {

@@ -7,7 +7,7 @@ import { resolveDbBrand } from '@/lib/brand/brand-db';
 /** Get all categories (for admin catalog). */
 export async function getCategories(brandId: BrandId | null = null) {
   return prisma.category.findMany({
-    where: { brand: resolveDbBrand(brandId) },
+    where: { brand: resolveDbBrand(brandId), isPublished: true },
     orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
   });
 }
@@ -15,7 +15,7 @@ export async function getCategories(brandId: BrandId | null = null) {
 /** Get categories with product count. */
 export async function getCategoriesWithProductCount(brandId: BrandId | null = null) {
   const categories = await prisma.category.findMany({
-    where: { brand: resolveDbBrand(brandId) },
+    where: { brand: resolveDbBrand(brandId), isPublished: true },
     select: {
       id: true,
       title: true,
@@ -73,7 +73,7 @@ export async function findCategoryById(id: string) {
 /** Find category by slug. */
 export async function findCategoryBySlug(slug: string, brandId: BrandId | null = null) {
   return prisma.category.findFirst({
-    where: { slug, brand: resolveDbBrand(brandId) },
+    where: { slug, brand: resolveDbBrand(brandId), isPublished: true },
   });
 }
 
@@ -117,9 +117,10 @@ export async function suggestCategoriesForLink(
   const q = query.trim();
   const where =
     q.length === 0
-      ? { brand: resolveDbBrand(brandId) }
+      ? { brand: resolveDbBrand(brandId), isPublished: true }
       : {
           brand: resolveDbBrand(brandId),
+          isPublished: true,
           OR: [
             { title: { contains: q, mode: 'insensitive' as const } },
             { slug: { contains: q, mode: 'insensitive' as const } },

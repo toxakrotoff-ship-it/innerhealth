@@ -5,13 +5,17 @@ import { GalleryBlock } from '@/components/site/gallery-block'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import { buildContentPageMetadata } from '@/lib/seo'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteTitle } = await getServerBrandContext()
-  return {
-    title: `Сертификаты соответствия | ${siteTitle}`,
-    description: `Сертификаты соответствия и документы, подтверждающие качество и безопасность продукции ${siteTitle}. Декларации и сертификаты качества.`,
-  }
+  const { brandId, siteTitle } = await getServerBrandContext()
+  return buildContentPageMetadata({
+    brandId,
+    page: 'certificates',
+    path: '/sertifikaty-sootvetstviya',
+    fallbackTitle: 'Сертификаты соответствия',
+    fallbackDescription: `Сертификаты соответствия и документы, подтверждающие качество и безопасность продукции ${siteTitle}. Декларации и сертификаты качества.`,
+  })
 }
 
 const breadcrumbItems = [

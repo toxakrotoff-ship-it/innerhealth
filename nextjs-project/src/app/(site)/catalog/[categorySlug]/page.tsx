@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils'
 import { NutrientCategoryUsageComposition } from '@/components/site/nutrient-category-usage-composition'
 import { NutrientCategoryBenefitsBento } from '@/components/site/nutrient-category-benefits-bento'
 import { extractPlainTextFromTipTap } from '@/lib/tiptap-plain-text'
+import { buildMetadataWithSocial, normalizeSeoDescription, parseSeoKeywords, trimToNull } from '@/lib/seo'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -109,10 +110,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
   const category = await prisma.category.findUnique({
     where: { brand_slug: { brand: resolveDbBrand(activeBrand), slug: categorySlug } },
-    select: { title: true, linePageBodyRichJson: true },
+    select: {
+      title: true,
+      pageTitle: true,
+      seoTitle: true,
+      seoDescription: true,
+      seoKeywords: true,
+      image: true,
+      imageAlt: true,
+      linePageBodyRichJson: true,
+      isPublished: true,
+      brand: true,
+    },
   })
   if (!category) {
     return {}
+  }
+  if (!category.isPublished) {
+    return {
+      robots: {
+        index: false,
+        follow: false,
+        googleBot: { index: false, follow: false },
+      },
+    }
   }
 
   const content = getCategoryPageContent(categorySlug, activeBrand)
@@ -134,17 +155,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const path = `/catalog/${categorySlug}`
+  const metadataTitle = trimToNull(category.seoTitle) ?? trimToNull(category.pageTitle) ?? category.title
+  const metadataDescription = normalizeSeoDescription(category.seoDescription, 200) ?? description
+  const imageAlt =
+    trimToNull(category.imageAlt) ??
+    trimToNull(getCategoryHeroBannerAlt(category.title, content?.heroSubtitle)) ??
+    trimToNull(category.pageTitle) ??
+    category.title
 
-  return {
-    title: category.title,
-    description,
-    alternates: { canonical: path },
-    openGraph: {
-      title: `${category.title} | ${brandSite.title}`,
-      description,
-      url: path,
-    },
-  }
+  return buildMetadataWithSocial({
+    title: metadataTitle,
+    description: metadataDescription,
+    path,
+    keywords: parseSeoKeywords(category.seoKeywords),
+    image: trimToNull(category.image) ? { url: trimToNull(category.image)!, alt: imageAlt } : null,
+  })
 }
 
 export default async function CategoryPage({ params }: PageProps) {
@@ -167,7 +192,7 @@ export default async function CategoryPage({ params }: PageProps) {
     where: { brand_slug: { brand: dbBrand, slug: categorySlug } },
     include: {
       children: {
-        where: { brand: dbBrand },
+        where: { brand: dbBrand, isPublished: true },
         select: {
           id: true,
           title: true,
@@ -208,6 +233,7 @@ export default async function CategoryPage({ params }: PageProps) {
   })
 
   if (!category) notFound()
+  if (!category.isPublished) notFound()
 
   let featuredProductForLine: {
     id: string
@@ -265,7 +291,7 @@ export default async function CategoryPage({ params }: PageProps) {
   }
 
   const allCategories = await prisma.category.findMany({
-    where: { brand: dbBrand },
+    where: { brand: dbBrand, isPublished: true },
     select: {
       id: true,
       title: true,
@@ -362,7 +388,7 @@ export default async function CategoryPage({ params }: PageProps) {
           <h1
             className={`mb-6 text-lg font-medium tracking-tight drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
           >
-            {category.title}
+            {category.pageTitle?.trim() || category.title}
           </h1>
           {category.children.length > 0 && (
             <div

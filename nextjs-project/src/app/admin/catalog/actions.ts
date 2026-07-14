@@ -17,10 +17,16 @@ import {
 export interface Category {
   id: string;
   title: string;
+  pageTitle?: string | null;
   slug: string;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoKeywords?: string | null;
   image?: string | null;
+  imageAlt?: string | null;
   sortOrder?: number | null;
   parentId?: string | null;
+  isPublished: boolean;
   showInCategoriesBlock: boolean;
   catalogTeaser?: string | null;
   linePageBodyRichJson?: Prisma.JsonValue | null;
@@ -33,10 +39,16 @@ export interface Category {
 
 interface CategoryInput {
   title: string;
+  pageTitle?: string | null;
   slug: string;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoKeywords?: string | null;
   image?: string | null;
+  imageAlt?: string | null;
   sortOrder?: number | null;
   parentId?: string | null;
+  isPublished?: boolean;
   showInCategoriesBlock?: boolean;
   catalogTeaser?: string | null;
   linePageBodyRichJson?: Prisma.JsonValue | null;
@@ -62,10 +74,16 @@ async function resolveEffectiveBrandId(brandId?: BrandId | null): Promise<BrandI
 
 const categoryInputSchema = z.object({
   title: z.string().trim().min(1, 'Название категории обязательно'),
+  pageTitle: z.string().trim().nullable().optional(),
   slug: z.string().trim().min(1, 'Slug обязателен'),
+  seoTitle: z.string().trim().nullable().optional(),
+  seoDescription: z.string().trim().max(5000).nullable().optional(),
+  seoKeywords: z.string().trim().max(2000).nullable().optional(),
   image: z.string().trim().nullable().optional(),
+  imageAlt: z.string().trim().nullable().optional(),
   sortOrder: z.number().int().nullable().optional(),
   parentId: z.string().trim().nullable().optional(),
+  isPublished: z.boolean().optional(),
   showInCategoriesBlock: z.boolean().optional(),
   catalogTeaser: z.string().max(20000).nullable().optional(),
   linePageBodyRichJson: z.unknown().optional(),
@@ -126,9 +144,15 @@ const innerCategoryAdminListSelect = {
   id: true,
   brand: true,
   title: true,
+  pageTitle: true,
   slug: true,
+  seoTitle: true,
+  seoDescription: true,
+  seoKeywords: true,
   image: true,
+  imageAlt: true,
   sortOrder: true,
+  isPublished: true,
   parentId: true,
   showInCategoriesBlock: true,
   linePageBodyRichJson: true,
@@ -144,9 +168,15 @@ function mapInnerCategoryAdminListRow(row: InnerCategoryAdminListRow): Category 
   return {
     id: row.id,
     title: row.title,
+    pageTitle: row.pageTitle,
     slug: row.slug,
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
+    seoKeywords: row.seoKeywords,
     image: row.image,
+    imageAlt: row.imageAlt,
     sortOrder: row.sortOrder,
+    isPublished: row.isPublished,
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
     catalogTeaser: null,
@@ -166,9 +196,15 @@ function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
   return {
     id: row.id,
     title: row.title,
+    pageTitle: row.pageTitle,
     slug: row.slug,
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
+    seoKeywords: row.seoKeywords,
     image: row.image,
+    imageAlt: row.imageAlt,
     sortOrder: row.sortOrder,
+    isPublished: row.isPublished,
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
     catalogTeaser: sprintRow ? (row.catalogTeaser ?? null) : null,
@@ -492,10 +528,16 @@ export async function createCategory(
     const dataScoped = stripSprintOnlyCategoryFields(data, effectiveBrandId);
     const parsed = categoryInputSchema.parse({
       ...dataScoped,
+      pageTitle: dataScoped.pageTitle?.trim() ? dataScoped.pageTitle.trim() : null,
       slug: dataScoped.slug.trim().toLowerCase(),
+      seoTitle: dataScoped.seoTitle?.trim() ? dataScoped.seoTitle.trim() : null,
+      seoDescription: dataScoped.seoDescription?.trim() ? dataScoped.seoDescription.trim() : null,
+      seoKeywords: dataScoped.seoKeywords?.trim() ? dataScoped.seoKeywords.trim() : null,
       image: dataScoped.image?.trim() ? dataScoped.image.trim() : null,
+      imageAlt: dataScoped.imageAlt?.trim() ? dataScoped.imageAlt.trim() : null,
       parentId: dataScoped.parentId?.trim() ? dataScoped.parentId.trim() : null,
       sortOrder: dataScoped.sortOrder ?? null,
+      isPublished: dataScoped.isPublished ?? true,
       showInCategoriesBlock: dataScoped.showInCategoriesBlock ?? true,
       catalogTeaser: dataScoped.catalogTeaser?.trim() ? dataScoped.catalogTeaser.trim() : null,
       linePageBodyRichJson: dataScoped.linePageBodyRichJson,
@@ -518,9 +560,15 @@ export async function createCategory(
         data: {
           brand: dbBrand,
           title: parsed.title,
+          pageTitle: parsed.pageTitle,
           slug: parsed.slug,
+          seoTitle: parsed.seoTitle,
+          seoDescription: parsed.seoDescription,
+          seoKeywords: parsed.seoKeywords,
           image: parsed.image,
+          imageAlt: parsed.imageAlt,
           sortOrder: parsed.sortOrder,
+          isPublished: parsed.isPublished ?? true,
           parentId: parsed.parentId,
           showInCategoriesBlock: parsed.showInCategoriesBlock ?? true,
           catalogTeaser: parsed.catalogTeaser ?? null,
@@ -591,11 +639,41 @@ export async function updateCategory(
     const dataScoped = stripSprintOnlyCategoryFields(data, effectiveBrandId);
     const parsed = categoryUpdateSchema.parse({
       ...dataScoped,
+      pageTitle:
+        dataScoped.pageTitle === undefined
+          ? undefined
+          : dataScoped.pageTitle?.trim()
+            ? dataScoped.pageTitle.trim()
+            : null,
       slug:
         dataScoped.slug === undefined
           ? undefined
           : dataScoped.slug.trim().toLowerCase(),
+      seoTitle:
+        dataScoped.seoTitle === undefined
+          ? undefined
+          : dataScoped.seoTitle?.trim()
+            ? dataScoped.seoTitle.trim()
+            : null,
+      seoDescription:
+        dataScoped.seoDescription === undefined
+          ? undefined
+          : dataScoped.seoDescription?.trim()
+            ? dataScoped.seoDescription.trim()
+            : null,
+      seoKeywords:
+        dataScoped.seoKeywords === undefined
+          ? undefined
+          : dataScoped.seoKeywords?.trim()
+            ? dataScoped.seoKeywords.trim()
+            : null,
       image: dataScoped.image === undefined ? undefined : dataScoped.image?.trim() ? dataScoped.image.trim() : null,
+      imageAlt:
+        dataScoped.imageAlt === undefined
+          ? undefined
+          : dataScoped.imageAlt?.trim()
+            ? dataScoped.imageAlt.trim()
+            : null,
       parentId:
         dataScoped.parentId === undefined
           ? undefined
@@ -603,6 +681,7 @@ export async function updateCategory(
             ? dataScoped.parentId.trim()
             : null,
       sortOrder: dataScoped.sortOrder ?? null,
+      isPublished: dataScoped.isPublished,
       showInCategoriesBlock: dataScoped.showInCategoriesBlock,
       catalogTeaser:
         dataScoped.catalogTeaser === undefined
@@ -628,9 +707,15 @@ export async function updateCategory(
       updatedAt: new Date(),
     };
     if (parsed.title !== undefined) updateData.title = parsed.title;
+    if (parsed.pageTitle !== undefined) updateData.pageTitle = parsed.pageTitle;
     if (parsed.slug !== undefined) updateData.slug = parsed.slug;
+    if (parsed.seoTitle !== undefined) updateData.seoTitle = parsed.seoTitle;
+    if (parsed.seoDescription !== undefined) updateData.seoDescription = parsed.seoDescription;
+    if (parsed.seoKeywords !== undefined) updateData.seoKeywords = parsed.seoKeywords;
     if (parsed.image !== undefined) updateData.image = parsed.image;
+    if (parsed.imageAlt !== undefined) updateData.imageAlt = parsed.imageAlt;
     if (parsed.sortOrder !== undefined) updateData.sortOrder = parsed.sortOrder;
+    if (parsed.isPublished !== undefined) updateData.isPublished = parsed.isPublished;
     if (parsed.showInCategoriesBlock !== undefined) {
       updateData.showInCategoriesBlock = parsed.showInCategoriesBlock;
     }

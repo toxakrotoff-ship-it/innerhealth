@@ -91,6 +91,9 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const ABOUT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'about', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'about', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'about', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'about', key: 'about.block1' },
   { page: 'about', key: 'about.block2.title' },
   { page: 'about', key: 'about.block2.text' },
@@ -105,6 +108,9 @@ const CATALOG_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const INNER_FAQ_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'faq', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'faq', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'faq', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'faq', key: 'faq.title', adminLabel: 'Страница FAQ — заголовок' },
   { page: 'faq', key: 'faq.subtitle', adminLabel: 'Страница FAQ — подзаголовок' },
   { page: 'home', key: 'howToOrder.title', adminLabel: 'FAQ / Как заказать — заголовок' },
@@ -123,6 +129,9 @@ const INNER_FAQ_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const SPRINT_FAQ_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'faq', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'faq', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'faq', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'faq', key: 'faq.title', adminLabel: 'Страница FAQ — заголовок' },
   { page: 'faq', key: 'faq.subtitle', adminLabel: 'Страница FAQ — подзаголовок' },
   { page: 'home', key: 'howToOrder.title', adminLabel: 'FAQ / Как заказать — заголовок' },
@@ -141,6 +150,9 @@ const SPRINT_FAQ_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const CONTACTS_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'contacts', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'contacts', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'contacts', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'contacts', key: 'contacts.title' },
   { page: 'contacts', key: 'contacts.section.contacts_title' },
   { page: 'contacts', key: 'contacts.label.phone' },
@@ -165,6 +177,9 @@ const CART_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const COOPERATION_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'sotrudnichestvo', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'sotrudnichestvo', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'sotrudnichestvo', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'sotrudnichestvo', key: 'cooperation.title' },
   { page: 'sotrudnichestvo', key: 'cooperation.subtitle' },
   { page: 'sotrudnichestvo', key: 'cooperation.form.title' },
@@ -182,6 +197,9 @@ const COOPERATION_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const B2B_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'b2b', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'b2b', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'b2b', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'b2b', key: 'b2b.title' },
   { page: 'b2b', key: 'b2b.body', adminLabel: 'B2B — основной текст страницы' },
   { page: 'b2b', key: 'b2b.form.title' },
@@ -190,6 +208,9 @@ const B2B_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const CERTIFICATES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'certificates', key: 'seo.title', adminLabel: 'SEO Title' },
+  { page: 'certificates', key: 'seo.description', adminLabel: 'SEO Description' },
+  { page: 'certificates', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
   { page: 'certificates', key: 'certificates.title' },
   { page: 'certificates', key: 'certificates.subtitle' },
   { page: 'certificates', key: 'certificates.gallery.image1.src' },
@@ -282,6 +303,24 @@ export function getAdminContentSchemaForBrandPage(
 }
 
 export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
+  { page: 'about', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'about', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'about', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
+  { page: 'b2b', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'b2b', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'b2b', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
+  { page: 'sotrudnichestvo', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'sotrudnichestvo', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'sotrudnichestvo', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
+  { page: 'contacts', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'contacts', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'contacts', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
+  { page: 'certificates', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'certificates', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'certificates', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
+  { page: 'faq', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
+  { page: 'faq', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
+  { page: 'faq', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
   // Home / Hero
   {
     page: 'home',

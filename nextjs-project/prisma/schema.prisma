@@ -101,9 +101,15 @@ model Category {
   id                    String            @id @default(cuid())
   brand                 String            @default("inner")
   title                 String
+  pageTitle             String?
   slug                  String
+  seoTitle              String?
+  seoDescription        String?
+  seoKeywords           String?
   image                 String?
+  imageAlt              String?
   sortOrder             Int?
+  isPublished           Boolean           @default(true)
   /// Показывать категорию в блоке «Разделы каталога» на главной и в каталоге
   showInCategoriesBlock Boolean           @default(true)
   /// Короткий тизер в блоке «Вся линейка» на главной Sprint (опционально)
@@ -127,6 +133,7 @@ model Category {
   @@unique([brand, slug])
   @@index([brand, parentId])
   @@index([brand, showInCategoriesBlock, sortOrder])
+  @@index([brand, isPublished, sortOrder])
 }
 
 model ProductCategory {

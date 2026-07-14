@@ -243,7 +243,7 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
       try {
         const categoriesForBlock = await withTimeout(
           prisma.category.findMany({
-            where: { showInCategoriesBlock: true, ...categoryScopeWhere },
+            where: { showInCategoriesBlock: true, isPublished: true, ...categoryScopeWhere },
             orderBy: { sortOrder: 'asc' },
             include: HOME_CATEGORY_CATALOG_INCLUDE,
           }),
@@ -256,7 +256,7 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
         // Fallback: показываем хотя бы часть категорий, чтобы главный блок не пропадал
         return withTimeout(
           prisma.category.findMany({
-            where: categoryScopeWhere,
+            where: { isPublished: true, ...categoryScopeWhere },
             orderBy: { sortOrder: 'asc' },
             include: HOME_CATEGORY_CATALOG_INCLUDE,
           }),
@@ -364,7 +364,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         try {
           let rows: HomeCategoryWithProductCount[] = await withTimeout(
             prisma.category.findMany({
-              where: { showInCategoriesBlock: true, brand: dbBrand },
+              where: { showInCategoriesBlock: true, isPublished: true, brand: dbBrand },
               orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
               include: HOME_CATEGORY_CATALOG_INCLUDE,
             }),
@@ -374,7 +374,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           if (rows.length === 0) {
             rows = await withTimeout(
               prisma.category.findMany({
-                where: { brand: dbBrand },
+                where: { brand: dbBrand, isPublished: true },
                 orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
                 include: HOME_CATEGORY_CATALOG_INCLUDE,
               }),
@@ -387,6 +387,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
               prisma.category.findMany({
                 where: {
                   showInCategoriesBlock: true,
+                  isPublished: true,
                   brand: 'inner',
                   slug: { startsWith: 'sp-' },
                 },
@@ -400,7 +401,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
           if (rows.length === 0) {
             rows = await withTimeout(
               prisma.category.findMany({
-                where: { brand: 'inner', slug: { startsWith: 'sp-' } },
+                where: { brand: 'inner', isPublished: true, slug: { startsWith: 'sp-' } },
                 orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
                 include: HOME_CATEGORY_CATALOG_INCLUDE,
               }),

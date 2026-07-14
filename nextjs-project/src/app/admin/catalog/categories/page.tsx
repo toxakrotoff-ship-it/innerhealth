@@ -32,6 +32,7 @@ import { getCategoryPageContentDoc } from '@/content/category-descriptions';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
 import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
+import { cn } from '@/lib/utils';
 
 const EMPTY_LINE_DOC: JSONContent = { type: 'doc', content: [] };
 
@@ -61,10 +62,16 @@ function formatCategoryActionError(context: string, error: unknown): string {
 
 interface CategoryFormState {
   title: string;
+  pageTitle: string;
   slug: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
   image: string;
+  imageAlt: string;
   sortOrder: number;
   parentId: string;
+  isPublished: boolean;
   showInCategoriesBlock: boolean;
   catalogTeaser: string;
   featuredProductId: string;
@@ -131,6 +138,7 @@ function CategoryRow({
             </div>
             <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-3">
               <span>slug: {category.slug}</span>
+              <span>{category.isPublished ? 'Опубликована' : 'Скрыта'}</span>
               <span>сортировка: {category.sortOrder ?? 0}</span>
               <span title="Показывать в блоке категорий на главной">
                 {category.showInCategoriesBlock ? 'На витрине' : 'Скрыта с витрины'}
@@ -176,10 +184,16 @@ export default function AdminCategoriesPage() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState<CategoryFormState>({
     title: '',
+    pageTitle: '',
     slug: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: '',
     image: '',
+    imageAlt: '',
     sortOrder: 0,
     parentId: '',
+    isPublished: true,
     showInCategoriesBlock: true,
     catalogTeaser: '',
     featuredProductId: '',
@@ -217,7 +231,7 @@ export default function AdminCategoriesPage() {
 
   const migrationHint = (message: string): string =>
     /column .+ does not exist|Unknown column|P2022/i.test(message) ||
-    /catalogTeaser|linePageBodyRichJson|featuredProductId|showLegacyLinePageBlocks/i.test(message)
+    /catalogTeaser|linePageBodyRichJson|featuredProductId|showLegacyLinePageBlocks|pageTitle|seoTitle|seoDescription|seoKeywords|imageAlt|isPublished/i.test(message)
       ? ' Похоже, не применена миграция БД (поля категории Sprint). Выполните prisma migrate deploy.'
       : '';
 
@@ -258,10 +272,16 @@ export default function AdminCategoriesPage() {
       await createCategory(
         {
           title: formData.title,
+          pageTitle: formData.pageTitle.trim() || null,
           slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
+          seoTitle: formData.seoTitle.trim() || null,
+          seoDescription: formData.seoDescription.trim() || null,
+          seoKeywords: formData.seoKeywords.trim() || null,
           image: formData.image,
+          imageAlt: formData.imageAlt.trim() || null,
           sortOrder: formData.sortOrder,
           parentId: formData.parentId || null,
+          isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? undefined
@@ -280,10 +300,16 @@ export default function AdminCategoriesPage() {
       await refetchCategoriesSilent();
       setFormData({
         title: '',
+        pageTitle: '',
         slug: '',
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: '',
         image: '',
+        imageAlt: '',
         sortOrder: 0,
         parentId: '',
+        isPublished: true,
         showInCategoriesBlock: true,
         catalogTeaser: '',
         featuredProductId: '',
@@ -307,10 +333,16 @@ export default function AdminCategoriesPage() {
         editingCategory.id,
         {
           title: formData.title,
+          pageTitle: formData.pageTitle.trim() || null,
           slug: formData.slug,
+          seoTitle: formData.seoTitle.trim() || null,
+          seoDescription: formData.seoDescription.trim() || null,
+          seoKeywords: formData.seoKeywords.trim() || null,
           image: formData.image,
+          imageAlt: formData.imageAlt.trim() || null,
           sortOrder: formData.sortOrder,
           parentId: formData.parentId || null,
+          isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? null
@@ -330,10 +362,16 @@ export default function AdminCategoriesPage() {
       setEditingCategory(null);
       setFormData({
         title: '',
+        pageTitle: '',
         slug: '',
+        seoTitle: '',
+        seoDescription: '',
+        seoKeywords: '',
         image: '',
+        imageAlt: '',
         sortOrder: 0,
         parentId: '',
+        isPublished: true,
         showInCategoriesBlock: true,
         catalogTeaser: '',
         featuredProductId: '',
@@ -401,10 +439,16 @@ export default function AdminCategoriesPage() {
     }
     setFormData({
       title: category.title,
+      pageTitle: category.pageTitle ?? '',
       slug: category.slug,
+      seoTitle: category.seoTitle ?? '',
+      seoDescription: category.seoDescription ?? '',
+      seoKeywords: category.seoKeywords ?? '',
       image: category.image || '',
+      imageAlt: category.imageAlt ?? '',
       sortOrder: category.sortOrder || 0,
       parentId: category.parentId || '',
+      isPublished: category.isPublished ?? true,
       showInCategoriesBlock: category.showInCategoriesBlock ?? true,
       catalogTeaser: category.catalogTeaser ?? '',
       featuredProductId: category.featuredProductId ?? '',
@@ -418,10 +462,16 @@ export default function AdminCategoriesPage() {
     setEditingCategory(null);
     setFormData({
       title: '',
+      pageTitle: '',
       slug: '',
+      seoTitle: '',
+      seoDescription: '',
+      seoKeywords: '',
       image: '',
+      imageAlt: '',
       sortOrder: 0,
       parentId: '',
+      isPublished: true,
       showInCategoriesBlock: true,
       catalogTeaser: '',
       featuredProductId: '',
@@ -569,70 +619,181 @@ export default function AdminCategoriesPage() {
               {editingCategory ? 'Редактировать категорию' : 'Создать категорию'}
             </h2>
             <form onSubmit={editingCategory ? handleUpdateCategory : handleCreateCategory} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Название
+              <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">Основное</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Название категории
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="form-input"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Используется в меню и списках.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    H1 страницы
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.pageTitle}
+                    onChange={(e) => setFormData({...formData, pageTitle: e.target.value})}
+                    className="form-input"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Основной заголовок страницы. Если пусто, используется название категории.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Slug
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                    placeholder="автоматически генерируется из названия"
+                    className="form-input"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Родительская категория
+                  </label>
+                  <select
+                    value={formData.parentId}
+                    onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+                    className="form-input"
+                  >
+                    <option value="">Без родителя</option>
+                    {flattenedTree.map((categoryNode) => (
+                      <option
+                        key={categoryNode.id}
+                        value={categoryNode.id}
+                        disabled={disabledParentIds.has(categoryNode.id)}
+                      >
+                        {getIndentedLabel(categoryNode)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Выберите родителя для построения иерархии разделов.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Порядок сортировки
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.sortOrder}
+                    onChange={(e) => setFormData({...formData, sortOrder: parseInt(e.target.value) || 0})}
+                    className="form-input"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={formData.isPublished}
+                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>Опубликована</span>
                 </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="form-input"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Slug
+
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    id="showInCategoriesBlock"
+                    checked={formData.showInCategoriesBlock ?? true}
+                    onChange={(e) => setFormData({ ...formData, showInCategoriesBlock: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>Показывать в блоке «Разделы каталога» на главной</span>
                 </label>
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                  placeholder="автоматически генерируется из названия"
-                  className="form-input"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Фото для карточки на главной
-                </label>
-                <CoverImageDropzone
-                  value={formData.image}
-                  onChange={(url) => setFormData({ ...formData, image: url })}
-                  folder="categories"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Перетащите файл с компьютера или нажмите для выбора. Без фото карточка отобразится без фона.
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Порядок сортировки
-                </label>
-                <input
-                  type="number"
-                  value={formData.sortOrder}
-                  onChange={(e) => setFormData({...formData, sortOrder: parseInt(e.target.value) || 0})}
-                  className="form-input"
-                />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showInCategoriesBlock"
-                  checked={formData.showInCategoriesBlock ?? true}
-                  onChange={(e) => setFormData({ ...formData, showInCategoriesBlock: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <label htmlFor="showInCategoriesBlock" className="text-sm font-medium text-gray-700">
-                  Показывать в блоке «Разделы каталога» на главной
-                </label>
+              <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">Изображение</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Фото для карточки на главной
+                  </label>
+                  <CoverImageDropzone
+                    value={formData.image}
+                    onChange={(url) => setFormData({ ...formData, image: url })}
+                    folder="categories"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Перетащите файл с компьютера или нажмите для выбора. Без фото карточка отобразится без фона.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Alt изображения
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.imageAlt}
+                    onChange={(e) => setFormData({...formData, imageAlt: e.target.value})}
+                    className="form-input"
+                  />
+                </div>
               </div>
+
+              <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">SEO</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SEO Title
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.seoTitle}
+                    onChange={(e) => setFormData({...formData, seoTitle: e.target.value})}
+                    className="form-input"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Заголовок страницы в поисковой выдаче. Рекомендуемо около 50–65 символов.</p>
+                  <p className="mt-1 text-xs text-gray-400">{formData.seoTitle.trim().length} символов</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SEO Description
+                  </label>
+                  <textarea
+                    value={formData.seoDescription}
+                    onChange={(e) => setFormData({...formData, seoDescription: e.target.value})}
+                    className="form-input min-h-[96px]"
+                    rows={4}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Описание страницы в поисковой выдаче. Рекомендуемо около 120–170 символов.</p>
+                  <p className="mt-1 text-xs text-gray-400">{formData.seoDescription.trim().length} символов</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    SEO Keywords
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.seoKeywords}
+                    onChange={(e) => setFormData({...formData, seoKeywords: e.target.value})}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">Контент страницы</h3>
 
               {activeBrand === 'sprint-power' ? (
                 <>
@@ -718,30 +879,6 @@ export default function AdminCategoriesPage() {
                   </p>
                 </div>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Родительская категория
-                </label>
-                <select
-                  value={formData.parentId}
-                  onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
-                  className="form-input"
-                >
-                  <option value="">Без родителя</option>
-                  {flattenedTree.map((categoryNode) => (
-                    <option
-                      key={categoryNode.id}
-                      value={categoryNode.id}
-                      disabled={disabledParentIds.has(categoryNode.id)}
-                    >
-                      {getIndentedLabel(categoryNode)}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Выберите родителя для построения иерархии разделов.
-                </p>
               </div>
               
               <div className="flex space-x-3">
