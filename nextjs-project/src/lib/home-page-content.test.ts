@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ContentBlockResolved } from '@/services/content-block.service'
+import { getAdminContentSchemaForBrandPage } from '@/config/content-blocks-defaults'
 import {
   resolveInnerHomeDirectionsContent,
   resolveInnerHomeHeroContent,
@@ -76,6 +77,47 @@ describe('resolveInnerHomeDirectionsContent', () => {
       categorySlug: 'bulony',
     })
   })
+
+  it('does not render directions for unavailable categories without safe fallback content', () => {
+    const result = resolveInnerHomeDirectionsContent(
+      [
+        shortBlock('home.directions.item1.categorySlug', 'foreign-or-unpublished'),
+        shortBlock('home.directions.item1.isVisible', '1'),
+      ],
+      []
+    )
+
+    expect(result.items).toEqual([])
+  })
+
+  it('keeps custom content isolated from category fallback data', () => {
+    const result = resolveInnerHomeDirectionsContent(
+      [
+        shortBlock('home.directions.item1.title', 'Свой заголовок'),
+        shortBlock('home.directions.item1.description', 'Свое описание'),
+        shortBlock('home.directions.item1.href', '/catalog/custom-direction'),
+        shortBlock('home.directions.item1.isVisible', '1'),
+      ],
+      [
+        {
+          id: 'foreign',
+          slug: 'sp-collagen',
+          title: 'Sprint category',
+          image: null,
+          imageAlt: 'alt',
+          catalogTeaser: 'teaser',
+        },
+      ]
+    )
+
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0]).toMatchObject({
+      title: 'Свой заголовок',
+      description: 'Свое описание',
+      href: '/catalog/custom-direction',
+      categorySlug: null,
+    })
+  })
 })
 
 describe('resolveInnerHomeSectionOrder', () => {
@@ -92,5 +134,36 @@ describe('resolveInnerHomeSectionOrder', () => {
       'howToOrder',
       'articles',
     ])
+  })
+
+  it('ignores unknown ids and blank chunks while preserving valid order', () => {
+    const result = resolveInnerHomeSectionOrder([
+      shortBlock('home.sections.order', ' ,unknown,reviews,,news,directions , bad '),
+    ])
+
+    expect(result).toEqual([
+      'reviews',
+      'news',
+      'directions',
+      'newArrivals',
+      'howToOrder',
+      'articles',
+    ])
+  })
+})
+
+describe('home content admin schema brand isolation', () => {
+  it('exposes PR-2 inner home controls only for inner brand', () => {
+    const innerKeys = getAdminContentSchemaForBrandPage('inner', 'home').map((entry) => entry.key)
+    const sprintKeys = getAdminContentSchemaForBrandPage('sprint-power', 'home').map(
+      (entry) => entry.key
+    )
+
+    expect(innerKeys).toContain('home.sections.order')
+    expect(innerKeys).toContain('home.directions.item1.categorySlug')
+    expect(innerKeys).toContain('hero.image.src')
+    expect(sprintKeys).not.toContain('home.sections.order')
+    expect(sprintKeys).not.toContain('home.directions.item1.categorySlug')
+    expect(sprintKeys).not.toContain('hero.image.src')
   })
 })
