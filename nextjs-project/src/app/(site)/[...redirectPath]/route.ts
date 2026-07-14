@@ -2,12 +2,9 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
-import { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { findRedirectByPath } from '@/services/redirect.service'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
-import { NotFoundPageContent } from '@/components/site/not-found-page-content'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,9 +62,53 @@ async function getNotFoundStyles(): Promise<string> {
 async function renderNotFoundHtml(brandId: 'inner' | 'sprint-power'): Promise<string> {
   const siteTitle = getBrandSiteConfig(brandId).title
   const styles = await getNotFoundStyles()
-  const markup = renderToStaticMarkup(
-    createElement(NotFoundPageContent, { homeHref: getBrandSiteUrl(brandId) })
-  )
+  const homeHref = getBrandSiteUrl(brandId)
+  const markup = `
+    <main class="not-found-root">
+      <div class="not-found-background" aria-hidden="true"></div>
+      <div class="not-found-layout">
+        <section class="not-found-card">
+          <div class="not-found-code-row">
+            <span class="not-found-code-digit">4</span>
+            <div class="not-found-compass-wrapper">
+              <div class="not-found-compass">
+                <svg class="not-found-compass-svg" viewBox="0 0 110 110" aria-hidden="true">
+                  <circle cx="55" cy="55" r="44" fill="none" stroke="#00A8FF" stroke-width="4"></circle>
+                  <circle cx="55" cy="55" r="28" fill="none" stroke="#00A8FF" stroke-width="4"></circle>
+                  <circle cx="55" cy="11" r="5" fill="#00A8FF"></circle>
+                  <circle cx="11" cy="55" r="5" fill="#22C55E"></circle>
+                  <circle cx="99" cy="55" r="5" fill="#F97316"></circle>
+                  <circle cx="55" cy="99" r="5" fill="#00A8FF"></circle>
+                  <g class="not-found-compass-arrow">
+                    <path d="M55 25 L62 55 L55 85 L48 55 Z" fill="#00A8FF"></path>
+                    <path d="M55 30 L60 55 L55 80 L50 55 Z" fill="#ffffff"></path>
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <span class="not-found-code-digit">4</span>
+          </div>
+          <div class="not-found-text-group not-found-text-group-primary">
+            <h1 class="not-found-title">Похоже, мы свернули не туда.</h1>
+          </div>
+          <div class="not-found-text-group not-found-text-group-secondary">
+            <p class="not-found-description">Страница потерялась, но путь домой — по кнопке ниже.</p>
+          </div>
+          <div class="not-found-button-wrapper">
+            <a href="${homeHref}" class="not-found-button">
+              <span class="relative z-10">Вернуться на главную</span>
+              <span class="not-found-button-flash" aria-hidden="true"></span>
+            </a>
+          </div>
+          <div class="not-found-dots" aria-hidden="true">
+            <span class="not-found-dot not-found-dot--muted"></span>
+            <span class="not-found-dot not-found-dot--active"></span>
+            <span class="not-found-dot not-found-dot--muted"></span>
+          </div>
+        </section>
+      </div>
+    </main>
+  `.trim()
 
   return `<!doctype html>
 <html lang="ru">
