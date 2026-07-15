@@ -38,6 +38,7 @@ import {
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { trimToNull } from '@/lib/seo'
 import { getCatalogBlockCategories } from '@/services/category.service'
+import { cn } from '@/lib/utils'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -224,6 +225,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 sprintFallback: isSprintTheme,
               })
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
+              const categorySubtitle =
+                cat.slug === 'aktsii'
+                  ? formatAktsiiCatalogBlockSubtitleRu(
+                      cat._count.products,
+                      publicGiftPromotionCount
+                    )
+                  : trimToNull(cat.catalogTeaser) ?? formatProductsCountRu(cat._count.products)
               return (
                 <Link
                   key={cat.id}
@@ -234,9 +242,13 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 >
                   <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
-                      className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'min-h-[180px] p-6'} flex-col justify-center items-center text-center rounded-2xl overflow-hidden ${
-                        !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
-                      }`}
+                      className={cn(
+                        'relative flex overflow-hidden rounded-2xl',
+                        isSprintTheme
+                          ? 'aspect-[16/12] items-center justify-center p-5 text-center'
+                          : 'min-h-[200px] items-end p-4 sm:p-5',
+                        !bgImage && (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background')
+                      )}
                     >
                       {bgImage && (
                         <>
@@ -245,39 +257,55 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             alt={trimToNull(cat.imageAlt) ?? getCategoryCardImageAlt(cat.title)}
                             fill
                             className={imagePosition}
-                            sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}
+                              sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}
                           />
                           <div
-                            className="absolute inset-0 bg-linear-to-b from-black/25 to-black/50 rounded-2xl"
+                            className={cn(
+                              'absolute inset-0 rounded-2xl',
+                              isSprintTheme
+                                ? 'bg-linear-to-b from-black/25 to-black/50'
+                                : 'bg-linear-to-t from-black/60 via-black/28 to-black/12'
+                            )}
                             aria-hidden
                           />
                         </>
                       )}
-                      <span
-                        className={`relative z-10 block text-balance drop-shadow-md ${categoryTitleFont} ${
+                      <div
+                        className={cn(
+                          'relative z-10',
                           isSprintTheme
-                            ? `text-base font-semibold uppercase leading-snug tracking-wide sm:text-lg ${
-                                bgImage ? 'text-white' : 'text-slate-100'
-                              }`
-                            : `font-medium text-lg ${bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'}`
-                        }`}
+                            ? 'max-w-[30ch]'
+                            : bgImage
+                              ? 'w-full max-w-[34rem] rounded-2xl bg-black/38 px-4 py-3 text-left shadow-lg backdrop-blur-[3px] sm:px-5'
+                              : 'w-full text-left'
+                        )}
                       >
-                        {cat.title}
-                      </span>
-                      {isSprintTheme ? null : (
                         <span
-                          className={`relative z-10 mt-2 text-sm font-medium normal-case tracking-normal drop-shadow ${categoryTitleFont} ${
-                            bgImage ? 'text-white/90' : isSprintTheme ? 'text-slate-400' : 'text-gray-500'
-                          }`}
+                          className={cn(
+                            'block text-balance drop-shadow-md',
+                            categoryTitleFont,
+                            isSprintTheme
+                              ? `text-base font-semibold uppercase leading-snug tracking-wide sm:text-lg ${
+                                  bgImage ? 'text-white' : 'text-slate-100'
+                                }`
+                              : `text-xl font-medium leading-tight ${
+                                  bgImage ? 'text-white' : 'text-text'
+                                }`
+                          )}
                         >
-                          {cat.slug === 'aktsii'
-                            ? formatAktsiiCatalogBlockSubtitleRu(
-                                cat._count.products,
-                                publicGiftPromotionCount
-                              )
-                            : trimToNull(cat.catalogTeaser) ?? formatProductsCountRu(cat._count.products)}
+                          {cat.title}
                         </span>
-                      )}
+                        {isSprintTheme ? null : (
+                          <span
+                            className={cn(
+                              'mt-2 block max-w-[30ch] text-sm leading-5',
+                              bgImage ? 'text-white/88' : 'text-gray-600'
+                            )}
+                          >
+                            {categorySubtitle}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TiltCard>
                 </Link>
