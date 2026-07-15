@@ -33,6 +33,10 @@ import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzo
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
 import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
 import { cn } from '@/lib/utils';
+import {
+  MAX_CATEGORY_TEASER_LENGTH,
+  normalizeCategoryTeaser,
+} from '@/lib/category-teaser';
 
 const EMPTY_LINE_DOC: JSONContent = { type: 'doc', content: [] };
 
@@ -283,7 +287,7 @@ export default function AdminCategoriesPage() {
           parentId: formData.parentId || null,
           isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
-          catalogTeaser: formData.catalogTeaser.trim() || null,
+          catalogTeaser: normalizeCategoryTeaser(formData.catalogTeaser),
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? undefined
             : lineDocToJsonValue(formData.linePageBodyRichJson),
@@ -344,7 +348,7 @@ export default function AdminCategoriesPage() {
           parentId: formData.parentId || null,
           isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
-          catalogTeaser: formData.catalogTeaser.trim() || null,
+          catalogTeaser: normalizeCategoryTeaser(formData.catalogTeaser),
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? null
             : lineDocToJsonValue(formData.linePageBodyRichJson),
@@ -713,18 +717,31 @@ export default function AdminCategoriesPage() {
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
                 <h3 className="text-sm font-semibold text-gray-900">Карточка категории</h3>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Краткое описание
-                  </label>
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Краткое описание
+                    </label>
+                    <span
+                      className={cn(
+                        'text-xs',
+                        formData.catalogTeaser.length > MAX_CATEGORY_TEASER_LENGTH - 20
+                          ? 'text-amber-600'
+                          : 'text-gray-500'
+                      )}
+                    >
+                      {formData.catalogTeaser.length}/{MAX_CATEGORY_TEASER_LENGTH}
+                    </span>
+                  </div>
                   <textarea
                     value={formData.catalogTeaser}
                     onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
+                    maxLength={MAX_CATEGORY_TEASER_LENGTH}
                     className="form-input min-h-[84px]"
                     rows={3}
                     placeholder="Короткий текст для верхней части категории и карточек направлений"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Показывается в верхней части категории и на главной, если раздел используется как направление.
+                    Показывается в верхней части категории и на карточках каталога. Лимит: до {MAX_CATEGORY_TEASER_LENGTH} символов.
                   </p>
                 </div>
 

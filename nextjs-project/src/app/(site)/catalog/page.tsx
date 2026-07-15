@@ -241,7 +241,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 >
                   <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
-                      className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'min-h-[180px] p-6'} flex-col justify-center items-center text-center rounded-2xl overflow-hidden ${
+                      className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'h-[180px] sm:h-[190px] lg:h-[200px] p-6'} flex-col justify-center items-center text-center rounded-2xl overflow-hidden ${
                         !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
                       }`}
                     >
@@ -266,14 +266,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             ? `text-base font-semibold uppercase leading-snug tracking-wide sm:text-lg ${
                                 bgImage ? 'text-white' : 'text-slate-100'
                               }`
-                            : `font-medium text-lg ${bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'}`
+                            : `max-w-[24ch] line-clamp-2 font-medium text-lg leading-tight ${bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'}`
                         }`}
                       >
                         {cat.title}
                       </span>
                       {isSprintTheme ? null : (
                         <span
-                          className={`relative z-10 mt-2 max-w-[34ch] text-balance text-sm font-normal leading-6 tracking-normal drop-shadow ${
+                          className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
                             bgImage ? 'text-white/88' : 'text-gray-600'
                           }`}
                         >

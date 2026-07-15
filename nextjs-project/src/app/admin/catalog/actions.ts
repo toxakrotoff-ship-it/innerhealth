@@ -13,6 +13,10 @@ import {
   isSprintPowerBrand,
   productBelongsToBrandScope,
 } from '@/lib/brand/brand-scope';
+import {
+  MAX_CATEGORY_TEASER_LENGTH,
+  normalizeCategoryTeaser,
+} from '@/lib/category-teaser';
 
 export interface Category {
   id: string;
@@ -85,7 +89,15 @@ const categoryInputSchema = z.object({
   parentId: z.string().trim().nullable().optional(),
   isPublished: z.boolean().optional(),
   showInCategoriesBlock: z.boolean().optional(),
-  catalogTeaser: z.string().max(20000).nullable().optional(),
+  catalogTeaser: z
+    .string()
+    .trim()
+    .max(
+      MAX_CATEGORY_TEASER_LENGTH,
+      `Краткое описание не должно превышать ${MAX_CATEGORY_TEASER_LENGTH} символов`
+    )
+    .nullable()
+    .optional(),
   linePageBodyRichJson: z.unknown().optional(),
   featuredProductId: z.string().nullable().optional(),
   showLegacyLinePageBlocks: z.boolean().optional(),
@@ -540,7 +552,7 @@ export async function createCategory(
       sortOrder: dataScoped.sortOrder ?? null,
       isPublished: dataScoped.isPublished ?? true,
       showInCategoriesBlock: dataScoped.showInCategoriesBlock ?? true,
-      catalogTeaser: dataScoped.catalogTeaser?.trim() ? dataScoped.catalogTeaser.trim() : null,
+      catalogTeaser: normalizeCategoryTeaser(dataScoped.catalogTeaser),
       linePageBodyRichJson: dataScoped.linePageBodyRichJson,
       featuredProductId: dataScoped.featuredProductId,
       showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
@@ -687,9 +699,7 @@ export async function updateCategory(
       catalogTeaser:
         dataScoped.catalogTeaser === undefined
           ? undefined
-          : dataScoped.catalogTeaser?.trim()
-            ? dataScoped.catalogTeaser.trim()
-            : null,
+          : normalizeCategoryTeaser(dataScoped.catalogTeaser),
       linePageBodyRichJson: dataScoped.linePageBodyRichJson,
       featuredProductId: dataScoped.featuredProductId,
       showLegacyLinePageBlocks: dataScoped.showLegacyLinePageBlocks,
