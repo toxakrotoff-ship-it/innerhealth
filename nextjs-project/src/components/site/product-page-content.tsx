@@ -11,6 +11,7 @@ import { PurchaseTrustStrip } from '@/components/site/purchase-trust-strip'
 import { ProductRelatedCategoryLinks } from '@/components/site/product-related-category-links'
 import { ProductMediaGallery } from '@/components/site/product-media-gallery'
 import { ProductFlavorSelector } from '@/components/site/product-flavor-selector'
+import { ProductDocumentsSection } from '@/components/site/product-documents-section'
 import { Breadcrumbs, type BreadcrumbItemType } from '@/components/site/breadcrumbs'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import type { ProductGalleryPhoto } from '@/lib/product-gallery'
@@ -21,6 +22,7 @@ import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { normalizeInnerProductContent } from '@/lib/product-tabs'
+import { isLegacyDocumentSectionTitle } from '@/lib/product-documents'
 import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
 
 interface ProductPageContentProps {
@@ -99,6 +101,18 @@ interface ProductPageContentProps {
       quantity?: number | null
       isPreorderEnabled?: boolean
     }>
+  }>
+  structuredDocuments?: Array<{
+    id: string
+    title: string
+    typeLabel: string
+    fileUrl: string
+    fileName: string | null
+    mimeType: string | null
+    fileSize: number | null
+    documentNumber?: string | null
+    issuedAt?: string | null
+    expiresAt?: string | null
   }>
   isSprintTheme?: boolean
 }
@@ -213,6 +227,7 @@ export function ProductPageContent({
   flavorVariants = [],
   relatedProducts,
   relationSections = [],
+  structuredDocuments = [],
   breadcrumbItems,
   relatedProductsCategoryTitle,
   isSprintTheme = false,
@@ -224,6 +239,15 @@ export function ProductPageContent({
   const shortDescription = innerContent?.shortDescription
   const shouldRenderShortDescription =
     !isSprintTheme && !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
+  const hasStructuredDocuments = structuredDocuments.length > 0
+  const visibleInnerSections = !isSprintTheme && innerContent
+    ? innerContent.sections.filter(
+        (section) => !(hasStructuredDocuments && isLegacyDocumentSectionTitle(section.title))
+      )
+    : []
+  const visibleSprintTabs = isSprintTheme && hasStructuredDocuments
+    ? tabs.filter((tab) => !isLegacyDocumentSectionTitle(tab.title))
+    : tabs
   const displayWeight =
     typeof product.weight === 'number' && Number.isFinite(product.weight) && product.weight > 0
       ? `${product.weight.toLocaleString('ru-RU')} г`
@@ -381,10 +405,16 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      {!isSprintTheme && innerContent && innerContent.sections.length > 0 && (
+      {hasStructuredDocuments && (
+        <ScalableSpacing size="lg">
+          <ProductDocumentsSection documents={structuredDocuments} isSprintTheme={isSprintTheme} />
+        </ScalableSpacing>
+      )}
+
+      {!isSprintTheme && visibleInnerSections.length > 0 && (
         <ScalableSpacing size="lg">
           <ProductTabs
-            tabs={innerContent.sections.map((section) => ({
+            tabs={visibleInnerSections.map((section) => ({
               title: section.title,
               content: section.content,
             }))}
@@ -393,9 +423,9 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      {isSprintTheme && tabs.length > 0 && (
+      {isSprintTheme && visibleSprintTabs.length > 0 && (
         <ScalableSpacing size="lg">
-          <ProductTabs tabs={tabs} isSprintTheme={isSprintTheme} />
+          <ProductTabs tabs={visibleSprintTabs} isSprintTheme={isSprintTheme} />
         </ScalableSpacing>
       )}
 
@@ -407,7 +437,7 @@ export function ProductPageContent({
           <ScalableSpacing size="lg" key={section.type}>
             <section
               className={
-                (isSprintTheme ? tabs.length > 0 : (innerContent?.sections.length ?? 0) > 0)
+                (isSprintTheme ? visibleSprintTabs.length > 0 || hasStructuredDocuments : visibleInnerSections.length > 0 || hasStructuredDocuments)
                   ? 'pt-6 sm:pt-8'
                   : isSprintTheme
                     ? 'border-t border-slate-700 pt-6 sm:pt-8'

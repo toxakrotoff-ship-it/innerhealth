@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ProductPageContent } from '@/components/site/product-page-content'
 import * as productService from '@/services/product.service'
 import * as productRelationService from '@/services/product-relation.service'
+import * as productDocumentService from '@/services/product-document.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 import { getSettingsMap } from '@/services/settings.service'
 import { buildProductJsonLd } from '@/lib/schema-org'
@@ -130,9 +131,10 @@ export default async function ProductPage({ params }: PageProps) {
   const productPath = `/product/${slug}`
 
   const categoryIds = product.categories.map((item) => item.categoryId)
-  const [relatedProducts, relationSections] = await Promise.all([
+  const [relatedProducts, relationSections, structuredDocuments] = await Promise.all([
     productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId),
     productRelationService.getPublishedProductRelations({ sourceProductId: product.id, brandId }),
+    productDocumentService.getPublishedProductDocuments({ productId: product.id, brandId }),
   ])
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
 
@@ -169,6 +171,7 @@ export default async function ProductPage({ params }: PageProps) {
         flavorVariants={flavorVariants}
         relatedProducts={relatedProducts}
         relationSections={relationSections}
+        structuredDocuments={structuredDocuments}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
         breadcrumbItems={breadcrumbItems}
         isSprintTheme={isSprintTheme}

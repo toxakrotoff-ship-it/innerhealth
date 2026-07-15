@@ -12,6 +12,7 @@ import type { ProductGalleryEditorPhoto } from './ProductGalleryEditor';
 import { ProductRichTextEditor } from './ProductRichTextEditor';
 import { ProductTabsEditor } from './ProductTabsEditor';
 import { ProductRelationsEditor } from './ProductRelationsEditor';
+import { ProductDocumentsEditor } from './ProductDocumentsEditor';
 import {
   buildInnerProductTabsForEditor,
   sanitizeProductTabEditorItems,
@@ -648,6 +649,7 @@ export function ProductEditorForm({
           </div>
 
           <ProductRelationsEditor sourceProductId={productId} activeBrand={activeBrand} />
+          <ProductDocumentsEditor productId={productId} activeBrand={activeBrand} />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">

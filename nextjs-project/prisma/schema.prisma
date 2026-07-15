@@ -86,6 +86,7 @@ model Product {
   categoriesFeaturedFor                Category[]        @relation("CategoryFeaturedProduct")
   outgoingRelations                    ProductRelation[] @relation("ProductRelationSource")
   incomingRelations                    ProductRelation[] @relation("ProductRelationTarget")
+  documentLinks                        ProductDocumentProduct[]
 
   @@index([slug])
   @@index([createdAt])
@@ -116,6 +117,44 @@ model ProductRelation {
   @@index([sourceProductId, relationType, isPublished, sortOrder])
   @@index([targetProductId])
   @@index([brand])
+}
+
+model ProductDocument {
+  id             String                   @id @default(cuid())
+  brand          String                   @default("inner")
+  title          String
+  type           ProductDocumentType
+  fileUrl        String
+  fileName       String?
+  originalName   String?
+  mimeType       String?
+  fileSize       Int?
+  documentNumber String?
+  issuedAt       DateTime?
+  expiresAt      DateTime?
+  sortOrder      Int                      @default(0)
+  isPublished    Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  products       ProductDocumentProduct[]
+
+  @@index([brand, isPublished, type, sortOrder])
+  @@index([brand, title])
+  @@index([brand, documentNumber])
+}
+
+model ProductDocumentProduct {
+  documentId String
+  productId  String
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  document   ProductDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, productId])
+  @@index([productId, sortOrder])
+  @@index([documentId, sortOrder])
 }
 
 model Category {
@@ -876,4 +915,13 @@ enum ProductRelationType {
   UPSELL
   ALTERNATIVE
   BUNDLE
+}
+
+enum ProductDocumentType {
+  CERTIFICATE
+  DECLARATION
+  TEST_REPORT
+  INSTRUCTION
+  LABEL
+  OTHER
 }
