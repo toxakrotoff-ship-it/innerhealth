@@ -309,39 +309,53 @@ export default async function CategoryPage({ params }: PageProps) {
 
       <section className={`py-12 ${isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}`}>
         <AdaptiveContainer maxWidth="default">
-          <h1
-            className={`mb-6 text-lg font-medium tracking-tight drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
+          <div
+            className={cn(
+              'mb-8 overflow-hidden rounded-3xl border',
+              isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-gradient-to-br from-white to-gray-50'
+            )}
           >
-            {categoryHeading}
-          </h1>
-          {categoryTeaser ? (
-            <p
-              className={cn(
-                'mb-6 max-w-3xl text-sm leading-7 sm:text-base',
-                isSprintTheme ? 'text-slate-300' : 'text-gray-700'
-              )}
-            >
-              {categoryTeaser}
-            </p>
-          ) : null}
-          {categoryImage ? (
-            <div
-              className={cn(
-                'mb-8 overflow-hidden rounded-3xl border',
-                isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-gray-50'
-              )}
-            >
-              <div className="relative aspect-[16/7] w-full">
-                <Image
-                  src={categoryImage}
-                  alt={categoryImageAlt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
-                />
+            <div className={cn('grid', categoryImage ? 'lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.45fr)]' : undefined)}>
+              <div className="flex flex-col justify-center px-6 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
+                <h1
+                  className={cn(
+                    `tracking-tight ${categoryTitleFont}`,
+                    isSprintTheme ? 'text-2xl font-medium text-slate-100 sm:text-3xl' : 'text-2xl font-medium text-text sm:text-3xl'
+                  )}
+                >
+                  {categoryHeading}
+                </h1>
+                {categoryTeaser ? (
+                  <p
+                    className={cn(
+                      'mt-4 max-w-2xl text-base leading-7',
+                      isSprintTheme ? 'text-slate-300' : 'text-gray-600'
+                    )}
+                  >
+                    {categoryTeaser}
+                  </p>
+                ) : null}
               </div>
+              {categoryImage ? (
+                <div
+                  className={cn(
+                    'relative min-h-[240px] border-t',
+                    isSprintTheme ? 'border-slate-700 lg:border-t-0 lg:border-l' : 'border-gray-200 lg:border-t-0 lg:border-l'
+                  )}
+                >
+                  <div className="relative aspect-[16/9] h-full min-h-[240px] w-full lg:aspect-auto lg:min-h-[320px]">
+                    <Image
+                      src={categoryImage}
+                      alt={categoryImageAlt}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 58vw"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          </div>
           {category.children.length > 0 && (
             <div
               className={`mb-8 rounded-xl p-4 ${
