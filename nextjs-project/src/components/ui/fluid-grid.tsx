@@ -1,6 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
-import { adaptiveTokens, getGridGap, getGridColumns } from '@/lib/adaptive-tokens'
 
 export interface FluidGridProps extends HTMLAttributes<HTMLDivElement> {
   /**
@@ -41,7 +40,7 @@ export interface FluidGridProps extends HTMLAttributes<HTMLDivElement> {
    */
   cols6xl?: number
   /**
-   * Промежуток между элементами (в пикселях или Tailwind-классе)
+   * Промежуток между элементами по шкале Tailwind (`4` => `gap-4`) или готовый класс/арбитрарное значение.
    * @default 4
    */
   gap?: number | string
@@ -172,11 +171,8 @@ export const FluidGrid = forwardRef<HTMLDivElement, FluidGridProps>(
       className
     )
 
-    // Инлайн стили для кастомного gap (если передан number)
-    const style = typeof gap === 'number' ? { gap: `${gap}px` } : undefined
-
     return (
-      <div ref={ref} className={gridClasses} style={style} {...props}>
+      <div ref={ref} className={gridClasses} {...props}>
         {children}
       </div>
     )
@@ -258,17 +254,5 @@ export const GridContent = forwardRef<HTMLDivElement, Omit<FluidGridProps, 'cols
   )
 )
 GridContent.displayName = 'GridContent'
-
-/**
- * Хук для получения адаптивных параметров сетки
- */
-export function useFluidGridConfig(
-  breakpoint: keyof typeof adaptiveTokens.grid.gapMultipliers = 'base'
-) {
-  return {
-    columns: getGridColumns(breakpoint === 'base' ? 'default' : breakpoint as keyof typeof adaptiveTokens.grid.columns),
-    gap: getGridGap(breakpoint),
-  }
-}
 
 export default FluidGrid
