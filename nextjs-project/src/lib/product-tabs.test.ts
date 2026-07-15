@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildInnerProductTabsForEditor,
   buildProductTabs,
+  normalizeInnerProductContent,
   parseProductTabsJson,
   productTabsForEditor,
   productTabsFromLegacyFields,
@@ -107,7 +109,76 @@ describe('product-tabs', () => {
     ])
 
     expect(parsed).toEqual([
-      { id: 'x', title: 'Состав', content: 'text', editorType: 'characteristics' },
+      {
+        id: 'x',
+        title: 'Состав',
+        content: 'text',
+        editorType: 'characteristics',
+        key: 'characteristics',
+        isVisible: true,
+      },
     ])
+  })
+
+  it('normalizes inner content with system block visibility and legacy fallbacks', () => {
+    const normalized = normalizeInnerProductContent({
+      description: '<p>Короткое описание</p>',
+      text: '<p>Подробное описание</p>',
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      characteristicsComposition: 'Коллаген, витамин C',
+      tabs: [
+        {
+          id: 'usage-1',
+          key: 'usage',
+          title: 'Способ применения',
+          content: '<p>По 1 капсуле в день</p>',
+          editorType: 'richtext',
+          isVisible: true,
+        },
+        {
+          id: 'faq-1',
+          key: 'faq',
+          title: 'Вопросы и ответы',
+          content: '<p>FAQ</p>',
+          editorType: 'richtext',
+          isVisible: false,
+        },
+      ],
+    })
+
+    expect(normalized.shortDescription).toBe('Короткое описание')
+    expect(normalized.sections.map((section) => section.key)).toEqual([
+      'usage',
+      'description',
+      'composition',
+    ])
+  })
+
+  it('builds managed inner editor blocks with default system sections', () => {
+    const tabs = buildInnerProductTabsForEditor({
+      description: null,
+      text: '<p>Описание</p>',
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      tabs: null,
+    })
+
+    expect(tabs[0]?.key).toBe('description')
+    expect(tabs[0]?.content).toBe('<p>Описание</p>')
+    expect(tabs[1]?.key).toBe('characteristics')
+    expect(tabs.every((tab) => typeof tab.isVisible === 'boolean')).toBe(true)
   })
 })

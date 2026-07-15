@@ -20,6 +20,7 @@ import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
+import { normalizeInnerProductContent } from '@/lib/product-tabs'
 import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
 
 interface ProductPageContentProps {
@@ -30,6 +31,7 @@ interface ProductPageContentProps {
     sku: string | null
     description: string | null
     text: string | null
+    weight?: number | null
     price: number
     priceOld: number | null
     photo: string | null
@@ -141,6 +143,25 @@ function ProductDescriptionBlock({
   )
 }
 
+function ProductShortDescription({
+  description,
+  isSprintTheme,
+}: {
+  description: string
+  isSprintTheme: boolean
+}) {
+  return (
+    <p
+      className={cn(
+        'mt-4 max-w-2xl text-sm leading-6 sm:text-base line-clamp-4',
+        isSprintTheme ? 'text-slate-300' : 'text-gray-700'
+      )}
+    >
+      {description}
+    </p>
+  )
+}
+
 function ProductLongTextBlock({ text, isSprintTheme }: { text: string; isSprintTheme: boolean }) {
   const className = cn(
     'prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
@@ -171,6 +192,14 @@ export function ProductPageContent({
   const shouldRenderDescription =
     !!product.description &&
     (isSprintTheme || !shouldHideInnerProductDescription(product.description, product.text))
+  const innerContent = !isSprintTheme ? normalizeInnerProductContent(product) : null
+  const shortDescription = innerContent?.shortDescription
+  const shouldRenderShortDescription =
+    !isSprintTheme && !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
+  const displayWeight =
+    typeof product.weight === 'number' && Number.isFinite(product.weight) && product.weight > 0
+      ? `${product.weight.toLocaleString('ru-RU')} г`
+      : null
   const isOutOfStock = product.quantity != null && product.quantity <= 0
   const isPreorderEnabled = product.isPreorderEnabled === true
   const isUnavailable = isOutOfStock && !isPreorderEnabled
@@ -245,6 +274,9 @@ export function ProductPageContent({
               SKU: {product.sku.trim()}
             </p>
           )}
+          {shouldRenderShortDescription && shortDescription && (
+            <ProductShortDescription description={shortDescription} isSprintTheme={isSprintTheme} />
+          )}
           <div className="mt-3">
             <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${stock.className}`}>
               {stock.label}
@@ -265,6 +297,11 @@ export function ProductPageContent({
             variants={flavorVariants}
             isSprintTheme={isSprintTheme}
           />
+          {displayWeight && (
+            <p className={cn('mt-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+              Вес: {displayWeight}
+            </p>
+          )}
           <div className="mt-6 flex flex-wrap gap-3">
             <AddToCartButton
               productId={product.id}
@@ -298,13 +335,13 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
           <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
-          {shouldRenderDescription && product.description && (
+          {isSprintTheme && shouldRenderDescription && product.description && (
             <ProductDescriptionBlock description={product.description} isSprintTheme={isSprintTheme} />
           )}
         </div>
       </FluidGrid>
 
-      {product.text && (
+      {isSprintTheme && product.text && (
         <ScalableSpacing size="lg">
           <section
             className={`pt-8 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200 dark:border-gray-700'}`}
@@ -314,7 +351,19 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      {tabs.length > 0 && (
+      {!isSprintTheme && innerContent && innerContent.sections.length > 0 && (
+        <ScalableSpacing size="lg">
+          <ProductTabs
+            tabs={innerContent.sections.map((section) => ({
+              title: section.title,
+              content: section.content,
+            }))}
+            isSprintTheme={false}
+          />
+        </ScalableSpacing>
+      )}
+
+      {isSprintTheme && tabs.length > 0 && (
         <ScalableSpacing size="lg">
           <ProductTabs tabs={tabs} isSprintTheme={isSprintTheme} />
         </ScalableSpacing>
@@ -324,7 +373,7 @@ export function ProductPageContent({
         <ScalableSpacing size="lg">
           <section
             className={
-              tabs.length > 0
+              (isSprintTheme ? tabs.length > 0 : (innerContent?.sections.length ?? 0) > 0)
                 ? 'pt-6 sm:pt-8'
                 : isSprintTheme
                   ? 'border-t border-slate-700 pt-6 sm:pt-8'

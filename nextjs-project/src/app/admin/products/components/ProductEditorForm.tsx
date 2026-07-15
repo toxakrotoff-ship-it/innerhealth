@@ -12,6 +12,7 @@ import type { ProductGalleryEditorPhoto } from './ProductGalleryEditor';
 import { ProductRichTextEditor } from './ProductRichTextEditor';
 import { ProductTabsEditor } from './ProductTabsEditor';
 import {
+  buildInnerProductTabsForEditor,
   sanitizeProductTabEditorItems,
   serializeProductTabsForStorage,
   syncLegacyTabFieldsFromTabs,
@@ -107,8 +108,26 @@ const textFieldsToSanitize: string[] = [];
 export function createEmptyProductEditorValues(
   activeBrand: AdminBrand | null
 ): ProductEditorFormValues {
+  const initialBrand = activeBrand === 'sprint-power' ? 'sprint-power' : 'inner'
+  const initialTabs =
+    initialBrand === 'inner'
+      ? buildInnerProductTabsForEditor({
+          description: null,
+          text: null,
+          tab1: null,
+          tab2: null,
+          tab3: null,
+          tab4: null,
+          tab1Title: null,
+          tab2Title: null,
+          tab3Title: null,
+          tab4Title: null,
+          tabs: null,
+        })
+      : []
+
   return {
-    brand: activeBrand === 'sprint-power' ? 'sprint-power' : 'inner',
+    brand: initialBrand,
     parentUid: '',
     title: '',
     slug: '',
@@ -117,7 +136,7 @@ export function createEmptyProductEditorValues(
     quantity: null,
     description: '',
     text: '',
-    tabs: [],
+    tabs: initialTabs,
     photo: '',
     priceOld: null,
     discountPrice: null,
@@ -160,6 +179,7 @@ export function ProductEditorForm({
     activeBrand === 'sprint-power'
       ? 'Показывать в блоке "Хиты продаж"'
       : 'Показывать в блоке "Новинки ассортимента"';
+  const isInnerBrandEditor = formData.brand === 'inner'
 
   useEffect(() => {
     setFormData(initialValues);
@@ -659,6 +679,7 @@ export function ProductEditorForm({
             <ProductTabsEditor
               value={formData.tabs}
               onChange={(tabs) => setFormData((prev) => ({ ...prev, tabs }))}
+              managedMode={isInnerBrandEditor}
             />
           </div>
 

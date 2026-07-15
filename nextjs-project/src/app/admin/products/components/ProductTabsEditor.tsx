@@ -21,6 +21,7 @@ import { ProductCharacteristicsEditor } from './ProductCharacteristicsEditor'
 import { ProductRichTextEditor } from './ProductRichTextEditor'
 import {
   createEmptyProductTab,
+  PRODUCT_SYSTEM_SECTION_META,
   type ProductTabEditorItem,
   type ProductTabEditorType,
 } from '@/lib/product-tabs'
@@ -29,6 +30,7 @@ import { sanitizeProductTitleInput } from '@/lib/sanitize-text'
 interface ProductTabsEditorProps {
   value: ProductTabEditorItem[]
   onChange: (tabs: ProductTabEditorItem[]) => void
+  managedMode?: boolean
 }
 
 interface SortableTabCardProps {
@@ -39,6 +41,7 @@ interface SortableTabCardProps {
 }
 
 function SortableTabCard({ tab, index, onTabChange, onDelete }: SortableTabCardProps) {
+  const isSystemBlock = typeof tab.key === 'string' && tab.key in PRODUCT_SYSTEM_SECTION_META
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
   })
@@ -71,6 +74,15 @@ function SortableTabCard({ tab, index, onTabChange, onDelete }: SortableTabCardP
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Таб {index + 1}
             </span>
+            {isSystemBlock ? (
+              <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                Системный блок
+              </span>
+            ) : (
+              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                Пользовательский блок
+              </span>
+            )}
             <select
               value={tab.editorType}
               onChange={(event) =>
@@ -81,34 +93,59 @@ function SortableTabCard({ tab, index, onTabChange, onDelete }: SortableTabCardP
               }
               className="form-input w-auto min-w-[180px]"
               aria-label="Тип содержимого таба"
+              disabled={isSystemBlock}
             >
               <option value="richtext">Текст и фото</option>
               <option value="characteristics">Таблица характеристик</option>
             </select>
+            {isSystemBlock && (
+              <label className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={tab.isVisible !== false}
+                  onChange={(event) =>
+                    onTabChange({
+                      ...tab,
+                      isVisible: event.target.checked,
+                    })
+                  }
+                  className="form-input h-4 w-4 rounded"
+                />
+                Показывать блок
+              </label>
+            )}
           </div>
 
-          <input
-            type="text"
-            value={tab.title}
-            onChange={(event) =>
-              onTabChange({
-                ...tab,
-                title: sanitizeProductTitleInput(event.target.value),
-              })
-            }
-            className="form-input w-full max-w-md"
-            placeholder="Название таба, например: Состав"
-          />
+          {isSystemBlock ? (
+            <div className="rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
+              {tab.title}
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={tab.title}
+              onChange={(event) =>
+                onTabChange({
+                  ...tab,
+                  title: sanitizeProductTitleInput(event.target.value),
+                })
+              }
+              className="form-input w-full max-w-md"
+              placeholder="Название таба, например: Состав"
+            />
+          )}
         </div>
 
-        <button
-          type="button"
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
-          aria-label="Удалить таб"
-          onClick={() => onDelete(tab.id)}
-        >
-          <Trash className="h-4 w-4" />
-        </button>
+        {!isSystemBlock && (
+          <button
+            type="button"
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800 dark:hover:text-red-400"
+            aria-label="Удалить таб"
+            onClick={() => onDelete(tab.id)}
+          >
+            <Trash className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {tab.editorType === 'characteristics' ? (
@@ -127,7 +164,7 @@ function SortableTabCard({ tab, index, onTabChange, onDelete }: SortableTabCardP
   )
 }
 
-export function ProductTabsEditor({ value, onChange }: ProductTabsEditorProps) {
+export function ProductTabsEditor({ value, onChange, managedMode = false }: ProductTabsEditorProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -183,7 +220,7 @@ export function ProductTabsEditor({ value, onChange }: ProductTabsEditorProps) {
 
       <div className="flex">
         <Button type="button" variant="secondary" onClick={handleAddTab}>
-          Добавить таб
+          {managedMode ? 'Добавить пользовательский блок' : 'Добавить таб'}
         </Button>
       </div>
     </div>
