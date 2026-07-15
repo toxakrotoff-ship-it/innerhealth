@@ -315,8 +315,51 @@ export default async function CategoryPage({ params }: PageProps) {
               isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-gradient-to-br from-white to-gray-50'
             )}
           >
-            <div className={cn('grid', categoryImage ? 'lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.45fr)]' : undefined)}>
-              <div className="flex flex-col justify-center px-6 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
+            {categoryImage ? (
+              <div className="relative min-h-[260px] sm:min-h-[320px] lg:min-h-[360px]">
+                <Image
+                  src={categoryImage}
+                  alt={categoryImageAlt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 1200px"
+                />
+                <div
+                  className={cn(
+                    'absolute inset-0',
+                    isSprintTheme
+                      ? 'bg-linear-to-r from-[#060A14]/88 via-[#060A14]/58 to-[#060A14]/18'
+                      : 'bg-linear-to-r from-white/92 via-white/70 to-white/18'
+                  )}
+                  aria-hidden
+                />
+                <div className="relative z-10 flex min-h-[260px] items-center px-6 py-7 sm:min-h-[320px] sm:px-8 sm:py-9 lg:min-h-[360px] lg:px-10 lg:py-10">
+                  <div className="max-w-2xl">
+                    <h1
+                      className={cn(
+                        `tracking-tight drop-shadow-sm ${categoryTitleFont}`,
+                        isSprintTheme
+                          ? 'text-2xl font-medium text-slate-100 sm:text-3xl'
+                          : 'text-2xl font-medium text-text sm:text-3xl'
+                      )}
+                    >
+                      {categoryHeading}
+                    </h1>
+                    {categoryTeaser ? (
+                      <p
+                        className={cn(
+                          'mt-4 max-w-xl text-base leading-7',
+                          isSprintTheme ? 'text-slate-300' : 'text-gray-700'
+                        )}
+                      >
+                        {categoryTeaser}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="px-6 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
                 <h1
                   className={cn(
                     `tracking-tight ${categoryTitleFont}`,
@@ -336,25 +379,7 @@ export default async function CategoryPage({ params }: PageProps) {
                   </p>
                 ) : null}
               </div>
-              {categoryImage ? (
-                <div
-                  className={cn(
-                    'relative min-h-[240px] border-t',
-                    isSprintTheme ? 'border-slate-700 lg:border-t-0 lg:border-l' : 'border-gray-200 lg:border-t-0 lg:border-l'
-                  )}
-                >
-                  <div className="relative aspect-[16/9] h-full min-h-[240px] w-full lg:aspect-auto lg:min-h-[320px]">
-                    <Image
-                      src={categoryImage}
-                      alt={categoryImageAlt}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1024px) 100vw, 58vw"
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            )}
           </div>
           {category.children.length > 0 && (
             <div
