@@ -201,6 +201,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
 
   return (
     <ProductEditorForm
+      productId={productId}
       activeBrand={activeBrand}
       initialValues={initialValues}
       title="Редактирование товара"

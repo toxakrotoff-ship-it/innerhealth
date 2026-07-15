@@ -84,6 +84,8 @@ model Product {
   giftPromotions                       GiftPromotion[]
   /// Категории, где этот товар показан как «главный» в блоке линейки
   categoriesFeaturedFor                Category[]        @relation("CategoryFeaturedProduct")
+  outgoingRelations                    ProductRelation[] @relation("ProductRelationSource")
+  incomingRelations                    ProductRelation[] @relation("ProductRelationTarget")
 
   @@index([slug])
   @@index([createdAt])
@@ -95,6 +97,25 @@ model Product {
   @@index([isDraft, priceOld])
   @@index([isDraft, title, createdAt])
   @@index([isDraft, isFeaturedInNewArrivals, createdAt])
+}
+
+model ProductRelation {
+  id              String              @id @default(cuid())
+  brand           String              @default("inner")
+  sourceProductId String
+  targetProductId String
+  relationType    ProductRelationType
+  sortOrder       Int                 @default(0)
+  isPublished     Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  sourceProduct   Product             @relation("ProductRelationSource", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  targetProduct   Product             @relation("ProductRelationTarget", fields: [targetProductId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceProductId, targetProductId, relationType])
+  @@index([sourceProductId, relationType, isPublished, sortOrder])
+  @@index([targetProductId])
+  @@index([brand])
 }
 
 model Category {
@@ -846,4 +867,13 @@ enum FunnelStep {
   CART_ADD
   CHECKOUT_START
   ORDER_CREATED
+}
+
+enum ProductRelationType {
+  RELATED
+  RECOMMENDED
+  CROSS_SELL
+  UPSELL
+  ALTERNATIVE
+  BUNDLE
 }

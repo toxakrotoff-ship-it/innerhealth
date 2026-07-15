@@ -79,6 +79,27 @@ interface ProductPageContentProps {
     quantity?: number | null
     isPreorderEnabled?: boolean
   }>
+  relationSections?: Array<{
+    type: 'RELATED' | 'RECOMMENDED' | 'CROSS_SELL' | 'UPSELL' | 'ALTERNATIVE' | 'BUNDLE'
+    title: string
+    items: Array<{
+      id: string
+      parentUid: string | null
+      title: string
+      brand: string | null
+      sku: string | null
+      weight?: number | null
+      price: number
+      priceOld: number | null
+      photo: string | null
+      photos?: unknown
+      slug: string | null
+      isPromoEligible: boolean
+      discountPrice: number | null
+      quantity?: number | null
+      isPreorderEnabled?: boolean
+    }>
+  }>
   isSprintTheme?: boolean
 }
 
@@ -191,6 +212,7 @@ export function ProductPageContent({
   photos,
   flavorVariants = [],
   relatedProducts,
+  relationSections = [],
   breadcrumbItems,
   relatedProductsCategoryTitle,
   isSprintTheme = false,
@@ -225,6 +247,8 @@ export function ProductPageContent({
       { label: product.title },
     ]
   const relatedListingItems = groupProductsForListing(relatedProducts)
+  const hasManualRelatedSection = relationSections.some((section) => section.type === 'RELATED')
+  const shouldRenderAutomaticRelated = relatedProducts.length > 0 && !hasManualRelatedSection
 
   return (
     <AdaptiveContainer
@@ -375,7 +399,69 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      {relatedProducts.length > 0 && (
+      {relationSections.map((section) => {
+        const sectionItems = groupProductsForListing(section.items)
+        if (sectionItems.length === 0) return null
+
+        return (
+          <ScalableSpacing size="lg" key={section.type}>
+            <section
+              className={
+                (isSprintTheme ? tabs.length > 0 : (innerContent?.sections.length ?? 0) > 0)
+                  ? 'pt-6 sm:pt-8'
+                  : isSprintTheme
+                    ? 'border-t border-slate-700 pt-6 sm:pt-8'
+                    : 'border-t border-gray-200 pt-6 sm:pt-8'
+              }
+            >
+              <Heading2 className={cn('mb-4', isSprintTheme && 'text-slate-100')}>
+                {section.title}
+              </Heading2>
+              <FluidGrid
+                cols={2}
+                colsTablet={3}
+                colsDesktop={4}
+                colsXl={4}
+                cols2xl={4}
+                cols3xl={4}
+                cols4xl={4}
+                cols5xl={4}
+                cols6xl={4}
+                gap={4}
+                adaptiveGap
+                className="max-sm:grid-cols-1"
+              >
+                {sectionItems.map((item) =>
+                  item.kind === 'single' ? (
+                    <ProductCard
+                      key={item.product.id}
+                      id={item.product.id}
+                      title={item.product.title}
+                      brand={item.product.brand}
+                      sku={item.product.sku}
+                      weight={item.product.weight}
+                      price={item.product.price}
+                      priceOld={item.product.priceOld}
+                      photo={item.product.photo}
+                      photos={item.product.photos}
+                      slug={item.product.slug}
+                      isPromoEligible={item.product.isPromoEligible}
+                      discountPrice={item.product.discountPrice}
+                      quantity={item.product.quantity}
+                      isPreorderEnabled={item.product.isPreorderEnabled}
+                      blurDataURL={getFirstPhotoBlurDataURL(item.product.photos)}
+                    />
+                  ) : (
+                    <GroupedProductCard key={item.parentUid} group={item} />
+                  )
+                )}
+              </FluidGrid>
+            </section>
+          </ScalableSpacing>
+        )
+      })}
+
+      {shouldRenderAutomaticRelated && (
         <ScalableSpacing size="lg">
           <section
             className={

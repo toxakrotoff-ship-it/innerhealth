@@ -11,6 +11,7 @@ import { ProductGalleryEditor } from './ProductGalleryEditor';
 import type { ProductGalleryEditorPhoto } from './ProductGalleryEditor';
 import { ProductRichTextEditor } from './ProductRichTextEditor';
 import { ProductTabsEditor } from './ProductTabsEditor';
+import { ProductRelationsEditor } from './ProductRelationsEditor';
 import {
   buildInnerProductTabsForEditor,
   sanitizeProductTabEditorItems,
@@ -19,7 +20,7 @@ import {
   type ProductTabEditorItem,
 } from '@/lib/product-tabs';
 
-type AdminBrand = 'inner' | 'sprint-power';
+export type AdminBrand = 'inner' | 'sprint-power';
 
 export interface ProductEditorFormValues {
   brand: AdminBrand;
@@ -92,6 +93,7 @@ export interface ProductEditorSubmitPayload {
 }
 
 interface ProductEditorFormProps {
+  productId?: string | null;
   activeBrand: AdminBrand | null;
   initialValues: ProductEditorFormValues;
   title: string;
@@ -157,6 +159,7 @@ export function createEmptyProductEditorValues(
 }
 
 export function ProductEditorForm({
+  productId = null,
   activeBrand,
   initialValues,
   title,
@@ -643,6 +646,8 @@ export function ProductEditorForm({
               categories={availableCategories}
             />
           </div>
+
+          <ProductRelationsEditor sourceProductId={productId} activeBrand={activeBrand} />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
