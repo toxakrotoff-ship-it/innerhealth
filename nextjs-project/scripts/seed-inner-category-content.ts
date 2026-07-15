@@ -38,11 +38,11 @@ function textNode(text: string) {
 }
 
 function paragraph(text: string) {
-  return { type: 'paragraph', content: [textNode(text)] }
+  return { type: 'paragraph', content: [textNode(text)] } as Prisma.InputJsonValue
 }
 
 function heading(text: string) {
-  return { type: 'heading', attrs: { level: 2 }, content: [textNode(text)] }
+  return { type: 'heading', attrs: { level: 2 }, content: [textNode(text)] } as Prisma.InputJsonValue
 }
 
 function bulletList(items: readonly string[]) {
@@ -52,7 +52,7 @@ function bulletList(items: readonly string[]) {
       type: 'listItem',
       content: [paragraph(item)],
     })),
-  }
+  } as Prisma.InputJsonValue
 }
 
 function buildDoc(options: {
@@ -60,14 +60,14 @@ function buildDoc(options: {
   bullets?: readonly string[]
   paragraphs: readonly string[]
 }): Prisma.InputJsonValue {
-  const content = [heading(options.heading)]
+  const content: Prisma.InputJsonValue[] = [heading(options.heading)]
   if (options.bullets?.length) content.push(bulletList(options.bullets))
   content.push(...options.paragraphs.map((item) => paragraph(item)))
   return { type: 'doc', content }
 }
 
 const INNER_CATEGORY_CONTENT: Record<string, InnerCategorySeed> = {
-  podarkovye-nabory: {
+  'podarkovye-nabory': {
     title: 'Подарочные наборы',
     pageTitle: 'Подарочные наборы Inner Health',
     catalogTeaser:
