@@ -3,7 +3,6 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { ProductCard } from '@/components/site/product-card'
 import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
@@ -15,12 +14,10 @@ import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { stripHtmlToPlainText } from '@/lib/plain-text'
 import { getCategoryHeroBannerAlt } from '@/lib/image-alt-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
-import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 import { groupProductsForListing } from '@/lib/product-grouping'
@@ -43,8 +40,21 @@ import { BCAA6000_INFO_CELLS } from '@/content/bcaa6000-category-info'
 import { cn } from '@/lib/utils'
 import { NutrientCategoryUsageComposition } from '@/components/site/nutrient-category-usage-composition'
 import { NutrientCategoryBenefitsBento } from '@/components/site/nutrient-category-benefits-bento'
-import { extractPlainTextFromTipTap } from '@/lib/tiptap-plain-text'
 import { buildMetadataWithSocial, normalizeSeoDescription, parseSeoKeywords, trimToNull } from '@/lib/seo'
+import {
+  hasNonEmptyTipTapDoc,
+  resolveCategoryDescriptionDoc,
+  resolveCategoryHeading,
+  resolveCategoryImageAlt,
+  resolveCategoryMetadataDescription,
+  resolveCategoryTeaser,
+} from '@/lib/category-page-content'
+import {
+  getPublicCategoryBySlug,
+  getPublicCategoryMetadataBySlug,
+  getPublishedCategoryTree,
+} from '@/services/category.service'
+import { prisma } from '@/lib/prisma'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -74,25 +84,6 @@ function SprintLineTipTapBlock({ raw }: { raw: unknown }) {
   )
 }
 
-function hasNonEmptyTipTapDoc(raw: unknown): boolean {
-  if (raw == null) return false
-  if (typeof raw === 'string') {
-    const t = raw.trim()
-    if (!t) return false
-    try {
-      const parsed = JSON.parse(t) as { type?: string; content?: unknown[] }
-      return parsed?.type === 'doc' && Array.isArray(parsed.content) && parsed.content.length > 0
-    } catch {
-      return t.length > 0
-    }
-  }
-  if (typeof raw === 'object' && raw !== null) {
-    const doc = raw as { type?: string; content?: unknown[] }
-    return doc.type === 'doc' && Array.isArray(doc.content) && doc.content.length > 0
-  }
-  return false
-}
-
 /** Статический рендер категории, ревалидация раз в 10 минут. */
 export const revalidate = 600
 export const dynamic = 'force-dynamic'
@@ -108,21 +99,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     forwardedBrand: headerStore.get('x-brand'),
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
-  const category = await prisma.category.findUnique({
-    where: { brand_slug: { brand: resolveDbBrand(activeBrand), slug: categorySlug } },
-    select: {
-      title: true,
-      pageTitle: true,
-      seoTitle: true,
-      seoDescription: true,
-      seoKeywords: true,
-      image: true,
-      imageAlt: true,
-      linePageBodyRichJson: true,
-      isPublished: true,
-      brand: true,
-    },
-  })
+  const category = await getPublicCategoryMetadataBySlug(categorySlug, activeBrand)
   if (!category) {
     return {}
   }
@@ -136,32 +113,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  const content = getCategoryPageContent(categorySlug, activeBrand)
   const brandSite = getBrandSiteConfig(activeBrand)
-  let description = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
-  const linePageText = extractPlainTextFromTipTap(category.linePageBodyRichJson, 158)
-  const fallbackContentDoc = getCategoryPageContentDoc(categorySlug, activeBrand)
-  const fallbackContentText = fallbackContentDoc
-    ? extractPlainTextFromTipTap(fallbackContentDoc, 158)
-    : ''
-  if (linePageText) {
-    description = linePageText
-  } else if (fallbackContentText) {
-    description = fallbackContentText
-  } else if (content?.paragraphs?.length) {
-    description = stripHtmlToPlainText(content.paragraphs[0] ?? '', 158)
-  } else if (content?.bullets?.length) {
-    description = stripHtmlToPlainText(content.bullets.join(' '), 158)
-  }
+  const descriptionFallback = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
+  const fallbackContentDoc = category.showLegacyLinePageBlocks
+    ? getCategoryPageContentDoc(categorySlug, activeBrand)
+    : null
+  const description = resolveCategoryMetadataDescription({
+    category,
+    legacyDoc: fallbackContentDoc,
+    fallbackDescription: descriptionFallback,
+  })
 
   const path = `/catalog/${categorySlug}`
   const metadataTitle = trimToNull(category.seoTitle) ?? trimToNull(category.pageTitle) ?? category.title
   const metadataDescription = normalizeSeoDescription(category.seoDescription, 200) ?? description
-  const imageAlt =
-    trimToNull(category.imageAlt) ??
-    trimToNull(getCategoryHeroBannerAlt(category.title, content?.heroSubtitle)) ??
-    trimToNull(category.pageTitle) ??
-    category.title
+  const imageAlt = resolveCategoryImageAlt(category)
 
   return buildMetadataWithSocial({
     title: metadataTitle,
@@ -179,7 +145,6 @@ export default async function CategoryPage({ params }: PageProps) {
     forwardedBrand: headerStore.get('x-brand'),
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
-  const dbBrand = resolveDbBrand(activeBrand)
   const isSprintTheme = isSprintPowerBrand(activeBrand)
   const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant', activeBrand)
   const categoryTitleFont =
@@ -188,49 +153,7 @@ export default async function CategoryPage({ params }: PageProps) {
       : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
         ? 'font-script'
         : 'font-display'
-  const category = await prisma.category.findUnique({
-    where: { brand_slug: { brand: dbBrand, slug: categorySlug } },
-    include: {
-      children: {
-        where: { brand: dbBrand, isPublished: true },
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          sortOrder: true,
-        },
-        orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
-      },
-      products: {
-        where: {
-          product: {
-            isDraft: false,
-          },
-        },
-        include: {
-          product: {
-            select: {
-              id: true,
-              parentUid: true,
-              title: true,
-              brand: true,
-              sku: true,
-              price: true,
-              priceOld: true,
-              photo: true,
-              photos: true,
-              slug: true,
-              isDraft: true,
-              isPromoEligible: true,
-              discountPrice: true,
-              quantity: true,
-              isPreorderEnabled: true,
-            },
-          },
-        },
-      },
-    },
-  })
+  const category = await getPublicCategoryBySlug(categorySlug, activeBrand)
 
   if (!category) notFound()
   if (!category.isPublished) notFound()
@@ -290,16 +213,7 @@ export default async function CategoryPage({ params }: PageProps) {
     }
   }
 
-  const allCategories = await prisma.category.findMany({
-    where: { brand: dbBrand, isPublished: true },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      parentId: true,
-      sortOrder: true,
-    },
-  })
+  const allCategories = await getPublishedCategoryTree(activeBrand)
 
   const breadcrumbChain = getCategoryAncestorChain(allCategories, category.id)
   const breadcrumbItems = [
@@ -322,18 +236,28 @@ export default async function CategoryPage({ params }: PageProps) {
     : visible
   const listingItems = groupProductsForListing(products)
   const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
-  const content = getCategoryPageContent(categorySlug, activeBrand)
-  const fallbackDescriptionDoc = getCategoryPageContentDoc(categorySlug, activeBrand)
-  const hasHero = Boolean(content?.heroImage)
-  const hasEditableDescription = hasNonEmptyTipTapDoc(category.linePageBodyRichJson)
-  const descriptionDocRaw =
-    hasEditableDescription && !isSprintTheme ? category.linePageBodyRichJson : fallbackDescriptionDoc
+  const content = isSprintTheme ? getCategoryPageContent(categorySlug, activeBrand) : undefined
+  const legacyDescriptionDoc = category.showLegacyLinePageBlocks
+    ? getCategoryPageContentDoc(categorySlug, activeBrand)
+    : null
+  const hasHero = isSprintTheme && Boolean(content?.heroImage)
+  const descriptionDocRaw = !isSprintTheme
+    ? resolveCategoryDescriptionDoc({
+        linePageBodyRichJson: category.linePageBodyRichJson,
+        legacyDoc: legacyDescriptionDoc,
+        showLegacyLinePageBlocks: category.showLegacyLinePageBlocks,
+      })
+    : null
+  const categoryHeading = resolveCategoryHeading(category)
+  const categoryTeaser = resolveCategoryTeaser(category)
+  const categoryImage = trimToNull(category.image)
+  const categoryImageAlt = resolveCategoryImageAlt(category)
 
   const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date(), activeBrand) : []
 
   return (
     <>
-      {/* Hero баннер для категорий с контентом */}
+      {/* Hero баннер для категорий Sprint Power с legacy-контентом */}
       {hasHero && content && (
         <section
           className="relative w-full overflow-hidden bg-[#e8d5d8]"
@@ -388,8 +312,36 @@ export default async function CategoryPage({ params }: PageProps) {
           <h1
             className={`mb-6 text-lg font-medium tracking-tight drop-shadow-md 2xl:text-xl 3xl:text-2xl ${categoryTitleFont} ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
           >
-            {category.pageTitle?.trim() || category.title}
+            {categoryHeading}
           </h1>
+          {categoryTeaser ? (
+            <p
+              className={cn(
+                'mb-6 max-w-3xl text-sm leading-7 sm:text-base',
+                isSprintTheme ? 'text-slate-300' : 'text-gray-700'
+              )}
+            >
+              {categoryTeaser}
+            </p>
+          ) : null}
+          {categoryImage ? (
+            <div
+              className={cn(
+                'mb-8 overflow-hidden rounded-3xl border',
+                isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-gray-50'
+              )}
+            >
+              <div className="relative aspect-[16/7] w-full">
+                <Image
+                  src={categoryImage}
+                  alt={categoryImageAlt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 90vw, 1200px"
+                />
+              </div>
+            </div>
+          ) : null}
           {category.children.length > 0 && (
             <div
               className={`mb-8 rounded-xl p-4 ${
@@ -528,7 +480,7 @@ export default async function CategoryPage({ params }: PageProps) {
 
           {products.length === 0 ? (
             <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
-              В этой категории пока нет товаров.
+              В этой категории пока нет доступных товаров.
             </p>
           ) : (
             <FluidGrid

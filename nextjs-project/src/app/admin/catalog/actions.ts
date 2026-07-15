@@ -117,9 +117,7 @@ function stripSprintOnlyCategoryFields<T extends Partial<CategoryInput> | Catego
 ): T {
   if (isSprintPowerBrand(brandId)) return payload;
   const rest = { ...(payload as Record<string, unknown>) };
-  delete rest.catalogTeaser;
   delete rest.featuredProductId;
-  delete rest.showLegacyLinePageBlocks;
   return rest as T;
 }
 
@@ -155,7 +153,9 @@ const innerCategoryAdminListSelect = {
   isPublished: true,
   parentId: true,
   showInCategoriesBlock: true,
+  catalogTeaser: true,
   linePageBodyRichJson: true,
+  showLegacyLinePageBlocks: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.CategorySelect;
@@ -179,13 +179,13 @@ function mapInnerCategoryAdminListRow(row: InnerCategoryAdminListRow): Category 
     isPublished: row.isPublished,
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
-    catalogTeaser: null,
+    catalogTeaser: row.catalogTeaser,
     linePageBodyRichJson:
       row.linePageBodyRichJson != null
         ? (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue)
         : null,
     featuredProductId: null,
-    showLegacyLinePageBlocks: false,
+    showLegacyLinePageBlocks: row.showLegacyLinePageBlocks,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -207,13 +207,13 @@ function mapPrismaCategoryToAdmin(row: PrismaCategory): Category {
     isPublished: row.isPublished,
     parentId: row.parentId,
     showInCategoriesBlock: row.showInCategoriesBlock,
-    catalogTeaser: sprintRow ? (row.catalogTeaser ?? null) : null,
+    catalogTeaser: row.catalogTeaser ?? null,
     linePageBodyRichJson:
-      sprintRow && row.linePageBodyRichJson != null
+      row.linePageBodyRichJson != null
         ? (JSON.parse(JSON.stringify(row.linePageBodyRichJson)) as Prisma.JsonValue)
         : null,
     featuredProductId: sprintRow ? (row.featuredProductId ?? null) : null,
-    showLegacyLinePageBlocks: sprintRow ? row.showLegacyLinePageBlocks : false,
+    showLegacyLinePageBlocks: row.showLegacyLinePageBlocks,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -252,6 +252,7 @@ async function assertFeaturedProductInCategory(
 
 function revalidateCategoryPaths(slugs: string[]): void {
   revalidateCategoryStorefront(slugs);
+  revalidatePath('/sitemap.xml');
 }
 
 async function ensureCategoryParentExists(

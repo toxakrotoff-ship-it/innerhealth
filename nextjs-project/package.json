@@ -23,6 +23,7 @@
     "favicon": "node scripts/generate-favicon.mjs",
     "seed:categories": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/seed-categories.ts",
     "seed:category-line-drafts": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' -r tsconfig-paths/register scripts/seed-category-line-drafts.ts",
+    "seed:inner-category-content": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/seed-inner-category-content.ts",
     "create-admin": "ts-node scripts/create-admin-user.ts",
     "add-admin": "ts-node scripts/add-admin-user.ts",
     "import-tilda-leads": "ts-node scripts/import-tilda-leads.ts",

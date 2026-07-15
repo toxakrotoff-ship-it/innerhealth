@@ -283,14 +283,14 @@ export default function AdminCategoriesPage() {
           parentId: formData.parentId || null,
           isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
+          catalogTeaser: formData.catalogTeaser.trim() || null,
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? undefined
             : lineDocToJsonValue(formData.linePageBodyRichJson),
+          showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
           ...(activeBrand === 'sprint-power'
             ? {
-                catalogTeaser: formData.catalogTeaser.trim() || null,
                 featuredProductId: formData.featuredProductId.trim() || null,
-                showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
         },
@@ -344,14 +344,14 @@ export default function AdminCategoriesPage() {
           parentId: formData.parentId || null,
           isPublished: formData.isPublished,
           showInCategoriesBlock: formData.showInCategoriesBlock,
+          catalogTeaser: formData.catalogTeaser.trim() || null,
           linePageBodyRichJson: isEmptyLineDoc(formData.linePageBodyRichJson)
             ? null
             : lineDocToJsonValue(formData.linePageBodyRichJson),
+          showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
           ...(activeBrand === 'sprint-power'
             ? {
-                catalogTeaser: formData.catalogTeaser.trim() || null,
                 featuredProductId: formData.featuredProductId.trim() || null,
-                showLegacyLinePageBlocks: formData.showLegacyLinePageBlocks,
               }
             : {}),
         },
@@ -708,23 +708,29 @@ export default function AdminCategoriesPage() {
                   <span>Опубликована</span>
                 </label>
 
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    id="showInCategoriesBlock"
-                    checked={formData.showInCategoriesBlock ?? true}
-                    onChange={(e) => setFormData({ ...formData, showInCategoriesBlock: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <span>Показывать в блоке «Разделы каталога» на главной</span>
-                </label>
               </div>
 
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
-                <h3 className="text-sm font-semibold text-gray-900">Изображение</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Карточка категории</h3>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Фото для карточки на главной
+                    Краткое описание
+                  </label>
+                  <textarea
+                    value={formData.catalogTeaser}
+                    onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
+                    className="form-input min-h-[84px]"
+                    rows={3}
+                    placeholder="Короткий текст для верхней части категории и карточек направлений"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Показывается в верхней части категории и на главной, если раздел используется как направление.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Изображение категории
                   </label>
                   <CoverImageDropzone
                     value={formData.image}
@@ -747,6 +753,17 @@ export default function AdminCategoriesPage() {
                     className="form-input"
                   />
                 </div>
+
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    id="showInCategoriesBlock"
+                    checked={formData.showInCategoriesBlock ?? true}
+                    onChange={(e) => setFormData({ ...formData, showInCategoriesBlock: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span>Показывать в блоке «Разделы каталога» на главной</span>
+                </label>
               </div>
 
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
@@ -793,26 +810,10 @@ export default function AdminCategoriesPage() {
               </div>
 
               <div className="space-y-4 rounded-2xl border border-gray-200 p-4">
-                <h3 className="text-sm font-semibold text-gray-900">Контент страницы</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Полный текст</h3>
 
               {activeBrand === 'sprint-power' ? (
                 <>
-                  <p className="text-xs text-slate-700 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
-                    Ниже — Sprint-специфичные поля для главной и страницы категории. Для Inner Health из этого блока не используются тизер, товар линейки и переключатель старых блоков.
-                  </p>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Тизер для главной (блок «Вся линейка»)
-                    </label>
-                    <textarea
-                      value={formData.catalogTeaser}
-                      onChange={(e) => setFormData({ ...formData, catalogTeaser: e.target.value })}
-                      className="form-input min-h-[72px]"
-                      rows={3}
-                      placeholder="Короткий текст под названием на главной Sprint. Если пусто — показывается число товаров."
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       ID товара для блока «купить» на странице категории
@@ -862,22 +863,49 @@ export default function AdminCategoriesPage() {
                       placeholder="Описание линейки, таблицы, юридические абзацы…"
                     />
                   </div>
+
+                  <p className="text-xs text-slate-700 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 leading-relaxed">
+                    Полный текст страницы рендерится из редактора ниже. Если редактор пуст и переключатель legacy включён, витрина использует старый контент из кода как fallback.
+                  </p>
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Текст под сеткой каталога (страница категории)
-                  </label>
-                  <SprintCategoryLineEditor
-                    key={editingCategory?.id ?? (isCreating ? 'create' : 'idle')}
-                    value={formData.linePageBodyRichJson}
-                    onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
-                    placeholder="Заголовок, списки и абзацы для нижнего блока категории…"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Старый текст из кода подставится сюда при открытии категории. После сохранения этот блок будет редактироваться уже из админки.
-                  </p>
-                </div>
+                <>
+                  <div>
+                    <label className="flex items-start gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.showLegacyLinePageBlocks}
+                        onChange={(e) =>
+                          setFormData({ ...formData, showLegacyLinePageBlocks: e.target.checked })
+                        }
+                        className="mt-1 rounded border-gray-300"
+                      />
+                      <span>
+                        <span className="font-medium text-gray-800">
+                          Использовать legacy fallback, если rich text пуст
+                        </span>
+                        <span className="mt-1 block text-xs text-gray-500">
+                          Когда редактор пуст, витрина может показать старый текст из кода. Новый rich text всегда имеет приоритет и не дублируется с legacy.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Текст под сеткой каталога (страница категории)
+                    </label>
+                    <SprintCategoryLineEditor
+                      key={editingCategory?.id ?? (isCreating ? 'create' : 'idle')}
+                      value={formData.linePageBodyRichJson}
+                      onChange={(next) => setFormData({ ...formData, linePageBodyRichJson: next })}
+                      placeholder="Заголовок, списки и абзацы для нижнего блока категории…"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Старый текст из кода подставится сюда при открытии категории. После сохранения этот блок будет редактироваться уже из админки.
+                    </p>
+                  </div>
+                </>
               )}
               </div>
               

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { prisma } from '@/lib/prisma'
 import * as productService from '@/services/product.service'
 import { ProductCard } from '@/components/site/product-card'
 import { GroupedProductCard } from '@/components/site/grouped-product-card'
@@ -32,12 +31,13 @@ import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
-import { resolveDbBrand } from '@/lib/brand/brand-db'
 import {
   formatAktsiiCatalogBlockSubtitleRu,
   formatProductsCountRu,
 } from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
+import { trimToNull } from '@/lib/seo'
+import { getCatalogBlockCategories } from '@/services/category.service'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -109,7 +109,6 @@ const PRODUCTS_PER_PAGE = 24
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const { brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
-  const dbBrand = resolveDbBrand(brandId)
   const sp = await searchParams
   const {
     page,
@@ -124,19 +123,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
 
   const now = new Date()
   const [categories, brandOptions, catalogResult, publicGiftPromotionCount] = await Promise.all([
-    prisma.category.findMany({
-      where: { showInCategoriesBlock: true, isPublished: true, brand: dbBrand },
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        _count: {
-          select: {
-            products: {
-              where: { product: { isDraft: false } },
-            },
-          },
-        },
-      },
-    }),
+    getCatalogBlockCategories(brandId),
     productService.getCatalogBrandOptions().then((options) =>
       isSprintPowerBrand(brandId)
         ? options.filter((b) => b === 'sprint-power')
@@ -255,7 +242,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         <>
                           <Image
                             src={bgImage}
-                            alt={getCategoryCardImageAlt(cat.title)}
+                            alt={trimToNull(cat.imageAlt) ?? getCategoryCardImageAlt(cat.title)}
                             fill
                             className={imagePosition}
                             sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}
@@ -288,7 +275,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                                 cat._count.products,
                                 publicGiftPromotionCount
                               )
-                            : formatProductsCountRu(cat._count.products)}
+                            : trimToNull(cat.catalogTeaser) ?? formatProductsCountRu(cat._count.products)}
                         </span>
                       )}
                     </div>
