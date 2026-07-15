@@ -150,15 +150,21 @@ function ProductShortDescription({
   description: string
   isSprintTheme: boolean
 }) {
+  const className = cn(
+    'mt-4 min-w-0 max-w-2xl break-words text-sm leading-6 [overflow-wrap:anywhere] sm:text-base [&_p]:my-0 [&_p+p]:mt-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_strong]:font-semibold',
+    isSprintTheme
+      ? 'text-slate-300 [&_strong]:text-slate-100'
+      : 'text-gray-700 [&_strong]:text-gray-900'
+  )
+
+  if (looksLikeHtmlMarkup(description)) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: description }} />
+  }
+
   return (
-    <p
-      className={cn(
-        'mt-4 max-w-2xl text-sm leading-6 sm:text-base line-clamp-4',
-        isSprintTheme ? 'text-slate-300' : 'text-gray-700'
-      )}
-    >
-      {description}
-    </p>
+    <div className={className}>
+      <p className="whitespace-pre-line">{description}</p>
+    </div>
   )
 }
 

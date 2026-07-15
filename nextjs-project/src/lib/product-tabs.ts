@@ -135,21 +135,6 @@ function trimToNull(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function stripHtmlMarkup(value: string): string {
-  return value
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 function inferSystemSectionKey(
   title: string,
   editorType: ProductTabEditorType
@@ -413,8 +398,7 @@ export function normalizeInnerProductContent(product: ProductTabFields): Normali
     return a.title.localeCompare(b.title, 'ru')
   })
 
-  const shortDescriptionPlain = trimToNull(product.description)
-  const shortDescription = shortDescriptionPlain ? stripHtmlMarkup(shortDescriptionPlain) : null
+  const shortDescription = trimToNull(product.description)
 
   return {
     shortDescription,

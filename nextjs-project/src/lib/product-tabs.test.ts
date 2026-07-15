@@ -153,7 +153,7 @@ describe('product-tabs', () => {
       ],
     })
 
-    expect(normalized.shortDescription).toBe('Короткое описание')
+    expect(normalized.shortDescription).toBe('<p>Короткое описание</p>')
     expect(normalized.sections.map((section) => section.key)).toEqual([
       'usage',
       'description',
