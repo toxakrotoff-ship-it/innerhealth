@@ -690,7 +690,7 @@ export default function AdminContentPage() {
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_40%),radial-gradient(circle_at_top_right,rgba(191,219,254,0.20),transparent_32%),linear-gradient(180deg,rgba(239,246,255,0.95)_0%,rgba(255,255,255,0.9)_55%,rgba(255,255,255,1)_100%)]"
             aria-hidden
           />
-          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative z-10 flex min-w-0 flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="min-w-0">
               <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700">
                 Контент-редактор
@@ -702,29 +702,33 @@ export default function AdminContentPage() {
                 Экран собран как рабочее место редактора: слева навигация по группам блоков, справа текущее значение, наследование и оформление. Необязательно знать ключи CMS, чтобы понять, что меняется.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:min-w-[520px]">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Страница</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">{PAGES.find((p) => p.id === page)?.label}</div>
+                <div className="mt-1 break-words text-sm font-semibold text-slate-900">
+                  {PAGES.find((p) => p.id === page)?.label}
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Блоков</div>
                 <div className="mt-1 text-sm font-semibold text-slate-900">{blocks.length}</div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Изменено</div>
                 <div className="mt-1 text-sm font-semibold text-slate-900">{dirtyCount}</div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div className="text-xs font-medium uppercase tracking-wide text-slate-500">Статус</div>
-                <div className="mt-1 text-sm font-semibold text-slate-900">{saving ? 'Сохраняем…' : 'Готово к редактированию'}</div>
+                <div className="mt-1 break-words text-sm font-semibold text-slate-900">
+                  {saving ? 'Сохраняем…' : 'Готово к редактированию'}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="relative z-10 mt-4 grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="relative z-10 mt-4 grid min-w-0 gap-3 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
             <select
-              className="form-input w-full rounded-2xl border-slate-200 bg-white"
+              className="form-input min-w-0 w-full rounded-2xl border-slate-200 bg-white"
               value={page}
               onChange={(e) => setPage(e.target.value)}
             >
@@ -735,7 +739,7 @@ export default function AdminContentPage() {
               ))}
             </select>
             <input
-              className="form-input w-full rounded-2xl border-slate-200 bg-white"
+              className="form-input min-w-0 w-full rounded-2xl border-slate-200 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Найти блок по названию или ключу"
