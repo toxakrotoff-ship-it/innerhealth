@@ -299,7 +299,7 @@ export function productTabsFromLegacyFields(product: ProductTabFields): ProductT
   const titleKeys: ProductTabTitleKey[] = ['tab1Title', 'tab2Title', 'tab3Title', 'tab4Title']
 
   return contentKeys
-    .map((contentKey, index) => {
+    .map<ProductTabEditorItem | null>((contentKey, index) => {
       const content = product[contentKey]
       if (!content?.trim()) return null
       const customTitle = product[titleKeys[index]]?.trim()
