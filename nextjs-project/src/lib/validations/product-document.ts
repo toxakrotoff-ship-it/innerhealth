@@ -51,14 +51,14 @@ const baseDocumentMutationSchema = z
     }
   })
 
-export const createProductDocumentSchema = baseDocumentMutationSchema.extend({
+export const createProductDocumentSchema = baseDocumentMutationSchema.safeExtend({
   productId: z.string().trim().min(1, 'Товар обязателен'),
   fileUrl: z.string().trim().min(1, 'Сначала загрузите файл'),
   mimeType: z.string().trim().min(1, 'Не удалось определить MIME файла'),
   fileSize: z.number().int().nonnegative(),
 })
 
-export const updateProductDocumentSchema = baseDocumentMutationSchema.extend({
+export const updateProductDocumentSchema = baseDocumentMutationSchema.safeExtend({
   id: z.string().trim().min(1, 'Document ID is required'),
 })
 
