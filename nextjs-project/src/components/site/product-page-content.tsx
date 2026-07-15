@@ -271,8 +271,8 @@ export function ProductPageContent({
       { label: product.title },
     ]
   const relatedListingItems = groupProductsForListing(relatedProducts)
-  const hasManualRelatedSection = relationSections.some((section) => section.type === 'RELATED')
-  const shouldRenderAutomaticRelated = relatedProducts.length > 0 && !hasManualRelatedSection
+  const hasManualRelationSections = relationSections.length > 0
+  const shouldRenderAutomaticRelated = relatedProducts.length > 0 && !hasManualRelationSections
 
   return (
     <AdaptiveContainer

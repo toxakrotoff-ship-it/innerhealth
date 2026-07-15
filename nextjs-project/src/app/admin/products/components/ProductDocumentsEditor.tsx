@@ -61,6 +61,15 @@ interface EditableDocumentState extends AdminProductDocument {
 
 const DEFAULT_CREATE_TYPE: ProductDocumentType = 'DECLARATION'
 
+function inferMimeTypeFromFileName(fileName: string | null | undefined): string | null {
+  const normalized = fileName?.trim().toLowerCase() ?? ''
+  if (normalized.endsWith('.pdf')) return 'application/pdf'
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg'
+  if (normalized.endsWith('.png')) return 'image/png'
+  if (normalized.endsWith('.webp')) return 'image/webp'
+  return null
+}
+
 function toDateInputValue(value: string | null | undefined): string {
   if (!value) return ''
   return value.slice(0, 10)
@@ -91,7 +100,16 @@ async function uploadProductDocumentFile(file: File): Promise<UploadedProductDoc
     throw new Error('error' in data && data.error ? data.error : 'Не удалось загрузить файл')
   }
 
-  return data as UploadedProductDocumentFile
+  const uploaded = data as UploadedProductDocumentFile
+
+  return {
+    ...uploaded,
+    mimeType:
+      uploaded.mimeType ??
+      inferMimeTypeFromFileName(uploaded.originalName) ??
+      inferMimeTypeFromFileName(uploaded.fileName) ??
+      '',
+  }
 }
 
 function emptyCreateState() {

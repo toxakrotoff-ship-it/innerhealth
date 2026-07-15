@@ -54,7 +54,7 @@ const baseDocumentMutationSchema = z
 export const createProductDocumentSchema = baseDocumentMutationSchema.safeExtend({
   productId: z.string().trim().min(1, 'Товар обязателен'),
   fileUrl: z.string().trim().min(1, 'Сначала загрузите файл'),
-  mimeType: z.string().trim().min(1, 'Не удалось определить MIME файла'),
+  mimeType: z.string().trim().min(1, 'Не удалось определить MIME файла').optional(),
   fileSize: z.number().int().nonnegative(),
 })
 
