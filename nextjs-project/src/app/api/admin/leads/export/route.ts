@@ -7,7 +7,7 @@ import {
   LeadExportFilter,
   type LeadsExportBrandScope,
 } from '@/services/leads-export.service'
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 
 const presetSchema = z
   .enum(['all', 'today', 'last7', 'last30', 'thisMonth', 'prevMonth'])
@@ -138,7 +138,7 @@ export async function GET(request: Request) {
     const includeAllBrands = allBrandsRaw === '1' || allBrandsRaw === 'on'
     const brandScope: LeadsExportBrandScope = includeAllBrands
       ? 'all'
-      : resolveBrandOrDefaultFromRequest(request)
+      : resolveAdminBrandFromRequest(request)
 
     const rows = await getAllLeadsForExport(filter, brandScope)
     const csv = buildLeadsCsv(rows)

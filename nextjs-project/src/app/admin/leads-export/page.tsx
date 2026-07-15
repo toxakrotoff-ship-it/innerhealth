@@ -1,6 +1,10 @@
 'use client'
 
+import { useAdminBrand } from '@/app/admin/context/admin-brand'
+
 export default function AdminLeadsExportPage() {
+  const activeBrand = useAdminBrand()
+
   return (
     <div className="admin-container">
       <div className="admin-content">
@@ -15,6 +19,8 @@ export default function AdminLeadsExportPage() {
             action="/api/admin/leads/export"
             className="space-y-4"
           >
+            <input type="hidden" name="brand" value={activeBrand} />
+
             <div className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
               <input
                 id="leads-export-all-brands"

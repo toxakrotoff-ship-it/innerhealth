@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { requireAdminSession } from '@/lib/require-admin'
 import * as partnershipService from '@/services/partnership.service'
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 
 export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   try {
     const leads = await partnershipService.getPartnershipLeads(brandId)
