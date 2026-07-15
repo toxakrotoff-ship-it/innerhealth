@@ -62,14 +62,14 @@ const PRODUCT_SYSTEM_SECTION_KEY_SET = new Set<ProductSystemSectionKey>(PRODUCT_
 export interface ProductTabFields {
   description?: string | null
   text?: string | null
-  tab1: string | null
-  tab2: string | null
-  tab3: string | null
-  tab4: string | null
-  tab1Title: string | null
-  tab2Title: string | null
-  tab3Title: string | null
-  tab4Title: string | null
+  tab1?: string | null
+  tab2?: string | null
+  tab3?: string | null
+  tab4?: string | null
+  tab1Title?: string | null
+  tab2Title?: string | null
+  tab3Title?: string | null
+  tab4Title?: string | null
   tabs?: unknown
   characteristicsNutrition100g?: string | null
   characteristicsKkal?: string | null
