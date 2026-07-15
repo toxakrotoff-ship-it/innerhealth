@@ -14,12 +14,15 @@ describe('computePromoOrderTotals', () => {
     });
 
     expect(result.shipping).toBe(300);
+    expect(result.delivery).toBe(300);
+    expect(result.total).toBe(1300);
     expect(result.goodsAfterPromo).toBe(1000);
     expect(result.goodsBeforePromo).toBe(1100);
     expect(result.promoDiscount).toBe(100);
     expect(result.nominalPromoLabel).toBe('10%');
     expect(result.effectivePercent).toBeCloseTo(100 / 11, 5);
     expect(result.flags).toEqual({
+      hasPromoCode: true,
       missingPromoDiscount: false,
       shippingEstimated: false,
       totalsReliable: true,
@@ -40,6 +43,26 @@ describe('computePromoOrderTotals', () => {
     expect(result.goodsAfterPromo).toBe(1000);
     expect(result.flags.missingPromoDiscount).toBe(true);
     expect(result.flags.totalsReliable).toBe(false);
+  });
+
+  it('treats orders without promo code as complete when delivery is persisted', () => {
+    const result = computePromoOrderTotals({
+      total: 1595,
+      deliverySum: 195,
+      promoDiscountAmount: null,
+      items: [{ quantity: 1, price: 1400 }],
+      promoCode: null,
+    });
+
+    expect(result.goodsBeforePromo).toBe(1400);
+    expect(result.goodsAfterPromo).toBe(1400);
+    expect(result.promoDiscount).toBe(0);
+    expect(result.flags).toEqual({
+      hasPromoCode: false,
+      missingPromoDiscount: false,
+      shippingEstimated: false,
+      totalsReliable: true,
+    });
   });
 
   it('uses legacy shipping estimate when deliverySum is absent', () => {
@@ -71,6 +94,7 @@ describe('computePromoOrderTotals', () => {
     expect(result.shipping).toBe(0);
     expect(result.goodsAfterPromo).toBeNull();
     expect(result.flags).toEqual({
+      hasPromoCode: true,
       missingPromoDiscount: true,
       shippingEstimated: true,
       totalsReliable: false,

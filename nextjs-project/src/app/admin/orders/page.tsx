@@ -4,6 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatOrderLabel } from '@/lib/order-label';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
+import type { PromoOrderTotalsResult } from '@/lib/promo-order-totals';
+import {
+  OrderFinancialBreakdownPanel,
+  OrderFinancialCompactSummary,
+} from '@/components/admin/order-financial-breakdown';
 
 interface OrderProduct {
   id: string;
@@ -31,6 +36,8 @@ interface ShippingInfoSummary {
 
 interface PromoCodeInfo {
   code: string;
+  discountType: string;
+  discountValue: number;
 }
 
 interface Order {
@@ -44,6 +51,7 @@ interface Order {
   items?: OrderItem[];
   shippingInfo: ShippingInfoSummary | null;
   promoCode: PromoCodeInfo | null;
+  financials: PromoOrderTotalsResult;
   yookassaPaymentId?: string | null;
   cdekOrderUuid?: string | null;
   cdekTrackNumber?: string | null;
@@ -374,22 +382,25 @@ export default function AdminOrdersPage() {
   }
 
   const orderDetailBlock = (order: Order) => (
-    <div className="grid gap-4 sm:grid-cols-2 text-sm">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] text-sm">
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Состав заказа</h3>
-        <p className="text-gray-500">
-          Детали состава доступны в{' '}
-          <button
-            type="button"
-            onClick={() => void handleOpenOrderPopup(order)}
-            className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
-          >
-            карточке заказа
-          </button>
-          {' '}в попапе.
-        </p>
+        <OrderFinancialBreakdownPanel financials={order.financials} title="Сумма заказа" />
+        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Состав заказа</h3>
+          <p className="text-gray-500">
+            Детали состава доступны в{' '}
+            <button
+              type="button"
+              onClick={() => void handleOpenOrderPopup(order)}
+              className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              карточке заказа
+            </button>
+            {' '}в попапе.
+          </p>
+        </div>
       </div>
-      <div>
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-gray-700 mb-2">
           {order.shippingInfo?.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}
         </h3>
@@ -602,10 +613,12 @@ export default function AdminOrdersPage() {
                     ) : null}
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
-                      <span className="text-sm font-medium">{order.total.toFixed(2)} ₽</span>
                       <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
                         getOrderStatusPresentation(order.status).badgeClassName
                       }`}>{getOrderStatusPresentation(order.status).label}</span>
+                    </div>
+                    <div className="mt-2 rounded-lg bg-gray-50 p-3">
+                      <OrderFinancialCompactSummary financials={order.financials} />
                     </div>
                             {mode === 'trash' && order.deletedAt && (
                               <p className="text-xs text-gray-500">
@@ -651,41 +664,43 @@ export default function AdminOrdersPage() {
             {/* Десктоп: таблица */}
             <div className="hidden md:block card overflow-hidden">
               <div className="table-responsive">
-                <table className="table table-horizontal">
+                <table className="table table-horizontal min-w-[980px]">
                   <thead>
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Клиент</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Сумма</th>
+                      <th className="w-[18rem] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Сумма</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-20" />
+                      <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" />
                     </tr>
                   </thead>
                   <tbody>
                     {filteredOrders.map((order) => (
                       <React.Fragment key={order.id}>
-                        <tr className="hover:bg-gray-50 border-b border-gray-100">
-                          <td className="px-4 py-3 text-sm">
+                        <tr className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-3 align-top text-sm">
                             <div className="font-medium text-gray-900">{order.shippingInfo?.fullName ?? '—'}</div>
                             <div className="text-gray-600 mt-0.5">{order.shippingInfo?.phoneMasked ?? '—'}</div>
                             <div className="text-sm font-medium text-gray-700 mt-1">{getOrderDisplayLabel(order)}</div>
                             {order.orderNumber != null ? (
-                              <div className="text-xs text-gray-400 font-mono mt-0.5 break-all" title="Внутренний ID">{order.id}</div>
+                              <div className="mt-0.5 break-all text-xs font-mono text-gray-400" title="Внутренний ID">{order.id}</div>
                             ) : null}
                             {mode === 'trash' && order.deletedAt && (
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="mt-1 text-xs text-gray-500">
                                 В корзине с {formatDate(order.deletedAt)}
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.createdAt)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{order.total.toFixed(2)} ₽</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 align-top text-sm text-gray-600">{formatDate(order.createdAt)}</td>
+                          <td className="px-4 py-3 align-top">
+                            <OrderFinancialCompactSummary financials={order.financials} />
+                          </td>
+                          <td className="px-4 py-3 align-top">
                             <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
                               getOrderStatusPresentation(order.status).badgeClassName
                             }`}>{getOrderStatusPresentation(order.status).label}</span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 align-top">
                             <div className="flex flex-col items-end gap-1">
                               <button
                                 type="button"
@@ -737,7 +752,7 @@ export default function AdminOrdersPage() {
           onClick={() => setPopupOrder(null)}
         >
           <div
-            className="w-full max-w-2xl rounded-xl bg-white shadow-xl"
+            className="flex max-h-[min(88vh,980px)] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-label={`Карточка заказа ${getOrderDisplayLabel(popupOrder)}`}
@@ -759,11 +774,15 @@ export default function AdminOrdersPage() {
                 Закрыть
               </button>
             </div>
-            <div className="max-h-[75vh] overflow-y-auto p-4 space-y-4">
+            <div className="min-h-0 overflow-y-auto p-4 space-y-4">
               <div className="grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
                 <p><span className="font-medium">Статус:</span> {getOrderStatusPresentation(popupOrder.status).label}</p>
-                <p><span className="font-medium">Сумма:</span> {popupOrder.total.toFixed(2)} ₽</p>
+                <p><span className="font-medium">Промокод:</span> {popupOrder.promoCode?.code ?? '—'}</p>
               </div>
+              <OrderFinancialBreakdownPanel
+                financials={(popupOrderDetail ?? popupOrder).financials}
+                title="Сумма заказа"
+              />
               <div>
                 <h3 className="mb-2 text-sm font-semibold text-gray-700">Состав заказа</h3>
                 {popupLoading ? (
@@ -802,7 +821,7 @@ export default function AdminOrdersPage() {
                   {popupOrder.shippingInfo?.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}
                 </h3>
                 {popupOrder.shippingInfo ? (
-                  <div className="space-y-1 text-sm text-gray-700">
+                  <div className="space-y-1 break-words text-sm text-gray-700">
                     <p><strong>{popupOrder.shippingInfo.fullName}</strong></p>
                     <p>{popupOrder.shippingInfo.phoneMasked}</p>
                     <p>{popupOrder.shippingInfo.city}</p>

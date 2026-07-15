@@ -3,6 +3,10 @@
 import { formatOrderLabel } from '@/lib/order-label';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 import type { PromoOrderTotalsResult } from '@/lib/promo-order-totals';
+import {
+  OrderFinancialBreakdownPanel,
+  OrderFinancialFlags,
+} from '@/components/admin/order-financial-breakdown';
 
 export interface PromoReportOrderCardItem {
   id: string;
@@ -24,11 +28,6 @@ export interface PromoReportOrderCardProps {
   computed: PromoOrderTotalsResult;
 }
 
-function formatMoney(value: number | null): string {
-  if (value == null) return '—';
-  return `${value.toFixed(2)} ₽`;
-}
-
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('ru-RU', {
     day: '2-digit',
@@ -43,7 +42,7 @@ export function PromoReportOrderCard({
   id,
   orderNumber,
   status,
-  total,
+  total: _total,
   createdAt,
   customerName,
   promoCode,
@@ -74,20 +73,7 @@ export function PromoReportOrderCard({
           Промокод: <span className="font-medium">{promoCode}</span>
           <span className="text-gray-500"> ({computed.nominalPromoLabel})</span>
         </p>
-        {(computed.flags.missingPromoDiscount || computed.flags.shippingEstimated) && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {computed.flags.missingPromoDiscount && (
-              <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-900">
-                скидка не сохранена
-              </span>
-            )}
-            {computed.flags.shippingEstimated && (
-              <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 text-sky-900">
-                доставка оценена
-              </span>
-            )}
-          </div>
-        )}
+        <OrderFinancialFlags financials={computed} className="pt-1" />
       </header>
 
       <div>
@@ -112,35 +98,13 @@ export function PromoReportOrderCard({
         </ul>
       </div>
 
-      <div className="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-        <p>
-          <span className="text-gray-500">Товары до промо:</span>{' '}
-          <span className="font-medium">{formatMoney(computed.goodsBeforePromo)}</span>
-        </p>
-        <p>
-          <span className="text-gray-500">Скидка:</span>{' '}
-          <span className="font-medium">{formatMoney(computed.promoDiscount)}</span>
-          {computed.effectivePercent != null ? (
-            <span
-              className="text-gray-400 ml-1"
-              title={`Фактическая скидка: ${computed.effectivePercent.toFixed(1)}%`}
-            >
-              ({computed.effectivePercent.toFixed(1)}%)
-            </span>
-          ) : null}
-        </p>
-        <p>
-          <span className="text-gray-500">Товары после промо:</span>{' '}
-          <span className="font-medium">{formatMoney(computed.goodsAfterPromo)}</span>
-        </p>
-        <p>
-          <span className="text-gray-500">Доставка:</span>{' '}
-          <span className="font-medium">{formatMoney(computed.shipping)}</span>
-        </p>
-        <p className="sm:col-span-2">
-          <span className="text-gray-500">Итого заказа:</span>{' '}
-          <span className="font-semibold text-gray-900">{total.toFixed(2)} ₽</span>
-        </p>
+      <div className="pt-3 border-t border-gray-100">
+        <OrderFinancialBreakdownPanel financials={computed} title="Сумма заказа" />
+        {computed.effectivePercent != null ? (
+          <p className="mt-2 text-xs text-gray-400">
+            Фактическая скидка: {computed.effectivePercent.toFixed(1)}%
+          </p>
+        ) : null}
       </div>
     </article>
   );

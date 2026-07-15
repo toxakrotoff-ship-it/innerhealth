@@ -7,6 +7,10 @@ import type { BrandId } from '@/lib/brand/brand';
 import { normalizeBrandId } from '@/lib/brand/brand';
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
+import {
+  computePromoOrderTotals,
+  type PromoOrderTotalsResult,
+} from '@/lib/promo-order-totals';
 
 const orderAdminInclude = {
   items: { include: { product: true } },
@@ -141,6 +145,7 @@ export interface AdminOrderDto {
     addressShort: string;
     deliveryMethod?: string | null;
   } | null;
+  financials: PromoOrderTotalsResult;
 }
 
 function orderListBrandWhere(brandId?: BrandId | null): Prisma.OrderWhereInput {
@@ -161,6 +166,22 @@ export async function getOrdersForAdmin(brandId?: BrandId | null): Promise<Admin
 function mapOrderToAdminDto(
   order: Prisma.OrderGetPayload<{ include: typeof orderAdminInclude }>
 ): AdminOrderDto {
+  const financials = computePromoOrderTotals({
+    total: order.total,
+    deliverySum: order.deliverySum,
+    promoDiscountAmount: order.promoDiscountAmount,
+    items: order.items.map((item) => ({
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    promoCode: order.promoCode
+      ? {
+          discountType: order.promoCode.discountType,
+          discountValue: order.promoCode.discountValue,
+        }
+      : null,
+  });
+
   return {
     id: order.id,
     orderNumber: order.orderNumber ?? null,
@@ -191,6 +212,7 @@ function mapOrderToAdminDto(
           deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
         }
       : null,
+    financials,
   };
 }
 

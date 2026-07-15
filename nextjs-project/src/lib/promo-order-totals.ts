@@ -12,6 +12,8 @@ export interface PromoOrderTotalsInput {
 }
 
 export interface PromoOrderTotalsResult {
+  total: number;
+  delivery: number | null;
   shipping: number | null;
   goodsAfterPromo: number | null;
   goodsBeforePromo: number | null;
@@ -19,6 +21,7 @@ export interface PromoOrderTotalsResult {
   nominalPromoLabel: string;
   effectivePercent: number | null;
   flags: {
+    hasPromoCode: boolean;
     missingPromoDiscount: boolean;
     shippingEstimated: boolean;
     totalsReliable: boolean;
@@ -43,14 +46,15 @@ function hasPersistedDeliverySum(deliverySum: number | null): boolean {
  * Derives promo report line amounts and legacy-data flags for a paid order with a promo code.
  */
 export function computePromoOrderTotals(input: PromoOrderTotalsInput): PromoOrderTotalsResult {
-  const missingPromoDiscount = input.promoDiscountAmount == null;
+  const hasPromoCode = input.promoCode != null;
+  const missingPromoDiscount = hasPromoCode && input.promoDiscountAmount == null;
   const shippingEstimated = !hasPersistedDeliverySum(input.deliverySum);
 
-  let shipping: number | null = null;
+  let delivery: number | null = null;
   if (!shippingEstimated) {
-    shipping = input.deliverySum as number;
+    delivery = input.deliverySum as number;
   } else {
-    shipping = resolveShippingCostForOrderNotify({
+    delivery = resolveShippingCostForOrderNotify({
       total: input.total,
       deliverySum: input.deliverySum,
       items: input.items,
@@ -61,14 +65,20 @@ export function computePromoOrderTotals(input: PromoOrderTotalsInput): PromoOrde
   let goodsAfterPromo: number | null = null;
   let goodsBeforePromo: number | null = null;
 
-  if (!missingPromoDiscount) {
+  if (!hasPromoCode) {
+    promoDiscount = 0;
+    if (!shippingEstimated && delivery != null) {
+      goodsAfterPromo = input.total - delivery;
+      goodsBeforePromo = goodsAfterPromo;
+    }
+  } else if (!missingPromoDiscount) {
     promoDiscount = input.promoDiscountAmount as number;
-    if (!shippingEstimated && shipping != null) {
-      goodsAfterPromo = input.total - shipping;
+    if (!shippingEstimated && delivery != null) {
+      goodsAfterPromo = input.total - delivery;
       goodsBeforePromo = goodsAfterPromo + promoDiscount;
     }
-  } else if (!shippingEstimated && shipping != null) {
-    goodsAfterPromo = input.total - shipping;
+  } else if (!shippingEstimated && delivery != null) {
+    goodsAfterPromo = input.total - delivery;
   }
 
   const effectivePercent =
@@ -82,13 +92,16 @@ export function computePromoOrderTotals(input: PromoOrderTotalsInput): PromoOrde
   const totalsReliable = !missingPromoDiscount && !shippingEstimated;
 
   return {
-    shipping,
+    total: input.total,
+    delivery,
+    shipping: delivery,
     goodsAfterPromo,
     goodsBeforePromo,
     promoDiscount,
     nominalPromoLabel: formatNominalPromoLabel(input.promoCode),
     effectivePercent,
     flags: {
+      hasPromoCode,
       missingPromoDiscount,
       shippingEstimated,
       totalsReliable,
