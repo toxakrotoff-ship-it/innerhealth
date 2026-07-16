@@ -706,7 +706,7 @@ function SprintPowerHome({
                       href={`/catalog/${category.slug}`}
                       className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
                     >
-                      <TiltCard variant="dark">
+                      <TiltCard className="[&>div]:border-transparent" variant="dark">
                         <div
                           className={`relative flex aspect-[16/12] flex-col items-center justify-center overflow-hidden rounded-2xl p-5 text-center ${
                             !bgImage ? 'bg-[#0F172A]' : ''
