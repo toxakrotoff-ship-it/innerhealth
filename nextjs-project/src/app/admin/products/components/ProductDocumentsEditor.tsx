@@ -43,10 +43,18 @@ interface ProductDocumentSuggestion {
 }
 
 interface UploadedProductDocumentFile {
-  url: string
+  fileUrl: string
   fileName: string
   originalName: string
   mimeType: string
+  fileSize: number
+}
+
+interface UploadedProductDocumentFileResponse {
+  url: string
+  fileName: string
+  originalName: string
+  mimeType?: string | null
   fileSize: number
 }
 
@@ -93,17 +101,20 @@ async function uploadProductDocumentFile(file: File): Promise<UploadedProductDoc
   })
 
   const data = (await response.json().catch(() => ({}))) as
-    | UploadedProductDocumentFile
+    | UploadedProductDocumentFileResponse
     | { error?: string }
 
   if (!response.ok) {
     throw new Error('error' in data && data.error ? data.error : 'Не удалось загрузить файл')
   }
 
-  const uploaded = data as UploadedProductDocumentFile
+  const uploaded = data as UploadedProductDocumentFileResponse
 
   return {
-    ...uploaded,
+    fileUrl: uploaded.url,
+    fileName: uploaded.fileName,
+    originalName: uploaded.originalName,
+    fileSize: uploaded.fileSize,
     mimeType:
       uploaded.mimeType ??
       inferMimeTypeFromFileName(uploaded.originalName) ??
@@ -320,7 +331,7 @@ export function ProductDocumentsEditor({
           document.id === documentId
             ? {
                 ...document,
-                fileUrl: uploadedFile.url,
+                fileUrl: uploadedFile.fileUrl,
                 fileName: uploadedFile.fileName,
                 originalName: uploadedFile.originalName,
                 mimeType: uploadedFile.mimeType,
