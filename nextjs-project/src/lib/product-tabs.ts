@@ -410,6 +410,7 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
   const explicitTabs = productTabsForEditor(product)
   const fallbackSections = getFieldFallbackSections(product)
   const explicitSystemTabs = new Map<ProductSystemSectionKey, ProductTabEditorItem>()
+  const orderedSystemKeys: ProductSystemSectionKey[] = []
   const customTabs: ProductTabEditorItem[] = []
 
   explicitTabs.forEach((tab) => {
@@ -425,6 +426,7 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
         editorType: key === 'characteristics' ? 'characteristics' : tab.editorType,
         isVisible: tab.isVisible ?? true,
       })
+      orderedSystemKeys.push(key)
       return
     }
 
@@ -435,7 +437,10 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
     })
   })
 
-  const systemTabs = PRODUCT_SYSTEM_SECTION_ORDER.map((key) => {
+  const systemTabs = [
+    ...orderedSystemKeys,
+    ...PRODUCT_SYSTEM_SECTION_ORDER.filter((key) => !explicitSystemTabs.has(key)),
+  ].map((key) => {
     const existing = explicitSystemTabs.get(key)
     if (existing) {
       return {

@@ -21,7 +21,7 @@ import { Heading1, Heading2 } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
-import { normalizeInnerProductContent } from '@/lib/product-tabs'
+import { normalizeInnerProductContent, parseProductTabsJson } from '@/lib/product-tabs'
 import { isLegacyDocumentSectionTitle } from '@/lib/product-documents'
 import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
 
@@ -33,6 +33,7 @@ interface ProductPageContentProps {
     sku: string | null
     description: string | null
     text: string | null
+    tabs?: unknown
     weight?: number | null
     price: number
     priceOld: number | null
@@ -236,9 +237,15 @@ export function ProductPageContent({
     !!product.description &&
     (isSprintTheme || !shouldHideInnerProductDescription(product.description, product.text))
   const innerContent = !isSprintTheme ? normalizeInnerProductContent(product) : null
+  const explicitInnerTabs = !isSprintTheme ? parseProductTabsJson(product.tabs) : null
   const shortDescription = innerContent?.shortDescription
   const shouldRenderShortDescription =
     !isSprintTheme && !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
+  const shouldRenderInnerLongText =
+    !isSprintTheme &&
+    !!product.text?.trim() &&
+    Array.isArray(explicitInnerTabs) &&
+    explicitInnerTabs.length > 0
   const hasStructuredDocuments = structuredDocuments.length > 0
   const visibleInnerSections = !isSprintTheme && innerContent
     ? innerContent.sections.filter(
@@ -401,6 +408,14 @@ export function ProductPageContent({
             className={`pt-8 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200 dark:border-gray-700'}`}
           >
             <ProductLongTextBlock text={product.text} isSprintTheme={isSprintTheme} />
+          </section>
+        </ScalableSpacing>
+      )}
+
+      {shouldRenderInnerLongText && product.text && (
+        <ScalableSpacing size="lg">
+          <section className="border-t border-gray-200 pt-8 dark:border-gray-700">
+            <ProductLongTextBlock text={product.text} isSprintTheme={false} />
           </section>
         </ScalableSpacing>
       )}

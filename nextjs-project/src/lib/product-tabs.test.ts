@@ -181,4 +181,40 @@ describe('product-tabs', () => {
     expect(tabs[1]?.key).toBe('characteristics')
     expect(tabs.every((tab) => typeof tab.isVisible === 'boolean')).toBe(true)
   })
+
+  it('preserves explicit system tab order in inner editor', () => {
+    const tabs = buildInnerProductTabsForEditor({
+      description: null,
+      text: '<p>Основной текст</p>',
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      tabs: [
+        {
+          id: 'composition-1',
+          key: 'composition',
+          title: 'Состав',
+          content: '<p>Состав</p>',
+          editorType: 'richtext',
+          isVisible: true,
+        },
+        {
+          id: 'description-1',
+          key: 'description',
+          title: 'Описание',
+          content: '<p>Описание</p>',
+          editorType: 'richtext',
+          isVisible: true,
+        },
+      ],
+    })
+
+    expect(tabs[0]?.key).toBe('composition')
+    expect(tabs[1]?.key).toBe('description')
+  })
 })
