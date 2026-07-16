@@ -39,7 +39,7 @@ export function ProductFlavorSelector({
   return (
     <div className="mt-4">
       <div className={cn('text-xs font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>Вкус</div>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-2 md:gap-2.5">
         {options.map((option) => {
           const isActive = option.id === activeProductId
           return (
@@ -50,7 +50,7 @@ export function ProductFlavorSelector({
               aria-current={isActive ? 'page' : undefined}
               aria-disabled={option.isUnavailable ? true : undefined}
               className={cn(
-                'inline-flex items-center rounded-full border px-3 py-1 text-sm transition-colors',
+                'inline-flex items-center rounded-full border px-3 py-1 text-sm transition-colors md:px-3.5 md:py-1.5 md:text-[0.95rem] 2xl:px-4 2xl:text-base',
                 option.isUnavailable && 'opacity-60',
                 isActive
                   ? isSprintTheme
@@ -70,4 +70,3 @@ export function ProductFlavorSelector({
     </div>
   )
 }
-

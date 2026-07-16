@@ -145,7 +145,7 @@ export function GroupedProductCard({
             </p>
           )}
 
-          <div className="mt-2 flex flex-wrap gap-1.5 max-sm:gap-1">
+          <div className="mt-2 flex flex-wrap gap-1.5 md:gap-2">
             {group.flavorOptions.map((option) => {
               const isSelected = option.id === activeVariant.id
               const label = option.label ?? `Вкус ${group.flavorOptions.findIndex((item) => item.id === option.id) + 1}`
@@ -155,7 +155,7 @@ export function GroupedProductCard({
                   type="button"
                   onClick={() => setSelectedId(option.id)}
                   className={cn(
-                    'rounded-full border px-2 py-0.5 text-[11px] transition-colors max-sm:px-1.5',
+                    'rounded-full border px-2 py-0.5 text-[11px] transition-colors max-sm:px-1.5 md:px-3 md:py-1 md:text-sm 2xl:px-3.5 2xl:py-1.5 2xl:text-[0.95rem]',
                     isSelected
                       ? isSprintTheme
                         ? 'border-[#7AA2FF] bg-[#7AA2FF] text-slate-950'
