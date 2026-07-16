@@ -226,7 +226,7 @@ export function ProductCard({
             </p>
           )}
 
-          <div className="mt-2.5 flex min-w-0 flex-col gap-1.5 max-sm:mt-0 3xl:mt-3 3xl:gap-2">
+          <div className="mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
             <AddToCartButton
               productId={id}
               title={title}

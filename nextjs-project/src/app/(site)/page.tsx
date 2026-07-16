@@ -723,7 +723,7 @@ function SprintPowerHome({
                                 sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 40vw"
                               />
                               <div
-                                className="absolute inset-0 rounded-2xl bg-linear-to-b from-black/25 to-black/50"
+                                className="absolute inset-0 rounded-2xl bg-black/38"
                                 aria-hidden
                               />
                             </>
@@ -1253,7 +1253,7 @@ export default async function HomePage() {
                               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             />
                             <div
-                              className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                              className="absolute inset-0 rounded-2xl bg-black/38"
                               aria-hidden
                             />
                           </>
@@ -1314,7 +1314,7 @@ export default async function HomePage() {
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                           <div
-                            className="absolute inset-0 bg-linear-to-b from-black/25 to-black/60 rounded-2xl"
+                            className="absolute inset-0 rounded-2xl bg-black/38"
                             aria-hidden
                           />
                         </>
