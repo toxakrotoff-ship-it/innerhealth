@@ -286,7 +286,11 @@ export function ProductPageContent({
       maxWidth="default"
       className={`py-6 sm:py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
     >
-      <Breadcrumbs items={crumbs} isInverted={isSprintTheme} />
+      <Breadcrumbs
+        items={crumbs}
+        isInverted={isSprintTheme}
+        hideCurrentPageOnMobile
+      />
       <RecentlyViewedTracker productId={product.id} />
       <FluidGrid
         cols={1}

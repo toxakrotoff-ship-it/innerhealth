@@ -17,13 +17,18 @@ export interface BreadcrumbItemType {
 interface BreadcrumbsProps {
   items: BreadcrumbItemType[]
   isInverted?: boolean
+  hideCurrentPageOnMobile?: boolean
 }
 
 /**
  * Breadcrumb navigation. Last item is current page (no link).
  * Link: hover:text-action-blue transition-colors. Current: text-text font-medium. Separator: / with mx-2.
  */
-export function Breadcrumbs({ items, isInverted = false }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items,
+  isInverted = false,
+  hideCurrentPageOnMobile = false,
+}: BreadcrumbsProps) {
   const rootClassName = isInverted ? 'text-slate-400' : 'text-gray-500'
   const currentPageClassName = isInverted ? 'text-slate-100' : 'text-text'
   const hoverClassName = isInverted ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
@@ -34,9 +39,12 @@ export function Breadcrumbs({ items, isInverted = false }: BreadcrumbsProps) {
       <BreadcrumbList className="text-inherit">
         {items.map((item, index) => {
           const isLast = index === items.length - 1
+          const shouldHideOnMobile = hideCurrentPageOnMobile && isLast
+          const shouldHideSeparatorOnMobile =
+            hideCurrentPageOnMobile && index === items.length - 2
           return (
             <React.Fragment key={index}>
-              <BreadcrumbItem>
+              <BreadcrumbItem className={shouldHideOnMobile ? 'hidden sm:inline-flex' : undefined}>
                 {item.href && !isLast ? (
                   <BreadcrumbLink asChild>
                     <Link
@@ -53,7 +61,9 @@ export function Breadcrumbs({ items, isInverted = false }: BreadcrumbsProps) {
                 )}
               </BreadcrumbItem>
               {index < items.length - 1 && (
-                <BreadcrumbSeparator className={`mx-2 desktop-microtext-scale [&>svg]:hidden ${separatorClassName}`}>
+                <BreadcrumbSeparator
+                  className={`${shouldHideSeparatorOnMobile ? 'hidden sm:inline-flex ' : ''}mx-2 desktop-microtext-scale [&>svg]:hidden ${separatorClassName}`}
+                >
                   /
                 </BreadcrumbSeparator>
               )}
