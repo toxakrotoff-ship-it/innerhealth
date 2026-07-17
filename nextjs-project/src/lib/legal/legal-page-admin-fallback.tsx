@@ -2,7 +2,7 @@ import 'server-only'
 
 import type { CheerioAPI } from 'cheerio'
 import { load } from 'cheerio'
-import type { Element } from 'domhandler'
+import type { AnyNode, Element } from 'domhandler'
 import type { JSONContent } from '@tiptap/core'
 import { getPrivacyPageFallbackHtml } from '@/components/site/legal/privacy-page-fallback-content'
 import type { BrandId } from '@/lib/brand/brand'
@@ -25,7 +25,7 @@ function mergeMarks(parent: JSONContent['marks'], next?: JSONContent['marks']): 
 
 function parseInlineNodes(
   $: CheerioAPI,
-  node: Element,
+  node: AnyNode,
   inheritedMarks: JSONContent['marks'] = []
 ): JSONContent[] {
   if (node.type === 'text') {
