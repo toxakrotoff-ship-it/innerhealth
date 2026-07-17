@@ -2,13 +2,23 @@ import 'server-only'
 
 import type { JSONContent } from '@tiptap/core'
 import { generateJSON } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
 import { JSDOM } from 'jsdom'
-import { buildRichTextEditorExtensions } from '@/app/admin/news/components/rich-text-editor-extensions'
 import { getPrivacyPageFallbackHtml } from '@/components/site/legal/privacy-page-fallback-content'
 import type { BrandId } from '@/lib/brand/brand'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
-const LEGAL_EDITOR_EXTENSIONS = buildRichTextEditorExtensions('')
+const LEGAL_EDITOR_EXTENSIONS = [
+  StarterKit.configure({
+    heading: { levels: [1, 2, 3] },
+  }),
+  Link.configure({
+    openOnClick: false,
+    autolink: false,
+    linkOnPaste: false,
+  }),
+]
 const legalFallbackCache = new Map<string, JSONContent>()
 
 function generateRichJsonFromHtml(html: string): JSONContent {
