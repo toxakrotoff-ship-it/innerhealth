@@ -28,7 +28,6 @@ import {
   getDescendantCategoryIds,
   type FlatCategoryTreeNode,
 } from '@/lib/category-tree';
-import { getCategoryPageContentDoc } from '@/content/category-descriptions';
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone';
 import { useAdminBrand } from '@/app/admin/context/admin-brand';
 import { SprintCategoryLineEditor } from '@/app/admin/catalog/components/sprint-category-line-editor';
@@ -437,9 +436,6 @@ export default function AdminCategoriesPage() {
       if (obj.type === 'doc' && Array.isArray(obj.content)) {
         lineDoc = rawLine as JSONContent;
       }
-    }
-    if (isEmptyLineDoc(lineDoc)) {
-      lineDoc = getCategoryPageContentDoc(category.slug, activeBrand) ?? EMPTY_LINE_DOC;
     }
     setFormData({
       title: category.title,
@@ -919,7 +915,7 @@ export default function AdminCategoriesPage() {
                       placeholder="Заголовок, списки и абзацы для нижнего блока категории…"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Старый текст из кода подставится сюда при открытии категории. После сохранения этот блок будет редактироваться уже из админки.
+                      Если редактор пуст, старый текст из кода не копируется сюда автоматически. Для витрины он будет использован только при включённом legacy fallback.
                     </p>
                   </div>
                 </>
