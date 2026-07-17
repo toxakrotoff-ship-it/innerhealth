@@ -5,6 +5,10 @@ import {
 } from '@/lib/category-teaser'
 
 describe('normalizeCategoryTeaser', () => {
+  it('keeps null as null', () => {
+    expect(normalizeCategoryTeaser(null)).toBeNull()
+  })
+
   it('returns null for blank teaser', () => {
     expect(normalizeCategoryTeaser('   ')).toBeNull()
   })
