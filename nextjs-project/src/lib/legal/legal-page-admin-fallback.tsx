@@ -1,51 +1,136 @@
 import 'server-only'
 
+import type { CheerioAPI, Element } from 'cheerio'
+import { load } from 'cheerio'
 import type { JSONContent } from '@tiptap/core'
-import { generateJSON } from '@tiptap/core'
-import StarterKit from '@tiptap/starter-kit'
-import Link from '@tiptap/extension-link'
-import { JSDOM } from 'jsdom'
 import { getPrivacyPageFallbackHtml } from '@/components/site/legal/privacy-page-fallback-content'
 import type { BrandId } from '@/lib/brand/brand'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
-const LEGAL_EDITOR_EXTENSIONS = [
-  StarterKit.configure({
-    heading: { levels: [1, 2, 3] },
-  }),
-  Link.configure({
-    openOnClick: false,
-    autolink: false,
-    linkOnPaste: false,
-  }),
-]
 const legalFallbackCache = new Map<string, JSONContent>()
 
-function generateRichJsonFromHtml(html: string): JSONContent {
-  const previousWindow = (globalThis as { window?: unknown }).window
-  const previousDocument = (globalThis as { document?: unknown }).document
-  const dom = new JSDOM('<!doctype html><html><body></body></html>')
+function toTextNode(text: string, marks?: JSONContent['marks']): JSONContent | null {
+  if (!text) return null
+  return marks && marks.length > 0
+    ? { type: 'text', text, marks }
+    : { type: 'text', text }
+}
 
-  ;(globalThis as { window?: unknown }).window = dom.window
-  ;(globalThis as { document?: unknown }).document = dom.window.document
+function mergeMarks(parent: JSONContent['marks'], next?: JSONContent['marks']): JSONContent['marks'] {
+  if (!parent?.length) return next ?? []
+  if (!next?.length) return parent
+  return [...parent, ...next]
+}
 
-  try {
-    return generateJSON(html, LEGAL_EDITOR_EXTENSIONS) as JSONContent
-  } finally {
-    dom.window.close()
+function parseInlineNodes(
+  $: CheerioAPI,
+  node: Element,
+  inheritedMarks: JSONContent['marks'] = []
+): JSONContent[] {
+  if (node.type === 'text') {
+    const textNode = toTextNode(node.data ?? '', inheritedMarks)
+    return textNode ? [textNode] : []
+  }
 
-    if (previousWindow === undefined) {
-      delete (globalThis as { window?: unknown }).window
-    } else {
-      ;(globalThis as { window?: unknown }).window = previousWindow
-    }
+  if (node.type !== 'tag') return []
 
-    if (previousDocument === undefined) {
-      delete (globalThis as { document?: unknown }).document
-    } else {
-      ;(globalThis as { document?: unknown }).document = previousDocument
+  const name = node.tagName.toLowerCase()
+  const localMarks: JSONContent['marks'] = []
+
+  if (name === 'strong' || name === 'b') {
+    localMarks.push({ type: 'bold' })
+  }
+
+  if (name === 'a') {
+    const href = $(node).attr('href')
+    if (href) {
+      localMarks.push({
+        type: 'link',
+        attrs: {
+          href,
+          target: href.startsWith('mailto:') ? null : '_blank',
+          rel: href.startsWith('mailto:') ? null : 'noopener noreferrer',
+        },
+      })
     }
   }
+
+  const mergedMarks = mergeMarks(inheritedMarks, localMarks)
+  const children = $(node)
+    .contents()
+    .toArray()
+    .flatMap((child) => parseInlineNodes($, child, mergedMarks))
+
+  return children
+}
+
+function buildParagraphFromListItem($: CheerioAPI, node: Element): JSONContent {
+  const content = $(node)
+    .contents()
+    .toArray()
+    .flatMap((child) => parseInlineNodes($, child))
+
+  return content.length > 0
+    ? { type: 'paragraph', content }
+    : { type: 'paragraph' }
+}
+
+function parseBlockNode($: CheerioAPI, node: Element): JSONContent | null {
+  if (node.type !== 'tag') return null
+
+  const name = node.tagName.toLowerCase()
+
+  if (name === 'h1' || name === 'h2' || name === 'h3') {
+    const level = Number(name.slice(1))
+    const content = $(node)
+      .contents()
+      .toArray()
+      .flatMap((child) => parseInlineNodes($, child))
+
+    return content.length > 0
+      ? { type: 'heading', attrs: { level }, content }
+      : { type: 'heading', attrs: { level } }
+  }
+
+  if (name === 'p') {
+    const content = $(node)
+      .contents()
+      .toArray()
+      .flatMap((child) => parseInlineNodes($, child))
+
+    return content.length > 0
+      ? { type: 'paragraph', content }
+      : { type: 'paragraph' }
+  }
+
+  if (name === 'ul' || name === 'ol') {
+    const type = name === 'ul' ? 'bulletList' : 'orderedList'
+    const items = $(node)
+      .children('li')
+      .toArray()
+      .map((item) => ({
+        type: 'listItem',
+        content: [buildParagraphFromListItem($, item)],
+      }))
+
+    return items.length > 0 ? { type, content: items } : null
+  }
+
+  if (name === 'div') {
+    return null
+  }
+
+  return null
+}
+
+function htmlToSimpleTipTapDoc(html: string): JSONContent {
+  const $ = load(html)
+  const rootChildren = $('body').children().first().children().toArray()
+  const content = rootChildren
+    .map((node) => parseBlockNode($, node))
+    .filter((node): node is JSONContent => node != null)
+
+  return { type: 'doc', content }
 }
 
 function buildPrivacyFallbackRichJson(brandId: BrandId): JSONContent {
@@ -55,7 +140,7 @@ function buildPrivacyFallbackRichJson(brandId: BrandId): JSONContent {
 
   const html = getPrivacyPageFallbackHtml({ siteUrl, email, privacyUrl })
 
-  return generateRichJsonFromHtml(html)
+  return htmlToSimpleTipTapDoc(html)
 }
 
 export function getAdminLegalFallbackRichJson(
