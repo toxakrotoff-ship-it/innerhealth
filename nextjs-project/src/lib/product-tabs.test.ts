@@ -161,6 +161,34 @@ describe('product-tabs', () => {
     ])
   })
 
+  it('does not re-add hidden system sections from fallback fields', () => {
+    const normalized = normalizeInnerProductContent({
+      description: null,
+      text: null,
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      characteristicsNutrition100g: 'белки 95 жиры 0,4 углеводы 0,0',
+      characteristicsKkal: '380,5',
+      tabs: [
+        {
+          id: 'nutrition-1',
+          title: 'Пищевая ценность / активные компоненты',
+          content: '',
+          editorType: 'richtext',
+          isVisible: false,
+        },
+      ],
+    })
+
+    expect(normalized.sections.map((section) => section.key)).toEqual([])
+  })
+
   it('builds managed inner editor blocks with default system sections', () => {
     const tabs = buildInnerProductTabsForEditor({
       description: null,

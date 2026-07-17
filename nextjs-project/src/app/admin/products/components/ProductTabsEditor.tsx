@@ -98,22 +98,20 @@ function SortableTabCard({ tab, index, onTabChange, onDelete }: SortableTabCardP
               <option value="richtext">Текст и фото</option>
               <option value="characteristics">Таблица характеристик</option>
             </select>
-            {isSystemBlock && (
-              <label className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={tab.isVisible !== false}
-                  onChange={(event) =>
-                    onTabChange({
-                      ...tab,
-                      isVisible: event.target.checked,
-                    })
-                  }
-                  className="form-input h-4 w-4 rounded"
-                />
-                Показывать блок
-              </label>
-            )}
+            <label className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={tab.isVisible !== false}
+                onChange={(event) =>
+                  onTabChange({
+                    ...tab,
+                    isVisible: event.target.checked,
+                  })
+                }
+                className="form-input h-4 w-4 rounded"
+              />
+              {isSystemBlock ? 'Показывать блок' : 'Показывать таб'}
+            </label>
           </div>
 
           {isSystemBlock ? (

@@ -357,23 +357,26 @@ export function normalizeInnerProductContent(product: ProductTabFields): Normali
   }
 
   explicitTabs.forEach((tab, index) => {
-    const tabKey = trimToNull(tab.key) ?? `custom:${tab.id}`
-    const isSystem = isSystemSectionKey(tab.key)
+    const resolvedSystemKey = isSystemSectionKey(tab.key)
+      ? tab.key
+      : inferSystemSectionKey(tab.title, tab.editorType)
+    const tabKey = trimToNull(resolvedSystemKey) ?? trimToNull(tab.key) ?? `custom:${tab.id}`
+    const isSystem = resolvedSystemKey !== null
     if (tab.isVisible === false) {
-      if (isSystem) seenKeys.add(tab.key)
+      if (resolvedSystemKey) seenKeys.add(resolvedSystemKey)
       return
     }
     if (!trimToNull(tab.content)) {
-      if (isSystem && managedTabs) seenKeys.add(tab.key)
+      if (resolvedSystemKey && managedTabs) seenKeys.add(resolvedSystemKey)
       return
     }
     addSection(
-      isSystem ? tab.key : tabKey,
-      tab.title.trim() || (isSystem ? PRODUCT_SYSTEM_SECTION_META[tab.key].title : 'Таб'),
+      isSystem ? resolvedSystemKey : tabKey,
+      tab.title.trim() || (isSystem ? PRODUCT_SYSTEM_SECTION_META[resolvedSystemKey].title : 'Таб'),
       tab.content,
       tab.editorType,
-      managedTabs ? index : PRODUCT_SYSTEM_SECTION_ORDER.indexOf(tab.key as ProductSystemSectionKey) >= 0
-        ? PRODUCT_SYSTEM_SECTION_ORDER.indexOf(tab.key as ProductSystemSectionKey)
+      managedTabs ? index : PRODUCT_SYSTEM_SECTION_ORDER.indexOf(resolvedSystemKey as ProductSystemSectionKey) >= 0
+        ? PRODUCT_SYSTEM_SECTION_ORDER.indexOf(resolvedSystemKey as ProductSystemSectionKey)
         : 100 + index,
       isSystem ? 'system' : 'custom'
     )
