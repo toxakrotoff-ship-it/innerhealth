@@ -3,9 +3,8 @@ import 'server-only'
 import type { JSONContent } from '@tiptap/core'
 import { generateJSON } from '@tiptap/core'
 import { JSDOM } from 'jsdom'
-import { renderToStaticMarkup } from 'react-dom/server'
 import { buildRichTextEditorExtensions } from '@/app/admin/news/components/rich-text-editor-extensions'
-import { PrivacyPageFallbackContent } from '@/components/site/legal/privacy-page-fallback-content'
+import { getPrivacyPageFallbackHtml } from '@/components/site/legal/privacy-page-fallback-content'
 import type { BrandId } from '@/lib/brand/brand'
 import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 
@@ -44,13 +43,7 @@ function buildPrivacyFallbackRichJson(brandId: BrandId): JSONContent {
   const email = getBrandSiteConfig(brandId).contact.email
   const privacyUrl = `${siteUrl.replace(/\/+$/, '')}/privacy`
 
-  const html = renderToStaticMarkup(
-    <PrivacyPageFallbackContent
-      siteUrl={siteUrl}
-      email={email}
-      privacyUrl={privacyUrl}
-    />
-  )
+  const html = getPrivacyPageFallbackHtml({ siteUrl, email, privacyUrl })
 
   return generateRichJsonFromHtml(html)
 }
