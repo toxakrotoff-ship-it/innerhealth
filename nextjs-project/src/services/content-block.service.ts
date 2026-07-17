@@ -6,6 +6,9 @@ import {
   type ContentBlockDefault,
 } from '@/config/content-blocks-defaults'
 import type { BrandId } from '@/lib/brand/brand'
+import { getAdminLegalFallbackRichJson } from '@/lib/legal/legal-page-admin-fallback'
+
+const EMPTY_RICH_DOC = { type: 'doc', content: [] } as Prisma.JsonValue
 
 export type ContentBlockValueSource = 'override' | 'brand_default' | 'generic_default'
 
@@ -233,15 +236,29 @@ export async function getAdminBlocksForPage(
       if (!resolvedType) return null
 
       const effectiveText = resolvedType === 'short' ? getEffectiveShortText(found, def) : null
-    const effectiveRichJson =
-      resolvedType === 'rich'
-        ? getEffectiveRichJson(found, def) ?? ({ type: 'doc', content: [] } as Prisma.JsonValue)
-        : null
+      const legalFallbackRichJson =
+        resolvedType === 'rich'
+          ? (getAdminLegalFallbackRichJson(entry.page, brandId) as Prisma.JsonValue | null)
+          : null
+      const resolvedRichJson =
+        resolvedType === 'rich' ? getEffectiveRichJson(found, def) : null
+      const effectiveRichJson =
+        resolvedType === 'rich'
+          ? (!isEmptyRichJson(resolvedRichJson)
+              ? resolvedRichJson
+              : legalFallbackRichJson ?? EMPTY_RICH_DOC)
+          : null
       const defaultText = resolvedType === 'short' ? def?.text ?? null : null
-    const defaultRichJson =
-      resolvedType === 'rich'
-        ? (((def?.richJson as Prisma.JsonValue | undefined) ?? { type: 'doc', content: [] }) as Prisma.JsonValue)
-        : null
+      const schemaDefaultRichJson =
+        resolvedType === 'rich'
+          ? ((def?.richJson as Prisma.JsonValue | undefined) ?? EMPTY_RICH_DOC)
+          : null
+      const defaultRichJson =
+        resolvedType === 'rich'
+          ? (!isEmptyRichJson(schemaDefaultRichJson)
+              ? schemaDefaultRichJson
+              : legalFallbackRichJson ?? EMPTY_RICH_DOC)
+          : null
       const valueSource = getValueSource(found, def, brandId)
 
       return {

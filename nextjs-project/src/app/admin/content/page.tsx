@@ -6,6 +6,7 @@ import { NavArrowDown } from 'iconoir-react'
 import Button from '@/components/ui/button'
 import { RichTextEditor } from '../news/components/RichTextEditor'
 import { CoverImageDropzone } from '../news/components/CoverImageDropzone'
+import { hasRenderableLegalRichBody } from '@/lib/legal/has-renderable-legal-rich-body'
 
 type BlockType = 'short' | 'rich'
 type ValueSource = 'override' | 'brand_default' | 'generic_default'
@@ -101,6 +102,11 @@ const FONT_WEIGHT_OPTIONS: Array<{ value: string; label: string }> = [
 ]
 
 const EMPTY_DOC: JSONContent = { type: 'doc', content: [] }
+
+const LEGAL_FALLBACK_SOURCE: Record<string, string> = {
+  'legal-privacy.body': '/privacy',
+  'legal-oferta.body': '/oferta',
+}
 
 function parseBooleanText(value: string | null | undefined, fallback = false): boolean {
   if (value == null) return fallback
@@ -332,6 +338,14 @@ function getBlockPreviewValue(block: ContentBlockAdmin): string {
   return sourceValue
 }
 
+function hasEmptyRichDocument(value: JSONContent | null | undefined): boolean {
+  return !hasRenderableLegalRichBody(value ?? null)
+}
+
+function getLegalFallbackRoute(key: string): string | null {
+  return LEGAL_FALLBACK_SOURCE[key] ?? null
+}
+
 function stripTechnicalSuffix(label: string): string {
   return label
     .replace(/\s*\(1\s*\/\s*да\s*\/\s*on\)\s*$/i, '')
@@ -492,6 +506,17 @@ export default function AdminContentPage() {
     () => (selectedBlock ? getBlockPresentationMeta(selectedBlock) : null),
     [selectedBlock]
   )
+
+  const legalFallbackRoute = useMemo(
+    () => (selectedBlock ? getLegalFallbackRoute(selectedBlock.key) : null),
+    [selectedBlock]
+  )
+
+  const isUsingEmptyLegalFallback = useMemo(() => {
+    if (!selectedBlock || selectedBlock.type !== 'rich') return false
+    if (!legalFallbackRoute) return false
+    return hasEmptyRichDocument(selectedBlock.richJson) && hasEmptyRichDocument(selectedBlock.defaultRichJson)
+  }, [legalFallbackRoute, selectedBlock])
 
   useEffect(() => {
     void loadBlocks(page)
@@ -970,6 +995,18 @@ export default function AdminContentPage() {
                         <div className="whitespace-pre-wrap">{selectedBlock.defaultText}</div>
                       </div>
                     ) : null}
+                  </div>
+                ) : null}
+
+                {isUsingEmptyLegalFallback ? (
+                  <div className="rounded-3xl border border-sky-200 bg-sky-50/80 p-4 text-sm text-sky-950">
+                    <div className="font-semibold">Почему редактор пустой</div>
+                    <p className="mt-1 text-sky-900">
+                      Для этой юридической страницы витрина пока использует кодовый fallback из маршрута <code className="rounded bg-white px-1.5 py-0.5 text-[12px]">{legalFallbackRoute}</code>, поэтому rich-блок в CMS пустой и здесь не подставляется автоматически.
+                    </p>
+                    <p className="mt-2 text-sky-900">
+                      Если нужно поправить пару слов прямо сейчас, их пока проще менять в исходнике страницы. После первого сохранения в этом редакторе содержимое станет override и дальше уже будет редактироваться здесь.
+                    </p>
                   </div>
                 ) : null}
 
