@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import {
-  getManagedUploadPublicUrl,
   guessContentTypeFromPath,
-  isS3MediaStorageEnabled,
   managedUploadCacheControl,
   normalizeManagedUploadPath,
   readManagedUpload,
@@ -23,14 +21,6 @@ async function handleRequest(pathSegments: string[] | undefined) {
   const managedPath = resolveManagedUploadPath(pathSegments)
   if (!managedPath) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  }
-
-  if (isS3MediaStorageEnabled()) {
-    return NextResponse.redirect(getManagedUploadPublicUrl(managedPath), {
-      headers: {
-        'Cache-Control': managedUploadCacheControl,
-      },
-    })
   }
 
   try {

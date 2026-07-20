@@ -1,4 +1,10 @@
-import { PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3'
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { getProjectRoot } from '@/lib/project-root'
@@ -345,7 +351,27 @@ export async function deleteManagedUpload(fileUrl: string | null | undefined): P
 }
 
 export async function readManagedUpload(filePath: string): Promise<Buffer> {
-  const absolutePath = getLocalUploadAbsolutePath(filePath)
+  const normalizedPath = normalizeManagedUploadPath(filePath)
+
+  if (isS3MediaStorageEnabled()) {
+    const client = getS3Client()
+    const { bucket } = getS3Config()
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket!,
+        Key: getManagedUploadObjectKey(normalizedPath),
+      })
+    )
+
+    if (!response.Body) {
+      throw new Error(`Managed upload body is empty for ${normalizedPath}`)
+    }
+
+    const bytes = await response.Body.transformToByteArray()
+    return Buffer.from(bytes)
+  }
+
+  const absolutePath = getLocalUploadAbsolutePath(normalizedPath)
   return fs.readFile(absolutePath)
 }
 
