@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProductDocumentType } from '@prisma/client'
+import {
+  AdminMediaLibraryPicker,
+  type AdminMediaLibraryItem,
+} from '@/app/admin/components/AdminMediaLibraryPicker'
 import { formatDocumentFileSize, PRODUCT_DOCUMENT_TYPE_OPTIONS } from '@/lib/product-documents'
 
 type AdminBrand = 'inner' | 'sprint-power'
@@ -133,6 +137,16 @@ function emptyCreateState() {
     sortOrder: '0',
     isPublished: true,
     uploadedFile: null as UploadedProductDocumentFile | null,
+  }
+}
+
+function toUploadedDocumentFileFromLibraryItem(item: AdminMediaLibraryItem): UploadedProductDocumentFile {
+  return {
+    fileUrl: item.url,
+    fileName: item.name,
+    originalName: item.name,
+    mimeType: item.mimeType,
+    fileSize: item.size ?? 0,
   }
 }
 
@@ -496,6 +510,23 @@ export function ProductDocumentsEditor({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Файл
             </label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <AdminMediaLibraryPicker
+                folders={['documents']}
+                kind="document"
+                onSelect={(item) =>
+                  setCreateState((prev) => {
+                    const uploadedFile = toUploadedDocumentFileFromLibraryItem(item)
+                    return {
+                      ...prev,
+                      uploadedFile,
+                      title: prev.title || item.name.replace(/\.[^.]+$/, ''),
+                    }
+                  })
+                }
+                disabled={uploadingCreateFile}
+              />
+            </div>
             <input
               type="file"
               accept=".pdf,image/jpeg,image/png,image/webp,application/pdf"
@@ -870,6 +901,30 @@ export function ProductDocumentsEditor({
                       <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Заменить файл
                       </label>
+                      <div className="mb-2">
+                        <AdminMediaLibraryPicker
+                          folders={['documents']}
+                          kind="document"
+                          onSelect={(item) =>
+                            setDocuments((prev) =>
+                              prev.map((doc) =>
+                                doc.id === document.id
+                                  ? {
+                                      ...doc,
+                                      fileUrl: item.url,
+                                      fileName: item.name,
+                                      originalName: item.name,
+                                      mimeType: item.mimeType,
+                                      fileSize: item.size,
+                                      uploadMeta: toUploadedDocumentFileFromLibraryItem(item),
+                                    }
+                                  : doc
+                              )
+                            )
+                          }
+                          disabled={savingId === document.id}
+                        />
+                      </div>
                       <input
                         type="file"
                         accept=".pdf,image/jpeg,image/png,image/webp,application/pdf"

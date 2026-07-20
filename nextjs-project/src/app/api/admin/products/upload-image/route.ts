@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as productService from '@/services/product.service';
-import fs from 'fs';
-import path from 'path';
-import { getProjectRoot } from '@/lib/project-root';
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage';
 import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -53,20 +51,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', 'products');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const { webpBuffer, blurDataURL } = await normalizeProductPhoto(buffer);
 
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.webp`;
-    const filePath = path.join(uploadDir, fileName);
-    await fs.promises.writeFile(filePath, webpBuffer);
-
-    const photoUrl = `/uploads/products/${fileName}`;
+    const photoUrl = buildManagedUploadPath('products', fileName);
+    await uploadManagedUpload({
+      filePath: photoUrl,
+      buffer: webpBuffer,
+      contentType: 'image/webp',
+    });
     const blurDataURLValue = blurDataURL ?? undefined;
 
     if (productId) {

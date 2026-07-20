@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
-import fs from 'fs';
-import path from 'path';
-import { getProjectRoot } from '@/lib/project-root';
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage';
 
 const ALLOWED_FOLDERS = ['products', 'posts', 'content', 'categories', 'popup'] as const;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -35,16 +33,16 @@ export async function POST(request: Request) {
     const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
     const ext = ALLOWED_EXT.has(rawExt) ? rawExt : 'jpg';
 
-    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', folder);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${ext}`;
-    const filePath = path.join(uploadDir, fileName);
     const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
+    const url = buildManagedUploadPath(folder, fileName);
 
-    const url = `/uploads/${folder}/${fileName}`;
+    await uploadManagedUpload({
+      filePath: url,
+      buffer,
+      contentType: file.type,
+    });
+
     return NextResponse.json({ url });
   } catch (error) {
     console.error('Upload error:', error);
@@ -58,8 +56,7 @@ export async function POST(request: Request) {
     if (code === 'EACCES' || code === 'EPERM') {
       return NextResponse.json(
         {
-          error:
-            'Нет прав на запись в каталог загрузок. На сервере выдайте контейнеру/пользователю запись в public/uploads (и подпапки) или см. docker-compose volume.',
+          error: 'Нет прав на запись в хранилище загрузок.',
         },
         { status: 500 }
       );

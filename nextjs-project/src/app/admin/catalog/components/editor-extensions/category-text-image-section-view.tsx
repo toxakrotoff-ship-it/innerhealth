@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
 import type { CategoryTextImagePosition } from './category-text-image-section';
+import { AdminMediaLibraryPicker } from '@/app/admin/components/AdminMediaLibraryPicker';
 
 const UPLOAD_ENDPOINT = '/api/admin/upload';
 const FOLDER = 'posts';
@@ -88,6 +89,17 @@ export function CategoryTextImageSectionView({ node, updateAttributes, deleteNod
         >
           {isUploading ? 'Загрузка…' : imageSrc ? 'Сменить фото' : 'Загрузить фото'}
         </button>
+        <AdminMediaLibraryPicker
+          folders={[FOLDER]}
+          buttonLabel="Из библиотеки"
+          disabled={isUploading}
+          onSelect={(item) =>
+            updateAttributes({
+              imageSrc: item.url,
+              imageAlt: imageAlt || item.name.replace(/\.[^.]+$/, ''),
+            })
+          }
+        />
         {imageSrc ? (
           <button
             type="button"

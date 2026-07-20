@@ -1,9 +1,7 @@
 'use server';
 
 import * as cheerio from 'cheerio';
-import fs from 'fs';
-import path from 'path';
-import { getProjectRoot } from '@/lib/project-root';
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage';
 
 // Инициализация Prisma Client
 // const prisma = new PrismaClient();
@@ -33,17 +31,11 @@ async function translateToEnglish(title: string): Promise<string> {
   }
 }
 
-// Функция для скачивания изображения и сохранения на сервере
+// Функция для скачивания изображения и сохранения в настроенное media-хранилище
 async function downloadImage(imageUrl: string, filename: string, productFolder: string): Promise<string> {
   try {
     console.log(`[DEBUG] Скачивание изображения: ${imageUrl}`);
-    
-    // Создаем директорию uploads если она не существует
-    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', productFolder);
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
+
     // Скачиваем изображение с помощью fetch
     const response = await fetch(imageUrl, {
       headers: {
@@ -56,15 +48,16 @@ async function downloadImage(imageUrl: string, filename: string, productFolder: 
     
     const buffer = await response.arrayBuffer();
     const imageBuffer = Buffer.from(buffer);
-    
-    // Сохраняем изображение на диск
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, imageBuffer);
-    
-    console.log(`[DEBUG] Изображение сохранено: ${filePath}`);
-    
-    // Возвращаем путь к файлу
-    return `/uploads/${productFolder}/${filename}`;
+
+    const fileUrl = buildManagedUploadPath(productFolder, filename);
+    await uploadManagedUpload({
+      filePath: fileUrl,
+      buffer: imageBuffer,
+    });
+
+    console.log(`[DEBUG] Изображение сохранено: ${fileUrl}`);
+
+    return fileUrl;
   } catch (error) {
     console.error('[DEBUG] Ошибка скачивания изображения:', error);
     throw new Error('Не удалось скачать изображение');

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AdminMediaLibraryPicker } from '@/app/admin/components/AdminMediaLibraryPicker';
 
 const ACCEPTED_IMAGE_TYPES = 'image/jpeg,image/png,image/gif,image/webp';
 const UPLOAD_ENDPOINT = '/api/admin/upload';
@@ -244,16 +245,26 @@ export function EditorMediaPanel({
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium text-gray-700">Медиа: загрузка и вставка</span>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded"
-              aria-label="Закрыть"
-            >
-              ×
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <AdminMediaLibraryPicker
+              folders={[FOLDER, 'content', 'categories', 'popup']}
+              buttonLabel="Из библиотеки"
+              onSelect={(item) => {
+                onUploadedAdd({ id: item.url, url: item.url, name: item.name })
+                onInsertImage(item.url)
+              }}
+            />
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                aria-label="Закрыть"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         <div

@@ -3,25 +3,25 @@
  * Синхронизация фото товаров из CSV Тильды:
  * - Парсит docs/store-6292080-202602140043.csv (col 1 = Tilda UID, col 9 = Photo URLs)
  * - Находит товар в БД по tildaUid
- * - Скачивает первое фото с static.tildacdn.com в public/uploads/products/{tildaUid}/
- * - Обновляет Product.photo локальным путём
+ * - Скачивает первое фото с static.tildacdn.com в настроенное media-хранилище
+ * - Обновляет Product.photo путём /uploads/products/{tildaUid}/...
  *
  * Запуск из корня nextjs-project:
  *   npx ts-node scripts/sync-product-photos-from-tilda.ts
  *   npx ts-node scripts/sync-product-photos-from-tilda.ts /path/to/file.csv
  */
 
-import fs from 'fs';
 import path from 'path';
+import { readFile } from 'fs/promises';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
 
 import { prisma } from '../src/lib/prisma';
+import { buildManagedUploadPath, uploadManagedUpload } from '../src/lib/media-storage';
 
 const TILDA_PHOTO_PREFIX = 'https://static.tildacdn.com/';
-const UPLOAD_BASE = 'public/uploads/products';
 
 /** Парсинг одной строки CSV с разделителем ";" и полями в кавычках */
 function parseCSVLine(line: string): string[] {
@@ -56,16 +56,13 @@ function extractPhotoUrls(photoField: string): string[] {
   return urls.filter((u) => u.startsWith(TILDA_PHOTO_PREFIX));
 }
 
-/** Скачивает изображение по URL и сохраняет в dirPath как filename. Возвращает относительный URL для БД или null при ошибке */
+/** Скачивает изображение по URL и загружает в настроенное media-хранилище. */
 async function downloadImage(
   imageUrl: string,
-  dirPath: string,
+  objectPrefix: string,
   filename: string
 ): Promise<string | null> {
   try {
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
-    }
     const res = await fetch(imageUrl, {
       headers: {
         'User-Agent':
@@ -85,12 +82,14 @@ async function downloadImage(
           ? 'webp'
           : 'jpg';
     const finalFilename = filename.endsWith(`.${ext}`) ? filename : `${filename}.${ext}`;
-    const filePath = path.join(dirPath, finalFilename);
     const buffer = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
-    // Относительный URL от public: /uploads/products/...
-    const relativeDir = path.relative(path.join(process.cwd(), 'public'), dirPath);
-    return `/${relativeDir.replace(/\\/g, '/')}/${finalFilename}`;
+    const fileUrl = buildManagedUploadPath(objectPrefix, finalFilename);
+    await uploadManagedUpload({
+      filePath: fileUrl,
+      buffer,
+      contentType,
+    });
+    return fileUrl;
   } catch (err) {
     console.warn('  Ошибка загрузки:', (err as Error).message);
     return null;
@@ -102,12 +101,11 @@ async function main(): Promise<void> {
     process.argv[2] ??
     path.resolve(process.cwd(), '../docs/store-6292080-202602140043.csv');
 
-  if (!fs.existsSync(csvPath)) {
+  const content = await readFile(csvPath, 'utf-8').catch(() => null);
+  if (content == null) {
     console.error('Файл не найден:', csvPath);
     process.exit(1);
   }
-
-  const content = fs.readFileSync(csvPath, 'utf-8');
   const lines = content.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) {
     console.error('В CSV нет строк с данными');
@@ -156,8 +154,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const dirPath = path.join(process.cwd(), UPLOAD_BASE, tildaUid);
-    const localUrl = await downloadImage(urls[0], dirPath, 'main');
+    const localUrl = await downloadImage(urls[0], path.posix.join('products', tildaUid), 'main');
     if (!localUrl) continue;
 
     await prisma.product.update({

@@ -1,12 +1,10 @@
 import { after, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { getProjectRoot } from '@/lib/project-root';
 import * as reviewService from '@/services/review.service';
 import { notifyTelegramNewReview } from '@/lib/telegram-notify';
 import { notifyMaxNewReview } from '@/lib/max-notify';
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage';
 
 const REVIEW_RATE_LIMIT = 5;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -127,15 +125,14 @@ export async function POST(request: Request) {
       }
       const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
       const ext = ALLOWED_EXT.has(rawExt) ? rawExt : 'jpg';
-      const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', UPLOAD_FOLDER);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}.${ext}`;
-      const filePath = path.join(uploadDir, fileName);
       const buffer = Buffer.from(await file.arrayBuffer());
-      fs.writeFileSync(filePath, buffer);
-      imageUrl = `/uploads/${UPLOAD_FOLDER}/${fileName}`;
+      imageUrl = buildManagedUploadPath(UPLOAD_FOLDER, fileName);
+      await uploadManagedUpload({
+        filePath: imageUrl,
+        buffer,
+        contentType: file.type,
+      });
     }
 
     const review = await reviewService.createReview({

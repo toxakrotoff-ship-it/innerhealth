@@ -1,9 +1,9 @@
 #!/usr/bin/env ts-node
 /**
- * Загружает все изображения с static.tildacdn.com в локальную папку проекта.
+ * Загружает все изображения с static.tildacdn.com в настроенное media-хранилище.
  *
  * - Product.photo, Category.image, Post.previewImage и картинки в Post.content (TipTap)
- * - Скачивает в public/uploads/tilda/, обновляет записи на /uploads/tilda/...
+ * - Сохраняет как /uploads/tilda/... и обновляет записи в БД
  *
  * Запуск из корня nextjs-project:
  *   npx ts-node scripts/download-tildacdn-images-to-local.ts
@@ -11,7 +11,6 @@
  *   npx ts-node scripts/download-tildacdn-images-to-local.ts --debug    # вывести примеры полей из БД (формат URL)
  */
 
-import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -20,9 +19,9 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
 
 import { prisma } from '../src/lib/prisma';
+import { buildManagedUploadPath, uploadManagedUpload } from '../src/lib/media-storage';
 
 const TILDA_PHOTO_PREFIX = 'https://static.tildacdn.com';
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'tilda');
 const PUBLIC_PREFIX = '/uploads/tilda';
 
 function isTildacdnUrl(value: string | null): value is string {
@@ -92,7 +91,7 @@ function filenameFromUrl(imageUrl: string): string {
   }
 }
 
-/** Скачивает изображение по URL, сохраняет в UPLOAD_DIR. Возвращает относительный URL для БД или null */
+/** Скачивает изображение по URL и загружает в настроенное media-хранилище. */
 async function downloadImage(
   imageUrl: string,
   baseFilename: string,
@@ -102,9 +101,6 @@ async function downloadImage(
     return `${PUBLIC_PREFIX}/${baseFilename}.jpg`;
   }
   try {
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-    }
     const res = await fetch(imageUrl, {
       headers: {
         'User-Agent':
@@ -124,10 +120,14 @@ async function downloadImage(
           ? 'webp'
           : 'jpg';
     const finalFilename = `${baseFilename}.${ext}`;
-    const filePath = path.join(UPLOAD_DIR, finalFilename);
     const buffer = Buffer.from(await res.arrayBuffer());
-    fs.writeFileSync(filePath, buffer);
-    return `${PUBLIC_PREFIX}/${finalFilename}`;
+    const fileUrl = buildManagedUploadPath('tilda', finalFilename);
+    await uploadManagedUpload({
+      filePath: fileUrl,
+      buffer,
+      contentType,
+    });
+    return fileUrl;
   } catch (err) {
     console.warn('  Ошибка загрузки:', (err as Error).message);
     return null;

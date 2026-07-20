@@ -1,13 +1,11 @@
 import 'server-only'
 
 import { Prisma, type ProductDocumentType } from '@prisma/client'
-import { promises as fs } from 'fs'
-import path from 'path'
 import { prisma } from '@/lib/prisma'
 import type { BrandId } from '@/lib/brand/brand'
 import { resolveDbBrand } from '@/lib/brand/brand-db'
 import { productBelongsToBrandScope, SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
-import { getProjectRoot } from '@/lib/project-root'
+import { deleteManagedUpload } from '@/lib/media-storage'
 import {
   getProductDocumentTypeLabel,
   getProductDocumentTypeOrder,
@@ -537,22 +535,7 @@ export async function deleteProductDocument(params: {
 
 export async function removeDocumentFileIfManaged(fileUrl: string | null | undefined): Promise<void> {
   if (!fileUrl || !fileUrl.startsWith('/uploads/')) return
-
-  const relativePath = fileUrl.replace(/^\/+/, '')
-  const filePath = path.join(getProjectRoot(), 'public', relativePath)
-
-  try {
-    await fs.unlink(filePath)
-  } catch (error) {
-    const code =
-      error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      typeof (error as NodeJS.ErrnoException).code === 'string'
-        ? (error as NodeJS.ErrnoException).code
-        : undefined
-    if (code !== 'ENOENT') throw error
-  }
+  await deleteManagedUpload(fileUrl)
 }
 
 export async function getDocumentProductSlugs(params: {

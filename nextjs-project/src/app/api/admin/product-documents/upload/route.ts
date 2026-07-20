@@ -1,14 +1,12 @@
-import fs from 'fs'
-import path from 'path'
 import { NextResponse } from 'next/server'
 import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage'
 import {
   buildStoredProductDocumentFileName,
   detectProductDocumentMime,
   PRODUCT_DOCUMENT_MAX_FILE_SIZE,
   PRODUCT_DOCUMENT_UPLOAD_FOLDER,
 } from '@/lib/product-document-files'
-import { getProjectRoot } from '@/lib/project-root'
 import { requireAdminSession } from '@/lib/require-admin'
 
 export async function POST(request: Request) {
@@ -44,16 +42,15 @@ export async function POST(request: Request) {
       mimeType: detectedMime,
     })
 
-    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', PRODUCT_DOCUMENT_UPLOAD_FOLDER)
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-
-    const filePath = path.join(uploadDir, fileName)
-    await fs.promises.writeFile(filePath, buffer)
+    const url = buildManagedUploadPath(PRODUCT_DOCUMENT_UPLOAD_FOLDER, fileName)
+    await uploadManagedUpload({
+      filePath: url,
+      buffer,
+      contentType: detectedMime,
+    })
 
     return NextResponse.json({
-      url: `/uploads/${PRODUCT_DOCUMENT_UPLOAD_FOLDER}/${fileName}`,
+      url,
       fileName,
       originalName: file.name,
       mimeType: detectedMime,

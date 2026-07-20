@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { AdminMediaLibraryPicker } from '@/app/admin/components/AdminMediaLibraryPicker';
 
 const ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 
@@ -95,6 +96,16 @@ export function CoverImageDropzone({
 
   return (
     <div className={className}>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <AdminMediaLibraryPicker
+          folders={[folder]}
+          onSelect={(item) => {
+            setUploadError(null)
+            onChange(item.url)
+          }}
+          disabled={disabled || uploading}
+        />
+      </div>
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}

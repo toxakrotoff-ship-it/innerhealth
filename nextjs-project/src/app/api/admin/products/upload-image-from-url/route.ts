@@ -2,11 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as productService from '@/services/product.service';
 import { lookup } from 'node:dns/promises';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
 import net from 'node:net';
-import path from 'path';
-import { getProjectRoot } from '@/lib/project-root';
+import { buildManagedUploadPath, uploadManagedUpload } from '@/lib/media-storage';
 import { normalizeProductPhoto } from '@/lib/product-photo-normalization';
 
 type PhotoEntry = {
@@ -162,13 +159,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Создаем директорию для загрузки файлов, если её нет
     const productName = existingProduct.title.replace(/[^a-zA-Z0-9а-яА-ЯёЁ\-_]/g, '_');
-    const uploadDir = path.join(getProjectRoot(), 'public', 'uploads', 'products', productName);
-    
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
 
     const arrayBuffer = await response.arrayBuffer();
     const originalBuffer = Buffer.from(arrayBuffer);
@@ -181,11 +172,13 @@ export async function POST(request: Request) {
     }
 
     const webpFileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.webp`;
-    const webpFilePath = path.join(uploadDir, webpFileName);
     const { webpBuffer, blurDataURL } = await normalizeProductPhoto(originalBuffer);
-    await fsPromises.writeFile(webpFilePath, webpBuffer);
-
-    const photoUrl = `/uploads/products/${productName}/${webpFileName}`;
+    const photoUrl = buildManagedUploadPath('products', productName, webpFileName);
+    await uploadManagedUpload({
+      filePath: photoUrl,
+      buffer: webpBuffer,
+      contentType: 'image/webp',
+    });
     const blurDataURLValue = blurDataURL ?? undefined;
 
     const existingPhotos = parsePhotosJson(existingProduct.photos);
