@@ -35,7 +35,8 @@ async function handleRequest(pathSegments: string[] | undefined) {
 
   try {
     const buffer = await readManagedUpload(managedPath)
-    return new NextResponse(buffer, {
+    const body = new Uint8Array(buffer)
+    return new NextResponse(body, {
       headers: {
         'Content-Type': guessContentTypeFromPath(managedPath),
         'Cache-Control': managedUploadCacheControl,
