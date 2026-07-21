@@ -33,6 +33,10 @@ vi.mock('@/services/settings.service', () => ({
     yookassa_shop_id: 'test-shop',
     yookassa_secret_key: 'test-secret',
   }),
+  getYookassaCredentials: vi.fn().mockResolvedValue({
+    shopId: 'test-shop',
+    secretKey: 'test-secret',
+  }),
 }))
 
 vi.mock('@/lib/telegram-notify', () => ({

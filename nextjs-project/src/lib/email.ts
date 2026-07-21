@@ -628,7 +628,7 @@ export async function sendNewOrderNotification(
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[email] Send new order notification error:', message)
+    console.error('[email] Send paid order admin notification error:', message)
     return { ok: false, error: message }
   }
 }

@@ -13,8 +13,8 @@ import { resolveShippingCostForOrderNotify } from '@/lib/order-shipping-cost'
  * Вызывать только после перевода заказа в статус «оплачен».
  */
 export function scheduleNotifyAllChannelsAfterOrderPaid(orderId: string): void {
-  after(() => {
-    void notifyAllChannelsAfterOrderPaid(orderId)
+  after(async () => {
+    await notifyAllChannelsAfterOrderPaid(orderId)
   })
 }
 
@@ -66,24 +66,26 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
       brandId,
     } as const
 
-    notifyTelegramOrder(notifyPayload)
-    void notifyMaxOrder({
-      ...notifyPayload,
-      customerUserId: order.userId ?? undefined,
-    })
-
     const adminEmails = await userService.getAdminNotificationEmails()
-    void sendPaidOrderEmailsWithDelay(adminEmails, shipping.email.trim(), shipping.fullName, {
-      orderId: order.id,
-      orderNumber: order.orderNumber ?? null,
-      total: order.total,
-      shippingCost,
-      items,
-      shipping,
-      promoCode: order.promoCode?.code ?? null,
-      promoDiscountAmount,
-      cdekTrackNumber: order.cdekTrackNumber ?? null,
-    })
+    notifyTelegramOrder(notifyPayload)
+
+    await Promise.allSettled([
+      notifyMaxOrder({
+        ...notifyPayload,
+        customerUserId: order.userId ?? undefined,
+      }),
+      sendPaidOrderEmailsWithDelay(adminEmails, shipping.email.trim(), shipping.fullName, {
+        orderId: order.id,
+        orderNumber: order.orderNumber ?? null,
+        total: order.total,
+        shippingCost,
+        items,
+        shipping,
+        promoCode: order.promoCode?.code ?? null,
+        promoDiscountAmount,
+        cdekTrackNumber: order.cdekTrackNumber ?? null,
+      }),
+    ])
   } catch (e) {
     console.error('[order-paid-notifications] failed', orderId, e)
   }
