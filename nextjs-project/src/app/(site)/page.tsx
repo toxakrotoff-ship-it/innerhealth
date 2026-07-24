@@ -1358,12 +1358,17 @@ export default async function HomePage() {
       <AdaptiveContainer maxWidth="default">
         <div className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">
-            <Heading2 className="font-semibold tracking-tighter text-slate-900">Отзывы</Heading2>
-            <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+            <Heading2 className="text-[28px] font-semibold tracking-tighter text-slate-900 sm:text-[34px]">
+              Отзывы
+            </Heading2>
+            <p className="text-xs font-light text-slate-500 2xl:text-sm 3xl:text-base">
               {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
             </p>
           </div>
-          <Link href="/otzyvy" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+          <Link
+            href="/otzyvy"
+            className="flex shrink-0 items-center gap-2 text-[10px] font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-xs"
+          >
             ВСЕ ОТЗЫВЫ <NavArrowRight className="w-4 h-4" aria-hidden />
           </Link>
         </div>
