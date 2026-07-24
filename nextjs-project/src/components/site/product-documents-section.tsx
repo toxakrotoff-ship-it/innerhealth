@@ -1,4 +1,3 @@
-import { Heading2 } from '@/components/ui/responsive-text'
 import { cn } from '@/lib/utils'
 import { formatDocumentDate, formatDocumentFileSize } from '@/lib/product-documents'
 
@@ -29,9 +28,16 @@ export function ProductDocumentsSection({
   if (documents.length === 0) return null
 
   return (
-    <section className={cn('border-t pt-6 sm:pt-8', isSprintTheme ? 'border-slate-700' : 'border-gray-200', className)}>
-      <Heading2 className={cn('mb-4', isSprintTheme && 'text-slate-100')}>Документы</Heading2>
-      <div className="space-y-3">
+    <section className={cn('border-t pt-5 sm:pt-6', isSprintTheme ? 'border-slate-700' : 'border-gray-200', className)}>
+      <h2
+        className={cn(
+          'mb-3 text-base font-semibold tracking-tight sm:text-lg',
+          isSprintTheme ? 'text-slate-100' : 'text-gray-900'
+        )}
+      >
+        Документы
+      </h2>
+      <div className="space-y-2.5">
         {documents.map((document) => {
           const metaLines = [
             document.documentNumber ? `№ ${document.documentNumber}` : null,
@@ -44,30 +50,30 @@ export function ProductDocumentsSection({
             <article
               key={document.id}
               className={cn(
-                'rounded-2xl border p-4 sm:p-5',
+                'rounded-xl border px-3.5 py-3 sm:px-4 sm:py-3.5',
                 isSprintTheme
                   ? 'border-slate-700 bg-slate-900/35'
                   : 'border-gray-200 bg-white'
               )}
             >
-              <p className={cn('text-xs font-semibold uppercase tracking-[0.12em]', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
+              <p className={cn('text-[11px] font-semibold uppercase tracking-[0.12em]', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
                 {document.typeLabel}
               </p>
               <h3
                 className={cn(
-                  'mt-2 text-base font-semibold break-words',
+                  'mt-1.5 text-sm font-semibold break-words sm:text-[0.95rem]',
                   isSprintTheme ? 'text-slate-100' : 'text-gray-900'
                 )}
               >
                 {document.title}
               </h3>
               {metaLines.length > 0 && (
-                <p className={cn('mt-2 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+                <p className={cn('mt-1.5 text-xs', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                   {metaLines.join(' • ')}
                 </p>
               )}
               {(issuedAt || expiresAt) && (
-                <div className={cn('mt-2 space-y-1 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+                <div className={cn('mt-1.5 space-y-0.5 text-xs', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
                   {issuedAt && <p>Дата документа: {issuedAt}</p>}
                   {expiresAt && <p>Действует до: {expiresAt}</p>}
                 </div>
@@ -78,7 +84,7 @@ export function ProductDocumentsSection({
                 rel="noopener noreferrer"
                 aria-label={`Открыть документ: ${document.title}`}
                 className={cn(
-                  'mt-4 inline-flex items-center rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  'mt-3 inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
                   isSprintTheme
                     ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
                     : 'bg-gray-900 text-white hover:bg-gray-700'

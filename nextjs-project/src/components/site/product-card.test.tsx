@@ -68,4 +68,20 @@ describe('ProductCard', () => {
 
     expect(screen.getByText('210 г')).toBeInTheDocument()
   })
+
+  it('shows size badge instead of repeating parentheses segment in the title', () => {
+    render(
+      <ProductCard
+        id="p-2"
+        title="Биойодин (90 капсул)"
+        price={1200}
+        slug="bioiodine"
+        quantity={5}
+      />
+    )
+
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Биойодин')
+    expect(screen.getByRole('heading', { level: 3 })).not.toHaveTextContent('90 капсул')
+    expect(screen.getByText('90 капсул')).toBeInTheDocument()
+  })
 })

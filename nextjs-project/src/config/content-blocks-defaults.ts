@@ -147,6 +147,15 @@ const CATALOG_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'catalog', key: 'categories.fontVariant' },
 ] as const
 
+const PRODUCT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  {
+    page: 'product',
+    key: 'product.documents.placement',
+    adminLabel:
+      'Карточка товара — где показывать блок «Документы» (before-tabs = до табов, after-tabs = после табов)',
+  },
+] as const
+
 const INNER_FAQ_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'faq', key: 'seo.title', adminLabel: 'SEO Title' },
   { page: 'faq', key: 'seo.description', adminLabel: 'SEO Description' },
@@ -311,6 +320,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     home: INNER_HOME_ADMIN_SCHEMA,
     about: ABOUT_ADMIN_SCHEMA,
     catalog: CATALOG_ADMIN_SCHEMA,
+    product: PRODUCT_ADMIN_SCHEMA,
     faq: INNER_FAQ_ADMIN_SCHEMA,
     contacts: CONTACTS_ADMIN_SCHEMA,
     cart: CART_ADMIN_SCHEMA,
@@ -324,6 +334,7 @@ const ADMIN_CONTENT_SCHEMA: Record<
     home: SPRINT_HOME_ADMIN_SCHEMA,
     about: ABOUT_ADMIN_SCHEMA,
     catalog: CATALOG_ADMIN_SCHEMA,
+    product: PRODUCT_ADMIN_SCHEMA,
     faq: SPRINT_FAQ_ADMIN_SCHEMA,
     contacts: CONTACTS_ADMIN_SCHEMA,
     cart: CART_ADMIN_SCHEMA,
@@ -1993,6 +2004,13 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'Как заказать — шаг 3 текст ссылки',
     type: 'short',
     text: 'Контакты',
+  },
+  {
+    page: 'product',
+    key: 'product.documents.placement',
+    label: 'Карточка товара — расположение блока «Документы»',
+    type: 'short',
+    text: 'before-tabs',
   },
   {
     page: 'legal-privacy',

@@ -88,6 +88,23 @@ export function getProductListingSizeLabel(title: string, weight?: number | null
   return null
 }
 
+/**
+ * Title + size badge for catalog cards.
+ * When size is taken from a trailing "(…)" / "— …" segment, that segment is
+ * omitted from the displayed title so it is not duplicated next to the badge.
+ */
+export function getProductListingTitlePresentation(
+  title: string,
+  weight?: number | null
+): { displayTitle: string; sizeLabel: string | null } {
+  const { baseTitle, flavorLabel } = getBaseTitleAndFlavorLabel(title)
+  const sizeLabel = getProductListingSizeLabel(title, weight)
+  return {
+    displayTitle: flavorLabel && sizeLabel ? baseTitle : title,
+    sizeLabel,
+  }
+}
+
 export function pickDefaultVariant(variants: ProductVariantForListing[]): ProductVariantForListing {
   const sorted = [...variants].sort((a, b) => a.title.localeCompare(b.title, 'ru'))
   const available = sorted.find((variant) => isVariantAvailable(variant))

@@ -28,6 +28,7 @@ export const CONTENT_BLOCK_PAGE_PATHS: Readonly<Record<string, readonly string[]
   home: ['/', '/catalog'],
   about: ['/o-nas'],
   catalog: ['/catalog'],
+  product: ['/product', '/catalog'],
   cart: ['/cart'],
   faq: ['/faq'],
   contacts: ['/contacts'],

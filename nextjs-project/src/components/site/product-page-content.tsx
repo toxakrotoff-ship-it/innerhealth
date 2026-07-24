@@ -24,6 +24,10 @@ import { groupProductsForListing } from '@/lib/product-grouping'
 import { normalizeInnerProductContent, parseProductTabsJson } from '@/lib/product-tabs'
 import { isLegacyDocumentSectionTitle } from '@/lib/product-documents'
 import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
+import {
+  DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
+  type ProductDocumentsPlacement,
+} from '@/lib/product-page-layout'
 
 interface ProductPageContentProps {
   product: {
@@ -115,6 +119,8 @@ interface ProductPageContentProps {
     issuedAt?: string | null
     expiresAt?: string | null
   }>
+  /** Where to render structured documents relative to description tabs. */
+  documentsPlacement?: ProductDocumentsPlacement
   isSprintTheme?: boolean
 }
 
@@ -229,6 +235,7 @@ export function ProductPageContent({
   relatedProducts,
   relationSections = [],
   structuredDocuments = [],
+  documentsPlacement = DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
   breadcrumbItems,
   relatedProductsCategoryTitle,
   isSprintTheme = false,
@@ -280,6 +287,16 @@ export function ProductPageContent({
   const relatedListingItems = groupProductsForListing(relatedProducts)
   const hasManualRelationSections = relationSections.length > 0
   const shouldRenderAutomaticRelated = relatedProducts.length > 0 && !hasManualRelationSections
+  const showDocumentsBeforeTabs =
+    hasStructuredDocuments && documentsPlacement === 'before-tabs'
+  const showDocumentsAfterTabs =
+    hasStructuredDocuments && documentsPlacement === 'after-tabs'
+
+  const documentsSection = showDocumentsBeforeTabs || showDocumentsAfterTabs ? (
+    <ScalableSpacing size="md">
+      <ProductDocumentsSection documents={structuredDocuments} isSprintTheme={isSprintTheme} />
+    </ScalableSpacing>
+  ) : null
 
   return (
     <AdaptiveContainer
@@ -424,11 +441,7 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      {hasStructuredDocuments && (
-        <ScalableSpacing size="lg">
-          <ProductDocumentsSection documents={structuredDocuments} isSprintTheme={isSprintTheme} />
-        </ScalableSpacing>
-      )}
+      {showDocumentsBeforeTabs ? documentsSection : null}
 
       {!isSprintTheme && visibleInnerSections.length > 0 && (
         <ScalableSpacing size="lg">
@@ -447,6 +460,8 @@ export function ProductPageContent({
           <ProductTabs tabs={visibleSprintTabs} isSprintTheme={isSprintTheme} />
         </ScalableSpacing>
       )}
+
+      {showDocumentsAfterTabs ? documentsSection : null}
 
       {relationSections.map((section) => {
         const sectionItems = groupProductsForListing(section.items)

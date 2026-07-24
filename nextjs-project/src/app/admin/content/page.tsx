@@ -60,6 +60,7 @@ const PAGES: Array<{ id: string; label: string }> = [
   { id: 'home', label: 'Главная' },
   { id: 'about', label: 'О нас' },
   { id: 'catalog', label: 'Каталог' },
+  { id: 'product', label: 'Карточка товара' },
   { id: 'cart', label: 'Корзина' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },
@@ -396,6 +397,13 @@ function getBlockPresentationMeta(block: ContentBlockAdmin): BlockPresentationMe
     return {
       shortTitle: toSentenceCase(shortTitle.replace(/^показывать\s+/i, '')),
       helper: 'Переключатель: показывать или скрыть элемент на витрине',
+    }
+  }
+
+  if (block.key === 'product.documents.placement') {
+    return {
+      shortTitle: 'Расположение блока «Документы»',
+      helper: 'before-tabs — до табов описания/состава; after-tabs — после табов',
     }
   }
 

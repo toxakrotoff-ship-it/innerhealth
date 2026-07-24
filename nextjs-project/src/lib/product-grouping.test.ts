@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { groupProductsForListing, type ProductVariantForListing } from '@/lib/product-grouping'
+import {
+  getProductListingTitlePresentation,
+  groupProductsForListing,
+  type ProductVariantForListing,
+} from '@/lib/product-grouping'
 
 function createProduct(input: Partial<ProductVariantForListing> & Pick<ProductVariantForListing, 'id' | 'title'>): ProductVariantForListing {
   return {
@@ -18,6 +22,29 @@ function createProduct(input: Partial<ProductVariantForListing> & Pick<ProductVa
     isPreorderEnabled: input.isPreorderEnabled ?? false,
   }
 }
+
+describe('getProductListingTitlePresentation', () => {
+  it('hides trailing parentheses size from title when badge is shown', () => {
+    expect(getProductListingTitlePresentation('Биойодин (90 капсул)')).toEqual({
+      displayTitle: 'Биойодин',
+      sizeLabel: '90 капсул',
+    })
+  })
+
+  it('keeps full title when size badge comes only from weight field', () => {
+    expect(getProductListingTitlePresentation('Костный бульон', 100)).toEqual({
+      displayTitle: 'Костный бульон',
+      sizeLabel: '100 г',
+    })
+  })
+
+  it('prefers parentheses segment over weight for the badge', () => {
+    expect(getProductListingTitlePresentation('Протеин (210 г)', 210)).toEqual({
+      displayTitle: 'Протеин',
+      sizeLabel: '210 г',
+    })
+  })
+})
 
 describe('groupProductsForListing', () => {
   it('preserves incoming order when grouped and single items are mixed', () => {

@@ -10,7 +10,7 @@ import { ProductQuickView } from '@/components/site/product-quick-view'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
-import { getProductListingSizeLabel } from '@/lib/product-grouping'
+import { getProductListingTitlePresentation } from '@/lib/product-grouping'
 
 interface ProductCardProps {
   id: string
@@ -82,7 +82,7 @@ export function ProductCard({
     : getProductImagePostprocessClasses({ surface: 'catalog-card' })
 
   const mobilePhotoFitClass = cn('max-sm:object-cover max-sm:object-center')
-  const sizeLabel = getProductListingSizeLabel(title, weight)
+  const { displayTitle, sizeLabel } = getProductListingTitlePresentation(title, weight)
 
   const updateStyles = () => {
     if (ref.current) {
@@ -187,7 +187,7 @@ export function ProductCard({
                 isSprintTheme ? 'text-slate-100 group-hover:text-[#7AA2FF]' : 'text-text group-hover:text-action-blue'
               )}
             >
-              {title}
+              {displayTitle}
             </h3>
 
             {sizeLabel ? (

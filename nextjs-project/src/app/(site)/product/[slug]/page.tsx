@@ -7,6 +7,7 @@ import * as productRelationService from '@/services/product-relation.service'
 import * as productDocumentService from '@/services/product-document.service'
 import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 import { getSettingsMap } from '@/services/settings.service'
+import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import { buildProductJsonLd } from '@/lib/schema-org'
 import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
@@ -14,6 +15,7 @@ import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 import { buildMetadataWithSocial, normalizeSeoDescription, parseSeoKeywords, trimToNull } from '@/lib/seo'
+import { resolveProductDocumentsPlacement } from '@/lib/product-page-layout'
 
 export const revalidate = 300
 
@@ -131,12 +133,14 @@ export default async function ProductPage({ params }: PageProps) {
   const productPath = `/product/${slug}`
 
   const categoryIds = product.categories.map((item) => item.categoryId)
-  const [relatedProducts, relationSections, structuredDocuments] = await Promise.all([
+  const [relatedProducts, relationSections, structuredDocuments, productBlocks] = await Promise.all([
     productService.getRelatedProductsByCategory(product.id, categoryIds, 8, brandId),
     productRelationService.getPublishedProductRelations({ sourceProductId: product.id, brandId }),
     productDocumentService.getPublishedProductDocuments({ productId: product.id, brandId }),
+    getResolvedBlocksForPage('product', brandId),
   ])
   const photos = parseProductGalleryPhotos(product.photos, product.photo)
+  const documentsPlacement = resolveProductDocumentsPlacement(productBlocks)
 
   const settings = await getSettingsMap(undefined, { brandId })
   const schemaUrl = settings.schema_org_url?.trim()
@@ -172,6 +176,7 @@ export default async function ProductPage({ params }: PageProps) {
         relatedProducts={relatedProducts}
         relationSections={relationSections}
         structuredDocuments={structuredDocuments}
+        documentsPlacement={documentsPlacement}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
         breadcrumbItems={breadcrumbItems}
         isSprintTheme={isSprintTheme}
