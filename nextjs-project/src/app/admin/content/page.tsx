@@ -310,6 +310,10 @@ function getBlockPreviewValue(block: ContentBlockAdmin): string {
     return parseBooleanText(block.text, false) ? 'Показывается на витрине' : 'Скрыто на витрине'
   }
 
+  if (!block.isInherited && block.type === 'short' && block.text.trim().length === 0) {
+    return 'Скрыто override'
+  }
+
   const sourceValue =
     block.type === 'rich'
       ? ''
@@ -344,6 +348,14 @@ function hasEmptyRichDocument(value: JSONContent | null | undefined): boolean {
 
 function getLegalFallbackRoute(key: string): string | null {
   return LEGAL_FALLBACK_SOURCE[key] ?? null
+}
+
+function supportsExplicitVisibilityToggle(block: ContentBlockAdmin): boolean {
+  if (block.type !== 'short') return false
+  if (isBooleanKey(block.key) || isSortOrderKey(block.key) || isCategorySlugKey(block.key)) return false
+  if (isImageSrcKey(block.key)) return false
+  if (block.key === 'categories.fontVariant') return false
+  return true
 }
 
 function stripTechnicalSuffix(label: string): string {
@@ -461,6 +473,7 @@ export default function AdminContentPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const editorTopRef = useRef<HTMLDivElement | null>(null)
+  const hiddenTextDraftsRef = useRef<Record<string, string>>({})
 
   const selectedBlock = useMemo(
     () => blocks.find((b) => b.key === selectedKey) ?? blocks[0],
@@ -517,6 +530,16 @@ export default function AdminContentPage() {
     if (!legalFallbackRoute) return false
     return hasEmptyRichDocument(selectedBlock.richJson) && hasEmptyRichDocument(selectedBlock.defaultRichJson)
   }, [legalFallbackRoute, selectedBlock])
+
+  const selectedBlockSupportsVisibilityToggle = useMemo(
+    () => (selectedBlock ? supportsExplicitVisibilityToggle(selectedBlock) : false),
+    [selectedBlock]
+  )
+
+  const selectedBlockIsExplicitlyHidden = useMemo(() => {
+    if (!selectedBlock || !supportsExplicitVisibilityToggle(selectedBlock)) return false
+    return !selectedBlock.isInherited && selectedBlock.text.trim().length === 0
+  }, [selectedBlock])
 
   useEffect(() => {
     void loadBlocks(page)
@@ -1019,146 +1042,173 @@ export default function AdminContentPage() {
                   </div>
 
                   {selectedBlock.type === 'short' ? (
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                      {getBlockFieldLabel(selectedBlock.key)}
-                    </label>
-                    {selectedBlock.key === 'hero.title' && (
-                      <p className="text-xs text-gray-500 mb-1">
-                        Каждая строка — отдельная строка на экране. Новый абзац — Enter.
-                      </p>
-                    )}
-                    {selectedBlock.key === 'hero.title.highlight' && (
-                      <p className="text-xs text-gray-500 mb-1">
-                        Впишите слово из заголовка выше — именно оно будет выделено цветом на сайте. Цвет задаётся ниже.
-                      </p>
-                    )}
-                    {isImageSrcKey(selectedBlock.key) && (
-                      <>
-                        <CoverImageDropzone
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                        {getBlockFieldLabel(selectedBlock.key)}
+                      </label>
+                      {selectedBlockSupportsVisibilityToggle ? (
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedBlockIsExplicitlyHidden) {
+                                updateBlock(selectedBlock.key, {
+                                  text:
+                                    hiddenTextDraftsRef.current[selectedBlock.key] ??
+                                    selectedBlock.defaultText ??
+                                    '',
+                                })
+                                return
+                              }
+                              hiddenTextDraftsRef.current[selectedBlock.key] = selectedBlock.text
+                              updateBlock(selectedBlock.key, { text: '' })
+                            }}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                              selectedBlockIsExplicitlyHidden
+                                ? 'border-amber-300 bg-amber-50 text-amber-900 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800'
+                                : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900'
+                            }`}
+                          >
+                            {selectedBlockIsExplicitlyHidden ? 'Показать поле' : 'Скрыть поле'}
+                          </button>
+                          <span className="text-xs text-slate-500">
+                            Скрытие сохраняется как пустой override и полностью убирает строку с витрины.
+                          </span>
+                        </div>
+                      ) : null}
+                      {selectedBlock.key === 'hero.title' && (
+                        <p className="text-xs text-gray-500 mb-1">
+                          Каждая строка — отдельная строка на экране. Новый абзац — Enter.
+                        </p>
+                      )}
+                      {selectedBlock.key === 'hero.title.highlight' && (
+                        <p className="text-xs text-gray-500 mb-1">
+                          Впишите слово из заголовка выше — именно оно будет выделено цветом на сайте. Цвет задаётся ниже.
+                        </p>
+                      )}
+                      {isImageSrcKey(selectedBlock.key) && (
+                        <>
+                          <CoverImageDropzone
+                            value={selectedBlock.text}
+                            onChange={(url) => updateBlock(selectedBlock.key, { text: url })}
+                            folder="content"
+                            className="mb-3"
+                          />
+                          <p className="text-xs text-gray-500 mb-1">Или введите URL вручную:</p>
+                        </>
+                      )}
+                      {selectedBlock.key === 'categories.fontVariant' ? (
+                        <>
+                          <p className="text-xs text-gray-500 mb-1">
+                            Применяется к названиям категорий на главной и в каталоге (карточки «Коллаген», «Грибная коллекция» и т.д.).
+                          </p>
+                          <select
+                            className="form-input w-full"
+                            value={
+                              ['sans', 'display', 'script'].includes(selectedBlock.text?.trim() ?? '')
+                                ? selectedBlock.text.trim()
+                                : 'display'
+                            }
+                            onChange={(e) =>
+                              updateBlock(selectedBlock.key, {
+                                text: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="sans">Основной текст (Montserrat)</option>
+                            <option value="display">Акцентный (Unbounded)</option>
+                            <option value="script">Декоративный</option>
+                          </select>
+                          <p
+                            className={`mt-2 text-lg font-medium border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 ${
+                              selectedBlock.text?.trim()?.toLowerCase() === 'sans'
+                                ? 'font-sans'
+                                : selectedBlock.text?.trim()?.toLowerCase() === 'script'
+                                  ? 'font-script'
+                                  : 'font-display'
+                            }`}
+                          >
+                            Коллаген · Грибная коллекция
+                          </p>
+                        </>
+                      ) : isBooleanKey(selectedBlock.key) ? (
+                        <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={parseBooleanText(selectedBlock.text, false)}
+                            onChange={(e) =>
+                              updateBlock(selectedBlock.key, {
+                                text: e.target.checked ? '1' : '0',
+                              })
+                            }
+                          />
+                          <span className="text-sm text-gray-700">Показывать элемент на витрине</span>
+                        </label>
+                      ) : isSortOrderKey(selectedBlock.key) ? (
+                        <input
+                          className="form-input w-full"
+                          type="number"
+                          step={1}
                           value={selectedBlock.text}
-                          onChange={(url) =>
-                            updateBlock(selectedBlock.key, { text: url })
+                          onChange={(e) =>
+                            updateBlock(selectedBlock.key, {
+                              text: e.target.value,
+                            })
                           }
-                          folder="content"
-                          className="mb-3"
                         />
-                        <p className="text-xs text-gray-500 mb-1">
-                          Или введите URL вручную:
-                        </p>
-                      </>
-                    )}
-                    {selectedBlock.key === 'categories.fontVariant' ? (
-                      <>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Применяется к названиям категорий на главной и в каталоге (карточки «Коллаген», «Грибная коллекция» и т.д.).
-                        </p>
+                      ) : isCategorySlugKey(selectedBlock.key) ? (
                         <select
                           className="form-input w-full"
-                          value={
-                            ['sans', 'display', 'script'].includes(
-                              selectedBlock.text?.trim() ?? ''
-                            )
-                              ? selectedBlock.text.trim()
-                              : 'display'
-                          }
+                          value={selectedBlock.text}
                           onChange={(e) =>
                             updateBlock(selectedBlock.key, {
                               text: e.target.value,
                             })
                           }
                         >
-                          <option value="sans">Основной текст (Montserrat)</option>
-                          <option value="display">Акцентный (Unbounded)</option>
-                          <option value="script">Декоративный</option>
+                          <option value="">Не выбрано</option>
+                          {categoryOptions.map((option) => (
+                            <option key={option.id} value={option.slug}>
+                              {option.title} ({option.slug})
+                            </option>
+                          ))}
                         </select>
-                        <p
-                          className={`mt-2 text-lg font-medium border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 ${
-                            selectedBlock.text?.trim()?.toLowerCase() === 'sans'
-                              ? 'font-sans'
-                              : selectedBlock.text?.trim()?.toLowerCase() === 'script'
-                                ? 'font-script'
-                                : 'font-display'
-                          }`}
-                        >
-                          Коллаген · Грибная коллекция
-                        </p>
-                      </>
-                    ) : isBooleanKey(selectedBlock.key) ? (
-                      <label className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
-                        <input
-                          type="checkbox"
-                          checked={parseBooleanText(selectedBlock.text, false)}
-                          onChange={(e) =>
-                            updateBlock(selectedBlock.key, {
-                              text: e.target.checked ? '1' : '0',
-                            })
-                          }
-                        />
-                        <span className="text-sm text-gray-700">Показывать элемент на витрине</span>
-                      </label>
-                    ) : isSortOrderKey(selectedBlock.key) ? (
-                      <input
-                        className="form-input w-full"
-                        type="number"
-                        step={1}
-                        value={selectedBlock.text}
-                        onChange={(e) =>
-                          updateBlock(selectedBlock.key, {
-                            text: e.target.value,
-                          })
-                        }
-                      />
-                    ) : isCategorySlugKey(selectedBlock.key) ? (
-                      <select
-                        className="form-input w-full"
-                        value={selectedBlock.text}
-                        onChange={(e) =>
-                          updateBlock(selectedBlock.key, {
-                            text: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Не выбрано</option>
-                        {categoryOptions.map((option) => (
-                          <option key={option.id} value={option.slug}>
-                            {option.title} ({option.slug})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <textarea
-                        className="form-input w-full"
-                        rows={1}
-                        style={{ minHeight: selectedBlock.key === 'hero.title' ? '120px' : '44px' }}
-                        onInput={(e) => autoResizeTextarea(e.currentTarget)}
-                        ref={(node) => {
-                          if (node) autoResizeTextarea(node)
-                        }}
-                        value={selectedBlock.text}
+                      ) : (
+                        <textarea
+                          className="form-input w-full"
+                          rows={1}
+                          style={{ minHeight: selectedBlock.key === 'hero.title' ? '120px' : '44px' }}
+                          onInput={(e) => autoResizeTextarea(e.currentTarget)}
+                          ref={(node) => {
+                            if (node) autoResizeTextarea(node)
+                          }}
+                          value={selectedBlock.text}
                           onChange={(e) =>
                             updateBlock(selectedBlock.key, {
                               text: e.target.value,
                             })
                           }
-                        placeholder={getBlockPlaceholder(selectedBlock.key)}
+                          placeholder={getBlockPlaceholder(selectedBlock.key)}
+                        />
+                      )}
+                      {selectedBlockIsExplicitlyHidden ? (
+                        <p className="mt-2 text-xs text-amber-700">
+                          Сейчас поле скрыто. Нажмите «Показать поле», чтобы вернуть текст в редактор.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Текст (rich)
+                      </label>
+                      <RichTextEditor
+                        value={selectedBlock.richJson ?? EMPTY_DOC}
+                        onChange={(value) => updateBlock(selectedBlock.key, { richJson: value })}
+                        placeholder="Введите текст..."
                       />
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Текст (rich)
-                    </label>
-                    <RichTextEditor
-                      value={selectedBlock.richJson ?? EMPTY_DOC}
-                      onChange={(value) =>
-                        updateBlock(selectedBlock.key, { richJson: value })
-                      }
-                      placeholder="Введите текст..."
-                    />
-                  </div>
-                )}
+                    </div>
+                  )}
                 </div>
 
                 {selectedBlock.key !== 'categories.fontVariant' && (

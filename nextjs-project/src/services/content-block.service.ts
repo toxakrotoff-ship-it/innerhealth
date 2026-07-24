@@ -21,8 +21,8 @@ function isEmptyRichJson(value: Prisma.JsonValue | null | undefined): boolean {
   )
 }
 
-function hasOwnShortText(value: string | null | undefined): boolean {
-  return typeof value === 'string' && value.trim().length > 0
+function hasStoredShortText(value: string | null | undefined): boolean {
+  return typeof value === 'string'
 }
 
 function getDefaultsForPage(page: string, brandId: BrandId): ContentBlockDefault[] {
@@ -55,7 +55,7 @@ function getValueSource(
   def: ContentBlockDefault | undefined,
   brandId: BrandId
 ): ContentBlockValueSource {
-  if (found && (hasOwnShortText(found.text) || !isEmptyRichJson(found.richJson))) {
+  if (found && (hasStoredShortText(found.text) || !isEmptyRichJson(found.richJson))) {
     return 'override'
   }
 
@@ -67,7 +67,7 @@ function getEffectiveShortText(
   found: { text?: string | null } | null | undefined,
   def: ContentBlockDefault | undefined
 ): string | null {
-  if (hasOwnShortText(found?.text)) return found?.text?.trim() ?? null
+  if (hasStoredShortText(found?.text)) return found?.text?.trim() ?? ''
   return def?.text ?? null
 }
 
