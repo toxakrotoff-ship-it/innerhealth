@@ -98,7 +98,7 @@ export function HowToOrderSteps({
   return (
     <section
       className={[
-        'py-12 sm:py-16',
+        'py-12 sm:py-16 lg:py-12 xl:py-14 2xl:py-16 3xl:py-18 4xl:py-20',
         isSprintTheme ? 'bg-[#060A14]' : 'bg-gray-50',
         showBorders ? (isSprintTheme ? 'border-y border-slate-800' : 'border-y border-gray-100') : '',
       ].join(' ')}

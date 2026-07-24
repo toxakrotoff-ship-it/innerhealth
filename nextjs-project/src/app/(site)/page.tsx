@@ -1107,14 +1107,17 @@ export default async function HomePage() {
         ctaHref={directionsContent.ctaHref}
         items={directionsContent.items}
       />
-      <SpacingVertical size="lg" />
+      <SpacingVertical
+        size="lg"
+        className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
+      />
     </>
   ) : null
 
   const newArrivalsSection =
     newProducts.length > 0 ? (
       <>
-        <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
+        <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-white">
           <AdaptiveContainer maxWidth="default">
             <div className="flex justify-between items-end mb-10 sm:mb-12">
               <div className="space-y-1">
@@ -1198,7 +1201,10 @@ export default async function HomePage() {
             )}
           </AdaptiveContainer>
         </section>
-        <SpacingVertical size="lg" />
+        <SpacingVertical
+          size="lg"
+          className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
+        />
       </>
     ) : null
 
@@ -1209,7 +1215,12 @@ export default async function HomePage() {
         title={howToOrder.title}
         steps={howToOrder.steps}
       />
-      {(showHomeNewsSection || showHomeArticlesSection) && <SpacingVertical size="lg" />}
+      {(showHomeNewsSection || showHomeArticlesSection) && (
+        <SpacingVertical
+          size="lg"
+          className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
+        />
+      )}
     </>
   )
 
@@ -1217,7 +1228,7 @@ export default async function HomePage() {
     <>
       <section
         id="news"
-        className="bg-white py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 scroll-mt-24"
+        className="bg-white py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 scroll-mt-24"
       >
         <AdaptiveContainer maxWidth="default">
           <div className="flex justify-between items-end mb-10 sm:mb-12">
@@ -1274,12 +1285,17 @@ export default async function HomePage() {
           )}
         </AdaptiveContainer>
       </section>
-      {showHomeArticlesSection ? <SpacingVertical size="lg" /> : null}
+      {showHomeArticlesSection ? (
+        <SpacingVertical
+          size="lg"
+          className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
+        />
+      ) : null}
     </>
   ) : null
 
   const articlesSection = showHomeArticlesSection ? (
-    <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+    <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
       <AdaptiveContainer maxWidth="default">
         <div className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">
@@ -1338,7 +1354,7 @@ export default async function HomePage() {
   ) : null
 
   const reviewsSection = (
-    <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-slate-50">
+    <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
       <AdaptiveContainer maxWidth="default">
         <div className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">

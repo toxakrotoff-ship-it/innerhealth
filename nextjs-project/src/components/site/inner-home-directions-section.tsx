@@ -26,7 +26,7 @@ export function InnerHomeDirectionsSection({
   if (items.length === 0) return null
 
   return (
-    <section className="py-16 sm:py-24 lg:py-28 xl:py-32 2xl:py-36 3xl:py-40 4xl:py-44 bg-white">
+    <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-white">
       <AdaptiveContainer maxWidth="default">
         <ScrollReveal as="div" variant="fade-up" className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">
