@@ -52,16 +52,19 @@ export function HeroBlock({
   const highlightWord = (highlight?.text?.trim() ?? 'твоего').toLowerCase()
   const highlightWordLen = highlightWord.length
 
-  const allowedHighlightColors = [
+  const allowedTextColors = [
     'text-white',
+    'text-white/90',
     'text-blue-300',
     'text-blue-400',
     'text-slate-300',
     'text-slate-400',
+    'text-slate-500',
+    'text-slate-600',
     'text-action-blue',
   ] as const
   const highlightColorClass =
-    highlight?.colorToken && allowedHighlightColors.includes(highlight.colorToken as (typeof allowedHighlightColors)[number])
+    highlight?.colorToken && allowedTextColors.includes(highlight.colorToken as (typeof allowedTextColors)[number])
       ? highlight.colorToken
       : 'text-blue-300'
 
@@ -83,14 +86,50 @@ export function HeroBlock({
     bold: 'font-bold',
     extrabold: 'font-extrabold',
   }
+  const allowedVariants = ['sans', 'display', 'script'] as const
+  const variantToClass: Record<(typeof allowedVariants)[number], string> = {
+    sans: 'font-sans',
+    display: 'font-display',
+    script: 'font-script',
+  }
+  const getWeightClass = (
+    block: ContentBlockResolved | null | undefined,
+    fallback: (typeof allowedWeights)[number]
+  ) =>
+    block?.fontWeight && allowedWeights.includes(block.fontWeight as (typeof allowedWeights)[number])
+      ? weightToClass[block.fontWeight as (typeof allowedWeights)[number]]
+      : weightToClass[fallback]
+  const getVariantClass = (
+    block: ContentBlockResolved | null | undefined,
+    fallback: (typeof allowedVariants)[number]
+  ) =>
+    block?.fontVariant && allowedVariants.includes(block.fontVariant as (typeof allowedVariants)[number])
+      ? variantToClass[block.fontVariant as (typeof allowedVariants)[number]]
+      : variantToClass[fallback]
+  const getColorClass = (
+    block: ContentBlockResolved | null | undefined,
+    fallback: (typeof allowedTextColors)[number]
+  ) =>
+    block?.colorToken && allowedTextColors.includes(block.colorToken as (typeof allowedTextColors)[number])
+      ? block.colorToken
+      : fallback
+
   const titleWeightClass =
-    title?.fontWeight && allowedWeights.includes(title.fontWeight as (typeof allowedWeights)[number])
-      ? weightToClass[title.fontWeight as (typeof allowedWeights)[number]]
-      : 'font-thin'
+    getWeightClass(title, 'thin')
+  const titleVariantClass =
+    getVariantClass(title, 'display')
   const subtitleWeightClass =
-    subtitle?.fontWeight && allowedWeights.includes(subtitle.fontWeight as (typeof allowedWeights)[number])
-      ? weightToClass[subtitle.fontWeight as (typeof allowedWeights)[number]]
-      : 'font-light'
+    getWeightClass(subtitle, 'light')
+  const subtitleVariantClass =
+    getVariantClass(subtitle, 'sans')
+  const subtitleColorClass =
+    getColorClass(subtitle, 'text-slate-300')
+  const descriptionWeightClass =
+    getWeightClass(description, 'light')
+  const descriptionVariantClass =
+    getVariantClass(description, 'sans')
+  const descriptionColorClass =
+    getColorClass(description, 'text-slate-300')
 
   const badgeClassName =
     'inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium tracking-wide sm:text-sm 2xl:px-4 2xl:py-1.5 2xl:text-base 3xl:px-5 3xl:py-2'
@@ -135,7 +174,7 @@ export function HeroBlock({
             </div>
           ) : null}
           <h1
-            className={`text-fluid-hero font-display tracking-tighter max-w-full w-full ${titleWeightClass}`}
+            className={`text-fluid-hero tracking-tighter max-w-full w-full ${titleVariantClass} ${titleWeightClass}`}
           >
             {titleText.split('\n').map((line, index) => (
               <span key={`line-${index}`} className="block">
@@ -145,14 +184,14 @@ export function HeroBlock({
           </h1>
           {showSubtitle ? (
             <p
-              className={`text-xl text-white/90 max-w-3xl ${subtitleWeightClass}`}
+              className={`text-fluid-subtitle max-w-fluid ${subtitleVariantClass} ${subtitleWeightClass} ${subtitleColorClass}`}
             >
               {subtitleText}
             </p>
           ) : null}
           {showDescription ? (
             <p
-              className={`text-fluid-subtitle text-slate-300 max-w-fluid ${subtitleWeightClass}`}
+              className={`text-fluid-subtitle max-w-fluid ${descriptionVariantClass} ${descriptionWeightClass} ${descriptionColorClass}`}
             >
               {descriptionText}
             </p>

@@ -394,6 +394,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     type: 'short',
     text: 'Натуральные сухие бульоны, пептиды коллагена и продукты из функциональных грибов российского производства.',
     colorToken: 'text-slate-300',
+    fontVariant: 'sans',
     fontWeight: 'light',
   },
   {
@@ -403,6 +404,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     type: 'short',
     text: 'Понятные составы, удобные форматы и подробная информация о каждом продукте.',
     colorToken: 'text-slate-300',
+    fontVariant: 'sans',
     fontWeight: 'light',
   },
   {
