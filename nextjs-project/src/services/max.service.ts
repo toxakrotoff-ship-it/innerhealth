@@ -28,6 +28,14 @@ export async function findMaxWhitelistByMaxUserId(
   });
 }
 
+/** All MAX links for a user across brands (password-reset fallback). */
+export async function findMaxWhitelistEntriesByUserId(userId: string) {
+  return prisma.maxWhitelist.findMany({
+    where: { userId },
+    select: { brand: true, maxUserId: true },
+  });
+}
+
 export async function findMaxWhitelistByUserId(
   userId: string,
   options: ScopeOptions = {}

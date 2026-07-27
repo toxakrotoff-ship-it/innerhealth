@@ -61,6 +61,8 @@ export default function AdminUsersPage() {
     role: 'USER' as string,
   });
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [resetLinkLoadingId, setResetLinkLoadingId] = useState<string | null>(null);
+  const [copiedResetLink, setCopiedResetLink] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -173,6 +175,53 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleGeneratePasswordResetLink(user: AdminUser) {
+    setError(null);
+    setSuccessMessage(null);
+    setCopiedResetLink(null);
+    setResetLinkLoadingId(user.id);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/password-reset-link`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Не удалось создать ссылку сброса');
+      }
+      const link = typeof data.resetLink === 'string' ? data.resetLink : '';
+      if (!link) throw new Error('Сервер не вернул ссылку');
+
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(link);
+        copied = true;
+      } catch {
+        // fallback below
+      }
+
+      const channels: string[] = [];
+      if (data.deliveredVia?.telegram) channels.push('Telegram');
+      if (data.deliveredVia?.max) channels.push('MAX');
+      const channelNote =
+        channels.length > 0
+          ? ` Также отправлено в ${channels.join(' и ')}.`
+          : ' Мессенджеры не привязаны — отправьте ссылку клиенту вручную.';
+
+      setCopiedResetLink(link);
+      setSuccessMessage(
+        copied
+          ? `Ссылка сброса для ${user.email} скопирована (действует ${data.expiresInMinutes ?? 60} мин).${channelNote}`
+          : `Ссылка сброса для ${user.email} создана (действует ${data.expiresInMinutes ?? 60} мин).${channelNote}`
+      );
+      setTimeout(() => setSuccessMessage(null), 12000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Произошла ошибка');
+    } finally {
+      setResetLinkLoadingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -225,8 +274,13 @@ export default function AdminUsersPage() {
         </div>
       )}
       {successMessage && (
-        <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+        <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg space-y-2">
           <p className="text-sm text-green-700">{successMessage}</p>
+          {copiedResetLink ? (
+            <p className="text-xs text-green-800 break-all font-mono bg-green-100/80 rounded px-2 py-1">
+              {copiedResetLink}
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -440,6 +494,18 @@ export default function AdminUsersPage() {
                   )}
                   <button
                     type="button"
+                    onClick={() => handleGeneratePasswordResetLink(user)}
+                    disabled={resetLinkLoadingId === user.id}
+                    className="p-2 text-gray-500 hover:text-indigo-600 rounded transition border border-gray-200 disabled:opacity-50"
+                    title="Ссылка сброса пароля"
+                    aria-label="Ссылка сброса пароля"
+                  >
+                    <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(user)}
                     className="p-2 text-gray-500 hover:text-red-600 rounded transition border border-gray-200"
                     title="Удалить пользователя"
@@ -557,6 +623,18 @@ export default function AdminUsersPage() {
                               </svg>
                             </Link>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleGeneratePasswordResetLink(user)}
+                            disabled={resetLinkLoadingId === user.id}
+                            className="p-2 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-50"
+                            title="Ссылка сброса пароля"
+                            aria-label="Ссылка сброса пароля"
+                          >
+                            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                            </svg>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(user)}

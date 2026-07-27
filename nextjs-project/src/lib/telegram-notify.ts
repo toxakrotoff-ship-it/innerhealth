@@ -3,6 +3,7 @@ import * as userService from '@/services/user.service';
 import * as settingsService from '@/services/settings.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
+import { normalizeBrandId } from '@/lib/brand/brand';
 import { formatOrderLabel } from '@/lib/order-label';
 import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
@@ -507,4 +508,48 @@ export function notifyTelegramConnection(payload: ConnectionNotifyPayload): void
       );
     }
   }).catch((e) => console.error('[telegram-notify] connection notify:', e));
+}
+
+/**
+ * Sends password reset link to all Telegram accounts linked to the user (any brand).
+ * @returns true if at least one message was delivered.
+ */
+export async function notifyTelegramPasswordResetForUser(payload: {
+  userId: string
+  resetLink: string
+  expiresInMinutes: number
+}): Promise<boolean> {
+  const links = await telegramService.findTelegramWhitelistEntriesByUserId(payload.userId)
+  if (links.length === 0) return false
+
+  let delivered = false
+  const seenChatIds = new Set<string>()
+
+  for (const link of links) {
+    const chatId = link.telegramUserId.trim()
+    if (!chatId || seenChatIds.has(chatId)) continue
+    seenChatIds.add(chatId)
+
+    const brandId = normalizeBrandId(link.brand) ?? 'inner'
+    const token = await settingsService.getTelegramBotToken({ brandId })
+    if (!token) continue
+
+    const text = [
+      '🔑 <b>Сброс пароля</b>',
+      '',
+      'Вы запросили сброс пароля на сайте Inner Health.',
+      `Ссылка действует ${payload.expiresInMinutes} минут:`,
+      escapeHtml(payload.resetLink),
+      '',
+      'Если вы не запрашивали сброс — просто проигнорируйте это сообщение.',
+    ].join('\n')
+
+    const messageId = await sendMessage(token, chatId, text).catch((error) => {
+      console.error('[telegram-notify] password reset notify error:', error)
+      return null
+    })
+    if (messageId != null) delivered = true
+  }
+
+  return delivered
 }

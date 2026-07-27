@@ -45,6 +45,14 @@ export async function findTelegramWhitelistByUserId(
   });
 }
 
+/** All Telegram links for a user across brands (password-reset fallback). */
+export async function findTelegramWhitelistEntriesByUserId(userId: string) {
+  return prisma.telegramWhitelist.findMany({
+    where: { userId },
+    select: { brand: true, telegramUserId: true },
+  });
+}
+
 /** Find whitelist by userId (select telegramUserId, linkedAt) for status. */
 export async function findTelegramWhitelistStatusByUserId(
   userId: string,

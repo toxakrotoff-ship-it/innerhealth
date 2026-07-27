@@ -17,6 +17,13 @@ export async function createPasswordResetToken(params: {
   });
 }
 
+/** Removes unused reset tokens for a user before issuing a new one. */
+export async function deleteUnusedPasswordResetTokensForUser(userId: string) {
+  return prisma.passwordResetToken.deleteMany({
+    where: { userId, usedAt: null },
+  });
+}
+
 export async function findPasswordResetTokenById(id: string) {
   return prisma.passwordResetToken.findUnique({
     where: { id },

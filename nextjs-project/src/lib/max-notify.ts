@@ -4,6 +4,7 @@ import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
+import { normalizeBrandId } from '@/lib/brand/brand';
 import { formatOrderLabel } from '@/lib/order-label';
 
 interface MaxAttachmentRequest {
@@ -25,18 +26,19 @@ async function sendToUsers(
   userIds: string[],
   text: string,
   options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[]; reviewId?: string }
-): Promise<void> {
+): Promise<number> {
   if (userIds.length === 0) {
     console.warn('[max-notify] no recipients', { brandId: options?.brandId ?? null });
-    return;
+    return 0;
   }
 
   const bot = await getMaxBot(options);
   if (!bot) {
     console.warn('[max-notify] bot token is missing', { brandId: options?.brandId ?? null });
-    return;
+    return 0;
   }
 
+  let deliveredCount = 0;
   for (const userId of userIds) {
     const id = Number.parseInt(userId, 10);
     if (!Number.isFinite(id)) {
@@ -52,6 +54,8 @@ async function sendToUsers(
       console.error('[max-notify] sendMessageToUser failed', userId, error);
       return null;
     });
+    if (!message) continue;
+    deliveredCount += 1;
     if (message && typeof message === 'object') {
       const anyMessage = message as unknown as Record<string, unknown>;
       const body = anyMessage.body as Record<string, unknown> | undefined;
@@ -83,6 +87,7 @@ async function sendToUsers(
       }
     }
   }
+  return deliveredCount;
 }
 
 export interface MaxOrderNotifyPayload {
@@ -431,4 +436,42 @@ export async function notifyMaxNewReview(payload: {
     messageText,
     { ...scope, attachments: [keyboard], reviewId: payload.reviewId }
   );
+}
+
+/**
+ * Sends password reset link to all MAX accounts linked to the user (any brand).
+ * @returns true if at least one message was delivered.
+ */
+export async function notifyMaxPasswordResetForUser(payload: {
+  userId: string
+  resetLink: string
+  expiresInMinutes: number
+}): Promise<boolean> {
+  const links = await maxService.findMaxWhitelistEntriesByUserId(payload.userId)
+  if (links.length === 0) return false
+
+  let delivered = false
+  const seenUserIds = new Set<string>()
+
+  for (const link of links) {
+    const maxUserId = link.maxUserId.trim()
+    if (!maxUserId || seenUserIds.has(maxUserId)) continue
+    seenUserIds.add(maxUserId)
+
+    const brandId = normalizeBrandId(link.brand) ?? 'inner'
+    const text = [
+      '🔑 **Сброс пароля**',
+      '',
+      'Вы запросили сброс пароля на сайте Inner Health.',
+      `Ссылка действует ${payload.expiresInMinutes} минут:`,
+      escapeHtml(payload.resetLink),
+      '',
+      'Если вы не запрашивали сброс — просто проигнорируйте это сообщение.',
+    ].join('\n')
+
+    const count = await sendToUsers([maxUserId], text, { brandId })
+    if (count > 0) delivered = true
+  }
+
+  return delivered
 }

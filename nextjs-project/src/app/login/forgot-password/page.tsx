@@ -76,7 +76,8 @@ export default function ForgotPasswordPage() {
         </h1>
 
         <p className="mb-4 w-full text-center text-sm text-white/80">
-          Введите email учётной записи. Мы отправим ссылку для сброса пароля.
+          Введите email учётной записи. Мы отправим ссылку для сброса пароля
+          (на почту или в привязанный Telegram/MAX).
         </p>
 
         {status === 'success' && (
