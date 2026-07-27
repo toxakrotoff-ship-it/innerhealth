@@ -485,22 +485,24 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
-        {order.status === 'pending' && order.yookassaPaymentId ? (
+        {order.yookassaPaymentId ? (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">ЮKassa</h3>
             <p className="text-xs text-gray-500">
               Payment ID: <span className="font-mono">{order.yookassaPaymentId}</span>
             </p>
-            <div className="mt-2 flex flex-wrap gap-3">
-              <button
-                type="button"
-                disabled={yookassaLoadingId === order.id}
-                onClick={() => handleSyncYookassaPayment(order.id)}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-              >
-                {yookassaLoadingId === order.id ? 'Проверка…' : 'Проверить оплату ЮKassa'}
-              </button>
-            </div>
+            {order.status === 'pending' ? (
+              <div className="mt-2 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={yookassaLoadingId === order.id}
+                  onClick={() => handleSyncYookassaPayment(order.id)}
+                  className="text-sm font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                >
+                  {yookassaLoadingId === order.id ? 'Проверка…' : 'Проверить оплату ЮKassa'}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

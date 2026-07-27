@@ -2,7 +2,9 @@
  * Интеграция с API ЮKassa (https://yookassa.ru/developers).
  * Создание платежа (redirect), чек 54-ФЗ, идемпотентность.
  *
- * Учётные данные: из params.credentials или из env (YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY).
+ * Учётные данные — только явно переданные (из настроек админки / SiteSetting).
+ * Env-fallback намеренно отсутствует: иначе при пустых/непрочитанных настройках
+ * платёж может уйти в тестовый/чужой магазин из YOOKASSA_* в окружении.
  * APP_URL или NEXTAUTH_URL — базовый URL для return_url (опционально).
  */
 
@@ -18,16 +20,48 @@ function buildAuthHeader(credentials: YookassaCredentials): string {
   return `Basic ${encoded}`
 }
 
-function getCredentials(override?: YookassaCredentials | null): YookassaCredentials {
-  if (override?.shopId && override?.secretKey) {
-    return { shopId: override.shopId, secretKey: override.secretKey }
-  }
-  const shopId = process.env.YOOKASSA_SHOP_ID
-  const secretKey = process.env.YOOKASSA_SECRET_KEY
+/** Секрет тестового магазина ЮKassa (`test_…`). */
+export function isYookassaTestSecretKey(secretKey: string): boolean {
+  return secretKey.trim().startsWith('test_')
+}
+
+/**
+ * Нормализует и требует валидные credentials. Без env-fallback.
+ * @throws если shopId/secretKey отсутствуют.
+ */
+export function requireYookassaCredentials(
+  credentials: YookassaCredentials | null | undefined
+): YookassaCredentials {
+  const shopId = credentials?.shopId?.trim() ?? ''
+  const secretKey = credentials?.secretKey?.trim() ?? ''
   if (!shopId || !secretKey) {
-    throw new Error('YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are required')
+    throw new Error('YooKassa credentials are required (shopId and secretKey from admin settings)')
   }
   return { shopId, secretKey }
+}
+
+/**
+ * В production запрещает тестовые ключи, чтобы заказ/СДЭК не ушли в test-контур.
+ * Обход: YOOKASSA_ALLOW_TEST_KEYS=1 (только для осознанного staging).
+ */
+export function assertYookassaCredentialsAllowedForEnvironment(
+  credentials: YookassaCredentials
+): void {
+  if (process.env.NODE_ENV !== 'production') return
+  if (process.env.YOOKASSA_ALLOW_TEST_KEYS === '1') return
+  if (isYookassaTestSecretKey(credentials.secretKey)) {
+    throw new Error(
+      'YooKassa test credentials (test_*) are not allowed in production. Set live keys in admin settings.'
+    )
+  }
+}
+
+function resolveCredentialsForRequest(
+  credentials: YookassaCredentials | null | undefined
+): YookassaCredentials {
+  const resolved = requireYookassaCredentials(credentials)
+  assertYookassaCredentialsAllowedForEnvironment(resolved)
+  return resolved
 }
 
 function getBaseUrl(): string {
@@ -62,8 +96,8 @@ export interface CreatePaymentParams {
   returnUrl: string
   /** Ключ идемпотентности (уникальный на запрос) */
   idempotenceKey: string
-  /** Учётные данные ЮKassa (если не заданы — берутся из env) */
-  credentials?: YookassaCredentials | null
+  /** Учётные данные ЮKassa из настроек админки (обязательны, без env-fallback) */
+  credentials: YookassaCredentials
 }
 
 /** Ответ API создания платежа (нужные поля) */
@@ -91,7 +125,7 @@ export interface YookassaGetPaymentResponse {
 export async function createYookassaPayment(
   params: CreatePaymentParams
 ): Promise<{ paymentId: string; confirmationUrl: string }> {
-  const credentials = getCredentials(params.credentials)
+  const credentials = resolveCredentialsForRequest(params.credentials)
   const auth = buildAuthHeader(credentials)
   const body = {
     amount: {
@@ -161,8 +195,13 @@ export async function getYookassaPayment(
   paymentId: string,
   credentials?: YookassaCredentials | null
 ): Promise<{ status: string; metadata?: { orderId?: string } } | null> {
-  if (credentials === null) return null
-  const creds = getCredentials(credentials)
+  let creds: YookassaCredentials
+  try {
+    creds = resolveCredentialsForRequest(credentials)
+  } catch {
+    // Нет валидных credentials из админки — не ходим в env и не подтверждаем оплату.
+    return null
+  }
   const auth = buildAuthHeader(creds)
   const res = await fetch(`${YOOKASSA_API}/payments/${paymentId}`, {
     method: 'GET',
@@ -187,10 +226,15 @@ export async function checkYookassaConnection(
   credentials?: YookassaCredentials | null
 ): Promise<YookassaConnectionCheck> {
   try {
-    if (credentials === null) {
-      return { ok: false, error: 'Учётные данные ЮKassa не заданы' }
+    let creds: YookassaCredentials
+    try {
+      creds = resolveCredentialsForRequest(credentials)
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Учётные данные ЮKassa не заданы',
+      }
     }
-    const creds = getCredentials(credentials)
     const auth = buildAuthHeader(creds)
     const res = await fetch(`${YOOKASSA_API}/payments?limit=1`, {
       method: 'GET',
