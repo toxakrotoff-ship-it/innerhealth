@@ -7,6 +7,11 @@ import {
   type AdminMediaLibraryItem,
 } from '@/app/admin/components/AdminMediaLibraryPicker'
 import { formatDocumentFileSize, PRODUCT_DOCUMENT_TYPE_OPTIONS } from '@/lib/product-documents'
+import {
+  DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
+  resolveProductDocumentsPlacement,
+  type ProductDocumentsPlacement,
+} from '@/lib/product-page-layout'
 
 type AdminBrand = 'inner' | 'sprint-power'
 
@@ -72,6 +77,16 @@ interface EditableDocumentState extends AdminProductDocument {
 }
 
 const DEFAULT_CREATE_TYPE: ProductDocumentType = 'DECLARATION'
+const DOCUMENTS_PLACEMENT_BLOCK_KEY = 'product.documents.placement'
+const DOCUMENTS_PLACEMENT_PAGE = 'product'
+
+interface PlacementBlockState {
+  id?: string
+  page: string
+  key: string
+  label: string
+  type: 'short' | 'rich'
+}
 
 function inferMimeTypeFromFileName(fileName: string | null | undefined): string | null {
   const normalized = fileName?.trim().toLowerCase() ?? ''
@@ -165,6 +180,13 @@ export function ProductDocumentsEditor({
   const [attachingId, setAttachingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<ProductDocumentSuggestion[]>([])
+  const [documentsPlacement, setDocumentsPlacement] = useState<ProductDocumentsPlacement>(
+    DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT
+  )
+  const [placementBlock, setPlacementBlock] = useState<PlacementBlockState | null>(null)
+  const [placementLoading, setPlacementLoading] = useState(false)
+  const [placementSaving, setPlacementSaving] = useState(false)
+  const [placementSaved, setPlacementSaved] = useState(false)
 
   const loadDocuments = useCallback(async () => {
     if (!productId) return
@@ -192,9 +214,141 @@ export function ProductDocumentsEditor({
     }
   }, [productId])
 
+  const loadDocumentsPlacement = useCallback(async () => {
+    setPlacementLoading(true)
+    try {
+      const brandQuery = activeBrand ? `&brand=${encodeURIComponent(activeBrand)}` : ''
+      const response = await fetch(
+        `/api/admin/content-blocks?page=${encodeURIComponent(DOCUMENTS_PLACEMENT_PAGE)}${brandQuery}`,
+        { credentials: 'include' }
+      )
+      const data = (await response.json().catch(() => [])) as
+        | Array<{
+            id?: string
+            page?: string
+            key?: string
+            label?: string
+            type?: 'short' | 'rich'
+            text?: string | null
+          }>
+        | { error?: string }
+
+      if (!response.ok) {
+        throw new Error(
+          'error' in data && typeof data.error === 'string'
+            ? data.error
+            : 'Не удалось загрузить расположение документов'
+        )
+      }
+
+      const blocks = Array.isArray(data) ? data : []
+      const block = blocks.find((item) => item.key === DOCUMENTS_PLACEMENT_BLOCK_KEY)
+      setDocumentsPlacement(
+        resolveProductDocumentsPlacement([
+          {
+            key: DOCUMENTS_PLACEMENT_BLOCK_KEY,
+            label: block?.label ?? DOCUMENTS_PLACEMENT_BLOCK_KEY,
+            type: 'short',
+            text: block?.text ?? DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
+            richJson: null,
+            colorToken: null,
+            fontVariant: null,
+            fontWeight: null,
+          },
+        ])
+      )
+      setPlacementBlock({
+        id: block?.id,
+        page: block?.page ?? DOCUMENTS_PLACEMENT_PAGE,
+        key: DOCUMENTS_PLACEMENT_BLOCK_KEY,
+        label: block?.label ?? 'Карточка товара — расположение блока «Документы»',
+        type: 'short',
+      })
+    } catch (placementError) {
+      console.error('product documents placement load', placementError)
+      setDocumentsPlacement(DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT)
+      setPlacementBlock({
+        page: DOCUMENTS_PLACEMENT_PAGE,
+        key: DOCUMENTS_PLACEMENT_BLOCK_KEY,
+        label: 'Карточка товара — расположение блока «Документы»',
+        type: 'short',
+      })
+    } finally {
+      setPlacementLoading(false)
+    }
+  }, [activeBrand])
+
   useEffect(() => {
     void loadDocuments()
   }, [loadDocuments])
+
+  useEffect(() => {
+    void loadDocumentsPlacement()
+  }, [loadDocumentsPlacement])
+
+  async function handleSaveDocumentsPlacement(nextPlacement: ProductDocumentsPlacement) {
+    if (!placementBlock) return
+
+    setDocumentsPlacement(nextPlacement)
+    setPlacementSaving(true)
+    setPlacementSaved(false)
+    setError(null)
+
+    try {
+      const brandQuery = activeBrand ? `?brand=${encodeURIComponent(activeBrand)}` : ''
+      const response = await fetch(`/api/admin/content-blocks${brandQuery}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: DOCUMENTS_PLACEMENT_PAGE,
+          blocks: [
+            {
+              id: placementBlock.id,
+              page: placementBlock.page,
+              key: placementBlock.key,
+              label: placementBlock.label,
+              type: placementBlock.type,
+              text: nextPlacement,
+            },
+          ],
+        }),
+      })
+      const data = (await response.json().catch(() => null)) as
+        | Array<{ id?: string; key?: string; label?: string; page?: string; type?: 'short' | 'rich' }>
+        | { error?: string }
+        | null
+
+      if (!response.ok) {
+        throw new Error(
+          data && 'error' in data && typeof data.error === 'string'
+            ? data.error
+            : 'Не удалось сохранить расположение документов'
+        )
+      }
+
+      const refreshed = Array.isArray(data)
+        ? data.find((item) => item.key === DOCUMENTS_PLACEMENT_BLOCK_KEY)
+        : null
+      if (refreshed) {
+        setPlacementBlock({
+          id: refreshed.id,
+          page: refreshed.page ?? DOCUMENTS_PLACEMENT_PAGE,
+          key: DOCUMENTS_PLACEMENT_BLOCK_KEY,
+          label: refreshed.label ?? placementBlock.label,
+          type: refreshed.type ?? 'short',
+        })
+      }
+      setPlacementSaved(true)
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error ? saveError.message : 'Не удалось сохранить расположение документов'
+      )
+      await loadDocumentsPlacement()
+    } finally {
+      setPlacementSaving(false)
+    }
+  }
 
   useEffect(() => {
     if (!productId) return
@@ -483,6 +637,27 @@ export function ProductDocumentsEditor({
         <p className="text-sm text-gray-600">
           Документы можно привязывать после первого сохранения товара.
         </p>
+        <div className="rounded-lg border border-gray-200 bg-white p-3">
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Где показывать блок «Документы» на карточке
+          </label>
+          <select
+            value={documentsPlacement}
+            disabled={placementLoading || placementSaving || !placementBlock}
+            onChange={(event) =>
+              void handleSaveDocumentsPlacement(event.target.value as ProductDocumentsPlacement)
+            }
+            className="form-input w-full max-w-md"
+          >
+            <option value="before-tabs">До табов (описание / состав)</option>
+            <option value="after-tabs">После табов (описание / состав)</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Настройка для всех товаров бренда{' '}
+            {activeBrand === 'sprint-power' ? 'Sprint Power' : 'Inner Health'}.
+            {placementSaved ? ' Сохранено.' : null}
+          </p>
+        </div>
       </section>
     )
   }
@@ -494,6 +669,28 @@ export function ProductDocumentsEditor({
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Бренд: {activeBrand === 'sprint-power' ? 'Sprint Power' : 'Inner Health'}. Один документ
           можно привязать к нескольким товарам без дублирования файла.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Где показывать блок «Документы» на карточке
+        </label>
+        <select
+          value={documentsPlacement}
+          disabled={placementLoading || placementSaving || !placementBlock}
+          onChange={(event) =>
+            void handleSaveDocumentsPlacement(event.target.value as ProductDocumentsPlacement)
+          }
+          className="form-input w-full max-w-md"
+        >
+          <option value="before-tabs">До табов (описание / состав)</option>
+          <option value="after-tabs">После табов (описание / состав)</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Общая настройка витрины для текущего бренда, не для одного документа.
+          {placementSaving ? ' Сохранение…' : null}
+          {!placementSaving && placementSaved ? ' Сохранено.' : null}
         </p>
       </div>
 

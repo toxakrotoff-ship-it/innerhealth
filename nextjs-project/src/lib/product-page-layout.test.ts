@@ -40,7 +40,7 @@ describe('resolveProductDocumentsPlacement', () => {
 })
 
 describe('product admin content schema', () => {
-  it('exposes documents placement for both brands', async () => {
+  it('keeps documents placement available for API-backed product editor', async () => {
     const { getAdminContentSchemaForBrandPage } = await import('@/config/content-blocks-defaults')
     expect(getAdminContentSchemaForBrandPage('inner', 'product').map((entry) => entry.key)).toContain(
       'product.documents.placement'
