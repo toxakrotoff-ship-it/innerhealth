@@ -21,6 +21,9 @@ interface HeroBlockProps {
   showDescription?: boolean
   showPrimaryCta?: boolean
   showImage?: boolean
+  secondaryCtaLabel?: string
+  secondaryCtaHref?: string
+  isSprintTheme?: boolean
 }
 
 export function HeroBlock({
@@ -38,6 +41,9 @@ export function HeroBlock({
   showDescription = true,
   showPrimaryCta = true,
   showImage = true,
+  secondaryCtaLabel,
+  secondaryCtaHref,
+  isSprintTheme = false,
 }: HeroBlockProps) {
 
   const badgeText = badge?.text ?? 'НОВЫЙ СТАНДАРТ БИОДОБАВОК'
@@ -155,7 +161,11 @@ export function HeroBlock({
   /* min-h breakpoints mirror `main` pt in `app/(site)/layout.tsx` (sticky header offset). */
   return (
     <section
-      className="relative box-border min-h-[clamp(560px,calc(100dvh-4rem-env(safe-area-inset-top)),980px)] 2xl:min-h-[clamp(620px,calc(100dvh-4.5rem-env(safe-area-inset-top)),1080px)] 3xl:min-h-[clamp(680px,calc(100dvh-5rem-env(safe-area-inset-top)),1160px)] 4xl:min-h-[clamp(720px,calc(100dvh-6rem-env(safe-area-inset-top)),1220px)] 5xl:min-h-[clamp(760px,calc(100dvh-7rem-env(safe-area-inset-top)),1280px)] 6xl:min-h-[clamp(800px,calc(100dvh-8rem-env(safe-area-inset-top)),1360px)] flex items-center overflow-hidden pb-6 sm:pb-8 text-white bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]"
+      className={`relative box-border min-h-[clamp(560px,calc(100dvh-4rem-env(safe-area-inset-top)),980px)] 2xl:min-h-[clamp(620px,calc(100dvh-4.5rem-env(safe-area-inset-top)),1080px)] 3xl:min-h-[clamp(680px,calc(100dvh-5rem-env(safe-area-inset-top)),1160px)] 4xl:min-h-[clamp(720px,calc(100dvh-6rem-env(safe-area-inset-top)),1220px)] 5xl:min-h-[clamp(760px,calc(100dvh-7rem-env(safe-area-inset-top)),1280px)] 6xl:min-h-[clamp(800px,calc(100dvh-8rem-env(safe-area-inset-top)),1360px)] flex items-center overflow-hidden pb-6 sm:pb-8 text-white ${
+        isSprintTheme
+          ? 'bg-[#060A14]'
+          : 'bg-[radial-gradient(circle_at_top_right,#334155_0%,#0f172a_100%)]'
+      }`}
       aria-label="Главный блок"
     >
       <AdaptiveContainer
@@ -169,7 +179,7 @@ export function HeroBlock({
         >
           {showBadge ? (
             <div className={`${badgeClassName} 3xl:text-sm 3xl:px-4 3xl:py-1.5`}>
-              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" aria-hidden />
+              <span className={`w-2 h-2 rounded-full animate-pulse ${isSprintTheme ? 'bg-[#7AA2FF]' : 'bg-blue-400'}`} aria-hidden />
               {badgeText}
             </div>
           ) : null}
@@ -200,17 +210,21 @@ export function HeroBlock({
             {showPrimaryCta ? (
               <Link
                 href={ctaHref}
-                className="desktop-button-scale inline-flex items-center gap-2 rounded-full bg-white px-7 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-blue-50 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
+                className={`desktop-button-scale inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-semibold transition-all sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base ${
+                  isSprintTheme
+                    ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]'
+                    : 'bg-white text-slate-900 hover:bg-blue-50'
+                }`}
               >
                 {ctaLabel}
                 <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden />
               </Link>
             ) : null}
             <Link
-              href="/sertifikaty-sootvetstviya"
+              href={secondaryCtaHref ?? '/sertifikaty-sootvetstviya'}
               className="desktop-button-scale rounded-full border border-white/10 bg-white/10 px-7 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/15 sm:px-8 sm:py-4 3xl:px-10 3xl:py-5 3xl:text-base"
             >
-              НАШИ СЕРТИФИКАТЫ
+              {secondaryCtaLabel ?? 'НАШИ СЕРТИФИКАТЫ'}
             </Link>
           </div>
         </ScrollReveal>
@@ -234,7 +248,11 @@ export function HeroBlock({
                 alt={imageAlt}
                 width={1008}
                 height={1016}
-                className="absolute inset-0 h-full w-full object-contain object-bottom-right opacity-80 sm:opacity-90 mix-blend-lighten hero-portrait-image"
+                className={`absolute inset-0 h-full w-full opacity-80 sm:opacity-90 hero-portrait-image ${
+                  isSprintTheme
+                    ? 'object-cover object-center mix-blend-normal'
+                    : 'object-contain object-bottom-right mix-blend-lighten'
+                }`}
                 sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
                 priority
                 fetchPriority="high"
@@ -242,7 +260,9 @@ export function HeroBlock({
               />
             </div>
             <div
-              className="absolute top-1/4 left-1/4 w-48 h-48 sm:w-64 sm:h-64 bg-blue-500/20 blur-[80px] sm:blur-[120px] rounded-full"
+              className={`absolute top-1/4 left-1/4 w-48 h-48 sm:w-64 sm:h-64 blur-[80px] sm:blur-[120px] rounded-full ${
+                isSprintTheme ? 'bg-[#7AA2FF]/20' : 'bg-blue-500/20'
+              }`}
               aria-hidden
             />
           </div>

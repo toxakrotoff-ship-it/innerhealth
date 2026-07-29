@@ -8,7 +8,7 @@
 
 | Surface | Owner |
 | --- | --- |
-| Home hero, CTA, section subtitles, Sprint home blocks, `howToOrder.*` | `content blocks` |
+| Home hero, CTA, section subtitles, Sprint home blocks and directions, `howToOrder.*` | `content blocks` |
 | FAQ page title/subtitle and Sprint fallback FAQ copy | `content blocks` |
 | Published FAQ entries | `FAQ records` |
 | Contacts page headings, labels, address/phone/email/hours | `content blocks` |
@@ -24,3 +24,4 @@
 - Frontend не должен хранить самостоятельные brand-specific fallback-строки для управляемого текста; fallback должен идти из brand-aware defaults registry.
 - Для `content blocks` админка показывает effective value и источник значения (`override`, `brand_default`, `generic_default`).
 - Пустой saved override не должен визуально скрывать effective fallback в админке.
+- Sprint использует тот же контракт home-ключей, что Inner (`hero.*`, `home.directions.*`, порядок и видимость секций); значения и assets остаются brand-scoped.

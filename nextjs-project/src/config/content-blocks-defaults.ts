@@ -312,6 +312,60 @@ const LEGAL_PAGES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   },
 ] as const
 
+const sprintHomeDefault = (key: string, label: string, text = ''): ContentBlockDefault => ({
+  brand: 'sprint-power',
+  page: 'home',
+  key,
+  label,
+  type: 'short',
+  text,
+})
+
+// These defaults mirror the editable Inner home contract while preserving Sprint assets and copy.
+const SPRINT_HOME_SHARED_DEFAULTS: readonly ContentBlockDefault[] = [
+  sprintHomeDefault('hero.description', 'Hero — описание', 'Спортивное питание нового поколения для силы, восстановления и устойчивого результата.'),
+  sprintHomeDefault('hero.cta.label', 'Hero — CTA текст', 'Выбрать продукт'),
+  sprintHomeDefault('hero.cta.href', 'Hero — CTA ссылка', '/catalog'),
+  sprintHomeDefault('hero.image.src', 'Hero — изображение', '/images/sprint-power/sprint-power-promo-hero.jpg'),
+  sprintHomeDefault('hero.image.alt', 'Hero — alt изображения', 'Спортсмен Sprint Power.'),
+  sprintHomeDefault('hero.isVisible', 'Hero — показывать блок', '1'),
+  sprintHomeDefault('hero.badge.isVisible', 'Hero — показывать бейдж', '1'),
+  sprintHomeDefault('hero.subtitle.isVisible', 'Hero — показывать подзаголовок', '1'),
+  sprintHomeDefault('hero.description.isVisible', 'Hero — показывать описание', '1'),
+  sprintHomeDefault('hero.cta.isVisible', 'Hero — показывать основную кнопку', '1'),
+  sprintHomeDefault('hero.image.isVisible', 'Hero — показывать изображение', '1'),
+  sprintHomeDefault('home.sections.order', 'Главная — порядок секций', 'directions,newArrivals,news,articles,reviews'),
+  sprintHomeDefault('home.directions.title', 'Направления — заголовок', 'Товарные направления'),
+  sprintHomeDefault('home.directions.subtitle', 'Направления — подзаголовок', 'Подберите формулу под цель тренировки и восстановления.'),
+  sprintHomeDefault('home.directions.cta.label', 'Направления — CTA текст', 'Смотреть весь каталог'),
+  sprintHomeDefault('home.directions.cta.href', 'Направления — CTA ссылка', '/catalog'),
+  sprintHomeDefault('home.new.title', 'Новинки — заголовок', 'Новинки ассортимента'),
+  sprintHomeDefault('home.new.isVisible', 'Новинки — показывать блок', '1'),
+  sprintHomeDefault('home.about.body', 'О нас — основной текст', 'Мы создаем спортивное питание нового поколения в России: от разработки формул и контроля сырья до производства готового продукта. В основе каждой формулы - чистые составы, биодоступные компоненты и синергия для уверенного восстановления.'),
+  sprintHomeDefault('home.about.isVisible', 'О нас — показывать блок', '1'),
+  sprintHomeDefault('home.faq.subtitle', 'FAQ — подпись', 'Ответы о выборе продуктов, доставке и оформлении заказа.'),
+  sprintHomeDefault('home.faq.cta.label', 'FAQ — CTA текст', 'Посмотреть все ответы'),
+  sprintHomeDefault('home.faq.cta.href', 'FAQ — CTA ссылка', '/faq'),
+  sprintHomeDefault('home.faq.isVisible', 'FAQ — показывать блок', '1'),
+  ...([
+    ['hydro', 'Гидропротеин', 'Быстро усваиваемый белок для восстановления.'],
+    ['bcaa6000', 'BCAA', 'Аминокислотная поддержка тренировки и восстановления.'],
+    ['collagen', 'Коллаген', 'Поддержка суставов, связок и активного движения.'],
+  ] as const).flatMap(([slug, title, description], index) => {
+    const item = index + 1
+    return [
+      sprintHomeDefault(`home.directions.item${item}.title`, `Направление ${item} — название`, title),
+      sprintHomeDefault(`home.directions.item${item}.description`, `Направление ${item} — описание`, description),
+      sprintHomeDefault(`home.directions.item${item}.categorySlug`, `Направление ${item} — категория`, slug),
+      sprintHomeDefault(`home.directions.item${item}.href`, `Направление ${item} — ссылка`, `/catalog/${slug}`),
+      sprintHomeDefault(`home.directions.item${item}.image.src`, `Направление ${item} — изображение`),
+      sprintHomeDefault(`home.directions.item${item}.image.alt`, `Направление ${item} — alt изображения`, `${title} Sprint Power.`),
+      sprintHomeDefault(`home.directions.item${item}.sortOrder`, `Направление ${item} — порядок`, String(item)),
+      sprintHomeDefault(`home.directions.item${item}.isVisible`, `Направление ${item} — показывать`, '1'),
+    ]
+  }),
+]
+
 const ADMIN_CONTENT_SCHEMA: Record<
   BrandId,
   Partial<Record<string, readonly AdminContentBlockSchemaEntry[]>>
@@ -350,10 +404,15 @@ export function getAdminContentSchemaForBrandPage(
   brandId: BrandId,
   page: string
 ): readonly AdminContentBlockSchemaEntry[] {
+  if (brandId === 'sprint-power' && page === 'home') {
+    const entries = [...INNER_HOME_ADMIN_SCHEMA, ...SPRINT_HOME_ADMIN_SCHEMA]
+    return Array.from(new Map(entries.map((entry) => [entry.key, entry])).values())
+  }
   return ADMIN_CONTENT_SCHEMA[brandId][page] ?? []
 }
 
 export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
+  ...SPRINT_HOME_SHARED_DEFAULTS,
   { page: 'about', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
   { page: 'about', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
   { page: 'about', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },

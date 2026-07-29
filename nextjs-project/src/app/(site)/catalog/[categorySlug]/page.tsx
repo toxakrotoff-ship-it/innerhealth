@@ -7,39 +7,22 @@ import { ProductCard } from '@/components/site/product-card'
 import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
-import { getCategoryPageContent, getCategoryPageContentDoc } from '@/content/category-descriptions'
+import { getCategoryPageContentDoc } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { getCategoryHeroBannerAlt } from '@/lib/image-alt-text'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
-import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
-import { CategoryLineProductHighlight } from '@/components/site/category-line-product-highlight'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
-import {
-  BoneBrothCompositionAndBenefitsScreen,
-  BoneBrothProductDescriptionScreen,
-} from '@/components/site/bonebroth-catalog-visual-blocks'
-import { CollagenCategoryBenefitsBento } from '@/components/site/collagen-category-benefits-bento'
-import { CollagenCategorySpecGrid } from '@/components/site/collagen-category-spec-grid'
-import { HydroCategoryBenefitsBento } from '@/components/site/hydro-category-benefits-bento'
-import { HydroCategoryProductDescription } from '@/components/site/hydro-category-product-description'
-import { Bcaa6000CategoryInfoGrid } from '@/components/site/bcaa6000-category-info-grid'
-import { Bcaa6000CategoryBenefitsBento } from '@/components/site/bcaa6000-category-benefits-bento'
-import { COLLAGEN_SPEC_CELLS } from '@/content/collagen-category-line'
-import { HYDRO_CATEGORY_PRODUCT_DESCRIPTION } from '@/content/hydro-category-bento'
-import { BCAA6000_INFO_CELLS } from '@/content/bcaa6000-category-info'
 import { cn } from '@/lib/utils'
-import { NutrientCategoryUsageComposition } from '@/components/site/nutrient-category-usage-composition'
-import { NutrientCategoryBenefitsBento } from '@/components/site/nutrient-category-benefits-bento'
 import { buildMetadataWithSocial, normalizeSeoDescription, parseSeoKeywords, trimToNull } from '@/lib/seo'
 import {
   hasNonEmptyTipTapDoc,
@@ -54,7 +37,6 @@ import {
   getPublicCategoryMetadataBySlug,
   getPublishedCategoryTree,
 } from '@/services/category.service'
-import { prisma } from '@/lib/prisma'
 
 function htmlToPlainText(html: string): string {
   const stripped = html
@@ -158,61 +140,6 @@ export default async function CategoryPage({ params }: PageProps) {
   if (!category) notFound()
   if (!category.isPublished) notFound()
 
-  let featuredProductForLine: {
-    id: string
-    title: string
-    price: number
-    priceOld: number | null
-    photo: string | null
-    photos: unknown
-    slug: string | null
-    isPromoEligible: boolean
-    discountPrice: number | null
-    quantity: number | null
-    isPreorderEnabled: boolean
-  } | null = null
-
-  if (isSprintTheme && category.featuredProductId) {
-    const fp = await prisma.product.findUnique({
-      where: { id: category.featuredProductId },
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        priceOld: true,
-        photo: true,
-        photos: true,
-        slug: true,
-        isPromoEligible: true,
-        discountPrice: true,
-        quantity: true,
-        isPreorderEnabled: true,
-        brand: true,
-        isDraft: true,
-      },
-    })
-    if (
-      fp &&
-      !fp.isDraft &&
-      productBelongsToBrandScope(fp.brand, activeBrand) &&
-      category.products.some((pc) => pc.product.id === fp.id)
-    ) {
-      featuredProductForLine = {
-        id: fp.id,
-        title: fp.title,
-        price: fp.price,
-        priceOld: fp.priceOld,
-        photo: fp.photo,
-        photos: fp.photos,
-        slug: fp.slug,
-        isPromoEligible: fp.isPromoEligible,
-        discountPrice: fp.discountPrice,
-        quantity: fp.quantity,
-        isPreorderEnabled: fp.isPreorderEnabled,
-      }
-    }
-  }
-
   const allCategories = await getPublishedCategoryTree(activeBrand)
 
   const breadcrumbChain = getCategoryAncestorChain(allCategories, category.id)
@@ -235,12 +162,9 @@ export default async function CategoryPage({ params }: PageProps) {
     ? visible.map((p) => ({ ...p, primaryCategorySlug: categorySlug }))
     : visible
   const listingItems = groupProductsForListing(products)
-  const sprintSingleProductListing = isSprintTheme && listingItems.length === 1
-  const content = isSprintTheme ? getCategoryPageContent(categorySlug, activeBrand) : undefined
   const legacyDescriptionDoc = category.showLegacyLinePageBlocks
     ? getCategoryPageContentDoc(categorySlug, activeBrand)
     : null
-  const hasHero = isSprintTheme && Boolean(content?.heroImage)
   const descriptionDocRaw = !isSprintTheme
     ? resolveCategoryDescriptionDoc({
         linePageBodyRichJson: category.linePageBodyRichJson,
@@ -257,45 +181,6 @@ export default async function CategoryPage({ params }: PageProps) {
 
   return (
     <>
-      {/* Hero баннер для категорий Sprint Power с legacy-контентом */}
-      {hasHero && content && (
-        <section
-          className="relative w-full overflow-hidden bg-[#e8d5d8]"
-          aria-hidden
-        >
-          <div className="relative w-full aspect-3/1 min-h-[160px] sm:min-h-[200px]">
-            <Image
-              src={content.heroImage}
-              alt={getCategoryHeroBannerAlt(content.heroTitle, content.heroSubtitle)}
-              fill
-              className="object-cover object-center"
-              sizes="100vw"
-              priority
-            />
-            {(content.heroTitle || content.heroSubtitle) && (
-              <div
-                className="absolute inset-0 flex flex-col items-end justify-center pr-6 sm:pr-10 md:pr-16"
-                style={{
-                  background:
-                    'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.6) 100%)',
-                }}
-              >
-                {content.heroTitle && (
-                  <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-wide text-white drop-shadow-md">
-                    {content.heroTitle}
-                  </span>
-                )}
-                {content.heroSubtitle && (
-                  <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold tracking-wide text-white drop-shadow-md -mt-1">
-                    {content.heroSubtitle}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
       {/* Хлебные крошки — нейтральный фон, без отдельной «полосы» highlight-blue */}
       <section className={isSprintTheme ? 'bg-[#060A14]' : 'bg-white'}>
         <AdaptiveContainer maxWidth="default">
@@ -407,21 +292,6 @@ export default async function CategoryPage({ params }: PageProps) {
               </div>
             </div>
           )}
-          {featuredProductForLine && (
-            <CategoryLineProductHighlight
-              id={featuredProductForLine.id}
-              title={featuredProductForLine.title}
-              price={featuredProductForLine.price}
-              priceOld={featuredProductForLine.priceOld}
-              photo={featuredProductForLine.photo}
-              photos={featuredProductForLine.photos}
-              slug={featuredProductForLine.slug}
-              isPromoEligible={featuredProductForLine.isPromoEligible}
-              discountPrice={featuredProductForLine.discountPrice}
-              quantity={featuredProductForLine.quantity}
-              isPreorderEnabled={featuredProductForLine.isPreorderEnabled}
-            />
-          )}
           {categorySlug === 'aktsii' && giftPromos.length > 0 && (
             <div className="mb-10">
               <ScrollReveal as="div" variant="fade-up">
@@ -523,19 +393,17 @@ export default async function CategoryPage({ params }: PageProps) {
             </p>
           ) : (
             <FluidGrid
-              cols={sprintSingleProductListing ? 1 : 2}
-              colsTablet={sprintSingleProductListing ? 1 : 3}
-              colsDesktop={sprintSingleProductListing ? 1 : 4}
-              colsXl={sprintSingleProductListing ? 1 : 5}
-              cols2xl={sprintSingleProductListing ? 1 : 5}
-              cols3xl={sprintSingleProductListing ? 1 : 6}
-              cols4xl={sprintSingleProductListing ? 1 : 6}
+              cols={2}
+              colsTablet={3}
+              colsDesktop={4}
+              colsXl={5}
+              cols2xl={5}
+              cols3xl={6}
+              cols4xl={6}
               gap="6"
               adaptiveGap={false}
               className={cn(
-                sprintSingleProductListing
-                  ? 'mx-auto w-full max-w-[min(100%,22rem)] sm:max-w-[min(100%,24rem)] md:max-w-[min(100%,26rem)] lg:max-w-[min(100%,28rem)] xl:max-w-[min(100%,30rem)] 2xl:max-w-[min(100%,32rem)] 3xl:max-w-[min(100%,34rem)] 4xl:max-w-[min(100%,36rem)] 5xl:max-w-[min(100%,38rem)] 6xl:max-w-[min(100%,40rem)] gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24'
-                  : 'max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24'
+                'max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24'
               )}
             >
               {listingItems.map((item, index) =>
@@ -553,7 +421,6 @@ export default async function CategoryPage({ params }: PageProps) {
                     photo={item.product.photo}
                     photos={'photos' in item.product ? item.product.photos : undefined}
                     slug={item.product.slug}
-                    showDetailsButton={!(isSprintTheme && sprintSingleProductListing)}
                     isPromoEligible={item.product.isPromoEligible}
                     discountPrice={item.product.discountPrice}
                     quantity={item.product.quantity}
@@ -567,110 +434,15 @@ export default async function CategoryPage({ params }: PageProps) {
                     group={item}
                     priority={index < 2}
                     showSku={false}
-                    showDetailsButton={!(isSprintTheme && sprintSingleProductListing)}
                   />
                 )
               )}
             </FluidGrid>
           )}
 
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
-              <NutrientCategoryUsageComposition />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
-              <Bcaa6000CategoryInfoGrid cells={BCAA6000_INFO_CELLS} />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
-            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'bcaa6000' || categorySlug === 'sp-bcaa6000') && (
-              <Bcaa6000CategoryBenefitsBento />
-            )}
-
-          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'hydro' && (
-            <HydroCategoryProductDescription content={HYDRO_CATEGORY_PRODUCT_DESCRIPTION} />
+          {isSprintTheme && hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
+            <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
           )}
-
-          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'hydro' && (
-            <HydroCategoryBenefitsBento />
-          )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
-            categorySlug === 'hydro' && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
-
-          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'collagen' && (
-            <CollagenCategorySpecGrid cells={COLLAGEN_SPEC_CELLS} />
-          )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
-            categorySlug === 'collagen' && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
-
-          {isSprintTheme && category.showLegacyLinePageBlocks && categorySlug === 'collagen' && (
-            <CollagenCategoryBenefitsBento />
-          )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-              <BoneBrothProductDescriptionScreen />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
-            (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'bonebroth' || categorySlug === 'sp-bonebroth') && (
-              <BoneBrothCompositionAndBenefitsScreen />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) &&
-            categorySlug !== 'hydro' &&
-            categorySlug !== 'collagen' &&
-            categorySlug !== 'bonebroth' &&
-            categorySlug !== 'bcaa6000' &&
-            categorySlug !== 'sp-bcaa6000' &&
-            categorySlug !== 'sp-bonebroth' && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
-
-          {isSprintTheme &&
-            category.showLegacyLinePageBlocks &&
-            (categorySlug === 'nutrient' || categorySlug === 'sp-nutrient') && (
-              <NutrientCategoryBenefitsBento />
-            )}
-
-          {isSprintTheme &&
-            !category.showLegacyLinePageBlocks &&
-            hasNonEmptyTipTapDoc(category.linePageBodyRichJson) && (
-              <SprintLineTipTapBlock raw={category.linePageBodyRichJson} />
-            )}
 
           {descriptionDocRaw && (
             <div className={`mt-12 pt-10 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200'}`}>

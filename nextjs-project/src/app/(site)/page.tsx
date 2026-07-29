@@ -567,6 +567,8 @@ function SprintPowerHome({
   categoryTitleFont: string
 }) {
   const innerSiteUrl = getBrandSiteUrl('inner')
+  const sharedHeroContent = resolveInnerHomeHeroContent(blocks)
+  const sharedDirectionsContent = resolveInnerHomeDirectionsContent(blocks, data.categories)
   const markers = [
     getBlockTextForBrand(blocks, 'home', 'markers.item1', 'sprint-power', 'GMP и HACCP стандарты'),
     getBlockTextForBrand(blocks, 'home', 'markers.item2', 'sprint-power', 'Прозрачный состав'),
@@ -591,6 +593,27 @@ function SprintPowerHome({
 
   return (
     <>
+      {sharedHeroContent.isVisible ? (
+        <HeroBlock
+          badge={getBlockByKey(blocks, 'hero.badge')}
+          title={getBlockByKey(blocks, 'hero.title')}
+          subtitle={getBlockByKey(blocks, 'hero.subtitle')}
+          description={getBlockByKey(blocks, 'hero.description')}
+          highlight={getBlockByKey(blocks, 'hero.title.highlight')}
+          ctaLabel={sharedHeroContent.ctaLabel}
+          ctaHref={sharedHeroContent.ctaHref}
+          imageSrc={sharedHeroContent.imageSrc}
+          imageAlt={sharedHeroContent.imageAlt}
+          showBadge={sharedHeroContent.showBadge}
+          showSubtitle={sharedHeroContent.showSubtitle}
+          showDescription={sharedHeroContent.showDescription}
+          showPrimaryCta={sharedHeroContent.showPrimaryCta}
+          showImage={sharedHeroContent.showImage}
+          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
+          secondaryCtaHref="/otzyvy"
+          isSprintTheme
+        />
+      ) : null}
       <section className="relative overflow-hidden bg-[#050914] py-4 sm:py-6 md:py-8">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_55%_at_50%_-15%,rgba(122,162,255,0.16),transparent_55%)]"
@@ -598,7 +621,7 @@ function SprintPowerHome({
         />
         <AdaptiveContainer maxWidth="full" className="relative z-10">
           <div className="space-y-6">
-            <div className="relative isolate overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] md:rounded-3xl">
+            <div className="relative isolate hidden overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#162542] bg-[#031021] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:min-h-[clamp(34rem,calc(100dvh-7rem),48rem)] md:rounded-3xl">
               <div className="absolute inset-x-0 top-0 h-[16rem] overflow-hidden sm:h-[18rem] md:hidden">
                 <Image
                   src="/images/sprint-power/sprint-power-promo-hero.jpg"
@@ -673,6 +696,17 @@ function SprintPowerHome({
             </div>
 
             <SprintPowerHomeAboutSection blocks={blocks} />
+
+            {sharedDirectionsContent.items.length > 0 ? (
+              <InnerHomeDirectionsSection
+                title={sharedDirectionsContent.title}
+                subtitle={sharedDirectionsContent.subtitle}
+                ctaLabel={sharedDirectionsContent.ctaLabel}
+                ctaHref={sharedDirectionsContent.ctaHref}
+                items={sharedDirectionsContent.items}
+                isSprintTheme
+              />
+            ) : null}
 
           <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">

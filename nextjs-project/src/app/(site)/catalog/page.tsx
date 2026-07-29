@@ -212,12 +212,11 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         />
         <ScalableSpacing size="lg">
           <FluidGrid
-            cols={isSprintTheme ? 1 : 2}
-            colsTablet={isSprintTheme ? 2 : 3}
-            colsDesktop={isSprintTheme ? 2 : 3}
+            cols={2}
+            colsTablet={3}
+            colsDesktop={3}
             gap={4}
             adaptiveGap
-            className={isSprintTheme ? 'mx-auto w-full max-w-[560px] sm:max-w-[640px] lg:max-w-[720px]' : undefined}
           >
             {catalogBlockCategories.map((cat) => {
               const bgImage = resolveCategoryImage(cat.slug, cat.image, {
@@ -241,7 +240,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 >
                   <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
                     <div
-                      className={`relative flex ${isSprintTheme ? 'aspect-[16/12] p-5' : 'h-[180px] sm:h-[190px] lg:h-[200px] p-6'} flex-col justify-center items-center text-center rounded-2xl overflow-hidden ${
+                      className={`relative flex h-[180px] flex-col items-center justify-center overflow-hidden rounded-2xl p-6 text-center sm:h-[190px] lg:h-[200px] ${
                         !bgImage ? (isSprintTheme ? 'bg-[#0F172A]' : 'bg-soft-background') : ''
                       }`}
                     >
@@ -261,25 +260,19 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         </>
                       )}
                       <span
-                        className={`relative z-10 block text-balance drop-shadow-md ${categoryTitleFont} ${
-                          isSprintTheme
-                            ? `text-base font-semibold uppercase leading-snug tracking-wide sm:text-lg ${
-                                bgImage ? 'text-white' : 'text-slate-100'
-                              }`
-                            : `max-w-[24ch] line-clamp-2 font-medium text-lg leading-tight ${bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'}`
+                        className={`relative z-10 block max-w-[24ch] line-clamp-2 text-balance text-lg font-medium leading-tight drop-shadow-md ${categoryTitleFont} ${
+                          bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
                         }`}
                       >
                         {cat.title}
                       </span>
-                      {isSprintTheme ? null : (
-                        <span
-                          className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
-                            bgImage ? 'text-white/88' : 'text-gray-600'
-                          }`}
-                        >
-                          {categorySubtitle}
-                        </span>
-                      )}
+                      <span
+                        className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
+                          bgImage ? 'text-white/88' : isSprintTheme ? 'text-slate-300' : 'text-gray-600'
+                        }`}
+                      >
+                        {categorySubtitle}
+                      </span>
                     </div>
                   </TiltCard>
                 </Link>
@@ -327,11 +320,6 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       photo={item.product.photo}
                       photos={'photos' in item.product ? item.product.photos : undefined}
                       slug={item.product.slug}
-                      detailsHref={
-                        isSprintTheme && item.product.primaryCategorySlug
-                          ? `/catalog/${item.product.primaryCategorySlug}`
-                          : undefined
-                      }
                       isPromoEligible={item.product.isPromoEligible}
                       discountPrice={item.product.discountPrice}
                       quantity={item.product.quantity}

@@ -14,6 +14,7 @@ interface InnerHomeDirectionsSectionProps {
   ctaLabel: string
   ctaHref: string
   items: InnerHomeDirectionItem[]
+  isSprintTheme?: boolean
 }
 
 export function InnerHomeDirectionsSection({
@@ -22,16 +23,17 @@ export function InnerHomeDirectionsSection({
   ctaLabel,
   ctaHref,
   items,
+  isSprintTheme = false,
 }: InnerHomeDirectionsSectionProps) {
   if (items.length === 0) return null
 
   return (
-    <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-white">
+    <section className={`py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 ${isSprintTheme ? 'bg-[#060A14]' : 'bg-white'}`}>
       <AdaptiveContainer maxWidth="default">
         <ScrollReveal as="div" variant="fade-up" className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">
-            <Heading2 className="font-semibold tracking-tighter text-slate-900">{title}</Heading2>
-            <p className="max-w-2xl text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+            <Heading2 className={`font-semibold tracking-tighter ${isSprintTheme ? 'text-slate-100' : 'text-slate-900'}`}>{title}</Heading2>
+            <p className={`max-w-2xl text-sm font-light 2xl:text-base 3xl:text-lg ${isSprintTheme ? 'text-slate-400' : 'text-slate-500'}`}>
               {subtitle}
             </p>
           </div>
@@ -53,10 +55,10 @@ export function InnerHomeDirectionsSection({
               <Link
                 key={item.id}
                 href={item.href}
-                className="block transition-shadow hover:shadow-md rounded-3xl hover:border-action-blue"
+                className={`block transition-shadow hover:shadow-md rounded-3xl ${isSprintTheme ? 'hover:border-[#7AA2FF]' : 'hover:border-action-blue'}`}
               >
-                <TiltCard>
-                  <article className="desktop-card-scale relative flex min-h-[21rem] flex-col justify-end overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-950 p-6 text-white sm:min-h-[24rem] 2xl:min-h-[26rem]">
+                <TiltCard variant={isSprintTheme ? 'dark' : 'default'}>
+                  <article className={`desktop-card-scale relative flex min-h-[21rem] flex-col justify-end overflow-hidden rounded-3xl border p-6 text-white sm:min-h-[24rem] 2xl:min-h-[26rem] ${isSprintTheme ? 'border-slate-700/80 bg-slate-900' : 'border-slate-200/80 bg-slate-950'}`}>
                     {item.imageSrc ? (
                       <>
                         <Image
@@ -102,7 +104,7 @@ export function InnerHomeDirectionsSection({
         <div className="mt-8 text-center">
           <Link
             href={ctaHref}
-            className="desktop-button-scale inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue 2xl:text-base 3xl:px-10 3xl:py-5"
+            className={`desktop-button-scale inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-sm font-semibold transition-colors 2xl:text-base 3xl:px-10 3xl:py-5 ${isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-slate-900 text-white hover:bg-action-blue'}`}
           >
             {ctaLabel}
             <NavArrowRight className="w-4 h-4" aria-hidden />

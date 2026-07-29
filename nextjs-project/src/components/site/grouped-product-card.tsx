@@ -36,10 +36,7 @@ export function GroupedProductCard({
     activeVariant.quantity != null && activeVariant.quantity <= 0 && !activeVariant.isPreorderEnabled
   const defaultDetailHref = activeVariant.slug ? `/product/${activeVariant.slug}` : `/product/id/${activeVariant.id}`
   const isSprintTheme = activeVariant.brand === 'sprint-power'
-  const detailHref =
-    isSprintTheme && activeVariant.primaryCategorySlug
-      ? `/catalog/${activeVariant.primaryCategorySlug}`
-      : defaultDetailHref
+  const detailHref = defaultDetailHref
   const activePhotoSrc = activeVariant.photo
     ? activeVariant.photo.startsWith('http://') || activeVariant.photo.startsWith('https://')
       ? activeVariant.photo

@@ -325,8 +325,7 @@ export function ProductPageContent({
       >
         <div
           className={cn(
-            isSprintTheme &&
-              'rounded-2xl border border-slate-700/70 bg-slate-900/20 p-3 sm:p-4 lg:self-start'
+            isSprintTheme && 'lg:self-start'
           )}
         >
           <ProductMediaGallery title={product.title} photos={photos} isSprintTheme={isSprintTheme} />
@@ -334,8 +333,7 @@ export function ProductPageContent({
         <div
           className={cn(
             'min-w-0',
-            isSprintTheme &&
-              'rounded-2xl border border-slate-700/70 bg-slate-900/35 p-5 sm:p-6 lg:self-start'
+            isSprintTheme && 'lg:self-start'
           )}
         >
           <Heading1
