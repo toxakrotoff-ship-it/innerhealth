@@ -783,28 +783,47 @@ export function CdekWidget({
     setInstanceKey(Math.random().toString(16).slice(2))
   }
 
+  const isSprintTheme = brandId === 'sprint-power'
+
   return (
     <div
       ref={hostRef}
-      className="cdek-widget-host min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 md:p-6"
+      className={`cdek-widget-host min-w-0 max-w-full space-y-4 rounded-2xl border p-3 sm:p-4 md:p-6 ${
+        isSprintTheme
+          ? 'border-slate-700 bg-[#0F172A] text-slate-100 shadow-[0_18px_50px_rgba(2,6,23,0.35)]'
+          : 'border-gray-200 bg-white text-slate-900'
+      }`}
     >
-      <div className="text-lg font-semibold">Доставка (СДЭК)</div>
+      <div>
+        <div className="text-lg font-semibold">Доставка (СДЭК)</div>
+        {isSprintTheme ? (
+          <p className="mt-1 text-sm leading-6 text-slate-300">
+            Выберите пункт выдачи или доставку до двери. Стоимость и срок появятся после выбора.
+          </p>
+        ) : null}
+      </div>
       {error ? (
         <div className="space-y-2">
-          <div className="text-sm text-red-600">{error}</div>
+          <div className={isSprintTheme ? 'text-sm text-red-300' : 'text-sm text-red-600'}>{error}</div>
           <button
             type="button"
             onClick={handleRetry}
-            className="min-h-[44px] rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+            className={`min-h-[44px] rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+              isSprintTheme
+                ? 'border-slate-600 bg-slate-800 text-slate-100 hover:border-[#7AA2FF] hover:bg-slate-700'
+                : 'border-gray-300 text-gray-800 hover:bg-gray-50'
+            }`}
           >
             Повторить загрузку
           </button>
         </div>
       ) : null}
-      <div className="cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl max-sm:h-[min(540px,calc(100dvh-10rem))] sm:h-[580px] md:h-[650px]">
+      <div className={`cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl border max-sm:h-[min(540px,calc(100dvh-10rem))] sm:h-[580px] md:h-[650px] ${
+        isSprintTheme ? 'border-slate-600 bg-white' : 'border-gray-200 bg-white'
+      }`}>
         {!error && !isReady ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 px-4 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white px-4 text-center">
+            <p className="text-sm font-medium text-slate-700">
               Загружаем карту и пункты выдачи СДЭК…
             </p>
           </div>

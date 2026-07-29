@@ -8,6 +8,7 @@ interface RecentlyViewedProductsProps {
   title?: string;
   excludeProductId?: string;
   limit?: number;
+  isSprintTheme?: boolean;
 }
 
 interface RecentlyViewedProductItem {
@@ -30,6 +31,7 @@ export function RecentlyViewedProducts({
   title = 'Недавно просмотренные',
   excludeProductId,
   limit = 8,
+  isSprintTheme = false,
 }: RecentlyViewedProductsProps) {
   const [items, setItems] = useState<RecentlyViewedProductItem[]>([]);
 
@@ -60,7 +62,7 @@ export function RecentlyViewedProducts({
 
   return (
     <section className="mt-12">
-      <h2 className="text-xl font-bold text-text mb-4">{title}</h2>
+      <h2 className={`mb-4 text-xl font-bold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>{title}</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {items.map((product) => (
           <ProductCard

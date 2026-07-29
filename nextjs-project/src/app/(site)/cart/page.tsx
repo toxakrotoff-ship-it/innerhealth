@@ -53,7 +53,7 @@ export default async function CartPage({ searchParams }: CartPageProps) {
         canUseSavedAddresses={canUseSavedAddresses}
       />
       <ScalableSpacing size="lg" />
-      <RecentlyViewedProducts title="Вы недавно смотрели" />
+      <RecentlyViewedProducts title="Вы недавно смотрели" isSprintTheme={isSprintTheme} />
     </AdaptiveContainer>
     </section>
   )

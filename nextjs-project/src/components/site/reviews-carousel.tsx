@@ -87,9 +87,11 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
           <article
             key={review.id}
             data-index={index}
-            className="min-w-[280px] lg:min-w-[320px] 2xl:min-w-[360px] 3xl:min-w-[400px] max-w-[340px] lg:max-w-[400px] 2xl:max-w-[460px] 3xl:max-w-[520px] shrink-0 snap-center rounded-2xl border border-gray-200 bg-white p-6 lg:p-7 2xl:p-8 shadow-sm"
+            className={`min-w-[280px] lg:min-w-[320px] 2xl:min-w-[360px] 3xl:min-w-[400px] max-w-[340px] lg:max-w-[400px] 2xl:max-w-[460px] 3xl:max-w-[520px] shrink-0 snap-center rounded-2xl border p-6 lg:p-7 2xl:p-8 shadow-sm ${
+              isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-white'
+            }`}
           >
-            <p className="whitespace-pre-wrap text-[13px] font-normal leading-[1.5] text-slate-800 lg:text-sm 2xl:text-base">
+            <p className={`whitespace-pre-wrap text-[13px] font-normal leading-[1.5] lg:text-sm 2xl:text-base ${isSprintTheme ? 'text-slate-200' : 'text-slate-800'}`}>
               {review.text}
             </p>
             <div className="mt-4 flex items-center gap-3">
@@ -98,12 +100,12 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
                   href={review.socialLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[11px] font-semibold text-slate-500 transition-colors hover:text-slate-700 hover:underline lg:text-xs 2xl:text-sm"
+                  className={`text-[11px] font-semibold transition-colors hover:underline lg:text-xs 2xl:text-sm ${isSprintTheme ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   {review.authorName}
                 </a>
               ) : (
-                <span className="text-[11px] font-semibold text-slate-500 lg:text-xs 2xl:text-sm">
+                <span className={`text-[11px] font-semibold lg:text-xs 2xl:text-sm ${isSprintTheme ? 'text-slate-400' : 'text-slate-500'}`}>
                   {review.authorName}
                 </span>
               )}

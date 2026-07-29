@@ -29,10 +29,11 @@ export function Breadcrumbs({
   isInverted = false,
   hideCurrentPageOnMobile = false,
 }: BreadcrumbsProps) {
-  const rootClassName = isInverted ? 'text-slate-400' : 'text-gray-500'
+  const rootClassName = isInverted ? 'text-slate-300' : 'text-gray-500'
   const currentPageClassName = isInverted ? 'text-slate-100' : 'text-text'
-  const hoverClassName = isInverted ? 'hover:text-[#7AA2FF]' : 'hover:text-action-blue'
-  const separatorClassName = isInverted ? 'text-slate-500' : 'text-gray-400'
+  const linkClassName = isInverted ? 'text-slate-200' : 'text-gray-600'
+  const hoverClassName = isInverted ? 'hover:text-[#9AB8FF]' : 'hover:text-action-blue'
+  const separatorClassName = isInverted ? 'text-slate-400' : 'text-gray-400'
 
   return (
     <Breadcrumb className={`pb-1 pt-4 text-sm 2xl:text-base 3xl:text-lg ${rootClassName}`}>
@@ -49,7 +50,7 @@ export function Breadcrumbs({
                   <BreadcrumbLink asChild>
                     <Link
                       href={item.href}
-                      className={`desktop-microtext-scale min-h-[32px] inline-flex items-center font-medium transition-colors hover:no-underline ${hoverClassName}`}
+                      className={`desktop-microtext-scale min-h-[32px] inline-flex items-center font-medium transition-colors hover:no-underline ${linkClassName} ${hoverClassName}`}
                     >
                       {item.label}
                     </Link>

@@ -28,6 +28,26 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const bic = blocks.find((b) => b.key === 'footer.bank.bic')
   const ogrnip = blocks.find((b) => b.key === 'footer.bank.ogrnip')
   const inn = blocks.find((b) => b.key === 'footer.bank.inn')
+  const getText = (key: string, fallback: string) => blocks.find((b) => b.key === key)?.text?.trim() || fallback
+  const getLinkKey = (href: string) => {
+    if (href === '/catalog') return 'footer.link.catalog'
+    if (href === '/news') return 'footer.link.news'
+    if (href === '/o-nas') return 'footer.link.about'
+    if (href === '/catalog/aktsii' || href === '/catalog?sort=newest') return 'footer.link.promotions'
+    if (href === '/informaciya') return 'footer.link.articles'
+    if (href === '/b2b') return 'footer.link.b2b'
+    if (href === '/contacts') return 'footer.link.contacts'
+    if (href === '/sotrudnichestvo') return 'footer.link.cooperation'
+    if (href === '/otzyvy') return 'footer.link.reviews'
+    if (href === '/faq') return 'footer.link.faq'
+    if (href === '/privacy') return 'footer.link.privacy'
+    if (href === '/oferta') return 'footer.link.offer'
+    return null
+  }
+  const getLinkLabel = (label: string, href: string) => {
+    const key = getLinkKey(href)
+    return key ? getText(key, label) : label
+  }
 
   const footerLinkSectionClass = isSprintTheme
     ? 'max-md:border-t max-md:border-slate-700 max-md:pt-9 md:border-0 md:pt-0'
@@ -87,7 +107,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 leading="relaxed"
                 adaptive
               >
-                Нутриенты и продукты для здоровья
+                {getText('footer.brand.description', 'Нутриенты и продукты для здоровья')}
               </ResponsiveText>
             </div>
 
@@ -103,7 +123,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 className={footerColumnHeadingClass}
                 adaptive
               >
-                Информация
+                {getText('footer.column.info.title', 'Информация')}
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
                 {infoLinks.map(({ label, href }) => (
@@ -123,7 +143,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                         color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
-                        {label}
+                        {getLinkLabel(label, href)}
                       </ResponsiveText>
                     </Link>
                   </li>
@@ -143,7 +163,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 className={footerColumnHeadingClass}
                 adaptive
               >
-                Покупателям
+                {getText('footer.column.customer.title', 'Покупателям')}
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
                 {customerLinks.map(({ label, href }) => (
@@ -163,7 +183,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                         color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
-                        {label}
+                        {getLinkLabel(label, href)}
                       </ResponsiveText>
                     </Link>
                   </li>
@@ -183,7 +203,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 className={footerColumnHeadingClass}
                 adaptive
               >
-                Юридическое
+                {getText('footer.column.legal.title', 'Юридическое')}
               </ResponsiveText>
               <ul className="space-y-4 2xl:space-y-5">
                 {legalLinks.map(({ label, href }) => (
@@ -203,7 +223,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                         color={isSprintTheme ? 'current' : 'secondary'}
                         adaptive
                       >
-                        {label}
+                        {getLinkLabel(label, href)}
                       </ResponsiveText>
                     </Link>
                   </li>
@@ -296,7 +316,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 color="secondary"
                 adaptive
               >
-                © 2026 {siteConfig.logoText}
+                {getText('footer.copyright', `© 2026 ${siteConfig.logoText}`)}
               </ResponsiveText>
               <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
                 |
@@ -314,7 +334,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   className={isSprintTheme ? 'text-[#7AA2FF]' : undefined}
                   adaptive
                 >
-                  Политика конфиденциальности
+                  {getText('footer.privacyLabel', 'Политика конфиденциальности')}
                 </ResponsiveText>
               </Link>
               <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
@@ -326,7 +346,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 color="secondary"
                 adaptive
               >
-                Разработка сайта:{' '}
+                {getText('footer.developerLabel', 'Разработка сайта:')}{' '}
               </ResponsiveText>
               <a
                 href={SITE_DEVELOPER_TELEGRAM_URL}

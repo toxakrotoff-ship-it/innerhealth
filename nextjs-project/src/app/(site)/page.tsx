@@ -324,6 +324,8 @@ type SprintHomeData = {
     authorName: string
     socialLink: string | null
     text: string
+    imageUrl: string | null
+    createdAt: string
   }>
   newsPosts: Array<{
     id: string
@@ -418,6 +420,8 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
             authorName: item.authorName,
             socialLink: item.socialLink,
             text: item.text,
+            imageUrl: item.imageUrl,
+            createdAt: item.createdAt.toISOString(),
           }))
         ),
         dbTimeoutMs,
@@ -569,6 +573,7 @@ function SprintPowerHome({
   const innerSiteUrl = getBrandSiteUrl('inner')
   const sharedHeroContent = resolveInnerHomeHeroContent(blocks)
   const sharedDirectionsContent = resolveInnerHomeDirectionsContent(blocks, data.categories)
+  const howToOrder = getHowToOrderContent(blocks)
   const markers = [
     getBlockTextForBrand(blocks, 'home', 'markers.item1', 'sprint-power', 'GMP и HACCP стандарты'),
     getBlockTextForBrand(blocks, 'home', 'markers.item2', 'sprint-power', 'Прозрачный состав'),
@@ -708,6 +713,13 @@ function SprintPowerHome({
               />
             ) : null}
 
+            <HowToOrderSteps
+              title={howToOrder.title}
+              steps={howToOrder.steps}
+              isSprintTheme
+              showBorders={false}
+            />
+
           <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
               <h3 className="text-2xl font-bold text-slate-100">
@@ -724,10 +736,9 @@ function SprintPowerHome({
               <FluidGrid
                 cols={1}
                 colsTablet={2}
-                colsDesktop={2}
+                colsDesktop={3}
                 gap={4}
                 adaptiveGap
-                className="mx-auto w-full max-w-full sm:max-w-[min(100%,36rem)] md:max-w-[min(100%,40rem)] lg:max-w-[45rem]"
               >
                 {data.categories.map((category) => {
                   const bgImage = resolveCategoryImage(category.slug, category.image, {
@@ -790,25 +801,7 @@ function SprintPowerHome({
               <h3 className="text-xl font-bold text-slate-900">
                 {getBlockTextForBrand(blocks, 'home', 'reviews.title', 'sprint-power', 'Отзывы спортсменов')}
               </h3>
-              {data.reviews.map((review) => (
-                <div key={review.id} className="rounded-xl bg-slate-50 px-4 py-4">
-                  <p className="whitespace-pre-wrap text-[15px] font-normal leading-[1.5] text-slate-800">
-                    {review.text}
-                  </p>
-                  {review.socialLink ? (
-                    <a
-                      href={review.socialLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 inline-flex text-[13px] font-semibold text-slate-500 transition-colors hover:text-slate-700 hover:underline"
-                    >
-                      {review.authorName}
-                    </a>
-                  ) : (
-                    <p className="mt-2 text-[13px] font-semibold text-slate-500">{review.authorName}</p>
-                  )}
-                </div>
-              ))}
+              <ReviewsCarousel reviews={data.reviews} isSprintTheme />
             </div>
             <div className="space-y-3">
               <h3 className="text-xl font-bold text-slate-900">

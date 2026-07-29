@@ -290,6 +290,25 @@ const CERTIFICATES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 ] as const
 
 const FOOTER_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
+  { page: 'footer', key: 'footer.brand.description' },
+  { page: 'footer', key: 'footer.column.info.title' },
+  { page: 'footer', key: 'footer.column.customer.title' },
+  { page: 'footer', key: 'footer.column.legal.title' },
+  { page: 'footer', key: 'footer.copyright' },
+  { page: 'footer', key: 'footer.privacyLabel' },
+  { page: 'footer', key: 'footer.developerLabel' },
+  { page: 'footer', key: 'footer.link.catalog' },
+  { page: 'footer', key: 'footer.link.news' },
+  { page: 'footer', key: 'footer.link.about' },
+  { page: 'footer', key: 'footer.link.promotions' },
+  { page: 'footer', key: 'footer.link.articles' },
+  { page: 'footer', key: 'footer.link.b2b' },
+  { page: 'footer', key: 'footer.link.contacts' },
+  { page: 'footer', key: 'footer.link.cooperation' },
+  { page: 'footer', key: 'footer.link.reviews' },
+  { page: 'footer', key: 'footer.link.faq' },
+  { page: 'footer', key: 'footer.link.privacy' },
+  { page: 'footer', key: 'footer.link.offer' },
   { page: 'footer', key: 'footer.legal.fullName' },
   { page: 'footer', key: 'footer.legal.address' },
   { page: 'footer', key: 'footer.bank.correspondentAccount' },
@@ -315,6 +334,15 @@ const LEGAL_PAGES_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
 const sprintHomeDefault = (key: string, label: string, text = ''): ContentBlockDefault => ({
   brand: 'sprint-power',
   page: 'home',
+  key,
+  label,
+  type: 'short',
+  text,
+})
+
+const sprintFooterDefault = (key: string, label: string, text = ''): ContentBlockDefault => ({
+  brand: 'sprint-power',
+  page: 'footer',
   key,
   label,
   type: 'short',
@@ -366,6 +394,28 @@ const SPRINT_HOME_SHARED_DEFAULTS: readonly ContentBlockDefault[] = [
   }),
 ]
 
+const SPRINT_FOOTER_DEFAULTS: readonly ContentBlockDefault[] = [
+  sprintFooterDefault('footer.brand.description', 'Футер — описание бренда', 'Нутриенты и продукты для здоровья'),
+  sprintFooterDefault('footer.column.info.title', 'Футер — заголовок колонки «Информация»', 'Информация'),
+  sprintFooterDefault('footer.column.customer.title', 'Футер — заголовок колонки «Покупателям»', 'Покупателям'),
+  sprintFooterDefault('footer.column.legal.title', 'Футер — заголовок колонки «Юридическое»', 'Юридическое'),
+  sprintFooterDefault('footer.copyright', 'Футер — копирайт', '© 2026 SPRINT POWER'),
+  sprintFooterDefault('footer.privacyLabel', 'Футер — ссылка на политику', 'Политика конфиденциальности'),
+  sprintFooterDefault('footer.developerLabel', 'Футер — подпись разработчика', 'Разработка сайта:'),
+  sprintFooterDefault('footer.link.catalog', 'Футер — ссылка «Каталог»', 'Каталог'),
+  sprintFooterDefault('footer.link.news', 'Футер — ссылка «Новости»', 'Новости'),
+  sprintFooterDefault('footer.link.about', 'Футер — ссылка «О бренде»', 'О бренде'),
+  sprintFooterDefault('footer.link.promotions', 'Футер — ссылка «Хиты продаж»', 'Хиты продаж'),
+  sprintFooterDefault('footer.link.articles', 'Футер — ссылка «Статьи»', 'Статьи'),
+  sprintFooterDefault('footer.link.b2b', 'Футер — ссылка «B2B»', 'B2B'),
+  sprintFooterDefault('footer.link.contacts', 'Футер — ссылка «Контакты»', 'Контакты'),
+  sprintFooterDefault('footer.link.cooperation', 'Футер — ссылка «Партнерство»', 'Партнерство'),
+  sprintFooterDefault('footer.link.reviews', 'Футер — ссылка «Отзывы»', 'Отзывы'),
+  sprintFooterDefault('footer.link.faq', 'Футер — ссылка «FAQ»', 'FAQ'),
+  sprintFooterDefault('footer.link.privacy', 'Футер — ссылка «Политика конфиденциальности»', 'Политика конфиденциальности'),
+  sprintFooterDefault('footer.link.offer', 'Футер — ссылка «Публичная оферта»', 'Публичная оферта'),
+]
+
 const ADMIN_CONTENT_SCHEMA: Record<
   BrandId,
   Partial<Record<string, readonly AdminContentBlockSchemaEntry[]>>
@@ -413,6 +463,7 @@ export function getAdminContentSchemaForBrandPage(
 
 export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   ...SPRINT_HOME_SHARED_DEFAULTS,
+  ...SPRINT_FOOTER_DEFAULTS,
   { page: 'about', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
   { page: 'about', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
   { page: 'about', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },

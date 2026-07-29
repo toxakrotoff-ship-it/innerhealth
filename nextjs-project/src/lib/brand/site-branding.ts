@@ -74,12 +74,22 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     logoText: 'SPRINT POWER',
     navLinks: [
       { label: 'Каталог', href: '/catalog' },
+      { label: 'Новости', href: '/news' },
+      { label: 'О нас', href: '/o-nas' },
+      { label: 'Акции', href: '/catalog/aktsii' },
+      { label: 'Статьи', href: '/informaciya' },
+      { label: 'B2B', href: '/b2b' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },
     ],
     mobileNavLinks: [
       { label: 'Каталог', href: '/catalog' },
+      { label: 'Новости', href: '/news' },
+      { label: 'О нас', href: '/o-nas' },
+      { label: 'Акции', href: '/catalog/aktsii' },
+      { label: 'Статьи', href: '/informaciya' },
+      { label: 'B2B', href: '/b2b' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },
@@ -111,4 +121,3 @@ export function getBrandSiteUrl(brandId: BrandId): string {
     return process.env.NEXT_PUBLIC_SPRINT_POWER_SITE_URL ?? DEFAULT_SPRINT_SITE_URL;
   return process.env.NEXT_PUBLIC_INNER_SITE_URL ?? DEFAULT_INNER_SITE_URL;
 }
-

@@ -588,7 +588,7 @@ export function ProductPageContent({
         </ScalableSpacing>
       )}
 
-      <RecentlyViewedProducts excludeProductId={product.id} />
+      <RecentlyViewedProducts excludeProductId={product.id} isSprintTheme={isSprintTheme} />
     </AdaptiveContainer>
   )
 }
