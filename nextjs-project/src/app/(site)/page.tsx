@@ -13,16 +13,8 @@ import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
 import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
 import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
-import {
-  filterCatalogBlockCategories,
-  getCategoryImageObjectPosition,
-  resolveCategoryImage,
-} from '@/lib/catalog-categories'
-import {
-  getCategoryCardImageAlt,
-  getPostPreviewImageAlt,
-  getSprintPowerHomePromoAlt,
-} from '@/lib/image-alt-text'
+import { filterCatalogBlockCategories } from '@/lib/catalog-categories'
+import { getPostPreviewImageAlt, getSprintPowerHomePromoAlt } from '@/lib/image-alt-text'
 import { TiltCard } from '@/components/ui/tilt-card'
 import { CheckCircle, NavArrowRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
@@ -563,12 +555,10 @@ function SprintPowerHome({
   data,
   blocks,
   faqItems,
-  categoryTitleFont,
 }: {
   data: SprintHomeData
   blocks: ContentBlockResolved[]
   faqItems: ReadonlyArray<{ id: string; question: string; answer: string }>
-  categoryTitleFont: string
 }) {
   const innerSiteUrl = getBrandSiteUrl('inner')
   const sharedHeroContent = resolveInnerHomeHeroContent(blocks)
@@ -719,82 +709,6 @@ function SprintPowerHome({
               isSprintTheme
               showBorders={false}
             />
-
-          <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-slate-700/40 bg-[#060A14] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
-            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-              <h3 className="text-2xl font-bold text-slate-100">
-                {getBlockTextForBrand(blocks, 'home', 'lineup.title', 'sprint-power', 'Вся линейка')}
-              </h3>
-              <Link
-                href="/catalog"
-                className="inline-flex w-fit shrink-0 items-center justify-center rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 transition-colors hover:border-[#7AA2FF] hover:text-white"
-              >
-                Весь каталог
-              </Link>
-            </div>
-            {data.categories.length > 0 ? (
-              <FluidGrid
-                cols={1}
-                colsTablet={2}
-                colsDesktop={3}
-                gap={4}
-                adaptiveGap
-              >
-                {data.categories.map((category) => {
-                  const bgImage = resolveCategoryImage(category.slug, category.image, {
-                    sprintFallback: true,
-                  })
-                  const imagePosition = getCategoryImageObjectPosition(category.slug)
-                  return (
-                    <Link
-                      key={category.id}
-                      href={`/catalog/${category.slug}`}
-                      className="block rounded-2xl transition-shadow hover:border-[#7AA2FF] hover:shadow-[0_0_0_1px_rgba(122,162,255,0.35)]"
-                    >
-                      <TiltCard className="[&>div]:border-transparent" variant="dark">
-                        <div
-                          className={`relative flex aspect-[16/12] flex-col items-center justify-center overflow-hidden rounded-2xl p-5 text-center ${
-                            !bgImage ? 'bg-[#0F172A]' : ''
-                          }`}
-                        >
-                          {bgImage ? (
-                            <>
-                              <Image
-                                src={bgImage}
-                                alt={getCategoryCardImageAlt(category.title)}
-                                width={1024}
-                                height={682}
-                                className={`absolute inset-0 h-full w-full object-cover ${imagePosition}`}
-                                sizes="(max-width: 640px) 92vw, (max-width: 1024px) 50vw, 40vw"
-                              />
-                              <div
-                                className="absolute inset-0 rounded-2xl bg-black/38"
-                                aria-hidden
-                              />
-                            </>
-                          ) : null}
-                          <span
-                            className={`relative z-10 block text-balance font-semibold uppercase leading-snug tracking-wide drop-shadow-md ${categoryTitleFont} text-base sm:text-lg ${
-                              bgImage ? 'text-white' : 'text-slate-100'
-                            }`}
-                          >
-                            {category.title}
-                          </span>
-                        </div>
-                      </TiltCard>
-                    </Link>
-                  )
-                })}
-              </FluidGrid>
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-600/70 bg-[#1E293B]/50 px-4 py-6 text-center">
-                <p className="text-sm leading-6 text-slate-400">
-                  Разделы каталога настраиваются в админке. Пока можно перейти в полный каталог и выбрать
-                  продукт там.
-                </p>
-              </div>
-            )}
-          </div>
 
           <div className="grid gap-4 rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] md:grid-cols-[1fr_360px] md:rounded-3xl md:p-8">
             <div className="space-y-3">
@@ -1067,10 +981,9 @@ export default async function HomePage() {
     }
     const emptySprintContentBlocks = [] as ContentBlockResolved[]
     const emptySprintFaqList = [] as Awaited<ReturnType<typeof faqService.getPublishedFaqItems>>
-    const [sprintHomeBlocks, sprintFaqItems, sprintCatalogBlocks] = await Promise.all([
+    const [sprintHomeBlocks, sprintFaqItems] = await Promise.all([
       withTimeout(getResolvedBlocksForPage('home', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
       withTimeout(faqService.getPublishedFaqItems(activeBrand), dbTimeoutMs, emptySprintFaqList),
-      withTimeout(getResolvedBlocksForPage('catalog', activeBrand), dbTimeoutMs, emptySprintContentBlocks),
     ])
 
     const sprintHomeData = await withTimeout(
@@ -1078,19 +991,11 @@ export default async function HomePage() {
       dbTimeoutMs,
       emptySprintHomeData
     )
-    const categoriesFontBlock = getBlockByKey(sprintCatalogBlocks, 'categories.fontVariant')
-    const categoryTitleFont =
-      categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
-        ? 'font-sans'
-        : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
-          ? 'font-script'
-          : 'font-display'
     return (
       <SprintPowerHome
         data={sprintHomeData}
         blocks={sprintHomeBlocks}
         faqItems={sprintFaqItems}
-        categoryTitleFont={categoryTitleFont}
       />
     )
   }
