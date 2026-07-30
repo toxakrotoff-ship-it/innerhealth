@@ -28,6 +28,7 @@ export const SETTING_KEYS = [
   'cdek_default_package_height_mm',
   'cdek_preferred_tariff_code_pvz',
   'cdek_preferred_tariff_code_address',
+  'yandex_maps_api_key',
   'yookassa_shop_id',
   'yookassa_secret_key',
   'yookassa_term_id',
@@ -192,6 +193,19 @@ export async function upsertSettings(
     })
   }
   return getSettingsMap(keys, options)
+}
+
+/**
+ * Browser-visible Yandex Maps key. The admin value is brand-scoped and takes
+ * precedence so it can be changed without rebuilding the Next.js client bundle.
+ */
+export async function getYandexMapsApiKey(
+  options: SettingsScopeOptions = {}
+): Promise<string | undefined> {
+  const map = await getSettingsMap(['yandex_maps_api_key'], options)
+  const fromSettings = map.yandex_maps_api_key?.trim()
+  const fromEnv = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY?.trim()
+  return fromSettings || fromEnv || undefined
 }
 
 /** Get Yookassa-related settings only. */

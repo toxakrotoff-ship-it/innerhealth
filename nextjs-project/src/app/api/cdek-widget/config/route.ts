@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import * as productService from '@/services/product.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { getYandexMapsApiKey } from '@/services/settings.service'
 import {
   mergeCdekPackages,
   productToCdekPackage,
@@ -61,6 +62,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: errorMessage },
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
+
+    const yandexMapsApiKey = await getYandexMapsApiKey({ brandId })
+    if (!yandexMapsApiKey) {
+      return NextResponse.json(
+        { error: 'Yandex Maps API key is missing' },
+        { status: 500, headers: { 'Cache-Control': 'no-store' } }
       )
     }
 
@@ -130,6 +139,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         from,
+        yandexMapsApiKey,
         goods,
         tariffs: {
           // Ограничиваем тарифы только теми, которые вы реально используете.

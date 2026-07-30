@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'CDEK credentials are missing' }, { status: 400 })
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY?.trim()
+    const apiKey = await settingsService.getYandexMapsApiKey({ brandId })
     if (!apiKey) {
       return NextResponse.json({ error: 'Yandex Maps API key is missing' }, { status: 500 })
     }

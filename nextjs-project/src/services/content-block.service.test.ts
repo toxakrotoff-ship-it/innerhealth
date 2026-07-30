@@ -36,6 +36,25 @@ describe('getAdminBlocksForPage', () => {
     expect(JSON.stringify(result[0]?.richJson)).toContain('Индивидуальный Предприниматель Кудимов Валерий Валерьевич')
   })
 
+  it('loads Sprint Power about defaults instead of Inner Health copy', async () => {
+    findManyMock.mockResolvedValue([])
+
+    const result = await getAdminBlocksForPage('about', 'sprint-power')
+    const block1 = result.find((block) => block.key === 'about.block1')
+    const block2Title = result.find((block) => block.key === 'about.block2.title')
+    const block2Text = result.find((block) => block.key === 'about.block2.text')
+
+    expect(block2Title).toMatchObject({
+      text: 'Sprint Power',
+      valueSource: 'brand_default',
+      isInherited: true,
+    })
+    expect(JSON.stringify(block1?.richJson)).toContain('Sprint Power')
+    expect(JSON.stringify(block1?.richJson)).not.toContain('Inner Health')
+    expect(JSON.stringify(block2Text?.richJson)).toContain('Sprint Power')
+    expect(JSON.stringify(block2Text?.richJson)).not.toContain('Inner Health')
+  })
+
   it('keeps an empty string override as an explicit hidden value', async () => {
     findManyMock.mockResolvedValue([
       {

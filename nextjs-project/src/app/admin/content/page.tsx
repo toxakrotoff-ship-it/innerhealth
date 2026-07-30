@@ -6,6 +6,7 @@ import { NavArrowDown } from 'iconoir-react'
 import Button from '@/components/ui/button'
 import { RichTextEditor } from '../news/components/RichTextEditor'
 import { CoverImageDropzone } from '../news/components/CoverImageDropzone'
+import { useAdminBrand } from '@/app/admin/context/admin-brand'
 import { hasRenderableLegalRichBody } from '@/lib/legal/has-renderable-legal-rich-body'
 
 type BlockType = 'short' | 'rich'
@@ -305,6 +306,22 @@ function getBlockTypeBadgeMeta(block: ContentBlockAdmin): BlockTypeBadgeMeta {
   }
 }
 
+function extractPlainTextFromTiptap(content: JSONContent | null | undefined): string {
+  if (!content?.content) return ''
+
+  const out: string[] = []
+  const stack: JSONContent[] = [...content.content]
+
+  while (stack.length > 0) {
+    const node = stack.shift()
+    if (!node) continue
+    if (typeof node.text === 'string') out.push(node.text)
+    if (Array.isArray(node.content)) stack.unshift(...node.content)
+  }
+
+  return out.join(' ').replace(/\s+/g, ' ').trim()
+}
+
 function getBlockPreviewValue(block: ContentBlockAdmin): string {
   if (isBooleanKey(block.key)) {
     return parseBooleanText(block.text, false) ? 'Показывается на витрине' : 'Скрыто на витрине'
@@ -316,7 +333,8 @@ function getBlockPreviewValue(block: ContentBlockAdmin): string {
 
   const sourceValue =
     block.type === 'rich'
-      ? ''
+      ? extractPlainTextFromTiptap(block.richJson) ||
+        extractPlainTextFromTiptap(block.defaultRichJson)
       : block.text?.trim() || block.defaultText?.trim() || ''
 
   if (sourceValue.length === 0) {
@@ -462,6 +480,7 @@ function getBlockPresentationMeta(block: ContentBlockAdmin): BlockPresentationMe
 }
 
 export default function AdminContentPage() {
+  const activeBrand = useAdminBrand()
   const [page, setPage] = useState<string>('home')
   const [blocks, setBlocks] = useState<ContentBlockAdmin[]>([])
   const [loading, setLoading] = useState(false)
@@ -543,7 +562,7 @@ export default function AdminContentPage() {
 
   useEffect(() => {
     void loadBlocks(page)
-  }, [page])
+  }, [page, activeBrand])
 
   useEffect(() => {
     if (page !== 'home') {
@@ -552,7 +571,7 @@ export default function AdminContentPage() {
     }
 
     void loadCategoryOptions()
-  }, [page])
+  }, [page, activeBrand])
 
   useEffect(() => {
     if (selectedGroupId) {
@@ -581,7 +600,9 @@ export default function AdminContentPage() {
       setError(null)
       setSuccess(false)
 
-      const res = await fetch(`/api/admin/content-blocks?page=${encodeURIComponent(currentPage)}`)
+      const res = await fetch(
+        `/api/admin/content-blocks?page=${encodeURIComponent(currentPage)}&brand=${encodeURIComponent(activeBrand)}`
+      )
       if (!res.ok) {
         throw new Error(await readApiError(res, 'Не удалось загрузить блоки'))
       }
@@ -604,7 +625,9 @@ export default function AdminContentPage() {
 
   async function loadCategoryOptions() {
     try {
-      const res = await fetch('/api/admin/content-link-suggest?q=&limit=50')
+      const res = await fetch(
+        `/api/admin/content-link-suggest?q=&limit=50&brand=${encodeURIComponent(activeBrand)}`
+      )
       if (!res.ok) return
       const data = (await res.json()) as { categories?: CategoryOption[] }
       setCategoryOptions(Array.isArray(data.categories) ? data.categories : [])
@@ -662,11 +685,14 @@ export default function AdminContentPage() {
         })),
       }
 
-      const res = await fetch('/api/admin/content-blocks', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const res = await fetch(
+        `/api/admin/content-blocks?brand=${encodeURIComponent(activeBrand)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      )
 
       const data = await res.json()
 
@@ -695,22 +721,25 @@ export default function AdminContentPage() {
       setError(null)
       setSuccess(false)
 
-      const res = await fetch('/api/admin/content-blocks', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          page,
-          blocks: [
-            {
-              page: selectedBlock.page,
-              key: selectedBlock.key,
-              label: selectedBlock.label,
-              type: selectedBlock.type,
-              reset: true,
-            },
-          ],
-        }),
-      })
+      const res = await fetch(
+        `/api/admin/content-blocks?brand=${encodeURIComponent(activeBrand)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            page,
+            blocks: [
+              {
+                page: selectedBlock.page,
+                key: selectedBlock.key,
+                label: selectedBlock.label,
+                type: selectedBlock.type,
+                reset: true,
+              },
+            ],
+          }),
+        }
+      )
 
       const data = await res.json()
       if (!res.ok) {
@@ -1016,6 +1045,14 @@ export default function AdminContentPage() {
                       <div className="mt-3 rounded-2xl border border-amber-200 bg-white/70 px-3 py-3 text-xs text-slate-700">
                         <div className="mb-1 font-medium text-slate-900">Default значение</div>
                         <div className="whitespace-pre-wrap">{selectedBlock.defaultText}</div>
+                      </div>
+                    ) : selectedBlock.type === 'rich' &&
+                      extractPlainTextFromTiptap(selectedBlock.defaultRichJson) ? (
+                      <div className="mt-3 rounded-2xl border border-amber-200 bg-white/70 px-3 py-3 text-xs text-slate-700">
+                        <div className="mb-1 font-medium text-slate-900">Default значение</div>
+                        <div className="line-clamp-4 whitespace-pre-wrap">
+                          {extractPlainTextFromTiptap(selectedBlock.defaultRichJson)}
+                        </div>
                       </div>
                     ) : null}
                   </div>

@@ -5,6 +5,7 @@ import type { CartLine } from '@/store/cart-store'
 
 export interface CdekWidgetConfigResponse {
   from: unknown
+  yandexMapsApiKey: string
   goods: Array<{ width: number; height: number; length: number; weight: number }>
   tariffs: { office: number[]; door: number[] }
 }

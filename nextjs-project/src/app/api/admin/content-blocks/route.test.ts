@@ -7,7 +7,7 @@ vi.mock('@/lib/require-admin', () => ({
 }))
 
 vi.mock('@/lib/brand/brand-request', () => ({
-  resolveBrandOrDefaultFromRequest: vi.fn(() => 'inner'),
+  resolveAdminBrandFromRequest: vi.fn(() => 'inner'),
 }))
 
 vi.mock('@/services/content-block.service', () => ({
@@ -21,7 +21,7 @@ vi.mock('@/lib/site-revalidation', () => ({
 }))
 
 import { GET, PUT } from './route'
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 import {
   getAdminBlocksForPage,
   resetBlockOverrides,
@@ -32,16 +32,14 @@ import { revalidateContentBlockPage } from '@/lib/site-revalidation'
 describe('GET /api/admin/content-blocks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(resolveBrandOrDefaultFromRequest).mockReturnValue('inner')
+    vi.mocked(resolveAdminBrandFromRequest).mockReturnValue('inner')
   })
 
-  it('loads blocks in request brand scope', async () => {
-    vi.mocked(resolveBrandOrDefaultFromRequest).mockReturnValue('sprint-power')
+  it('loads blocks in admin brand scope', async () => {
+    vi.mocked(resolveAdminBrandFromRequest).mockReturnValue('sprint-power')
 
     const response = await GET(
-      new Request('http://localhost/api/admin/content-blocks?page=home', {
-        headers: { 'x-brand': 'sprint-power' },
-      })
+      new Request('http://localhost/api/admin/content-blocks?page=home&brand=sprint-power')
     )
 
     expect(response.status).toBe(200)
@@ -52,7 +50,7 @@ describe('GET /api/admin/content-blocks', () => {
 describe('PUT /api/admin/content-blocks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(resolveBrandOrDefaultFromRequest).mockReturnValue('inner')
+    vi.mocked(resolveAdminBrandFromRequest).mockReturnValue('inner')
   })
 
   it('rejects unsafe custom links', async () => {
@@ -112,6 +110,35 @@ describe('PUT /api/admin/content-blocks', () => {
       ],
       'inner'
     )
+  })
+
+  it('saves overrides into admin brand scope', async () => {
+    vi.mocked(resolveAdminBrandFromRequest).mockReturnValue('sprint-power')
+
+    await PUT(
+      new Request('http://localhost/api/admin/content-blocks?brand=sprint-power', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          page: 'about',
+          blocks: [
+            {
+              page: 'about',
+              key: 'about.block2.title',
+              label: 'О нас — блок 2 заголовок',
+              type: 'short',
+              text: 'Sprint Power',
+            },
+          ],
+        }),
+      })
+    )
+
+    expect(upsertBlocks).toHaveBeenCalledWith(
+      [expect.objectContaining({ key: 'about.block2.title', text: 'Sprint Power' })],
+      'sprint-power'
+    )
+    expect(getAdminBlocksForPage).toHaveBeenCalledWith('about', 'sprint-power')
   })
 
   it('revalidates the home page after saving home blocks', async () => {

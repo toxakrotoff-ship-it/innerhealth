@@ -8,6 +8,7 @@ vi.mock('@/lib/rate-limit', () => ({
 
 vi.mock('@/services/settings.service', () => ({
   getCdekCredentials: vi.fn(),
+  getYandexMapsApiKey: vi.fn(),
 }))
 
 vi.mock('@/lib/cdek-resolve-region-from-coords', () => ({
@@ -21,7 +22,7 @@ const rateLimit = await import('@/lib/rate-limit')
 describe('POST /api/cdek-widget/geo-region', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubEnv('NEXT_PUBLIC_YANDEX_MAPS_API_KEY', 'test-yandex-key')
+    vi.mocked(settingsService.getYandexMapsApiKey).mockResolvedValue('test-yandex-key')
   })
 
   it('returns resolved region payload', async () => {

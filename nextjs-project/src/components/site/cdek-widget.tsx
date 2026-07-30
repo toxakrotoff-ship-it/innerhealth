@@ -355,14 +355,14 @@ export function CdekWidget({
         })
         throw new Error('CDEKWidget is not available on window')
       }
-      const apiKey = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY
-      if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+      const apiKey = configJson.yandexMapsApiKey?.trim()
+      if (!apiKey) {
         logCartDebug({
           scope: 'cdek-widget',
           event: 'missing_yandex_maps_key',
           level: 'error',
         })
-        throw new Error('Yandex Maps apiKey is missing (NEXT_PUBLIC_YANDEX_MAPS_API_KEY)')
+        throw new Error('Yandex Maps apiKey is missing')
       }
 
       initTimeoutId = setTimeout(() => {

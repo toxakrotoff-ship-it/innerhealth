@@ -15,14 +15,20 @@ vi.mock('@/lib/cdek', () => ({
   resolveCdekSenderSettings: vi.fn(),
 }))
 
+vi.mock('@/services/settings.service', () => ({
+  getYandexMapsApiKey: vi.fn(),
+}))
+
 import { POST } from './route'
 
 const productService = await import('@/services/product.service')
 const cdek = await import('@/lib/cdek')
+const settingsService = await import('@/services/settings.service')
 
 describe('POST /api/cdek-widget/config', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(settingsService.getYandexMapsApiKey).mockResolvedValue('test-yandex-key')
   })
 
   it('returns sender city from the resolved server-side sender config', async () => {
@@ -70,6 +76,7 @@ describe('POST /api/cdek-widget/config', () => {
         city: 'Санкт-Петербург',
         address: 'Санкт-Петербург, склад',
       },
+      yandexMapsApiKey: 'test-yandex-key',
       goods: [
         {
           width: 1,

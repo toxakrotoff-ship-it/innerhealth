@@ -136,6 +136,13 @@ const FIELDS: Array<{
     group: 'cdek',
     options: CDEK_TARIFF_CODE_OPTIONS_ADDRESS,
   },
+  {
+    key: 'yandex_maps_api_key',
+    label: 'Ключ API Яндекс.Карт и Геокодера',
+    type: 'text',
+    placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    group: 'cdek',
+  },
   { key: 'yookassa_shop_id', label: 'Shop ID ЮKassa', type: 'text', placeholder: 'Идентификатор магазина', group: 'yookassa' },
   { key: 'yookassa_secret_key', label: 'Секретный ключ ЮKassa', type: 'password', placeholder: '••••••••', group: 'yookassa' },
   { key: 'yookassa_term_id', label: 'Term ID ЮKassa (терминал)', type: 'text', placeholder: 'ID терминала при необходимости', group: 'yookassa' },

@@ -30,6 +30,7 @@ export const CDEK_BRAND_SCOPED_SETTING_KEYS = [
   'cdek_default_package_height_mm',
   'cdek_preferred_tariff_code_pvz',
   'cdek_preferred_tariff_code_address',
+  'yandex_maps_api_key',
 ] as const;
 
 export const BRAND_SCOPED_SETTING_KEYS = [

@@ -6,6 +6,7 @@ import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
 import { ScalableSpacing } from '@/components/ui/scalable-spacing'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
+import { getYandexMapsApiKey } from '@/services/settings.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
@@ -51,7 +52,10 @@ function getText(block: { text: string | null } | undefined, fallback: string): 
 export default async function ContactsPage() {
   const { siteTitle, brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
-  const blocks = await getResolvedBlocksForPage('contacts', brandId)
+  const [blocks, yandexMapsApiKey] = await Promise.all([
+    getResolvedBlocksForPage('contacts', brandId),
+    getYandexMapsApiKey({ brandId }),
+  ])
   const byKey = (key: string) => blocks.find((b) => b.key === key)
 
   const phone = getText(byKey('contacts.phone'), DEFAULT_PHONE)
@@ -114,7 +118,10 @@ export default async function ContactsPage() {
                 isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-gray-100'
               }`}
             >
-              <YandexMapDynamic className="w-full h-full min-h-[320px]" />
+              <YandexMapDynamic
+                className="w-full h-full min-h-[320px]"
+                apiKey={yandexMapsApiKey}
+              />
             </div>
 
             <div className={`flex flex-col justify-center space-y-5 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
