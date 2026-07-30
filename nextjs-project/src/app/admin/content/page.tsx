@@ -769,14 +769,25 @@ export default function AdminContentPage() {
           />
           <div className="relative z-10 flex min-w-0 flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700">
-                Контент-редактор
+              <div className="mb-2 inline-flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700">
+                  Контент-редактор
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${
+                    activeBrand === 'sprint-power'
+                      ? 'border-indigo-200 bg-indigo-50 text-indigo-800'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  }`}
+                >
+                  Бренд: {activeBrand === 'sprint-power' ? 'Sprint Power' : 'Inner Health'}
+                </span>
               </div>
               <h1 className="mb-1 text-3xl font-bold tracking-tight text-slate-900">
                 Управление текстами и блоками
               </h1>
               <p className="max-w-3xl text-sm text-slate-600">
-                Экран собран как рабочее место редактора: слева навигация по группам блоков, справа текущее значение, наследование и оформление. Необязательно знать ключи CMS, чтобы понять, что меняется.
+                Экран собран как рабочее место редактора: слева навигация по группам блоков, справа текущее значение, наследование и оформление. Необязательно знать ключи CMS, чтобы понять, что меняется. Сохранение пишет override только в активный бренд выше.
               </p>
             </div>
             <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[520px] xl:grid-cols-4">
@@ -1240,6 +1251,7 @@ export default function AdminContentPage() {
                         Текст (rich)
                       </label>
                       <RichTextEditor
+                        key={`${activeBrand}:${selectedBlock.key}`}
                         value={selectedBlock.richJson ?? EMPTY_DOC}
                         onChange={(value) => updateBlock(selectedBlock.key, { richJson: value })}
                         placeholder="Введите текст..."

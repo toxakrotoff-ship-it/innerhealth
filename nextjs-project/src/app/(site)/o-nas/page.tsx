@@ -14,6 +14,7 @@ const IMAGE_FACE_DEFAULT = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
 
 export const revalidate = 86400
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { brandId, siteTitle } = await getServerBrandContext()
