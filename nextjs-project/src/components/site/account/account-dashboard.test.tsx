@@ -27,6 +27,7 @@ describe('AccountDashboard', () => {
         userEmail="jane@example.com"
         orderCount={3}
         totalSpent={1200}
+        activeBrand="inner"
       />,
     )
 
@@ -42,6 +43,7 @@ describe('AccountDashboard', () => {
         userEmail="empty-name@example.com"
         orderCount={0}
         totalSpent={0}
+        activeBrand="inner"
       />,
     )
 
@@ -56,6 +58,7 @@ describe('AccountDashboard', () => {
         userEmail="test@example.com"
         orderCount={1}
         totalSpent={10}
+        activeBrand="inner"
       />,
     )
 
@@ -63,4 +66,3 @@ describe('AccountDashboard', () => {
     expect(getEmailOccurrencesCount('test@example.com')).toBe(1)
   })
 })
-

@@ -32,6 +32,7 @@ export default async function AccountPage() {
           orderCount={dashboard.stats.orderCount}
           totalSpent={dashboard.stats.totalSpent}
           userRole={session.user.role}
+          activeBrand={activeBrand}
         />
         <AccountTelegramBlock brandId={activeBrand} />
         <AccountMaxBlock brandId={activeBrand} />

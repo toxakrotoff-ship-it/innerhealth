@@ -21,7 +21,7 @@ export interface BrandSiteConfig {
 }
 
 const DEFAULT_INNER_SITE_URL = 'https://innerhealth.ru';
-const DEFAULT_SPRINT_SITE_URL = 'https://sprint-power.ru';
+const DEFAULT_SPRINT_SITE_URL = 'https://sprintpower.ru';
 
 const sharedFooterLegalLinks: readonly BrandNavLink[] = [
   { label: 'Политика конфиденциальности', href: '/privacy' },

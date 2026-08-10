@@ -73,7 +73,7 @@ describe('legacy redirect fallback page', () => {
 
   it('keeps redirects on the public origin from the requested host', async () => {
     mockedHeaders = new Headers({
-      host: 'sprint-power.ru',
+      host: 'sprintpower.ru',
     })
     findRedirectByPath.mockResolvedValueOnce({
       destination: '/catalog/nutrienty',
@@ -84,7 +84,7 @@ describe('legacy redirect fallback page', () => {
 
     await expect(
       Page({ params: Promise.resolve({ redirectPath: ['nutrienty'] }) })
-    ).rejects.toThrow('redirect:https://sprint-power.ru/catalog/nutrienty')
+    ).rejects.toThrow('redirect:https://sprintpower.ru/catalog/nutrienty')
 
     expect(findRedirectByPath).toHaveBeenCalledWith('/nutrienty', { brandId: 'sprint-power' })
   })

@@ -8,7 +8,7 @@ const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
 const BRAND_IDS = new Set(['inner', 'sprint-power'])
 const REDIRECT_STATUS_CODES = new Set([301, 302, 307, 308])
 const DEFAULT_INNER_SITE_URL = 'https://innerhealth.ru'
-const DEFAULT_SPRINT_SITE_URL = 'https://sprint-power.ru'
+const DEFAULT_SPRINT_SITE_URL = 'https://sprintpower.ru'
 
 function getAdminSecretPath(): string {
   return process.env.ADMIN_SECRET_PATH || 'admin'

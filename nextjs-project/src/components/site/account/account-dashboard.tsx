@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AccountHeader } from '@/components/site/account/account-header'
+import type { BrandId } from '@/lib/brand/brand'
 
 export interface AccountDashboardProps {
   userName: string
@@ -7,6 +8,7 @@ export interface AccountDashboardProps {
   orderCount: number
   totalSpent: number
   userRole?: string
+  activeBrand: BrandId
 }
 
 function normalizeUserIdentityValue(value: string): string {
@@ -19,6 +21,7 @@ export function AccountDashboard({
   orderCount,
   totalSpent,
   userRole,
+  activeBrand,
 }: AccountDashboardProps) {
   const normalizedUserName = normalizeUserIdentityValue(userName)
   const normalizedUserEmail = normalizeUserIdentityValue(userEmail)
@@ -26,7 +29,7 @@ export function AccountDashboard({
 
   return (
     <section className="space-y-6">
-      <AccountHeader title="Личный кабинет" />
+      <AccountHeader title="Личный кабинет" activeBrand={activeBrand} />
       <div className="rounded-3xl border border-gray-200 bg-white p-6">
         {shouldRenderUserName && <p className="mt-1 text-sm text-gray-600">{userName}</p>}
         <p className="text-sm text-gray-500">{userEmail}</p>
