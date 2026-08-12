@@ -387,7 +387,7 @@ export default async function CategoryPage({ params }: PageProps) {
             </div>
           )}
 
-          {products.length === 0 ? (
+          {products.length === 0 && giftPromos.length === 0 ? (
             <p className={isSprintTheme ? 'text-slate-400' : 'text-gray-500'}>
               В этой категории пока нет доступных товаров.
             </p>
