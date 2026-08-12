@@ -13,7 +13,6 @@ import { buildContentPageMetadata } from '@/lib/seo'
 const IMAGE_FACE_DEFAULT = '/images/o-nas/face-lift.jpg'
 const IMAGE_NUTRITION_DEFAULT = '/images/o-nas/nutrition.jpg'
 
-export const revalidate = 86400
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -36,6 +35,7 @@ export default async function AboutPage() {
   ]
 
   const blocks = await getResolvedBlocksForPage('about', brandId)
+  const pageTitle = blocks.find((b) => b.key === 'about.title')
   const block1 = blocks.find((b) => b.key === 'about.block1')
   const block2Title = blocks.find((b) => b.key === 'about.block2.title')
   const block2Text = blocks.find((b) => b.key === 'about.block2.text')
@@ -43,6 +43,9 @@ export default async function AboutPage() {
   const image1Alt = blocks.find((b) => b.key === 'about.image1.alt')
   const image2Src = blocks.find((b) => b.key === 'about.image2.src')
   const image2Alt = blocks.find((b) => b.key === 'about.image2.alt')
+  const ctaText = blocks.find((b) => b.key === 'about.cta.text')
+  const ctaLabel = blocks.find((b) => b.key === 'about.cta.label')
+  const ctaHref = blocks.find((b) => b.key === 'about.cta.href')
 
   return (
     <div className={isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}>
@@ -58,10 +61,10 @@ export default async function AboutPage() {
           weight="bold"
           className={`mb-10 mt-0 font-display ${isSprintTheme ? 'text-slate-100' : ''}`}
         >
-          О нас
+          {pageTitle?.text?.trim() || 'О нас'}
         </ResponsiveText>
 
-        {/* Блок 1: Формула красоты и молодости */}
+        {/* Блок 1: основной текст + изображение */}
         <section className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start">
           <div className="order-2 lg:order-1">
             <TipTapDocRenderer
@@ -89,7 +92,7 @@ export default async function AboutPage() {
 
         <ScalableSpacing size="lg" />
 
-        {/* Блок 2: На рынке с 2022, доверие, партнёры */}
+        {/* Блок 2: заголовок + текст + изображение */}
         <section className="mt-4">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
             <div className="order-2 lg:order-1 rounded-2xl overflow-hidden border border-gray-200 shadow-sm max-w-md mx-auto w-full">
@@ -131,17 +134,20 @@ export default async function AboutPage() {
           }`}
         >
           <p className={`mb-4 font-medium ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-            Выберите продукты для красоты и здоровья изнутри
+            {ctaText?.text?.trim() ||
+              (isSprintTheme
+                ? 'Выберите продукты для силы, восстановления и результата'
+                : 'Выберите продукты для красоты и здоровья изнутри')}
           </p>
           <Link
-            href="/catalog"
+            href={ctaHref?.text?.trim() || '/catalog'}
             className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-2.5 font-medium transition-colors ${
               isSprintTheme
                 ? 'bg-[#7AA2FF] text-[#06101f] hover:bg-[#8fb0ff]'
                 : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
             }`}
           >
-            Перейти в каталог
+            {ctaLabel?.text?.trim() || 'Перейти в каталог'}
           </Link>
         </section>
       </AdaptiveContainer>

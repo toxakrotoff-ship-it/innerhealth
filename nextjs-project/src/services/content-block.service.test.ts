@@ -49,10 +49,12 @@ describe('getAdminBlocksForPage', () => {
       valueSource: 'brand_default',
       isInherited: true,
     })
-    expect(JSON.stringify(block1?.richJson)).toContain('Sprint Power')
+    expect(JSON.stringify(block1?.richJson)).toContain('спортивное питание')
     expect(JSON.stringify(block1?.richJson)).not.toContain('Inner Health')
+    expect(JSON.stringify(block1?.richJson)).not.toContain('Формула красоты')
     expect(JSON.stringify(block2Text?.richJson)).toContain('Sprint Power')
     expect(JSON.stringify(block2Text?.richJson)).not.toContain('Inner Health')
+    expect(JSON.stringify(block2Text?.richJson)).not.toContain('PreventAge')
   })
 
   it('keeps an empty string override as an explicit hidden value', async () => {

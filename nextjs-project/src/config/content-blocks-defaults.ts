@@ -134,6 +134,7 @@ const ABOUT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'about', key: 'seo.title', adminLabel: 'SEO Title' },
   { page: 'about', key: 'seo.description', adminLabel: 'SEO Description' },
   { page: 'about', key: 'seo.ogImage', adminLabel: 'SEO Open Graph image' },
+  { page: 'about', key: 'about.title', adminLabel: 'О нас — заголовок страницы (H1)' },
   { page: 'about', key: 'about.block1' },
   { page: 'about', key: 'about.block2.title' },
   { page: 'about', key: 'about.block2.text' },
@@ -141,6 +142,9 @@ const ABOUT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'about', key: 'about.image1.alt' },
   { page: 'about', key: 'about.image2.src' },
   { page: 'about', key: 'about.image2.alt' },
+  { page: 'about', key: 'about.cta.text', adminLabel: 'О нас — CTA текст' },
+  { page: 'about', key: 'about.cta.label', adminLabel: 'О нас — CTA кнопка' },
+  { page: 'about', key: 'about.cta.href', adminLabel: 'О нас — CTA ссылка' },
 ] as const
 
 const CATALOG_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
@@ -1197,8 +1201,16 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   {
     brand: 'sprint-power',
     page: 'about',
+    key: 'about.title',
+    label: 'О нас — заголовок страницы',
+    type: 'short',
+    text: 'О нас',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'about',
     key: 'about.block1',
-    label: 'О нас — блок 1 (формула красоты)',
+    label: 'О нас — блок 1 (о бренде)',
     type: 'rich',
     richJson: {
       type: 'doc',
@@ -1208,7 +1220,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
           content: [
             {
               type: 'text',
-              text: 'Формула красоты и молодости существует. Главное в ней не дорогие крема, сыворотки, кондиционеры и шампуни. Красота рождается изнутри. Здоровые люди обворожительны по-особому.',
+              text: 'Sprint Power — спортивное питание нового поколения для силы, восстановления и устойчивого результата.',
             },
           ],
         },
@@ -1217,7 +1229,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
           content: [
             {
               type: 'text',
-              text: 'Sprint Power – это инновационные здоровьесберегающие продукты с нутрикосметическим эффектом. Они расширяют границы вашего потенциала. С ними ваш белковый статус в норме. А ухоженная, упругая кожа, густые, блестящие волосы, легкая походка, стройное тело вне времени, вне возраста.',
+              text: 'Мы создаём продукты в России: от разработки формул и контроля сырья до производства готового продукта. В основе каждой формулы — чистые составы, биодоступные компоненты и синергия для уверенного восстановления после нагрузки.',
             },
           ],
         },
@@ -1226,16 +1238,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
           content: [
             {
               type: 'text',
-              text: 'Все от разработки формул и производства основного сырья делаем в России. Стоимость продукции не обременена затратами на логистику и колебаниями курса доллара.',
-            },
-          ],
-        },
-        {
-          type: 'paragraph',
-          content: [
-            {
-              type: 'text',
-              text: 'Чистые составы без дополнительных объемных реагентов, консервантов, красителей, подсластителей. Высокая биодоступность и эффективная синергия компонентов. Результативность пролонгирована. Ее чувствуют, видят, ценят.',
+              text: 'Стоимость не раздута логистикой и курсом валют. Без лишних объёмных реагентов, красителей и подсластителей — только то, что работает на результат.',
             },
           ],
         },
@@ -1264,7 +1267,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
           content: [
             {
               type: 'text',
-              text: 'Sprint Power на рынке с 2022 года, но уже сыскала доверие покупателей. Более 5000 человек каждый день становятся с нами здоровее и возвращаются вновь и вновь. Особая гордость – более 2000 положительных отзывов, которые вдохновляют нас идти дальше. Бесценно доверие врачей конвенциальной и превентивной медицины, нутрициологов, диетологов, косметологов.',
+              text: 'Sprint Power на рынке с 2022 года. Каждый день тысячи людей выбирают наши формулы для тренировок, восстановления и стабильного прогресса — и возвращаются снова.',
             },
           ],
         },
@@ -1273,15 +1276,46 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
           content: [
             {
               type: 'text',
-              text: 'Сотрудничаем с Международным институтом PreventAge, Университетом образовательной медицины (UOM), Международным институтом интегративной нутрициологии (МИИН), Первым Московским государственным медицинским университетом им. И.М. Сеченова.',
+              text: 'Мы опираемся на практику спортивного питания и превентивной медицины, чтобы дозировки и схемы приёма были понятными и результативными.',
             },
           ],
         },
       ],
     } as JSONContent,
   },
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.cta.text',
+    label: 'О нас — CTA текст',
+    type: 'short',
+    text: 'Выберите продукты для силы, восстановления и результата',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.cta.label',
+    label: 'О нас — CTA кнопка',
+    type: 'short',
+    text: 'Перейти в каталог',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'about',
+    key: 'about.cta.href',
+    label: 'О нас — CTA ссылка',
+    type: 'short',
+    text: '/catalog',
+  },
 
   // About page
+  {
+    page: 'about',
+    key: 'about.title',
+    label: 'О нас — заголовок страницы',
+    type: 'short',
+    text: 'О нас',
+  },
   {
     page: 'about',
     key: 'about.block1',
@@ -1394,6 +1428,27 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     label: 'О нас — изображение 2 alt',
     type: 'short',
     text: 'Питание и здоровый образ жизни',
+  },
+  {
+    page: 'about',
+    key: 'about.cta.text',
+    label: 'О нас — CTA текст',
+    type: 'short',
+    text: 'Выберите продукты для красоты и здоровья изнутри',
+  },
+  {
+    page: 'about',
+    key: 'about.cta.label',
+    label: 'О нас — CTA кнопка',
+    type: 'short',
+    text: 'Перейти в каталог',
+  },
+  {
+    page: 'about',
+    key: 'about.cta.href',
+    label: 'О нас — CTA ссылка',
+    type: 'short',
+    text: '/catalog',
   },
 
   // Каталог — шрифт названий категорий (главная + страница каталога)
