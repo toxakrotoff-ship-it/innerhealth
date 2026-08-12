@@ -450,6 +450,49 @@ export function CartPageContent({
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
 
+  // Для сохранённого адреса «до двери» тариф считаем напрямую через калькулятор,
+  // без повторного запуска виджета СДЭК (виджет для usingSavedAddress не рендерится).
+  useEffect(() => {
+    if (!usingSavedAddress) return
+    if (!selectedSavedAddress) return
+    if (selectedSavedAddress.deliveryMethod !== 'cdek_door') return
+    if (!selectedSavedAddress.cdekCityCode) return
+
+    const controller = new AbortController()
+
+    async function run() {
+      setDeliveryError(null)
+      try {
+        const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
+        const response = await fetch(`/api/cdek/calculator${brandQuery}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deliveryKind: 'address',
+            items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+            toLocation: { cityCode: selectedSavedAddress!.cdekCityCode },
+          }),
+          signal: controller.signal,
+        })
+        const json = (await response.json().catch(() => null)) as
+          | { tariffs?: CdekTariffSummary[]; error?: string }
+          | null
+        if (!response.ok) throw new Error(json?.error ?? 'Ошибка расчёта СДЭК до двери')
+
+        const tariffs = Array.isArray(json?.tariffs) ? json.tariffs : []
+        const door = tariffs.find((t) => t.tariffCode === 137) ?? tariffs[0] ?? null
+        setDoorTariff(door)
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта СДЭК до двери')
+        setDoorTariff(null)
+      }
+    }
+
+    void run()
+    return () => controller.abort()
+  }, [usingSavedAddress, selectedSavedAddress, items, brandId])
+
   useEffect(() => {
     const keepPvzSelection = cityCode != null && deliveryMethod === 'cdek_pvz'
     if (!keepPvzSelection) {

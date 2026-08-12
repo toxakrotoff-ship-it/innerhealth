@@ -153,7 +153,7 @@ describe('resolveInnerHomeSectionOrder', () => {
 })
 
 describe('home content admin schema brand isolation', () => {
-  it('exposes PR-2 inner home controls only for inner brand', () => {
+  it('exposes shared hero/directions controls for both brands but keeps section order inner-only', () => {
     const innerKeys = getAdminContentSchemaForBrandPage('inner', 'home').map((entry) => entry.key)
     const sprintKeys = getAdminContentSchemaForBrandPage('sprint-power', 'home').map(
       (entry) => entry.key
@@ -162,8 +162,12 @@ describe('home content admin schema brand isolation', () => {
     expect(innerKeys).toContain('home.sections.order')
     expect(innerKeys).toContain('home.directions.item1.categorySlug')
     expect(innerKeys).toContain('hero.image.src')
+    // resolveInnerHomeHeroContent/resolveInnerHomeDirectionsContent рендерят
+    // общий hero и directions-блок и для Sprint Power (см. SprintPowerHome в
+    // src/app/(site)/page.tsx), поэтому эти ключи должны быть editable и там
+    expect(sprintKeys).toContain('home.directions.item1.categorySlug')
+    expect(sprintKeys).toContain('hero.image.src')
+    // а вот порядок секций управляет только inner-версией главной
     expect(sprintKeys).not.toContain('home.sections.order')
-    expect(sprintKeys).not.toContain('home.directions.item1.categorySlug')
-    expect(sprintKeys).not.toContain('hero.image.src')
   })
 })

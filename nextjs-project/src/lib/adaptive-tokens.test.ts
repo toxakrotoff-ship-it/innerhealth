@@ -74,13 +74,13 @@ describe('adaptiveTokens', () => {
     })
 
     it('возвращает CSS min() функции для контейнеров', () => {
-      expect(adaptiveTokens.containerWidths.default).toContain('min(')
-      expect(adaptiveTokens.containerWidths.default).toContain('vw')
+      expect(adaptiveTokens.containerWidths.xl).toContain('min(')
+      expect(adaptiveTokens.containerWidths.xl).toContain('vw')
     })
 
     it('новые контейнеры используют корректные значения', () => {
-      expect(adaptiveTokens.containerWidths['5xl']).toBe('min(180rem, 70vw)')
-      expect(adaptiveTokens.containerWidths['6xl']).toBe('min(240rem, 65vw)')
+      expect(adaptiveTokens.containerWidths['5xl']).toBe('min(92vw, 205vh)')
+      expect(adaptiveTokens.containerWidths['6xl']).toBe('min(92vw, 195vh)')
     })
   })
 
@@ -269,27 +269,27 @@ describe('adaptiveTokens', () => {
 describe('getContainerWidth', () => {
   it('возвращает ширину для default брейкпоинта', () => {
     const width = getContainerWidth('default')
-    expect(width).toBe('min(90rem, 92vw)')
+    expect(width).toBe('92vw')
   })
 
   it('возвращает ширину для xl брейкпоинта', () => {
     const width = getContainerWidth('xl')
-    expect(width).toBe('min(100rem, 90vw)')
+    expect(width).toBe('min(92vw, 240vh)')
   })
 
   it('возвращает ширину для 4xl брейкпоинта', () => {
     const width = getContainerWidth('4xl')
-    expect(width).toBe('min(140rem, 75vw)')
+    expect(width).toBe('min(92vw, 215vh)')
   })
 
   it('возвращает ширину для 5xl брейкпоинта (4K)', () => {
     const width = getContainerWidth('5xl')
-    expect(width).toBe('min(180rem, 70vw)')
+    expect(width).toBe('min(92vw, 205vh)')
   })
 
   it('возвращает ширину для 6xl брейкпоинта (5K)', () => {
     const width = getContainerWidth('6xl')
-    expect(width).toBe('min(240rem, 65vw)')
+    expect(width).toBe('min(92vw, 195vh)')
   })
 
   it('по умолчанию возвращает default ширину', () => {
@@ -576,14 +576,14 @@ describe('Интеграционные тесты', () => {
     // Проверяем что контейнер и масштабирование подходят
     const containerWidth = getContainerWidth('6xl')
     const scaleFactor = adaptiveTokens.scaleFactors['6xl']
-    
-    expect(containerWidth).toContain('65vw') // 65% от ширины экрана
+
+    expect(containerWidth).toBe('min(92vw, 195vh)') // 92% от ширины экрана, ограничено высотой
     expect(scaleFactor).toBe(1.4) // +40% масштабирование
   })
 
   it('проверяет обратную совместимость', () => {
     // Существующие функции должны работать как раньше
-    expect(getContainerWidth('default')).toBe('min(90rem, 92vw)')
+    expect(getContainerWidth('default')).toBe('92vw')
     expect(getScaledSize(16, 'base')).toBe(16)
     expect(getScaledSize(16, '4xl')).toBe(19)
     

@@ -281,7 +281,7 @@ describe('CartPageContent delivery type switch', () => {
       }
     })
 
-    render(<CartPageContent pickupAddress="г. Москва, Тестовый адрес" />)
+    render(<CartPageContent pickupAddress="г. Москва, Тестовый адрес" canUseSavedAddresses />)
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

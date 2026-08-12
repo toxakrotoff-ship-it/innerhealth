@@ -455,7 +455,13 @@ export function getAdminContentSchemaForBrandPage(
   page: string
 ): readonly AdminContentBlockSchemaEntry[] {
   if (brandId === 'sprint-power' && page === 'home') {
-    const entries = [...INNER_HOME_ADMIN_SCHEMA, ...SPRINT_HOME_ADMIN_SCHEMA]
+    // resolveInnerHomeHeroContent/resolveInnerHomeDirectionsContent рендерят общий
+    // hero и directions-блок и для Sprint Power, поэтому их ключи нужны в обеих
+    // схемах. home.sections.order управляет только порядком секций inner-версии
+    // главной (см. src/app/(site)/page.tsx) и на Sprint Power не влияет.
+    const entries = [...INNER_HOME_ADMIN_SCHEMA, ...SPRINT_HOME_ADMIN_SCHEMA].filter(
+      (entry) => entry.key !== 'home.sections.order'
+    )
     return Array.from(new Map(entries.map((entry) => [entry.key, entry])).values())
   }
   return ADMIN_CONTENT_SCHEMA[brandId][page] ?? []

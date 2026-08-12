@@ -8,11 +8,13 @@ import { renderHook, act } from '@testing-library/react'
 import { useOverlapDetection, useMediaConflictDetection } from './use-overlap-detection'
 
 // Мокаем ResizeObserver
-const ResizeObserverMock = vi.fn(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+const ResizeObserverMock = vi.fn(function ResizeObserverMock() {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+})
 
 vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 
@@ -53,6 +55,7 @@ describe('useOverlapDetection', () => {
   it('возвращает false когда элементы не пересекаются', () => {
     // Создаем мок-элементы
     const elementA = document.createElement('div')
+    elementA.className = 'no-overlap-a'
     elementA.getBoundingClientRect = () => ({
       top: 0,
       left: 0,
@@ -66,6 +69,7 @@ describe('useOverlapDetection', () => {
     })
 
     const elementB = document.createElement('div')
+    elementB.className = 'no-overlap-b'
     elementB.getBoundingClientRect = () => ({
       top: 200,
       left: 200,
@@ -81,8 +85,11 @@ describe('useOverlapDetection', () => {
     document.body.appendChild(elementA)
     document.body.appendChild(elementB)
 
-    const { result } = renderHook(() => 
-      useOverlapDetection('div:first-of-type', 'div:last-of-type')
+    // Селекторы по классу, а не по позиции в дереве — в jsdom между тестами
+    // этого файла не выполняется testing-library cleanup(), поэтому
+    // `div:first-of-type` мог бы зацепить элемент из предыдущего рендера
+    const { result } = renderHook(() =>
+      useOverlapDetection('.no-overlap-a', '.no-overlap-b')
     )
 
     expect(result.current).toBe(false)
@@ -102,22 +109,39 @@ describe('useOverlapDetection', () => {
   })
 
   it('подписывается на resize события', () => {
+    // Хук регистрирует листенеры только когда оба элемента найдены в DOM
+    const elementA = document.createElement('div')
+    elementA.className = 'a'
+    const elementB = document.createElement('div')
+    elementB.className = 'b'
+    document.body.appendChild(elementA)
+    document.body.appendChild(elementB)
+
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
-    
-    renderHook(() => 
+
+    renderHook(() =>
       useOverlapDetection('.a', '.b')
     )
 
     expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function))
-    
+
     addEventListenerSpy.mockRestore()
+    document.body.removeChild(elementA)
+    document.body.removeChild(elementB)
   })
 
   it('отписывается от событий при unmount', () => {
+    const elementA = document.createElement('div')
+    elementA.className = 'a'
+    const elementB = document.createElement('div')
+    elementB.className = 'b'
+    document.body.appendChild(elementA)
+    document.body.appendChild(elementB)
+
     const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
-    
-    const { unmount } = renderHook(() => 
+
+    const { unmount } = renderHook(() =>
       useOverlapDetection('.a', '.b')
     )
 
@@ -125,9 +149,11 @@ describe('useOverlapDetection', () => {
 
     expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function))
     expect(removeEventListenerSpy).toHaveBeenCalledWith('scroll', expect.any(Function))
-    
+
     addEventListenerSpy.mockRestore()
     removeEventListenerSpy.mockRestore()
+    document.body.removeChild(elementA)
+    document.body.removeChild(elementB)
   })
 })
 
@@ -147,22 +173,34 @@ describe('useMediaConflictDetection', () => {
     vi.useRealTimers()
   })
 
-  it('возвращает true для ширины 1024-1279px', () => {
+  it('возвращает false для ширины 1024-1279px без высокого DPI', () => {
+    // Диапазон 1024-1279px раньше форсировал конфликт, но эта проверка была
+    // сужена (см. ab03457) до dpr >= 1.5 && width < 768, чтобы не показывать
+    // мобильное меню на обычных ноутбучных экранах
     Object.defineProperty(window, 'innerWidth', { value: 1100, writable: true })
     Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true })
+
+    const { result } = renderHook(() => useMediaConflictDetection())
+
+    expect(result.current).toBe(false)
+  })
+
+  it('возвращает true для высокого DPI на маленьких экранах (< 768px)', () => {
+    Object.defineProperty(window, 'innerWidth', { value: 700, writable: true })
+    Object.defineProperty(window, 'devicePixelRatio', { value: 1.5, writable: true })
 
     const { result } = renderHook(() => useMediaConflictDetection())
 
     expect(result.current).toBe(true)
   })
 
-  it('возвращает true для DPI >= 1.3 при ширине < 1400px', () => {
+  it('возвращает false для DPI >= 1.5 при ширине >= 768px', () => {
     Object.defineProperty(window, 'innerWidth', { value: 1300, writable: true })
     Object.defineProperty(window, 'devicePixelRatio', { value: 1.5, writable: true })
 
     const { result } = renderHook(() => useMediaConflictDetection())
 
-    expect(result.current).toBe(true)
+    expect(result.current).toBe(false)
   })
 
   it('возвращает false для стандартной ширины >= 1280px', () => {
@@ -199,17 +237,17 @@ describe('useMediaConflictDetection', () => {
   })
 
   it('реагирует на изменение ширины окна', async () => {
-    Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
-    Object.defineProperty(window, 'devicePixelRatio', { value: 1, writable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 1000, writable: true })
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, writable: true })
 
     const { result } = renderHook(() => useMediaConflictDetection())
 
-    // Начальное состояние
+    // Начальное состояние: DPI высокий, но ширина ещё не < 768px
     expect(result.current).toBe(false)
 
-    // Изменяем ширину
-    Object.defineProperty(window, 'innerWidth', { value: 1100, writable: true })
-    
+    // Сужаем окно ниже 768px при том же высоком DPI
+    Object.defineProperty(window, 'innerWidth', { value: 700, writable: true })
+
     act(() => {
       window.dispatchEvent(new Event('resize'))
     })
