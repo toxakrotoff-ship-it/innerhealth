@@ -12,11 +12,85 @@ import {
   type PromoOrderTotalsResult,
 } from '@/lib/promo-order-totals';
 
+export class OrderStockConflictError extends Error {
+  readonly productTitle: string;
+
+  constructor(productTitle: string) {
+    super(`Недостаточно товара на складе: ${productTitle}`);
+    this.name = 'OrderStockConflictError';
+    this.productTitle = productTitle;
+  }
+}
+
 const orderAdminInclude = {
   items: { include: { product: true } },
   promoCode: true,
   shippingInfo: true,
 } as const;
+
+interface ReservedOrderItem {
+  productId: string;
+  quantity: number;
+  title: string;
+  stock: number | null;
+  isPreorderEnabled: boolean;
+}
+
+function aggregateReservedItems(
+  items: ReadonlyArray<ReservedOrderItem>
+): ReservedOrderItem[] {
+  const aggregated = new Map<string, ReservedOrderItem>();
+
+  for (const item of items) {
+    const existing = aggregated.get(item.productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+      continue;
+    }
+    aggregated.set(item.productId, { ...item });
+  }
+
+  return Array.from(aggregated.values());
+}
+
+async function reserveStockForOrderItems(
+  tx: Prisma.TransactionClient,
+  items: ReadonlyArray<ReservedOrderItem>
+) {
+  for (const item of aggregateReservedItems(items)) {
+    if (item.stock == null || item.isPreorderEnabled) continue;
+
+    const updated = await tx.product.updateMany({
+      where: {
+        id: item.productId,
+        quantity: { gte: item.quantity },
+      },
+      data: {
+        quantity: { decrement: item.quantity },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new OrderStockConflictError(item.title);
+    }
+  }
+}
+
+async function restoreStockForOrderItems(
+  tx: Prisma.TransactionClient,
+  items: ReadonlyArray<ReservedOrderItem>
+) {
+  for (const item of aggregateReservedItems(items)) {
+    if (item.stock == null || item.isPreorderEnabled) continue;
+
+    await tx.product.update({
+      where: { id: item.productId },
+      data: {
+        quantity: { increment: item.quantity },
+      },
+    });
+  }
+}
 
 /** Get order by id (minimal, for webhook). */
 export async function findOrderForWebhook(orderId: string) {
@@ -416,6 +490,63 @@ export async function updateOrder(
   });
 }
 
+export async function cancelPendingOrderAndRestoreStock(orderId: string) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: {
+        status: true,
+        items: {
+          select: {
+            quantity: true,
+            product: {
+              select: {
+                id: true,
+                title: true,
+                quantity: true,
+                isPreorderEnabled: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) return { found: false, changed: false, previousStatus: 'unknown', status: 'unknown' };
+    if (order.status !== 'pending') {
+      return {
+        found: true,
+        changed: false,
+        previousStatus: order.status,
+        status: order.status,
+      };
+    }
+
+    await restoreStockForOrderItems(
+      tx,
+      order.items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        title: item.product.title,
+        stock: item.product.quantity,
+        isPreorderEnabled: item.product.isPreorderEnabled,
+      }))
+    );
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'canceled' },
+    });
+
+    return {
+      found: true,
+      changed: true,
+      previousStatus: 'pending',
+      status: 'canceled',
+    };
+  });
+}
+
 export interface CreateOrderShippingParams {
   fullName: string;
   phone: string;
@@ -464,6 +595,53 @@ export async function createOrderWithItemsAndShipping(params: {
       hasPromoCode,
       brandId: params.brandId ?? null,
     });
+
+    const reservableProductIds = Array.from(
+      new Set([
+        ...params.items.map((item) => item.productId),
+        ...gifts.map((gift) => gift.giftProductId),
+      ])
+    );
+
+    const reservableProducts = await tx.product.findMany({
+      where: { id: { in: reservableProductIds } },
+      select: {
+        id: true,
+        title: true,
+        quantity: true,
+        isPreorderEnabled: true,
+      },
+    });
+    const reservableProductMap = new Map(reservableProducts.map((product) => [product.id, product]));
+
+    await reserveStockForOrderItems(tx, [
+      ...params.items.map((item) => {
+        const product = reservableProductMap.get(item.productId);
+        if (!product) {
+          throw new OrderStockConflictError(item.productId);
+        }
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          title: product.title,
+          stock: product.quantity,
+          isPreorderEnabled: product.isPreorderEnabled,
+        };
+      }),
+      ...gifts.map((gift) => {
+        const product = reservableProductMap.get(gift.giftProductId);
+        if (!product) {
+          throw new OrderStockConflictError(gift.giftProductId);
+        }
+        return {
+          productId: gift.giftProductId,
+          quantity: gift.quantity,
+          title: product.title,
+          stock: product.quantity,
+          isPreorderEnabled: product.isPreorderEnabled,
+        };
+      }),
+    ]);
 
     const created = await tx.order.create({
       data: {

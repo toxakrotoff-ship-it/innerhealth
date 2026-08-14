@@ -17,6 +17,7 @@ import * as settingsService from '@/services/settings.service'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { OrderStockConflictError } from '@/services/order.service'
 
 /** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
 function parseVatCode(value: string | undefined, fallback: number): number {
@@ -251,6 +252,17 @@ export async function POST(request: Request) {
     )
   } catch (e) {
     console.error('Order create error:', e)
+    if (e instanceof OrderStockConflictError) {
+      return NextResponse.json(
+        { error: `Недостаточно товара на складе: ${e.productTitle}` },
+        {
+          status: 409,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      )
+    }
     return NextResponse.json(
       { error: 'Ошибка создания заказа' },
       {

@@ -99,18 +99,17 @@ export async function transitionOrderToCanceled(
   orderId: string,
   _source: OrderPaymentTransitionSource
 ): Promise<OrderTransitionResult> {
-  const order = await orderService.findOrderForWebhook(orderId)
-  if (!order) {
+  const result = await orderService.cancelPendingOrderAndRestoreStock(orderId)
+  if (!result.found) {
     return { changed: false, previousStatus: 'unknown', status: 'unknown' }
   }
-  if (order.status !== 'pending') {
-    return { changed: false, previousStatus: order.status, status: order.status }
+  if (!result.changed) {
+    return { changed: false, previousStatus: result.previousStatus, status: result.status }
   }
 
-  const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
-  await orderService.updateOrderStatus(orderId, 'canceled')
-
-  if (order.userId) {
+  const order = await orderService.findOrderForWebhook(orderId)
+  if (order?.userId) {
+    const orderBrandId = await orderService.findOrderBrandIdForNotify(orderId)
     notifyUserOrderStatusInBackground({
       userId: order.userId,
       orderId,
