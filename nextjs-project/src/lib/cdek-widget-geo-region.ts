@@ -255,7 +255,7 @@ export async function resolveWidgetGeoRegionWithBudgetDetailed(params: {
   geolocationBudgetMs?: number
   geoApiTimeoutMs?: number
   totalBudgetMs?: number
-}): Promise<{ geoRegion: WidgetGeoRegion | null; geoDenied: boolean }> {
+}): Promise<{ geoRegion: WidgetGeoRegion | null; geoDenied: boolean; coords: GeolocationCoordinates | null }> {
   const totalBudgetMs = params.totalBudgetMs ?? WIDGET_GEO_TOTAL_BUDGET_MS
   const geolocationBudgetMs = Math.min(
     params.geolocationBudgetMs ?? WIDGET_GEO_RESOLVE_BUDGET_MS,
@@ -267,6 +267,7 @@ export async function resolveWidgetGeoRegionWithBudgetDetailed(params: {
     return {
       geoRegion: null,
       geoDenied: geolocation.failureReason === 'denied',
+      coords: null,
     }
   }
 
@@ -282,7 +283,7 @@ export async function resolveWidgetGeoRegionWithBudgetDetailed(params: {
     geoApiTimeoutMs: geoApiTimeoutMs > 0 ? geoApiTimeoutMs : 1,
   })
 
-  return { geoRegion, geoDenied: false }
+  return { geoRegion, geoDenied: false, coords: geolocation.coords }
 }
 
 export function readSenderCityCodeFromWidgetConfig(from: unknown): number | null {
@@ -304,8 +305,17 @@ export async function resolveWidgetOfficesBootstrap(params: {
 }): Promise<{
   geoRegion: WidgetGeoRegion | null
   bootstrap: WidgetOfficesBootstrap
+  /**
+   * Raw browser geolocation coordinates, present only when `bootstrapSource === 'geo_region'`.
+   * Prefer passing these directly as the widget's `defaultLocation` (it accepts a
+   * `[longitude, latitude]` pair) instead of a place name — the widget forward-geocodes a
+   * name itself via Yandex, which can resolve to a different point than the coordinates we
+   * already reverse-geocoded server-side, leaving the map centered somewhere with no loaded
+   * offices even though the correct region's offices did load.
+   */
+  coords: GeolocationCoordinates | null
 }> {
-  const { geoRegion, geoDenied } = await resolveWidgetGeoRegionWithBudgetDetailed({
+  const { geoRegion, geoDenied, coords } = await resolveWidgetGeoRegionWithBudgetDetailed({
     brandId: params.brandId,
   })
 
@@ -318,6 +328,7 @@ export async function resolveWidgetOfficesBootstrap(params: {
         bootstrapSource: 'geo_region',
         geoDenied: false,
       },
+      coords,
     }
   }
 
@@ -336,6 +347,7 @@ export async function resolveWidgetOfficesBootstrap(params: {
         bootstrapSource: 'saved_city',
         geoDenied,
       },
+      coords: null,
     }
   }
 
@@ -354,6 +366,7 @@ export async function resolveWidgetOfficesBootstrap(params: {
           bootstrapSource: 'location_name',
           geoDenied,
         },
+        coords: null,
       }
     }
   }
@@ -373,6 +386,7 @@ export async function resolveWidgetOfficesBootstrap(params: {
         bootstrapSource: 'sender_city',
         geoDenied,
       },
+      coords: null,
     }
   }
 
@@ -384,6 +398,7 @@ export async function resolveWidgetOfficesBootstrap(params: {
       bootstrapSource: 'country',
       geoDenied,
     },
+    coords: null,
   }
 }
 

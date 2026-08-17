@@ -267,6 +267,7 @@ export function CdekWidget({
       let officesBootstrapSource: WidgetOfficesBootstrapSource | null = null
       let geoDenied = false
       let fallbackCityCode: number | null = null
+      let geoCoords: GeolocationCoordinates | null = null
       try {
         const configPromise = getCachedCdekWidgetConfig({ brandId, items: itemsRef.current })
         const bootstrapPromise = configPromise.then((config) =>
@@ -292,6 +293,7 @@ export function CdekWidget({
         officesBootstrapSource = bootstrapResult.bootstrap.bootstrapSource
         geoDenied = bootstrapResult.bootstrap.geoDenied
         fallbackCityCode = bootstrapResult.bootstrap.fallbackCityCode
+        geoCoords = bootstrapResult.coords
 
         if (initStartedAt > 0) {
           pushDebugEvent('assets_ready', {
@@ -326,6 +328,15 @@ export function CdekWidget({
         geoRegion,
         configFrom: configJson.from,
       })
+      // Prefer raw geolocation coordinates over a place name: the widget forward-geocodes
+      // a string itself via Yandex, which can land on a different point than the one we
+      // already reverse-geocoded server-side for the offices region — leaving the map
+      // centered somewhere with no loaded offices even though the correct region's offices
+      // did load (e.g. text "Оренбург" resolving the map to an unrelated city elsewhere in
+      // Russia while `servicePath` correctly scoped offices to the Orenburg region).
+      const widgetDefaultLocation: string | [number, number] = geoCoords
+        ? [geoCoords.longitude, geoCoords.latitude]
+        : resolvedDefaultLocation
 
       const fallbackCityCodeForPath = geoRegion ? null : fallbackCityCode
       const containerWidth = hostRef.current?.getBoundingClientRect().width ?? 0
@@ -354,6 +365,7 @@ export function CdekWidget({
           fallbackCityCode,
           isMobileClient,
           shouldBackgroundExpandCountry,
+          usingCoordsForDefaultLocation: geoCoords != null,
         },
       })
 
@@ -409,7 +421,7 @@ export function CdekWidget({
         debug: isCdekWidgetDebugEnabled(),
         fixBounds: 'country',
         from: configJson.from,
-        defaultLocation: resolvedDefaultLocation,
+        defaultLocation: widgetDefaultLocation,
         ...(selected?.office || selected?.door
           ? {
               selected: {
