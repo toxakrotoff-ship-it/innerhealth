@@ -1050,11 +1050,29 @@ export async function getCdekSuggestCities(
 }
 
 /**
+ * Достаёт название города/населённого пункта из `full_name` вида
+ * "Оренбург, городской округ Оренбург, Оренбургская область, Россия" —
+ * СДЭК отдаёт его вместо плоского поля `city` для части запросов
+ * (например /location/cities с некоторыми параметрами).
+ */
+function extractCityNameFromFullName(fullName: unknown): string | undefined {
+  if (typeof fullName !== 'string') return undefined
+  const firstSegment = fullName.split(',')[0]?.trim()
+  return firstSegment && firstSegment.length > 0 ? firstSegment : undefined
+}
+
+/**
  * Нормализует элемент города из ответа API: СДЭК может вернуть city/code или cityName/cityId.
  */
-function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
+export function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
   const code = row.code ?? row.city_code ?? row.cityId ?? row.city_id
-  const city = row.city ?? row.cityName ?? row.city_name ?? row.settlement ?? row.name
+  const city =
+    row.city ??
+    row.cityName ??
+    row.city_name ??
+    row.settlement ??
+    row.name ??
+    extractCityNameFromFullName(row.full_name ?? row.fullName)
   const region = row.region ?? row.region_name
   const countryCode = row.country_code ?? row.countryCode
   return {
