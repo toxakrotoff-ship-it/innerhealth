@@ -371,18 +371,25 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
             ) : null}
             {lookup.cityOptions.length > 0 ? (
               <div className="absolute z-10 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow">
-                {lookup.cityOptions.map((city) => (
-                  <button
-                    key={`${city.code}-${city.city ?? 'city'}`}
-                    type="button"
-                    onClick={() => applySelectedCity({ city, setForm, setLookup })}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
-                  >
-                    <span className="font-medium">{city.city ?? 'Без названия'}</span>
-                    <span className="ml-2 text-xs text-gray-500">({city.code})</span>
-                    {city.region ? <span className="ml-2 text-xs text-gray-500">{city.region}</span> : null}
-                  </button>
-                ))}
+                {lookup.cityOptions.map((city) => {
+                  // Не подставляем текст поиска как "угаданное" имя города здесь: в списке
+                  // одновременно показывается несколько разных кодов, и одинаковый
+                  // угаданный ярлык на всех строках может увести пользователя на неверный
+                  // код города. Честное "Без названия" безопаснее одинаковой подписи.
+                  const hasName = Boolean(city.city?.trim())
+                  return (
+                    <button
+                      key={`${city.code}-${city.city ?? city.region ?? 'city'}`}
+                      type="button"
+                      onClick={() => applySelectedCity({ city, setForm, setLookup })}
+                      className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      <span className="font-medium">{hasName ? city.city : 'Без названия'}</span>
+                      <span className="ml-2 text-xs text-gray-500">({city.code})</span>
+                      {city.region ? <span className="ml-2 text-xs text-gray-500">{city.region}</span> : null}
+                    </button>
+                  )
+                })}
               </div>
             ) : null}
           </div>

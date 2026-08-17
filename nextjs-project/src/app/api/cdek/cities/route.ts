@@ -85,6 +85,14 @@ export async function GET(request: Request) {
       )
     } else if (cities.length > 0) {
       console.info('CDEK cities: q=%s, returning %d cities', q ?? '(all)', cities.length)
+      const missingCityName = cities.find((city) => !city.city || !city.city.trim())
+      if (missingCityName) {
+        console.warn(
+          'CDEK cities: q=%s, entry has no city name after normalization. Raw keys:',
+          q ?? '(all)',
+          Object.keys(missingCityName as unknown as Record<string, unknown>)
+        )
+      }
     }
 
     return NextResponse.json({ cities })

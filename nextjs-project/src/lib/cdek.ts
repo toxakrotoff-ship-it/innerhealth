@@ -1054,7 +1054,7 @@ export async function getCdekSuggestCities(
  */
 function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
   const code = row.code ?? row.city_code ?? row.cityId ?? row.city_id
-  const city = row.city ?? row.cityName ?? row.name
+  const city = row.city ?? row.cityName ?? row.city_name ?? row.settlement ?? row.name
   const region = row.region ?? row.region_name
   const countryCode = row.country_code ?? row.countryCode
   return {
