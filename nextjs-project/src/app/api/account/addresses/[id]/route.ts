@@ -20,7 +20,7 @@ export async function PATCH(
 ) {
   const session = await requireUserSession({
     requiresVerifiedEmail: true,
-    allowedRoles: ['USER', 'PARTNER'],
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
   })
   if (session instanceof NextResponse) return session
 
@@ -82,7 +82,7 @@ export async function DELETE(
 ) {
   const session = await requireUserSession({
     requiresVerifiedEmail: true,
-    allowedRoles: ['USER', 'PARTNER'],
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
   })
   if (session instanceof NextResponse) return session
 

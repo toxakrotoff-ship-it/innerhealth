@@ -17,7 +17,7 @@ function isUserAddressServiceError(error: unknown): error is UserAddressServiceE
 export async function GET() {
   const session = await requireUserSession({
     requiresVerifiedEmail: true,
-    allowedRoles: ['USER', 'PARTNER'],
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
   })
   if (session instanceof NextResponse) return session
 
@@ -45,7 +45,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await requireUserSession({
     requiresVerifiedEmail: true,
-    allowedRoles: ['USER', 'PARTNER'],
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
   })
   if (session instanceof NextResponse) return session
 

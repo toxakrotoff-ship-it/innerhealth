@@ -6,7 +6,10 @@ import { requireUserSession } from '@/lib/auth/require-user-session'
 import * as accountService from '@/services/account.service'
 
 export async function GET(request: Request) {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
+  })
   if (session instanceof NextResponse) return session
 
   const searchParams = new URL(request.url).searchParams

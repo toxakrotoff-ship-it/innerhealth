@@ -18,7 +18,10 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireUserSession({ requiresVerifiedEmail: true })
+  const session = await requireUserSession({
+    requiresVerifiedEmail: true,
+    allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'],
+  })
   if (session instanceof NextResponse) return session
 
   let parsedParams: z.infer<typeof accountOrderParamsSchema>

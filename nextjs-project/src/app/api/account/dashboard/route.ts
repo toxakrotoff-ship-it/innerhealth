@@ -3,7 +3,7 @@ import { requireUserSession } from '@/lib/auth/require-user-session'
 import * as accountService from '@/services/account.service'
 
 export async function GET() {
-  const session = await requireUserSession()
+  const session = await requireUserSession({ allowedRoles: ['USER', 'PARTNER', 'ADMIN', 'WRITER'] })
   if (session instanceof NextResponse) return session
 
   try {
