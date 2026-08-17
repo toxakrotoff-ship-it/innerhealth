@@ -828,7 +828,13 @@ export function CdekWidget({
           </button>
         </div>
       ) : null}
-      <div className={`cdek-widget-viewport relative h-[min(520px,calc(100dvh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl border max-sm:h-[min(540px,calc(100dvh-10rem))] sm:h-[580px] md:h-[650px] ${
+      {/*
+        Используем svh, а не dvh: dvh пересчитывается при скрытии/появлении адресной строки
+        браузера на мобильном при скролле, из-за чего контейнер карты меняет размер уже
+        ПОСЛЕ инициализации Yandex Maps (WebGL) виджетом СДЭК — карта откатывается в
+        статичный fallback-режим без интерактивных меток ПВЗ. svh стабильна при скролле.
+      */}
+      <div className={`cdek-widget-viewport relative h-[min(520px,calc(100svh-12rem))] w-full min-w-0 max-w-full overflow-hidden rounded-xl border max-sm:h-[min(540px,calc(100svh-10rem))] sm:h-[580px] md:h-[650px] ${
         isSprintTheme ? 'border-slate-600 bg-white' : 'border-gray-200 bg-white'
       }`}>
         {!error && !isReady ? (
