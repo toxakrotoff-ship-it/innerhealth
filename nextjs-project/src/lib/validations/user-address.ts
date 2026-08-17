@@ -5,7 +5,7 @@ const DELIVERY_METHOD_SCHEMA = z.enum(DELIVERY_METHOD_VALUES)
 
 const baseAddressSchema = z.object({
   label: z.string().min(1, 'Address label is required').max(100).trim(),
-  city: z.string().min(1, 'City is required').max(120).trim(),
+  city: z.string().min(1, 'Укажите город').max(120).trim(),
   postalCode: z.string().max(20).trim().optional(),
   addressLine: z.string().min(1, 'Address line is required').max(300).trim(),
   deliveryMethod: DELIVERY_METHOD_SCHEMA,

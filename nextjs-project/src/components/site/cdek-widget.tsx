@@ -18,6 +18,7 @@ import { detectCdekWidgetModeFromText } from '@/lib/cdek-widget-mode'
 import {
   buildCdekWidgetServicePath,
   CDEK_WIDGET_LAYOUT_BREAKPOINT_PX,
+  guessCityFromFormattedAddress,
   isCdekWidgetMobileClient,
   readSenderCityCodeFromWidgetConfig,
   resolveWidgetDefaultLocation,
@@ -620,6 +621,15 @@ export function CdekWidget({
               : typeof cityCodeRaw === 'string'
                 ? Number.parseInt(cityCodeRaw, 10)
                 : undefined
+          const formattedDoorAddress = typeof a.formatted === 'string' ? a.formatted : undefined
+          // For door delivery the widget only fills `city` from the Yandex geocoder's
+          // LOCALITY component, which is sometimes absent for a given point. Without a
+          // name here there is nothing to resolve the CDEK city code from downstream, so
+          // fall back to a best-effort guess parsed from the full formatted address.
+          const resolvedCity =
+            typeof a.city === 'string' && a.city.trim().length > 0
+              ? a.city.trim()
+              : (guessCityFromFormattedAddress(formattedDoorAddress) ?? undefined)
           onChooseRef.current({
             deliveryMethod: m,
             tariff: {
@@ -633,10 +643,10 @@ export function CdekWidget({
               typeof a.city_uuid === 'string' && a.city_uuid.trim().length > 0
                 ? a.city_uuid.trim()
                 : undefined,
-            city: typeof a.city === 'string' ? a.city : undefined,
+            city: resolvedCity,
             pvzCode: typeof a.code === 'string' ? a.code : undefined,
             pvzAddress: typeof a.address === 'string' ? a.address : undefined,
-            doorAddress: typeof a.formatted === 'string' ? a.formatted : undefined,
+            doorAddress: formattedDoorAddress,
           })
         },
       })

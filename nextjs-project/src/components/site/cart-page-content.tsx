@@ -550,7 +550,11 @@ export function CartPageContent({
           selectedCity: selectedCity?.city ?? formData.city ?? null,
         },
       })
-      setDeliveryError('Не указан код города СДЭК')
+      setDeliveryError(
+        deliveryMethod === 'cdek_door'
+          ? 'Не удалось определить город по выбранному адресу. Попробуйте отметить на карте точку ближе к центру города или выбрать доставку в пункт выдачи СДЭК.'
+          : 'Не указан код города СДЭК'
+      )
       return
     }
     if (deliveryMethod === 'cdek_pvz' && (!selectedPvz?.code || !pvzTariff?.tariffCode)) {

@@ -205,17 +205,23 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
     setLookup: Dispatch<SetStateAction<CdekLookupUiState>>
   }) {
     const { city, setForm, setLookup } = params
-    setForm((prev) => ({
-      ...prev,
-      city: city.city ?? prev.city,
-      cdekCityCode: String(city.code),
-      cdekCityUuid: city.city_uuid ?? '',
-      cdekPvzCode: '',
-      addressLine: '',
-    }))
+    // CDEK иногда не возвращает `city` в подсказке (например, для части городов при поиске
+    // через suggest-эндпоинт) — в этом случае используем то, что реально видел и вводил
+    // пользователь, чтобы не отправить на сервер пустое название города при заполненном коде.
+    setForm((prev) => {
+      const fallbackName = city.city?.trim() || city.region?.trim() || prev.city
+      return {
+        ...prev,
+        city: fallbackName,
+        cdekCityCode: String(city.code),
+        cdekCityUuid: city.city_uuid ?? '',
+        cdekPvzCode: '',
+        addressLine: '',
+      }
+    })
     setLookup((prev) => ({
       ...prev,
-      cityQuery: city.city ?? prev.cityQuery,
+      cityQuery: city.city?.trim() || city.region?.trim() || prev.cityQuery,
       cityOptions: [],
       pvzQuery: '',
     }))
@@ -227,6 +233,10 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
   }
 
   async function createAddress() {
+    if (!createForm.city.trim()) {
+      setErrorMessage('Не удалось определить название города, выберите город из списка ещё раз.')
+      return
+    }
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
@@ -279,6 +289,10 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
   }
 
   async function saveEditedAddress(addressId: string) {
+    if (!editForm.city.trim()) {
+      setErrorMessage('Не удалось определить название города, выберите город из списка ещё раз.')
+      return
+    }
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
@@ -374,7 +388,7 @@ export function AccountAddressesManager({ initialAddresses }: { initialAddresses
           </div>
           {form.cdekCityCode ? (
             <div className="text-xs text-gray-600">
-              Выбран: <span className="font-medium">{form.city || lookup.cityQuery}</span> (код CDEK: {form.cdekCityCode})
+              Выбран: <span className="font-medium">{form.city}</span> (код CDEK: {form.cdekCityCode})
             </div>
           ) : null}
         </div>

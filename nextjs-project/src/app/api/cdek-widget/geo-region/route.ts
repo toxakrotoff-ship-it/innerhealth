@@ -53,6 +53,10 @@ export async function POST(request: Request) {
     })
 
     if (!resolved) {
+      console.warn('[cdek/widget][geo-region] region resolution failed, widget will fall back', {
+        brandId,
+        hasApiKey: !!apiKey,
+      })
       return NextResponse.json({ region: null })
     }
 

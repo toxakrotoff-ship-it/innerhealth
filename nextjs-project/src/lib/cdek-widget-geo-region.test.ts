@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildCdekWidgetServicePath,
   extractCityFromSenderAddress,
+  guessCityFromFormattedAddress,
   isCdekWidgetMobileClient,
   isCdekWidgetMobileViewport,
   isCdekWidgetNarrowLayout,
@@ -103,9 +104,43 @@ describe('cdek-widget-geo-region', () => {
     ).toBe(true)
   })
 
+  it('expands country offices when bootstrap fully fails (server silently falls back to a default city)', () => {
+    expect(
+      shouldExpandCountryOfficesAfterInit({
+        regionCode: null,
+        fallbackCityCode: null,
+        bootstrapSource: 'country',
+        isMobileClient: false,
+      })
+    ).toBe(true)
+
+    expect(
+      shouldExpandCountryOfficesAfterInit({
+        regionCode: null,
+        fallbackCityCode: null,
+        bootstrapSource: 'country',
+        isMobileClient: true,
+      })
+    ).toBe(true)
+  })
+
   it('extracts city name from sender address', () => {
     expect(extractCityFromSenderAddress('Санкт-Петербург, склад')).toBe('Санкт-Петербург')
     expect(extractCityFromSenderAddress('  ')).toBeNull()
+  })
+
+  it('guesses city from a Yandex-formatted door address', () => {
+    expect(guessCityFromFormattedAddress('Россия, Московская область, Химки, Молодёжная улица, 2')).toBe(
+      'Химки'
+    )
+    expect(guessCityFromFormattedAddress('Россия, Республика Татарстан, Казань, улица Баумана, 1')).toBe(
+      'Казань'
+    )
+    expect(guessCityFromFormattedAddress('Россия, Москва, Тверская улица, 7')).toBe('Москва')
+    expect(guessCityFromFormattedAddress(null)).toBeNull()
+    expect(guessCityFromFormattedAddress('  ')).toBeNull()
+    // No locality-like segment before the street part — nothing reliable to guess.
+    expect(guessCityFromFormattedAddress('Россия, Краснодарский край, улица Мира, 10')).toBeNull()
   })
 
   it('returns null when geolocation never resolves within budget', async () => {

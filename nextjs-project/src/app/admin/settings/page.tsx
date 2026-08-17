@@ -138,7 +138,7 @@ const FIELDS: Array<{
   },
   {
     key: 'yandex_maps_api_key',
-    label: 'Ключ API Яндекс.Карт и Геокодера',
+    label: 'Ключ API Яндекс.Карт и Геокодера (в кабинете Яндекса у ключа должны быть подключены обе услуги: JavaScript API и HTTP Геокодер)',
     type: 'text',
     placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     group: 'cdek',

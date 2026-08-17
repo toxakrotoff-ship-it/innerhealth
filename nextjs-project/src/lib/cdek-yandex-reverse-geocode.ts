@@ -49,12 +49,24 @@ export async function reverseGeocodeYandexCoordinates(params: {
   url.searchParams.set('geocode', `${params.longitude},${params.latitude}`)
 
   const response = await fetch(url.toString(), { cache: 'no-store' })
-  if (!response.ok) return null
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    console.error('[cdek/geocoder] Yandex reverse geocode request failed', {
+      status: response.status,
+      body: body.slice(0, 500),
+    })
+    return null
+  }
 
   const payload = (await response.json()) as YandexGeocoderResponse
   const geoObject = payload.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject
   const metadata = geoObject?.metaDataProperty?.GeocoderMetaData
-  if (!metadata) return null
+  if (!metadata) {
+    console.error('[cdek/geocoder] Yandex reverse geocode returned no GeocoderMetaData', {
+      hasFeatureMember: !!payload.response?.GeoObjectCollection?.featureMember?.length,
+    })
+    return null
+  }
 
   const components = metadata.Address?.Components
   const locality =

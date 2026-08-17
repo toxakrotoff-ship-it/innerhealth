@@ -47,6 +47,36 @@ export function extractCityFromSenderAddress(address: string | null | undefined)
   return cityPart && cityPart.length > 0 ? cityPart : null
 }
 
+const FORMATTED_ADDRESS_COUNTRY_NAMES = new Set(['россия', 'russia'])
+const FORMATTED_ADDRESS_REGION_PATTERN =
+  /(область|край|республика|автономный округ|обл\.|респ\.|\bао\b|\bчувашия\b)/i
+const FORMATTED_ADDRESS_STREET_HINT_PATTERN =
+  /(улица|проспект|переулок|шоссе|бульвар|наб\.|пр-кт|пр-т|ул\.|пер\.|бул\.|мкр|квартал|тракт|аллея|проезд|тупик|набережная)/i
+
+/**
+ * Best-effort city guess from a Yandex-formatted full address string
+ * (e.g. "Россия, Московская область, Химки, Молодёжная улица, 2").
+ * Used when the CDEK widget's door-delivery `onChoose` payload has no
+ * explicit `city` field (Yandex reverse geocode returned no LOCALITY
+ * component for that point) — without this there is nothing to resolve
+ * the numeric CDEK city code from at all.
+ */
+export function guessCityFromFormattedAddress(formatted: string | null | undefined): string | null {
+  const trimmed = formatted?.trim()
+  if (!trimmed) return null
+
+  const segments = trimmed.split(',').map((segment) => segment.trim()).filter(Boolean)
+  for (const segment of segments) {
+    const normalized = segment.toLowerCase()
+    if (FORMATTED_ADDRESS_COUNTRY_NAMES.has(normalized)) continue
+    if (/^\d+$/.test(segment)) continue
+    if (FORMATTED_ADDRESS_REGION_PATTERN.test(normalized)) continue
+    if (FORMATTED_ADDRESS_STREET_HINT_PATTERN.test(normalized)) return null
+    return segment
+  }
+  return null
+}
+
 export function isCdekWidgetNarrowLayout(containerWidth: number): boolean {
   return containerWidth > 0 && containerWidth < CDEK_WIDGET_LAYOUT_BREAKPOINT_PX
 }
@@ -416,7 +446,13 @@ export function shouldExpandCountryOfficesAfterInit(params: {
 }): boolean {
   const hasRegionBootstrap = params.regionCode != null && params.regionCode > 0
   const hasCityBootstrap = params.fallbackCityCode != null && params.fallbackCityCode > 0
-  if (!hasRegionBootstrap && !hasCityBootstrap) return false
+  // 'country' means geolocation, saved city, name lookup and sender city all failed to
+  // resolve on the client — but the server (`normalizeWidgetOfficesQuery`) still silently
+  // falls back to a single default city (Moscow) for the initial offices request. Without
+  // expanding to the whole country here, the user would be stuck seeing only that default
+  // city's offices with no recovery path.
+  const isFullFallback = params.bootstrapSource === 'country'
+  if (!hasRegionBootstrap && !hasCityBootstrap && !isFullFallback) return false
 
   if (
     params.isMobileClient &&

@@ -72,10 +72,21 @@ export async function resolveCdekRegionFromCoordinates(params: {
     longitude: params.longitude,
     apiKey: params.yandexApiKey,
   })
-  if (!geocoded) return null
+  if (!geocoded) {
+    console.warn('[cdek/geo-region] reverse geocode failed, aborting region resolution', {
+      latitude: params.latitude,
+      longitude: params.longitude,
+    })
+    return null
+  }
 
   const lookupName = geocoded.locality ?? geocoded.province
-  if (!lookupName) return null
+  if (!lookupName) {
+    console.warn('[cdek/geo-region] reverse geocode returned no locality/province', {
+      formattedAddress: geocoded.formattedAddress,
+    })
+    return null
+  }
 
   let cities = await getCdekSuggestCities(
     { name: lookupName, country_codes: ['RU'] },
@@ -99,10 +110,23 @@ export async function resolveCdekRegionFromCoordinates(params: {
     city = pickBestCity(byLocality, geocoded.locality)
   }
 
-  if (!city) return null
+  if (!city) {
+    console.warn('[cdek/geo-region] no CDEK city matched for locality', {
+      lookupName,
+      locality: geocoded.locality,
+      province: geocoded.province,
+    })
+    return null
+  }
 
   const cityWithRegion = await enrichCityWithRegionCode(city, params.cdekCredentials)
-  if (!cityWithRegion?.region_code || cityWithRegion.region_code <= 0) return null
+  if (!cityWithRegion?.region_code || cityWithRegion.region_code <= 0) {
+    console.warn('[cdek/geo-region] matched CDEK city has no region_code after enrichment', {
+      cityCode: city.code,
+      cityName: city.city,
+    })
+    return null
+  }
 
   return {
     regionCode: cityWithRegion.region_code,
