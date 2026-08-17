@@ -484,13 +484,27 @@ export function CartPageContent({
             : 'Ошибка расчёта СДЭК до двери'
         if (!response.ok) throw new Error(json?.error ?? errorMessage)
 
+        // Виджет СДЭК в корзине жёстко ограничен одним тарифом на метод доставки
+        // (/api/cdek-widget/config: office=[136], door=[137]) — покупатель никогда не видит
+        // и не может выбрать никакой другой тариф там. Для сохранённого адреса калькулятор
+        // возвращает полный список доступных тарифов (включая экспресс/супер-экспресс), и
+        // fallback на "первый из списка" мог подставить совсем другой, более дорогой тариф,
+        // если 136/137 отсутствовал в конкретном ответе — расхождение с ценой в виджете.
+        // Разрешаем только тот же самый тариф, что и виджет, без подмены на другой.
         const tariffs = Array.isArray(json?.tariffs) ? json.tariffs : []
+        const requiredTariffCode = deliveryMethodForSavedAddress === 'cdek_pvz' ? 136 : 137
+        const matchedTariff = tariffs.find((t) => t.tariffCode === requiredTariffCode) ?? null
+        if (!matchedTariff) {
+          throw new Error(
+            deliveryMethodForSavedAddress === 'cdek_pvz'
+              ? 'Тариф СДЭК ПВЗ недоступен для этого адреса'
+              : 'Тариф СДЭК до двери недоступен для этого адреса'
+          )
+        }
         if (deliveryMethodForSavedAddress === 'cdek_pvz') {
-          const office = tariffs.find((t) => t.tariffCode === 136) ?? tariffs[0] ?? null
-          setPvzTariff(office)
+          setPvzTariff(matchedTariff)
         } else {
-          const door = tariffs.find((t) => t.tariffCode === 137) ?? tariffs[0] ?? null
-          setDoorTariff(door)
+          setDoorTariff(matchedTariff)
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return
