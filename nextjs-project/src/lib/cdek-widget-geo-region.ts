@@ -456,7 +456,7 @@ export function shouldExpandCountryOfficesAfterInit(params: {
   regionCode?: number | null
   fallbackCityCode?: number | null
   bootstrapSource?: WidgetOfficesBootstrapSource | null
-  /** Skip background country load on mobile after geo_region bootstrap to avoid map jank. */
+  /** @deprecated No longer used — country-wide expansion always runs regardless of device. */
   isMobileClient?: boolean
 }): boolean {
   const hasRegionBootstrap = params.regionCode != null && params.regionCode > 0
@@ -469,13 +469,14 @@ export function shouldExpandCountryOfficesAfterInit(params: {
   const isFullFallback = params.bootstrapSource === 'country'
   if (!hasRegionBootstrap && !hasCityBootstrap && !isFullFallback) return false
 
-  if (
-    params.isMobileClient &&
-    params.bootstrapSource === 'geo_region' &&
-    hasRegionBootstrap
-  ) {
-    return false
-  }
-
+  // Always expand to the full country list in the background, even after a successful
+  // geo_region bootstrap and even on mobile. The widget's own city search only moves the
+  // map center (it re-geocodes the typed text via Yandex) — it does NOT re-scope which
+  // offices are loaded, since `servicePath` embeds a single region_code fixed at init time.
+  // Skipping this expansion on mobile meant a user browsing on their phone (where geolocation
+  // reliably succeeds) could search for and "select" any other city on the map, but would see
+  // zero pickup points there — only their own region's offices were ever fetched. Desktop
+  // testing tends to mask this because a denied/unavailable geolocation permission falls
+  // through to the 'country' bootstrap source, which already expanded to everything.
   return true
 }
