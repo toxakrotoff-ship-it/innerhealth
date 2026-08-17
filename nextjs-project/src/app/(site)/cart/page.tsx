@@ -36,8 +36,11 @@ export default async function CartPage({ searchParams }: CartPageProps) {
   )
   const contactsAddress = contactBlocks.find((block) => block.key === 'contacts.address')?.text?.trim()
   const pickupAddress = contactsAddress || `г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис ${siteTitle}`
+  const isStaffRole = session?.user?.role === 'ADMIN' || session?.user?.role === 'WRITER'
   const canUseSavedAddresses =
-    session?.user?.role === 'USER' && Boolean(session.user.isEmailVerified)
+    Boolean(session?.user) &&
+    (session?.user?.role === 'USER' || isStaffRole) &&
+    (isStaffRole || Boolean(session?.user?.isEmailVerified))
   return (
     <section className={isSprintTheme ? 'bg-[#060A14] py-10' : ''}>
       <AdaptiveContainer maxWidth="default" className={isSprintTheme ? 'py-0 text-slate-100' : 'py-10'}>
