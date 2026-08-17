@@ -21,11 +21,12 @@ export default async function AccountPage() {
 
   const userDisplayName = session.user.name ?? dashboard.user?.email ?? 'Пользователь'
   const userEmail = session.user.email ?? dashboard.user?.email ?? ''
+  const isStaffRole = session.user.role === 'ADMIN' || session.user.role === 'WRITER'
 
   return (
     <AdaptiveContainer maxWidth="default" className="py-10">
       <div className="mx-auto max-w-280 space-y-6">
-        {!session.user.isEmailVerified ? <VerifyEmailBanner /> : null}
+        {!isStaffRole && !session.user.isEmailVerified ? <VerifyEmailBanner /> : null}
         <AccountDashboard
           userName={userDisplayName}
           userEmail={userEmail}

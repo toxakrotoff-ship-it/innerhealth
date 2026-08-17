@@ -19,7 +19,10 @@ export async function requireUserPageSession(options?: RequireUserPageSessionOpt
     redirect('/')
   }
 
-  if (options?.requiresVerifiedEmail && !session.user.isEmailVerified) {
+  // Email verification exists to confirm a buyer's contact details before checkout —
+  // it's not meaningful for staff accounts (ADMIN/WRITER) that log in separately.
+  const isStaffRole = session.user.role === 'ADMIN' || session.user.role === 'WRITER'
+  if (options?.requiresVerifiedEmail && !isStaffRole && !session.user.isEmailVerified) {
     redirect('/account?verify=required')
   }
 

@@ -21,8 +21,11 @@ export async function requireUserSession(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Email verification exists to confirm a buyer's contact details before checkout —
+  // it's not meaningful for staff accounts (ADMIN/WRITER) that log in separately.
+  const isStaffRole = session.user.role === 'ADMIN' || session.user.role === 'WRITER'
   const isEmailVerified = Boolean((session.user as { isEmailVerified?: boolean }).isEmailVerified)
-  if (options?.requiresVerifiedEmail && !isEmailVerified) {
+  if (options?.requiresVerifiedEmail && !isStaffRole && !isEmailVerified) {
     return NextResponse.json({ error: 'Email verification required' }, { status: 403 })
   }
 
