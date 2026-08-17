@@ -450,12 +450,13 @@ export function CartPageContent({
     applySavedAddress(selectedSavedAddressId)
   }, [usingSavedAddress, selectedSavedAddressId, applySavedAddress])
 
-  // Для сохранённого адреса «до двери» тариф считаем напрямую через калькулятор,
+  // Для сохранённого адреса (ПВЗ или «до двери») тариф считаем напрямую через калькулятор,
   // без повторного запуска виджета СДЭК (виджет для usingSavedAddress не рендерится).
   useEffect(() => {
     if (!usingSavedAddress) return
     if (!selectedSavedAddress) return
-    if (selectedSavedAddress.deliveryMethod !== 'cdek_door') return
+    const deliveryMethodForSavedAddress = selectedSavedAddress.deliveryMethod
+    if (deliveryMethodForSavedAddress !== 'cdek_door' && deliveryMethodForSavedAddress !== 'cdek_pvz') return
     if (!selectedSavedAddress.cdekCityCode) return
 
     const controller = new AbortController()
@@ -468,7 +469,7 @@ export function CartPageContent({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            deliveryKind: 'address',
+            deliveryKind: deliveryMethodForSavedAddress === 'cdek_pvz' ? 'pvz' : 'address',
             items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
             toLocation: { cityCode: selectedSavedAddress!.cdekCityCode },
           }),
@@ -477,15 +478,32 @@ export function CartPageContent({
         const json = (await response.json().catch(() => null)) as
           | { tariffs?: CdekTariffSummary[]; error?: string }
           | null
-        if (!response.ok) throw new Error(json?.error ?? 'Ошибка расчёта СДЭК до двери')
+        const errorMessage =
+          deliveryMethodForSavedAddress === 'cdek_pvz'
+            ? 'Ошибка расчёта СДЭК ПВЗ'
+            : 'Ошибка расчёта СДЭК до двери'
+        if (!response.ok) throw new Error(json?.error ?? errorMessage)
 
         const tariffs = Array.isArray(json?.tariffs) ? json.tariffs : []
-        const door = tariffs.find((t) => t.tariffCode === 137) ?? tariffs[0] ?? null
-        setDoorTariff(door)
+        if (deliveryMethodForSavedAddress === 'cdek_pvz') {
+          const office = tariffs.find((t) => t.tariffCode === 136) ?? tariffs[0] ?? null
+          setPvzTariff(office)
+        } else {
+          const door = tariffs.find((t) => t.tariffCode === 137) ?? tariffs[0] ?? null
+          setDoorTariff(door)
+        }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return
-        setDeliveryError(e instanceof Error ? e.message : 'Ошибка расчёта СДЭК до двери')
-        setDoorTariff(null)
+        const fallbackMessage =
+          deliveryMethodForSavedAddress === 'cdek_pvz'
+            ? 'Ошибка расчёта СДЭК ПВЗ'
+            : 'Ошибка расчёта СДЭК до двери'
+        setDeliveryError(e instanceof Error ? e.message : fallbackMessage)
+        if (deliveryMethodForSavedAddress === 'cdek_pvz') {
+          setPvzTariff(null)
+        } else {
+          setDoorTariff(null)
+        }
       }
     }
 

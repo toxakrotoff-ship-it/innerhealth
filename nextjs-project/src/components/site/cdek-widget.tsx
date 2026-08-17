@@ -91,6 +91,12 @@ function parseWidgetInt(value: unknown): number {
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_INIT_TIMEOUT_MS = 45_000
 const COUNTRY_OFFICES_BACKGROUND_DEFER_MS = 4_000
+// iOS Safari fires `pageshow` with `persisted: true` on brief backgrounding (screen lock,
+// app switch, notification banner) — not just on genuine back/forward-cache navigation.
+// Only treat it as a real bfcache restore (where the widget's WebGL map state can actually
+// be broken) if the page was hidden for at least this long; otherwise a full remount would
+// throw away an already-loaded, correctly-zoomed map for no reason on every brief glance away.
+const PAGESHOW_REMOUNT_MIN_HIDDEN_MS = 4_000
 
 function isCdekWidgetDebugEnabled(): boolean {
   return process.env.NEXT_PUBLIC_CART_DEBUG === 'true' || process.env.NODE_ENV === 'development'
@@ -177,15 +183,24 @@ export function CdekWidget({
   }, [onChoose, onCalculate, onModeChange])
 
   useEffect(() => {
-    function handlePageShow(event: PageTransitionEvent) {
-      // bfcache restore: scripts might be present, but widget internal state can be broken.
-      if (event.persisted) {
-        setInstanceKey(Math.random().toString(16).slice(2))
-      }
+    let hiddenSinceMs: number | null = null
+
+    function handleVisibilityChange() {
+      hiddenSinceMs = document.visibilityState === 'hidden' ? Date.now() : null
     }
 
+    function handlePageShow(event: PageTransitionEvent) {
+      // bfcache restore: scripts might be present, but widget internal state can be broken.
+      if (!event.persisted) return
+      const hiddenMs = hiddenSinceMs != null ? Date.now() - hiddenSinceMs : Infinity
+      if (hiddenMs < PAGESHOW_REMOUNT_MIN_HIDDEN_MS) return
+      setInstanceKey(Math.random().toString(16).slice(2))
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('pageshow', handlePageShow)
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pageshow', handlePageShow)
     }
   }, [])
