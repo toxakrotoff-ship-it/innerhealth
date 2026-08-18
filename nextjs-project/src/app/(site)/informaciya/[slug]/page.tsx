@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function InformaciyaPostPage({ params }: PageProps) {
-  const { siteUrl, brandId } = await getServerBrandContext()
+  const { siteTitle, siteUrl, brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
   const { slug } = await params
   const post = await prisma.post.findUnique({
@@ -160,7 +160,7 @@ export default async function InformaciyaPostPage({ params }: PageProps) {
             </div>
           )}
           <TipTapDocRenderer raw={post.content} />
-          <ArticleSourceFooter canonicalUrl={canonicalUrl} />
+          <ArticleSourceFooter canonicalUrl={canonicalUrl} siteName={siteTitle} />
           <script
             type="application/ld+json"
             suppressHydrationWarning
