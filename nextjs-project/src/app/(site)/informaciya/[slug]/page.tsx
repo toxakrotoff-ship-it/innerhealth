@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getSettingsMap } from '@/services/settings.service'
 import { buildNewsArticleGeoStructuredData } from '@/lib/schema-org'
-import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { extractPlainTextFromPostContent } from '@/lib/tiptap-plain-text'
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
@@ -88,7 +87,7 @@ export default async function InformaciyaPostPage({ params }: PageProps) {
   const postPath = getPostPath({ type: post.type, slug: post.slug })
   const canonicalUrl = schemaUrl
     ? `${schemaUrl.replace(/\/+$/, '')}${postPath}`
-    : toAbsoluteSiteUrl(postPath)
+    : `${siteUrl.replace(/\/+$/, '')}${postPath}`
   const articleBodyPlain = extractPlainTextFromPostContent(post.content)
   const geoStructuredData = buildNewsArticleGeoStructuredData({
     settings,
