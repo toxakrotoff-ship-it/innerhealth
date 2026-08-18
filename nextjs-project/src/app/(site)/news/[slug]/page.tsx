@@ -117,67 +117,77 @@ export default async function NewsPostPage({ params }: PageProps) {
   const currentPath = postPath
 
   return (
-    <AdaptiveContainer
-      maxWidth="default"
-      className={`py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
-    >
-      <div className="mx-auto max-w-3xl">
-        <BreadcrumbJsonLd items={breadcrumbItems} currentPath={currentPath} />
-        <Breadcrumbs items={breadcrumbItems} />
-        <article
-          id="geo-article-root"
-          className={`rounded-2xl p-8 mt-4 ${
-            isSprintTheme ? 'bg-[#0F172A] border border-slate-700' : 'bg-white border border-gray-200'
-          }`}
-        >
-          <h1
-            id="geo-article-title"
-            className={`text-2xl font-bold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
+    <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
+      <AdaptiveContainer
+        maxWidth="default"
+        className={`py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+      >
+        <div className="mx-auto max-w-3xl">
+          <BreadcrumbJsonLd items={breadcrumbItems} currentPath={currentPath} />
+          <Breadcrumbs items={breadcrumbItems} isInverted={isSprintTheme} />
+          <article
+            id="geo-article-root"
+            className={`rounded-2xl p-8 mt-4 ${
+              isSprintTheme ? 'bg-[#0F172A] border border-slate-700' : 'bg-white border border-gray-200'
+            }`}
           >
-            {post.title}
-          </h1>
-          <p className={`text-xs mb-4 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>
-            Опубликовано: {post.createdAt.toLocaleDateString('ru-RU')}
-            {post.updatedAt.getTime() !== post.createdAt.getTime() && (
-              <> · Обновлено: {post.updatedAt.toLocaleDateString('ru-RU')}</>
-            )}
-          </p>
-          {post.excerpt && (
-            <p className={`mb-4 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{post.excerpt}</p>
-          )}
-          {post.previewImage && (
-            <div
-              className={`aspect-video rounded-lg mb-6 overflow-hidden relative ${
-                isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
-              }`}
+            <h1
+              id="geo-article-title"
+              className={`text-2xl font-bold mb-4 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}
             >
-              <Image
-                src={post.previewImage}
-                alt={post.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 672px"
-                unoptimized={post.previewImage.startsWith('/')}
-              />
-            </div>
-          )}
-          <TipTapDocRenderer raw={post.content} />
-          <ArticleSourceFooter canonicalUrl={canonicalUrl} siteName={siteTitle} />
-          <script
-            type="application/ld+json"
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(geoStructuredData) }}
-          />
-        </article>
-        <Link
-          href="/"
-          className={`text-sm mt-6 inline-block hover:underline ${
-            isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
-          }`}
-        >
-          ← На главную
-        </Link>
-      </div>
-    </AdaptiveContainer>
+              {post.title}
+            </h1>
+            <p className={`text-xs mb-4 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>
+              Опубликовано: {post.createdAt.toLocaleDateString('ru-RU')}
+              {post.updatedAt.getTime() !== post.createdAt.getTime() && (
+                <> · Обновлено: {post.updatedAt.toLocaleDateString('ru-RU')}</>
+              )}
+            </p>
+            {post.excerpt && (
+              <p className={`mb-4 ${isSprintTheme ? 'text-slate-300' : 'text-gray-600'}`}>{post.excerpt}</p>
+            )}
+            {post.previewImage && (
+              <div
+                className={`aspect-video rounded-lg mb-6 overflow-hidden relative ${
+                  isSprintTheme ? 'bg-slate-900' : 'bg-gray-100'
+                }`}
+              >
+                <Image
+                  src={post.previewImage}
+                  alt={post.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 672px"
+                  unoptimized={post.previewImage.startsWith('/')}
+                />
+              </div>
+            )}
+            <TipTapDocRenderer
+              raw={post.content}
+              tone={isSprintTheme ? 'dark' : 'light'}
+              className={
+                isSprintTheme
+                  ? 'prose-invert text-slate-300 prose-headings:text-slate-100 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100 prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline'
+                  : ''
+              }
+            />
+            <ArticleSourceFooter canonicalUrl={canonicalUrl} siteName={siteTitle} />
+            <script
+              type="application/ld+json"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(geoStructuredData) }}
+            />
+          </article>
+          <Link
+            href="/"
+            className={`text-sm mt-6 inline-block hover:underline ${
+              isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
+            }`}
+          >
+            ← На главную
+          </Link>
+        </div>
+      </AdaptiveContainer>
+    </section>
   )
 }
