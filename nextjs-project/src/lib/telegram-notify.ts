@@ -415,8 +415,8 @@ export interface PaymentErrorNotifyPayload {
   /** Сумма заказа в рублях (опционально, например для webhook неизвестна). */
   total?: number;
   errorMessage: string;
-  /** Контекст: создание платежа при оформлении заказа или верификация в webhook. */
-  context: 'create' | 'webhook';
+  /** Контекст: создание платежа при оформлении заказа, верификация в webhook или фоновая проверка кроном. */
+  context: 'create' | 'webhook' | 'cron-poll';
   brandId?: BrandId;
 }
 
@@ -429,7 +429,12 @@ export function notifyTelegramPaymentError(payload: PaymentErrorNotifyPayload): 
     return userService.getAdminTelegramChatIds(brandId);
   }).then(async (chatIds) => {
     if (!chatIds || chatIds.length === 0) return;
-    const contextLabel = context === 'create' ? 'создание платежа' : 'верификация в webhook';
+    const contextLabel =
+      context === 'create'
+        ? 'создание платежа'
+        : context === 'webhook'
+          ? 'верификация в webhook'
+          : 'фоновая проверка (крон)';
     const totalStr =
       total !== undefined && total !== null
         ? `Сумма: ${total.toFixed(0)} ₽. `

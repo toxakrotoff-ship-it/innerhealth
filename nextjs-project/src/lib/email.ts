@@ -401,6 +401,7 @@ export interface NewOrderEmailPayload {
   /** Сумма скидки по промокоду в рублях (отдельная строка в письме). */
   promoDiscountAmount?: number | null
   cdekTrackNumber?: string | null
+  brandId?: BrandId
 }
 
 export interface PaidOrderEmailPayload extends NewOrderEmailPayload {
@@ -455,6 +456,7 @@ export async function sendNewOrderNotification(
   const { orderId, total, shippingCost, items, shipping, promoCode, promoDiscountAmount, cdekTrackNumber } =
     payload
   const orderLabel = formatOrderLabel(payload)
+  const storefront = labelForBrandEmail(payload.brandId)
   const itemsLines = items.map(
     (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
   )
@@ -502,7 +504,7 @@ export async function sendNewOrderNotification(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Заказ оплачен — Inner Health</title>
+  <title>Заказ оплачен — ${escapeHtml(storefront)}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f3f1eb;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
@@ -514,7 +516,7 @@ export async function sendNewOrderNotification(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;background-color:#fffdf9;border:1px solid #ebe6dc;border-radius:24px;overflow:hidden;">
           <tr>
             <td style="padding:28px 28px 22px;background:linear-gradient(135deg,#16302b 0%,#27544c 100%);">
-              <div style="font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#d8e9e3;">Inner Health</div>
+              <div style="font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#d8e9e3;">${escapeHtml(storefront)}</div>
               <h1 style="margin:14px 0 8px;font-family:Arial,'Segoe UI',sans-serif;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Заказ оплачен</h1>
               <p style="margin:0;font-size:15px;line-height:1.5;color:#d9ebe4;">Оплата получена, заказ можно обрабатывать.</p>
             </td>
@@ -620,7 +622,7 @@ export async function sendNewOrderNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Заказ оплачен ${orderLabel} — Inner Health`,
+      subject: `Заказ оплачен ${orderLabel} — ${storefront}`,
       text,
       html,
     })
@@ -788,6 +790,7 @@ export async function sendCustomerOrderPaidEmail(
   })
   const { total, shippingCost, items, cdekTrackNumber, promoCode, promoDiscountAmount } = payload
   const orderLabel = formatOrderLabel(payload)
+  const storefront = labelForBrandEmail(payload.brandId)
   const orderSummary = items
     .map(
       (i) =>
@@ -805,7 +808,7 @@ export async function sendCustomerOrderPaidEmail(
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `Inner Health\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}${promoTextSection}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `${storefront}\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}${promoTextSection}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
@@ -842,7 +845,7 @@ export async function sendCustomerOrderPaidEmail(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;">
           <tr>
             <td style="background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);padding:28px 32px;text-align:center;">
-              <h1 style="margin:0;font-size:22px;font-weight:600;color:#ffffff;letter-spacing:-0.02em;">Inner Health</h1>
+              <h1 style="margin:0;font-size:22px;font-weight:600;color:#ffffff;letter-spacing:-0.02em;">${escapeHtml(storefront)}</h1>
               <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.9);">Заказ оплачен</p>
             </td>
           </tr>
@@ -883,7 +886,7 @@ export async function sendCustomerOrderPaidEmail(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: trimmedTo,
-      subject: `Заказ ${orderLabel} оплачен — Inner Health`,
+      subject: `Заказ ${orderLabel} оплачен — ${storefront}`,
       text,
       html,
     })
@@ -933,6 +936,7 @@ export async function sendAdminCdekTrackNotification(
 
   const { total, shipping } = payload
   const orderLabel = formatOrderLabel(payload)
+  const storefront = labelForBrandEmail(payload.brandId)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =
     `Получен трек-номер СДЭК\n\n` +
@@ -958,7 +962,7 @@ export async function sendAdminCdekTrackNotification(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <tr>
             <td style="padding:26px 28px;background:linear-gradient(135deg,#0f766e 0%,#115e59 100%);">
-              <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.82);">Inner Health</div>
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.82);">${escapeHtml(storefront)}</div>
               <h1 style="margin:12px 0 0;font-size:24px;line-height:1.15;font-weight:700;color:#ffffff;">Получен трек СДЭК</h1>
             </td>
           </tr>
@@ -993,7 +997,7 @@ export async function sendAdminCdekTrackNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Трек СДЭК для заказа ${orderLabel} — Inner Health`,
+      subject: `Трек СДЭК для заказа ${orderLabel} — ${storefront}`,
       text,
       html,
     })
@@ -1043,6 +1047,7 @@ export async function sendCustomerCdekTrackNotification(
   })
 
   const orderLabel = formatOrderLabel(payload)
+  const storefront = labelForBrandEmail(payload.brandId)
   const trackingUrl = getCdekTrackingUrl(trackNumber)
   const text =
     `Здравствуйте, ${username}.\n\n` +
@@ -1090,7 +1095,7 @@ export async function sendCustomerCdekTrackNotification(
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: trimmedTo,
-      subject: `Трек СДЭК для заказа ${orderLabel} — Inner Health`,
+      subject: `Трек СДЭК для заказа ${orderLabel} — ${storefront}`,
       text,
       html,
     })

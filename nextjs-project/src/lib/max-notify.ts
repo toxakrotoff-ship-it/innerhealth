@@ -380,11 +380,16 @@ export async function notifyMaxPaymentError(payload: {
   orderId: string;
   total?: number;
   errorMessage: string;
-  context: 'create' | 'webhook';
+  context: 'create' | 'webhook' | 'cron-poll';
   brandId?: BrandId;
 }): Promise<void> {
   const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const contextLabel = payload.context === 'create' ? 'создание платежа' : 'верификация в webhook';
+  const contextLabel =
+    payload.context === 'create'
+      ? 'создание платежа'
+      : payload.context === 'webhook'
+        ? 'верификация в webhook'
+        : 'фоновая проверка (крон)';
   const totalLine =
     payload.total !== undefined ? `Сумма: ${payload.total.toFixed(0)} ₽. ` : '';
   const text = [

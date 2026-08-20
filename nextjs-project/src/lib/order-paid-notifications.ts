@@ -84,6 +84,7 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
         promoCode: order.promoCode?.code ?? null,
         promoDiscountAmount,
         cdekTrackNumber: order.cdekTrackNumber ?? null,
+        brandId,
       }),
     ])
   } catch (e) {

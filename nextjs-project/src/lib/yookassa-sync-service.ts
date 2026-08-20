@@ -8,6 +8,8 @@ import {
 } from '@/lib/order-payment-flow'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
+import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
+import { notifyMaxPaymentError } from '@/lib/max-notify'
 
 /**
  * Шкала throttle для крон-поллера. Сравнивается с возрастом заказа от createdAt.
@@ -108,6 +110,19 @@ export async function syncOnePendingOrder(
 
     const paymentStatus = payment?.status ?? null
     if (!paymentStatus) {
+      const errorMessage = 'Не удалось получить статус платежа в ЮKassa'
+      if (source === 'cron-poll') {
+        const paymentErrorPayload = {
+          orderId: candidate.id,
+          errorMessage,
+          context: 'cron-poll' as const,
+          brandId: candidate.brand,
+        }
+        notifyTelegramPaymentError(paymentErrorPayload)
+        notifyMaxPaymentError(paymentErrorPayload).catch((e) =>
+          console.error('[yookassa-sync] notifyMaxPaymentError failed', candidate.id, e)
+        )
+      }
       return {
         orderId: candidate.id,
         paymentId,
@@ -115,7 +130,7 @@ export async function syncOnePendingOrder(
         previousOrderStatus,
         orderStatus: previousOrderStatus,
         updated: false,
-        error: 'Не удалось получить статус платежа в ЮKassa',
+        error: errorMessage,
       }
     }
 
@@ -151,6 +166,19 @@ export async function syncOnePendingOrder(
       updated: false,
     }
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    if (source === 'cron-poll') {
+      const paymentErrorPayload = {
+        orderId: candidate.id,
+        errorMessage,
+        context: 'cron-poll' as const,
+        brandId: candidate.brand,
+      }
+      notifyTelegramPaymentError(paymentErrorPayload)
+      notifyMaxPaymentError(paymentErrorPayload).catch((e) =>
+        console.error('[yookassa-sync] notifyMaxPaymentError failed', candidate.id, e)
+      )
+    }
     return {
       orderId: candidate.id,
       paymentId,
@@ -158,7 +186,7 @@ export async function syncOnePendingOrder(
       previousOrderStatus,
       orderStatus: previousOrderStatus,
       updated: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMessage,
     }
   }
 }

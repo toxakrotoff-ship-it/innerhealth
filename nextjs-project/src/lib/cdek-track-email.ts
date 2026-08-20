@@ -18,6 +18,7 @@ export async function sendCdekTrackEmailsForOrder(
   const order = await orderService.findOrderForPaidEmail(orderId)
   if (!order?.shippingInfo) return
 
+  const brandId = await orderService.findOrderBrandIdForNotify(orderId)
   const shippingCost = resolveShippingCostForOrderNotify(order)
 
   const payload = {
@@ -41,6 +42,7 @@ export async function sendCdekTrackEmailsForOrder(
     },
     promoCode: order.promoCode?.code ?? null,
     cdekTrackNumber: normalizedTrack,
+    brandId,
   } as const
 
   const adminEmails = await userService.getAdminNotificationEmails()
