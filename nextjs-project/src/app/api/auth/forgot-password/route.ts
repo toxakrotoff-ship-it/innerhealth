@@ -11,14 +11,17 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { z } from 'zod'
 
 const bodySchema = z.object({ email: z.string().email().max(254).trim().toLowerCase() })
-const RATE_LIMIT = 5 // requests per minute per IP
+const IP_RATE_LIMIT = 3
+const IP_RATE_WINDOW_MS = 10 * 60 * 1000
+const EMAIL_RATE_LIMIT = 2
+const EMAIL_RATE_WINDOW_MS = 30 * 60 * 1000
 
 const GENERIC_SUCCESS_MESSAGE =
   'Если такой email зарегистрирован, на него отправлена ссылка для сброса пароля. Если письма нет — проверьте Telegram/MAX (если аккаунт привязан) или напишите в поддержку.'
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = await checkRateLimit(clientId, 'forgot-password', RATE_LIMIT)
+  const rate = await checkRateLimit(clientId, 'forgot-password', IP_RATE_LIMIT, IP_RATE_WINDOW_MS)
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Слишком много запросов. Попробуйте позже.' },
@@ -45,6 +48,24 @@ export async function POST(request: Request) {
     )
   }
   const { email } = parsed.data
+
+  const emailRate = await checkRateLimit(
+    email,
+    'forgot-password-email',
+    EMAIL_RATE_LIMIT,
+    EMAIL_RATE_WINDOW_MS
+  )
+  if (!emailRate.success) {
+    return NextResponse.json(
+      { message: GENERIC_SUCCESS_MESSAGE },
+      {
+        headers: {
+          'Retry-After': String(emailRate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
+  }
 
   const user = await userService.findUserByEmail(email)
   if (!user) {
