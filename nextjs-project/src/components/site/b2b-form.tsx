@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 
@@ -13,6 +13,8 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [website, setWebsite] = useState('')
+  const formStartedAt = useRef(Date.now())
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -28,6 +30,8 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
+          website,
+          formStartedAt: formStartedAt.current,
         }),
       })
       const data = (await res.json()) as { error?: string } | { success?: boolean }
@@ -36,6 +40,7 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
         setName('')
         setEmail('')
         setPhone('')
+        setWebsite('')
       } else {
         setStatus('error')
         setErrorMessage('error' in data ? data.error : 'Произошла ошибка')
@@ -70,6 +75,18 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6">
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label htmlFor="b2b-website">Website</label>
+        <input
+          id="b2b-website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
+      </div>
       <div>
         <label htmlFor="b2b-name" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Имя <span className="text-red-500">*</span>
