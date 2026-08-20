@@ -12,11 +12,19 @@ import {
 } from '@/lib/auth/email-already-registered'
 import * as userService from '@/services/user.service'
 
-const REGISTER_RATE_LIMIT = 5
+const REGISTER_IP_RATE_LIMIT = 3
+const REGISTER_IP_RATE_WINDOW_MS = 10 * 60 * 1000
+const REGISTER_EMAIL_RATE_LIMIT = 2
+const REGISTER_EMAIL_RATE_WINDOW_MS = 60 * 60 * 1000
 
 export async function POST(request: Request) {
   const clientId = getClientIdentifier(request)
-  const rate = await checkRateLimit(clientId, 'auth-register', REGISTER_RATE_LIMIT)
+  const rate = await checkRateLimit(
+    clientId,
+    'auth-register',
+    REGISTER_IP_RATE_LIMIT,
+    REGISTER_IP_RATE_WINDOW_MS
+  )
   if (!rate.success) {
     return NextResponse.json(
       { error: 'Too many registration attempts. Try again later.' },
@@ -47,7 +55,27 @@ export async function POST(request: Request) {
     )
   }
 
-  const emailValidation = await validatePublicEmailDomain(payload.email)
+  const normalizedEmail = payload.email.trim().toLowerCase()
+  const emailRate = await checkRateLimit(
+    normalizedEmail,
+    'auth-register-email',
+    REGISTER_EMAIL_RATE_LIMIT,
+    REGISTER_EMAIL_RATE_WINDOW_MS
+  )
+  if (!emailRate.success) {
+    return NextResponse.json(
+      { error: 'Too many registration attempts. Try again later.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(emailRate.resetIn),
+          'Cache-Control': 'no-store',
+        },
+      }
+    )
+  }
+
+  const emailValidation = await validatePublicEmailDomain(normalizedEmail)
   if (!emailValidation.valid) {
     return NextResponse.json(
       { error: emailValidation.userMessage || 'Registration is not allowed for this email domain.' },
@@ -60,7 +88,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const existingUser = await userService.findUserByEmail(payload.email)
+  const existingUser = await userService.findUserByEmail(normalizedEmail)
   if (existingUser) {
     return NextResponse.json(
       {
@@ -78,7 +106,7 @@ export async function POST(request: Request) {
 
   const passwordHash = await hashPassword(payload.password)
   const createdUser = await userService.createUser({
-    email: payload.email,
+    email: normalizedEmail,
     password: passwordHash,
     name: payload.name ?? null,
     lastName: payload.lastName ?? null,
