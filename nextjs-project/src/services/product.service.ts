@@ -114,6 +114,12 @@ export const productCardSelect = {
   isFeaturedInNewArrivals: true,
 } as const;
 
+const promotionListingProductSelect = Prisma.validator<Prisma.ProductSelect>()({
+  ...productCardSelect,
+  photos: true,
+  isDraft: true,
+});
+
 export interface CatalogQueryOptions {
   page: number;
   pageSize: number;
@@ -197,6 +203,18 @@ function buildCatalogWhere(options: CatalogQueryOptions): Prisma.ProductWhereInp
   return { isDraft: false, AND: andClauses };
 }
 
+function buildPromotionProductsWhere(brandId?: BrandId | null): Prisma.ProductWhereInput {
+  const brandWhere: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
+
+  return {
+    isDraft: false,
+    priceOld: { not: null },
+    ...brandWhere,
+  };
+}
+
 export async function getCatalogProducts(
   options: CatalogQueryOptions
 ): Promise<{ items: CatalogProductRow[]; total: number; hasNextPage: boolean }> {
@@ -260,6 +278,25 @@ export async function countCatalogProducts(
     ...options,
   });
   return prisma.product.count({ where });
+}
+
+export async function getPublicPromotionProducts(brandId?: BrandId | null) {
+  const rows = await prisma.product.findMany({
+    where: buildPromotionProductsWhere(brandId),
+    orderBy: [{ createdAt: 'desc' }],
+    select: promotionListingProductSelect,
+  });
+
+  return rows.filter((row) => row.priceOld != null && row.priceOld > row.price);
+}
+
+export async function countPublicPromotionProducts(brandId?: BrandId | null): Promise<number> {
+  const rows = await prisma.product.findMany({
+    where: buildPromotionProductsWhere(brandId),
+    select: { price: true, priceOld: true },
+  });
+
+  return rows.filter((row) => row.priceOld != null && row.priceOld > row.price).length;
 }
 
 export async function getCatalogBrandOptions(): Promise<string[]> {

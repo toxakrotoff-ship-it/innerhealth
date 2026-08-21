@@ -8,6 +8,7 @@ import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ProductQuickView } from '@/components/site/product-quick-view'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
+import { ProductDiscountBadge } from '@/components/site/product-discount-badge'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
 import { getProductListingTitlePresentation } from '@/lib/product-grouping'
@@ -75,6 +76,7 @@ export function ProductCard({
         : `/${photo.replace(/^\//, '')}`
     : null
   const photoTransform = getPhotoTransformByUrl(photos, photoSrc)
+  const hasDiscountBadge = priceOld != null && priceOld > price
   const photoFitClass = photoTransform
     ? photoTransform.fitMode === 'cover'
       ? 'object-cover'
@@ -137,7 +139,12 @@ export function ProductCard({
             isSprintTheme ? 'bg-slate-800 max-sm:bg-slate-900' : 'bg-highlight-blue max-sm:bg-white'
           )}
         >
-          <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
+          <ProductDiscountBadge
+            price={price}
+            priceOld={priceOld}
+            className="absolute right-2 top-2 z-30"
+          />
+          <div className={cn('absolute right-2 z-20 flex items-center gap-2', hasDiscountBadge ? 'top-14' : 'top-2')}>
             <ProductQuickView
               id={id}
               title={title}

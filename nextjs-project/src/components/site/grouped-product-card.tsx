@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ProductQuickView } from '@/components/site/product-quick-view'
+import { ProductDiscountBadge } from '@/components/site/product-discount-badge'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { cn } from '@/lib/utils'
@@ -45,6 +46,8 @@ export function GroupedProductCard({
         : `/${activeVariant.photo.replace(/^\//, '')}`
     : null
   const activePhotoTransform = getPhotoTransformByUrl(activeVariant.photos, activePhotoSrc)
+  const hasDiscountBadge =
+    activeVariant.priceOld != null && activeVariant.priceOld > activeVariant.price
   const activePhotoFitClass = activePhotoTransform
     ? activePhotoTransform.fitMode === 'cover'
       ? 'object-cover'
@@ -68,7 +71,12 @@ export function GroupedProductCard({
             isSprintTheme ? 'bg-slate-800 max-sm:bg-slate-900' : 'bg-highlight-blue max-sm:bg-white'
           )}
         >
-          <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
+          <ProductDiscountBadge
+            price={activeVariant.price}
+            priceOld={activeVariant.priceOld}
+            className="absolute right-2 top-2 z-30"
+          />
+          <div className={cn('absolute right-2 z-20 flex items-center gap-2', hasDiscountBadge ? 'top-14' : 'top-2')}>
             <ProductQuickView
               id={activeVariant.id}
               title={group.baseTitle}

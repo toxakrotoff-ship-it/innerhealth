@@ -122,7 +122,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   } = parseCatalogSearchParams(sp)
 
   const now = new Date()
-  const [categories, brandOptions, catalogResult, publicGiftPromotionCount] = await Promise.all([
+  const [categories, brandOptions, catalogResult, publicGiftPromotionCount, publicPromotionProductCount] = await Promise.all([
     getCatalogBlockCategories(brandId),
     productService.getCatalogBrandOptions().then((options) =>
       isSprintPowerBrand(brandId)
@@ -141,6 +141,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
       brandId,
     }),
     countPublicGiftPromotions(now, brandId),
+    productService.countPublicPromotionProducts(brandId),
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories, { brandId })
@@ -226,7 +227,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               const categorySubtitle =
                 cat.slug === 'aktsii'
                   ? formatAktsiiCatalogBlockSubtitleRu(
-                      cat._count.products,
+                      publicPromotionProductCount,
                       publicGiftPromotionCount
                     )
                   : trimToNull(cat.catalogTeaser) ?? formatProductsCountRu(cat._count.products)

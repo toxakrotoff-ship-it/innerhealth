@@ -11,6 +11,7 @@ import { getCategoryPageContentDoc } from '@/content/category-descriptions'
 import { getCategoryAncestorChain } from '@/lib/category-tree'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getPublicGiftPromotions } from '@/services/gift-promotion.service'
+import { getPublicPromotionProducts } from '@/services/product.service'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { TiltCard } from '@/components/ui/tilt-card'
@@ -185,9 +186,19 @@ export default async function CategoryPage({ params }: PageProps) {
     }),
   ]
 
-  const productRows = category.products.map((pc) => pc.product) as Array<
+  const autoPromotionProducts =
+    categorySlug === 'aktsii' ? await getPublicPromotionProducts(activeBrand) : []
+  const categoryProductRows = category.products.map((pc) => pc.product) as Array<
     (typeof category.products)[number]['product'] & { isDraft: boolean }
   >
+  const productRows =
+    categorySlug === 'aktsii'
+      ? Array.from(
+          new Map(
+            [...autoPromotionProducts, ...categoryProductRows].map((product) => [product.id, product])
+          ).values()
+        )
+      : categoryProductRows
   const visible = filterVisibleProducts(productRows)
   const products = isSprintTheme
     ? visible.map((p) => ({ ...p, primaryCategorySlug: categorySlug }))
