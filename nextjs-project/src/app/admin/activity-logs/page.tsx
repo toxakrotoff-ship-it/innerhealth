@@ -17,6 +17,7 @@ interface ActivityLogItem {
   entityId: string
   entityName: string
   brand: string
+  changes?: unknown
 }
 
 const ACTION_LABELS: Record<LogAction, string> = {
@@ -28,6 +29,83 @@ const ACTION_LABELS: Record<LogAction, string> = {
 const ENTITY_TYPE_LABELS: Record<EntityType, string> = {
   PRODUCT: 'Товар',
   CATEGORY: 'Категория',
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  title: 'название',
+  pageTitle: 'заголовок страницы',
+  slug: 'slug',
+  sku: 'артикул',
+  mark: 'торговая марка',
+  category: 'категория (текст)',
+  categoryIds: 'категории',
+  description: 'описание',
+  text: 'текст',
+  photo: 'фото (главное)',
+  photos: 'фотографии',
+  price: 'цена',
+  priceOld: 'старая цена',
+  discountPrice: 'цена со скидкой',
+  quantity: 'остаток',
+  isDraft: 'черновик',
+  isPromoEligible: 'участие в акциях',
+  isPreorderEnabled: 'предзаказ',
+  isFeaturedInNewArrivals: 'в новинках',
+  isPublished: 'публикация',
+  showInCategoriesBlock: 'показ в блоке категорий',
+  editions: 'варианты',
+  modifications: 'модификации',
+  externalId: 'внешний ID',
+  parentUid: 'родительский товар',
+  parentId: 'родительская категория',
+  weight: 'вес',
+  length: 'длина',
+  width: 'ширина',
+  height: 'высота',
+  seoTitle: 'SEO-заголовок',
+  seoDescr: 'SEO-описание',
+  seoDescription: 'SEO-описание',
+  seoKeywords: 'SEO-ключевые слова',
+  fbTitle: 'заголовок для соцсетей',
+  fbDescr: 'описание для соцсетей',
+  tabs: 'вкладки',
+  image: 'изображение',
+  imageAlt: 'alt изображения',
+  sortOrder: 'порядок сортировки',
+  catalogTeaser: 'краткое описание',
+  linePageBodyRichJson: 'контент страницы',
+  featuredProductId: 'товар блока «купить»',
+  showLegacyLinePageBlocks: 'старые блоки страницы',
+}
+
+function fieldLabel(key: string): string {
+  return FIELD_LABELS[key] ?? key
+}
+
+function formatChangeValue(value: unknown): string {
+  if (value === null || value === undefined) return '—'
+  if (typeof value === 'boolean') return value ? 'да' : 'нет'
+  if (typeof value === 'string' || typeof value === 'number') return String(value)
+  return ''
+}
+
+/** `changes` is either `{ fields: string[] }` (list of touched fields) or a plain key→value object (small updates). */
+function formatChanges(changes: unknown): string | null {
+  if (!changes || typeof changes !== 'object') return null
+  const record = changes as Record<string, unknown>
+  if (Array.isArray(record.fields)) {
+    const fields = record.fields.filter((f): f is string => typeof f === 'string')
+    if (fields.length === 0) return null
+    return fields.map(fieldLabel).join(', ')
+  }
+  const entries = Object.entries(record)
+  if (entries.length === 0) return null
+  return entries
+    .map(([key, value]) => {
+      const formatted = formatChangeValue(value)
+      return formatted ? `${fieldLabel(key)}: ${formatted}` : fieldLabel(key)
+    })
+    .join(', ')
 }
 
 const PAGE_SIZE = 30
@@ -185,40 +263,47 @@ export default function ActivityLogsPage() {
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Тип</th>
                   <th className="py-2 pr-4 font-medium">Название</th>
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Витрина</th>
+                  <th className="py-2 pr-4 font-medium">Изменения</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="py-6 text-center text-gray-500 dark:text-gray-400">
                       Загрузка…
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan={7} className="py-6 text-center text-gray-500 dark:text-gray-400">
                       Записей не найдено
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => (
-                    <tr key={item.id} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
-                      <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
-                        {formatDate(item.createdAt)}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
-                        {item.actorEmail || '—'}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-4">{ACTION_LABELS[item.action]}</td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
-                        {ENTITY_TYPE_LABELS[item.entityType]}
-                      </td>
-                      <td className="py-2 pr-4 text-gray-800 dark:text-gray-100">{item.entityName}</td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
-                        {brandDefinitions.find((definition) => definition.id === item.brand)?.label ?? item.brand}
-                      </td>
-                    </tr>
-                  ))
+                  items.map((item) => {
+                    const changesLabel = formatChanges(item.changes)
+                    return (
+                      <tr key={item.id} className="border-b border-gray-100 last:border-0 dark:border-gray-800">
+                        <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
+                          {formatDate(item.createdAt)}
+                        </td>
+                        <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
+                          {item.actorEmail || '—'}
+                        </td>
+                        <td className="whitespace-nowrap py-2 pr-4">{ACTION_LABELS[item.action]}</td>
+                        <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
+                          {ENTITY_TYPE_LABELS[item.entityType]}
+                        </td>
+                        <td className="py-2 pr-4 text-gray-800 dark:text-gray-100">{item.entityName}</td>
+                        <td className="whitespace-nowrap py-2 pr-4 text-gray-600 dark:text-gray-300">
+                          {brandDefinitions.find((definition) => definition.id === item.brand)?.label ?? item.brand}
+                        </td>
+                        <td className="max-w-[360px] py-2 pr-4 text-gray-600 dark:text-gray-300">
+                          {changesLabel ?? '—'}
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>

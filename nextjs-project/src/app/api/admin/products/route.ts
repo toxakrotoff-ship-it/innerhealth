@@ -208,6 +208,8 @@ export async function PUT(request: Request) {
           ? [...previousCategoryIds, ...categoryIds]
           : undefined,
     });
+    const changedFields = Object.keys(sanitizedData);
+    if (categoryIds !== undefined) changedFields.push('categoryIds');
     await logActivity({
       actor: { id: session.user.id ?? '', email: session.user.email ?? '' },
       entityType: 'PRODUCT',
@@ -215,6 +217,7 @@ export async function PUT(request: Request) {
       entityId: updatedProduct.id,
       entityName: updatedProduct.title,
       brand: brandId,
+      changes: { fields: changedFields },
     });
     return NextResponse.json(updatedProduct);
   } catch (error) {
