@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { CategoryMultiSelect } from './CategoryMultiSelect';
@@ -93,10 +94,21 @@ export interface ProductEditorSubmitPayload {
   seoKeywords: string | null;
 }
 
+interface FlavorSiblingSummary {
+  id: string;
+  title: string;
+  sku: string | null;
+  price: number;
+  priceOld: number | null;
+  discountPrice: number | null;
+}
+
 interface ProductEditorFormProps {
   productId?: string | null;
   activeBrand: AdminBrand | null;
+  adminBasePath?: string;
   initialValues: ProductEditorFormValues;
+  flavorSiblings?: FlavorSiblingSummary[];
   title: string;
   submitLabel: string;
   submitPendingLabel: string;
@@ -162,7 +174,9 @@ export function createEmptyProductEditorValues(
 export function ProductEditorForm({
   productId = null,
   activeBrand,
+  adminBasePath = 'admin',
   initialValues,
+  flavorSiblings = [],
   title,
   submitLabel,
   submitPendingLabel,
@@ -184,6 +198,7 @@ export function ProductEditorForm({
       ? 'Показывать в блоке "Хиты продаж"'
       : 'Показывать в блоке "Новинки ассортимента"';
   const isInnerBrandEditor = formData.brand === 'inner'
+  const hasFlavorGroup = flavorSiblings.length > 1
 
   useEffect(() => {
     setFormData(initialValues);
@@ -342,6 +357,37 @@ export function ProductEditorForm({
           <Button onClick={() => router.push(catalogHref)}>Назад к каталогу</Button>
         </div>
 
+        {hasFlavorGroup ? (
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-800">
+            <p className="font-medium">В этой группе несколько вкусов.</p>
+            <p className="mt-1">
+              Старая цена, цена по промокоду и участие в скидке сохраняются только для текущего вкуса.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {flavorSiblings.map((sibling) => {
+                const isCurrent = sibling.id === productId
+                const label = sibling.sku?.trim() || sibling.title
+                const hasPromoPrice =
+                  typeof sibling.priceOld === 'number' && sibling.priceOld > sibling.price
+                return (
+                  <Link
+                    key={sibling.id}
+                    href={`/${adminBasePath}/products/${sibling.id}/edit`}
+                    className={`rounded-full border px-3 py-1.5 transition-colors ${
+                      isCurrent
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : 'border-blue-200 bg-white text-slate-700 hover:border-blue-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="font-medium">{label}</span>
+                    {hasPromoPrice ? ' · акция' : sibling.discountPrice != null ? ' · промокод' : ''}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
@@ -492,6 +538,9 @@ export function ProductEditorForm({
               min="0"
               step="0.01"
             />
+            {hasFlavorGroup ? (
+              <p className="mt-1 text-xs text-gray-500">Поле влияет только на текущий вкус в этой группе.</p>
+            ) : null}
           </div>
 
           <div>
@@ -508,6 +557,11 @@ export function ProductEditorForm({
               step="0.01"
               placeholder="—"
             />
+            {hasFlavorGroup ? (
+              <p className="mt-1 text-xs text-gray-500">
+                Так можно дать скидку только на один вкус, не меняя остальные варианты товара.
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-6">

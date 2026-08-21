@@ -74,6 +74,28 @@ interface PageProps {
   params: Promise<{ categorySlug: string }>
 }
 
+function buildPromotionsCategoryFallback(brandTitle: string) {
+  return {
+    id: '__promotions__',
+    brand: null,
+    title: 'Акции',
+    pageTitle: 'Акции',
+    slug: 'aktsii',
+    catalogTeaser: `Актуальные акции и подарки ${brandTitle}.`,
+    linePageBodyRichJson: null,
+    showLegacyLinePageBlocks: false,
+    seoTitle: 'Акции',
+    seoDescription: `Актуальные акции и подарки ${brandTitle}.`,
+    seoKeywords: null,
+    image: null,
+    imageAlt: 'Акции',
+    isPublished: true,
+    featuredProductId: null,
+    children: [] as Array<{ id: string; title: string; slug: string; sortOrder: number | null }>,
+    products: [] as Array<{ sortOrder: number | null; product: never }>,
+  }
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { categorySlug } = await params
   const headerStore = await headers()
@@ -81,7 +103,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     forwardedBrand: headerStore.get('x-brand'),
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
+  const brandSite = getBrandSiteConfig(activeBrand)
   const category = await getPublicCategoryMetadataBySlug(categorySlug, activeBrand)
+  if (!category && categorySlug === 'aktsii') {
+    return buildMetadataWithSocial({
+      title: 'Акции',
+      description: `Актуальные акции и подарки ${brandSite.title}.`,
+      path: `/catalog/${categorySlug}`,
+    })
+  }
   if (!category) {
     return {}
   }
@@ -95,7 +125,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  const brandSite = getBrandSiteConfig(activeBrand)
   const descriptionFallback = `${category.title} — товары в каталоге ${brandSite.title}. Доставка по России.`
   const fallbackContentDoc = category.showLegacyLinePageBlocks
     ? getCategoryPageContentDoc(categorySlug, activeBrand)
@@ -135,14 +164,16 @@ export default async function CategoryPage({ params }: PageProps) {
       : categoriesFontBlock?.text?.trim()?.toLowerCase() === 'script'
         ? 'font-script'
         : 'font-display'
-  const category = await getPublicCategoryBySlug(categorySlug, activeBrand)
+  const brandSite = getBrandSiteConfig(activeBrand)
+  const fallbackCategory = categorySlug === 'aktsii' ? buildPromotionsCategoryFallback(brandSite.title) : null
+  const category = (await getPublicCategoryBySlug(categorySlug, activeBrand)) ?? fallbackCategory
 
   if (!category) notFound()
   if (!category.isPublished) notFound()
 
   const allCategories = await getPublishedCategoryTree(activeBrand)
 
-  const breadcrumbChain = getCategoryAncestorChain(allCategories, category.id)
+  const breadcrumbChain = category.id === '__promotions__' ? [] : getCategoryAncestorChain(allCategories, category.id)
   const breadcrumbItems = [
     { label: 'Главная', href: '/' },
     { label: 'Каталог', href: '/catalog' },

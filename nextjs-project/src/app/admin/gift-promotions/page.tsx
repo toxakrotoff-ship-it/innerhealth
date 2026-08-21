@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Button from '@/components/ui/button'
 import { ProductRichTextEditor } from '@/app/admin/products/components/ProductRichTextEditor'
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone'
+import { useAdminBasePath } from '@/app/admin/context/admin-base-path'
 
 interface GiftPromotion {
   id: string
@@ -84,6 +85,9 @@ const initialForm: FormState = {
 }
 
 export default function GiftPromotionsPage() {
+  const base = useAdminBasePath()
+  const activeBrand = base.includes('sprint-power') ? 'sprint-power' : 'inner'
+  const brandQuery = `brand=${encodeURIComponent(activeBrand)}`
   const [items, setItems] = useState<GiftPromotion[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -105,7 +109,7 @@ export default function GiftPromotionsPage() {
   async function fetchItems() {
     try {
       setLoading(true)
-      const res = await fetch('/api/admin/gift-promotions', { cache: 'no-store' })
+      const res = await fetch(`/api/admin/gift-promotions?${brandQuery}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Не удалось загрузить акции-подарки')
       const data = (await res.json()) as GiftPromotion[]
       setItems(data)
@@ -126,7 +130,7 @@ export default function GiftPromotionsPage() {
     try {
       setProductSearchLoading(true)
       const res = await fetch(
-        `/api/catalog/suggest?q=${encodeURIComponent(trimmed)}&limit=10`,
+        `/api/catalog/suggest?q=${encodeURIComponent(trimmed)}&limit=10&${brandQuery}`,
         { credentials: 'include' }
       )
       if (!res.ok) {
@@ -224,9 +228,10 @@ export default function GiftPromotionsPage() {
     }
 
     try {
-      const res = await fetch('/api/admin/gift-promotions', {
+      const res = await fetch(`/api/admin/gift-promotions?${brandQuery}`, {
         method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
       if (!res.ok) {
@@ -243,9 +248,10 @@ export default function GiftPromotionsPage() {
   async function handleDelete(id: string) {
     if (!window.confirm('Удалить эту акцию-подарок?')) return
     try {
-      const res = await fetch('/api/admin/gift-promotions', {
+      const res = await fetch(`/api/admin/gift-promotions?${brandQuery}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ id }),
       })
       if (!res.ok) throw new Error('Не удалось удалить акцию')

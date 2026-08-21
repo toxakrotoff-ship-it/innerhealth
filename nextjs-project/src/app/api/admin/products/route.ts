@@ -26,7 +26,20 @@ export async function GET(request: Request) {
           { status: 404 }
         );
       }
-      return NextResponse.json(product);
+      const flavorSiblings = product.parentUid
+        ? await productService.getProductFlavorVariantsByParentUid(product.parentUid, brandId)
+        : [];
+      return NextResponse.json({
+        ...product,
+        flavorSiblings: flavorSiblings.map((variant) => ({
+          id: variant.id,
+          title: variant.title,
+          sku: variant.sku,
+          price: variant.price,
+          priceOld: variant.priceOld,
+          discountPrice: variant.discountPrice,
+        })),
+      });
     } catch (error) {
       console.error('Error fetching product:', error);
       return NextResponse.json(

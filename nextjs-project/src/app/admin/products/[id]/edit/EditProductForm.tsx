@@ -43,6 +43,14 @@ interface ProductResponse {
   seoTitle: string | null;
   seoDescr: string | null;
   seoKeywords: string | null;
+  flavorSiblings?: Array<{
+    id: string;
+    title: string;
+    sku: string | null;
+    price: number;
+    priceOld: number | null;
+    discountPrice: number | null;
+  }>;
 }
 
 interface EditProductFormProps {
@@ -127,6 +135,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flavorSiblings, setFlavorSiblings] = useState<
+    NonNullable<ProductResponse['flavorSiblings']>
+  >([]);
 
   useEffect(() => {
     setFormValues(createEmptyProductEditorValues(activeBrand));
@@ -162,6 +173,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
 
         if (cancelled) return;
         setFormValues(mapProductToFormValues(data, activeBrand));
+        setFlavorSiblings(data.flavorSiblings ?? []);
       } catch (fetchError) {
         if (cancelled) return;
         setError(fetchError instanceof Error ? fetchError.message : 'Произошла ошибка');
@@ -203,7 +215,9 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     <ProductEditorForm
       productId={productId}
       activeBrand={activeBrand}
+      adminBasePath={base}
       initialValues={initialValues}
+      flavorSiblings={flavorSiblings}
       title="Редактирование товара"
       submitLabel="Сохранить изменения"
       submitPendingLabel="Сохранение..."

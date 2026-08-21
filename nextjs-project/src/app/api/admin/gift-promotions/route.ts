@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdminSession } from '@/lib/require-admin'
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 import * as productService from '@/services/product.service'
 import * as giftPromotionService from '@/services/gift-promotion.service'
 
@@ -73,7 +73,7 @@ const deleteSchema = z.object({
 export async function GET(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   try {
     const promos = await giftPromotionService.getGiftPromotionsForAdmin(brandId)
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   let data: z.infer<typeof createSchema>
   try {
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   let data: z.infer<typeof updateSchema>
   try {
@@ -255,7 +255,7 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   let data: z.infer<typeof deleteSchema>
   try {
