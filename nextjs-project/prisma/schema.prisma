@@ -207,6 +207,34 @@ model ProductCategory {
   @@id([productId, categoryId])
 }
 
+/// Лог действий администраторов над товарами и категориями (создание/изменение/удаление).
+model ActivityLog {
+  id         String                @id @default(cuid())
+  createdAt  DateTime              @default(now())
+  actorId    String
+  actorEmail String
+  entityType ActivityLogEntityType
+  action     ActivityLogAction
+  entityId   String
+  entityName String
+  brand      String
+  changes    Json?
+
+  @@index([entityType, brand, createdAt])
+  @@index([entityId])
+}
+
+enum ActivityLogEntityType {
+  PRODUCT
+  CATEGORY
+}
+
+enum ActivityLogAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
 model CartItem {
   id        String   @id @default(cuid())
   productId String

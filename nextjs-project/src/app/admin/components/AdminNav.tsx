@@ -144,6 +144,7 @@ const settingsChildren: NavItemEntry[] = [
    { path: 'site-popup', label: 'Попап на главной', icon: icons.promo },
   { path: 'faq', label: 'FAQ', icon: icons.faq },
   { path: 'redirects', label: 'Редиректы', icon: icons.redirects },
+  { path: 'activity-logs', label: 'Лог действий', icon: icons.stats },
 ]
 
 const catalogEditChildren: NavItemEntry[] = [

@@ -4,11 +4,14 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { revalidateCatalogForProduct, revalidateCategoryStorefront } from '@/lib/catalog-revalidation';
 import { cookies, headers } from 'next/headers';
+import { getServerSession } from 'next-auth';
 import { z, ZodError } from 'zod';
 import { Prisma, type Category as PrismaCategory } from '@prisma/client';
 import type { BrandId } from '@/lib/brand/brand';
 import { resolveAdminBrand, ACTIVE_BRAND_COOKIE_NAME, ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context';
 import { resolveDbBrand } from '@/lib/brand/brand-db';
+import { authOptions } from '@/lib/auth';
+import { logActivity } from '@/lib/activity-log';
 import {
   isSprintPowerBrand,
   productBelongsToBrandScope,
@@ -62,6 +65,15 @@ interface CategoryInput {
 
 interface BrandScopeOptions {
   brandId?: BrandId | null;
+}
+
+/** Category mutations run as Server Actions (no Request/session middleware), so each one must fetch the admin actor itself. */
+async function requireAdminActor(): Promise<{ id: string; email: string }> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    throw new Error('Недостаточно прав для этого действия');
+  }
+  return { id: session.user.id ?? '', email: session.user.email ?? '' };
 }
 
 async function resolveEffectiveBrandId(brandId?: BrandId | null): Promise<BrandId> {
@@ -522,6 +534,7 @@ export async function createCategory(
   data: CategoryInput,
   options: BrandScopeOptions = {}
 ): Promise<void> {
+  const actor = await requireAdminActor();
   const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
   const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
@@ -606,6 +619,14 @@ export async function createCategory(
 
     revalidateCategoryPaths([category.slug]);
     revalidatePath('/admin/catalog');
+    await logActivity({
+      actor,
+      entityType: 'CATEGORY',
+      action: 'CREATE',
+      entityId: category.id,
+      entityName: category.title,
+      brand: effectiveBrandId,
+    });
   } catch (error) {
     console.error('Error creating category:', error);
     if (error instanceof ZodError) {
@@ -633,6 +654,7 @@ export async function updateCategory(
   data: Partial<CategoryInput>,
   options: BrandScopeOptions = {}
 ): Promise<void> {
+  const actor = await requireAdminActor();
   const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
   const dbBrand = resolveDbBrand(effectiveBrandId);
   try {
@@ -757,7 +779,7 @@ export async function updateCategory(
       }
     }
 
-    await prisma.category.update({
+    const updatedCategory = await prisma.category.update({
       where: { id },
       data: updateData as Parameters<typeof prisma.category.update>[0]['data'],
     });
@@ -769,6 +791,15 @@ export async function updateCategory(
     }
     revalidateCategoryPaths(Array.from(slugsToRevalidate));
     revalidatePath('/admin/catalog');
+    await logActivity({
+      actor,
+      entityType: 'CATEGORY',
+      action: 'UPDATE',
+      entityId: updatedCategory.id,
+      entityName: updatedCategory.title,
+      brand: effectiveBrandId,
+      changes: { fields: Object.keys(updateData).filter((key) => key !== 'updatedAt') },
+    });
   } catch (error) {
     console.error('Error updating category:', error);
     if (error instanceof ZodError) {
@@ -830,11 +861,12 @@ export async function deleteCategory(
   id: string,
   options: BrandScopeOptions = {}
 ): Promise<void> {
+    const actor = await requireAdminActor();
     const effectiveBrandId = await resolveEffectiveBrandId(options.brandId);
     const dbBrand = resolveDbBrand(effectiveBrandId);
     const existingCategory = await prisma.category.findUnique({
       where: { id },
-      select: { brand: true, slug: true },
+      select: { brand: true, slug: true, title: true },
     });
     if (!existingCategory || existingCategory.brand !== dbBrand) {
       throw new Error('Категория не найдена в выбранном бренде');
@@ -860,6 +892,14 @@ export async function deleteCategory(
       revalidateCategoryPaths([existingCategory.slug]);
     }
     revalidatePath('/admin/catalog');
+    await logActivity({
+      actor,
+      entityType: 'CATEGORY',
+      action: 'DELETE',
+      entityId: id,
+      entityName: existingCategory.title,
+      brand: effectiveBrandId,
+    });
   } catch (error) {
     console.error('Error deleting category:', error);
     if (error instanceof Error) {

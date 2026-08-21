@@ -8,6 +8,7 @@ import { slugify, slugifyUnique } from '@/lib/slugify';
 import { sanitizeProductTextFields } from '@/lib/sanitize-text';
 import * as productService from '@/services/product.service';
 import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
+import { logActivity } from '@/lib/activity-log';
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -207,6 +208,14 @@ export async function PUT(request: Request) {
           ? [...previousCategoryIds, ...categoryIds]
           : undefined,
     });
+    await logActivity({
+      actor: { id: session.user.id ?? '', email: session.user.email ?? '' },
+      entityType: 'PRODUCT',
+      action: 'UPDATE',
+      entityId: updatedProduct.id,
+      entityName: updatedProduct.title,
+      brand: brandId,
+    });
     return NextResponse.json(updatedProduct);
   } catch (error) {
     console.error('Error updating product:', error);
@@ -263,6 +272,15 @@ export async function PATCH(request: Request) {
     }
     const updated = await productService.patchProductPriceQuantity(id, data);
     await revalidateCatalogForProduct({ productId: id });
+    await logActivity({
+      actor: { id: session.user.id ?? '', email: session.user.email ?? '' },
+      entityType: 'PRODUCT',
+      action: 'UPDATE',
+      entityId: updated.id,
+      entityName: updated.title,
+      brand: brandId,
+      changes: data,
+    });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PATCH product error:', error);
@@ -329,6 +347,14 @@ export async function POST(request: Request) {
       productId: productWithoutCategories.id,
       extraCategoryIds: categoryIds,
     });
+    await logActivity({
+      actor: { id: session.user.id ?? '', email: session.user.email ?? '' },
+      entityType: 'PRODUCT',
+      action: 'CREATE',
+      entityId: productWithoutCategories.id,
+      entityName: productWithoutCategories.title,
+      brand: brandId,
+    });
     return NextResponse.json(productWithoutCategories);
   } catch (error) {
     console.error('Error creating product:', error);
@@ -376,6 +402,14 @@ export async function DELETE(request: Request) {
     await revalidateCatalogForProduct({
       productId: id,
       extraCategoryIds: categoryIdsToRevalidate,
+    });
+    await logActivity({
+      actor: { id: session.user.id ?? '', email: session.user.email ?? '' },
+      entityType: 'PRODUCT',
+      action: 'DELETE',
+      entityId: deletedProduct.id,
+      entityName: deletedProduct.title,
+      brand: brandId,
     });
     return NextResponse.json(deletedProduct);
   } catch (error) {
