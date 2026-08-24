@@ -54,6 +54,7 @@ export interface PromoOrdersReportResult {
 }
 
 function orderListBrandWhere(brandId?: BrandId | null): Prisma.OrderWhereInput {
+  if (!brandId) return {};
   return { brand: isSprintPowerBrand(brandId) ? 'sprint-power' : 'inner' };
 }
 

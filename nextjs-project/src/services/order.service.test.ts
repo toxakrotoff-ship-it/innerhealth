@@ -13,6 +13,7 @@ const txOrderFindUniqueMock = vi.fn()
 const txOrderUpdateMock = vi.fn()
 const txShippingInfoCreateMock = vi.fn()
 const txPromoCodeUpdateMock = vi.fn()
+const orderFindManyMock = vi.fn()
 
 vi.mock('@/services/gift-promotion.service', () => ({
   calculateGiftsForOrder: (...args: unknown[]) => calculateGiftsForOrderMock(...args),
@@ -21,6 +22,9 @@ vi.mock('@/services/gift-promotion.service', () => ({
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     $transaction: (...args: unknown[]) => transactionMock(...args),
+    order: {
+      findMany: (...args: unknown[]) => orderFindManyMock(...args),
+    },
   },
 }))
 
@@ -186,5 +190,37 @@ describe('order.service stock reservation', () => {
       previousStatus: 'pending',
       status: 'canceled',
     })
+  })
+})
+
+describe('getPendingOrdersWithYookassaPayment brand filtering', () => {
+  beforeEach(() => {
+    orderFindManyMock.mockReset()
+    orderFindManyMock.mockResolvedValue([])
+  })
+
+  it('does not restrict by brand when brandId is null (cron-poll scans all brands)', async () => {
+    const service = await import('@/services/order.service')
+    await service.getPendingOrdersWithYookassaPayment({
+      since: new Date('2026-01-01'),
+      take: 100,
+      brandId: null,
+    })
+
+    expect(orderFindManyMock).toHaveBeenCalledTimes(1)
+    const call = orderFindManyMock.mock.calls[0][0]
+    expect(call.where).not.toHaveProperty('brand')
+  })
+
+  it('restricts to sprint-power when brandId is explicitly sprint-power', async () => {
+    const service = await import('@/services/order.service')
+    await service.getPendingOrdersWithYookassaPayment({
+      since: new Date('2026-01-01'),
+      take: 100,
+      brandId: 'sprint-power',
+    })
+
+    const call = orderFindManyMock.mock.calls[0][0]
+    expect(call.where.brand).toBe('sprint-power')
   })
 })
