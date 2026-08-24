@@ -45,7 +45,7 @@ export async function sendCdekTrackEmailsForOrder(
     brandId,
   } as const
 
-  const adminEmails = await userService.getAdminNotificationEmails()
+  const adminEmails = await userService.getAdminNotificationEmails(brandId)
   await sendAdminCdekTrackNotification(adminEmails, payload)
 
   if (order.shippingInfo.email && order.shippingInfo.fullName) {

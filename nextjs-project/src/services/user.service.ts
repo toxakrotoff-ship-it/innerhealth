@@ -185,10 +185,13 @@ export async function bumpSessionVersion(userId: string): Promise<void> {
   });
 }
 
-const CORE_ORDER_NOTIFICATIONS_EMAIL = 'innerhealth@mail.ru';
+const CORE_ORDER_NOTIFICATIONS_EMAIL: Record<BrandId, string> = {
+  inner: 'innerhealth@mail.ru',
+  'sprint-power': 'sprintpower@bk.ru',
+};
 
-/** Get admins for notifications (email, notificationEmail). */
-export async function getAdminNotificationEmails() {
+/** Get admins for notifications (email, notificationEmail), plus the brand's core address. */
+export async function getAdminNotificationEmails(brandId: BrandId) {
   const admins = await prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: { email: true, notificationEmail: true },
@@ -197,7 +200,7 @@ export async function getAdminNotificationEmails() {
     new Set(
       [
         ...admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()),
-        CORE_ORDER_NOTIFICATIONS_EMAIL,
+        CORE_ORDER_NOTIFICATIONS_EMAIL[brandId],
       ]
         .map((email) => email.trim().toLowerCase())
         .filter(Boolean)

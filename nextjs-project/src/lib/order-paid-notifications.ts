@@ -66,7 +66,7 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
       brandId,
     } as const
 
-    const adminEmails = await userService.getAdminNotificationEmails()
+    const adminEmails = await userService.getAdminNotificationEmails(brandId)
     notifyTelegramOrder(notifyPayload)
 
     await Promise.allSettled([

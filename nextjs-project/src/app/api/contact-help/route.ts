@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     after(() => notifyMaxForm(formNotifyPayload))
 
     after(async () => {
-      const adminEmails = await userService.getAdminNotificationEmails()
+      const adminEmails = await userService.getAdminNotificationEmails(brandId)
       await sendContactHelpNotification(adminEmails, {
         name,
         email: normalizedEmail,
