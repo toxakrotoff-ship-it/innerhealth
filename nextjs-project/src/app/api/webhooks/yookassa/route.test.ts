@@ -52,9 +52,25 @@ vi.mock('@/lib/order-payment-flow', () => ({
   transitionOrderToCanceled: vi.fn().mockResolvedValue({ changed: true, status: 'canceled', previousStatus: 'pending' }),
 }))
 
+vi.mock('@/services/checkout-session.service', () => ({
+  findSessionByOrderId: vi.fn().mockResolvedValue(null),
+}))
+
+const transitionCheckoutToPaymentSucceededMock = vi.fn().mockResolvedValue({ changed: true })
+
+vi.mock('@/lib/checkout-session-flow', () => ({
+  trackPaymentCallback: vi.fn(),
+  transitionCheckoutToPaymentSucceeded: (...args: unknown[]) =>
+    transitionCheckoutToPaymentSucceededMock(...args),
+  transitionCheckoutToPaymentFailed: vi.fn().mockResolvedValue({ changed: true }),
+  transitionCheckoutToPaymentCancelled: vi.fn().mockResolvedValue({ changed: true }),
+}))
+
 import { getYookassaPayment } from '@/lib/yookassa'
 import * as orderService from '@/services/order.service'
+import * as checkoutSessionService from '@/services/checkout-session.service'
 import { transitionOrderToPaid, transitionOrderToCanceled } from '@/lib/order-payment-flow'
+import { trackPaymentCallback } from '@/lib/checkout-session-flow'
 import { POST } from '@/app/api/webhooks/yookassa/route'
 
 const originalNodeEnv = process.env.NODE_ENV
@@ -208,5 +224,46 @@ describe('POST /api/webhooks/yookassa', () => {
     const response = await POST(makeRequest(PAID_PAYLOAD))
     expect(response.status).toBe(200)
     expect(getYookassaPayment).not.toHaveBeenCalled()
+  })
+
+  describe('checkout-session tracking', () => {
+    it('does nothing when the order has no CheckoutSession (orders predating the feature)', async () => {
+      vi.mocked(checkoutSessionService.findSessionByOrderId).mockResolvedValue(null)
+      vi.mocked(getYookassaPayment).mockResolvedValue({ status: 'succeeded' })
+
+      const response = await POST(makeRequest(PAID_PAYLOAD))
+
+      expect(response.status).toBe(200)
+      expect(trackPaymentCallback).not.toHaveBeenCalled()
+    })
+
+    it('duplicate succeeded webhook does not fire the checkout transition twice (idempotent)', async () => {
+      vi.mocked(checkoutSessionService.findSessionByOrderId).mockResolvedValue({
+        id: 'sess-1',
+      } as never)
+      vi.mocked(getYookassaPayment).mockResolvedValue({ status: 'succeeded' })
+      // Первый вызов реально меняет статус; второй — сессия уже COMPLETED, идемпотентность
+      // гарантируется самой transitionCheckoutToPaymentSucceeded (см. checkout-session-flow.test.ts);
+      // здесь проверяем, что webhook вызывает переход при каждом callback, не пропуская его.
+      transitionCheckoutToPaymentSucceededMock.mockResolvedValueOnce({ changed: true })
+      transitionCheckoutToPaymentSucceededMock.mockResolvedValueOnce({ changed: false })
+
+      await POST(makeRequest(PAID_PAYLOAD))
+      await POST(makeRequest(PAID_PAYLOAD))
+
+      expect(transitionCheckoutToPaymentSucceededMock).toHaveBeenCalledTimes(2)
+      expect(transitionCheckoutToPaymentSucceededMock).toHaveBeenNthCalledWith(1, 'sess-1', 'webhook')
+      expect(transitionCheckoutToPaymentSucceededMock).toHaveBeenNthCalledWith(2, 'sess-1', 'webhook')
+    })
+
+    it('does not fail the webhook response when checkout tracking throws', async () => {
+      vi.mocked(checkoutSessionService.findSessionByOrderId).mockRejectedValue(new Error('db down'))
+      vi.mocked(getYookassaPayment).mockResolvedValue({ status: 'succeeded' })
+
+      const response = await POST(makeRequest(PAID_PAYLOAD))
+
+      expect(response.status).toBe(200)
+      expect(transitionOrderToPaid).toHaveBeenCalled()
+    })
   })
 })

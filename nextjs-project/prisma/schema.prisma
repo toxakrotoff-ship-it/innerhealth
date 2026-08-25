@@ -294,12 +294,126 @@ model Order {
   user                User?         @relation(fields: [userId], references: [id])
   items               OrderItem[]
   shippingInfo        ShippingInfo?
+  checkoutSession     CheckoutSession?
 
   @@index([status])
   @@index([userId, createdAt])
   @@index([deletedAt, createdAt])
   @@index([brand, createdAt])
   @@index([status, yookassaPaymentId, yookassaCheckedAt])
+}
+
+model CheckoutSession {
+  id                String              @id @default(cuid())
+  brand             String              @default("inner")
+
+  // идентификация
+  userId            String?
+  guestToken        String?             @unique
+  anonId            String?
+
+  // контакты (сохраняются по мере ввода, не только в конце)
+  fullName          String?
+  phone             String?
+  email             String?
+
+  // snapshot корзины на момент последнего изменения (не история, только последнее состояние)
+  cartSnapshot      Json?
+  cartItemsCount    Int                 @default(0)
+  cartTotal         Float?
+  promoCode         String?
+  deliveryMethod    String?
+  deliverySum       Float?
+
+  // состояние
+  currentStep       CheckoutStep        @default(CART)
+  lastCompletedStep CheckoutStep?
+  status            CheckoutStatus      @default(ACTIVE)
+
+  // связь с результатом
+  orderId           String?             @unique
+  order             Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  // платёж (денормализовано для быстрого списка в админке; источник истины — события)
+  paymentProvider   String?
+  paymentId         String?
+  paymentStatus     String?
+
+  createdAt         DateTime            @default(now())
+  lastActivityAt    DateTime            @default(now())
+  completedAt       DateTime?
+
+  // retention/privacy (см. этап 8) — момент анонимизации PII-полей
+  anonymizedAt      DateTime?
+
+  events            CheckoutEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([lastActivityAt])
+  @@index([brand])
+  @@index([brand, status, lastActivityAt])
+  @@index([phone])
+  @@index([email])
+  @@index([userId])
+}
+
+model CheckoutEvent {
+  id                String            @id @default(cuid())
+  checkoutSessionId String
+  checkoutSession   CheckoutSession   @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
+
+  eventType         CheckoutEventType
+  step              CheckoutStep?
+  metadata          Json?
+
+  createdAt         DateTime          @default(now())
+
+  @@index([checkoutSessionId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+enum CheckoutStep {
+  CART
+  CONTACT
+  DELIVERY
+  CONFIRMATION
+  ORDER_CREATED
+  PAYMENT_INITIALIZATION
+  PAYMENT_CREATED
+  PAYMENT_REDIRECT
+  PAYMENT_PROCESSING
+  COMPLETED
+}
+
+enum CheckoutStatus {
+  ACTIVE
+  ABANDONED
+  PAYMENT_FAILED
+  PAYMENT_CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum CheckoutEventType {
+  CHECKOUT_STARTED
+  CONTACT_ENTERED
+  DELIVERY_SELECTED
+  PROMO_APPLIED
+  ORDER_CREATED
+  PAYMENT_INITIALIZATION_STARTED
+  PAYMENT_CREATED
+  PAYMENT_REDIRECTED
+  PAYMENT_CALLBACK_RECEIVED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  PAYMENT_CANCELLED
+  CHECKOUT_COMPLETED
+  CHECKOUT_ABANDONED
+  CHECKOUT_REACTIVATED
+  VALIDATION_ERROR
+  API_ERROR
+  PAYMENT_PROVIDER_ERROR
 }
 
 model User {

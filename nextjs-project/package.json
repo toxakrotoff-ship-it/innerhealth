@@ -48,7 +48,8 @@
     "db:mark-applied": "ts-node scripts/mark-migrations-applied.ts",
     "deploy:preflight": "prisma generate && prisma migrate status",
     "start:with-migrate": "prisma migrate deploy && next start",
-    "maintenance:cleanup-auth": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/cleanup-auth-tokens.ts"
+    "maintenance:cleanup-auth": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/cleanup-auth-tokens.ts",
+    "maintenance:anonymize-checkout-sessions": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"moduleResolution\":\"node\"}' scripts/anonymize-old-checkout-sessions.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1090.0",

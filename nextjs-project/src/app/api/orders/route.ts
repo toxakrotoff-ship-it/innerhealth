@@ -18,6 +18,91 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import { OrderStockConflictError } from '@/services/order.service'
+import { cookies } from 'next/headers'
+import {
+  CHECKOUT_GUEST_COOKIE_NAME,
+  completeCheckout,
+  linkCheckoutOrder,
+  trackCheckoutError,
+  trackCheckoutStep,
+  type CheckoutOwnerContext,
+} from '@/lib/checkout-tracking'
+import {
+  trackPaymentCreated,
+  trackPaymentInitialized,
+  trackPaymentRedirected,
+} from '@/lib/checkout-session-flow'
+
+/**
+ * Трекинг checkout — чисто наблюдательность, не должен мешать оформлению заказа:
+ * ошибки (чужая/битая сессия, гонка) намеренно проглатываются.
+ */
+async function trackOrderCreatedBestEffort(
+  checkoutSessionId: string | undefined,
+  owner: CheckoutOwnerContext,
+  orderId: string
+): Promise<void> {
+  if (!checkoutSessionId) return
+  try {
+    await linkCheckoutOrder(checkoutSessionId, owner, orderId)
+    await trackCheckoutStep(checkoutSessionId, owner, 'ORDER_CREATED', 'ORDER_CREATED', { orderId })
+  } catch (error) {
+    console.error('[orders] checkout-session tracking (order created) failed:', error)
+  }
+}
+
+async function completeCheckoutBestEffort(
+  checkoutSessionId: string | undefined,
+  orderId: string
+): Promise<void> {
+  if (!checkoutSessionId) return
+  try {
+    await completeCheckout(checkoutSessionId, orderId)
+  } catch (error) {
+    console.error('[orders] checkout-session tracking (complete) failed:', error)
+  }
+}
+
+async function trackPaymentInitializedBestEffort(checkoutSessionId: string | undefined): Promise<void> {
+  if (!checkoutSessionId) return
+  try {
+    await trackPaymentInitialized(checkoutSessionId, 'client')
+  } catch (error) {
+    console.error('[orders] checkout-session tracking (payment initialized) failed:', error)
+  }
+}
+
+async function trackPaymentCreatedBestEffort(
+  checkoutSessionId: string | undefined,
+  paymentId: string,
+  status: string
+): Promise<void> {
+  if (!checkoutSessionId) return
+  try {
+    await trackPaymentCreated(checkoutSessionId, 'client', { provider: 'yookassa', paymentId, status })
+    await trackPaymentRedirected(checkoutSessionId, 'client')
+  } catch (error) {
+    console.error('[orders] checkout-session tracking (payment created) failed:', error)
+  }
+}
+
+async function trackCheckoutPaymentErrorBestEffort(
+  checkoutSessionId: string | undefined,
+  errorMessage: string,
+  httpStatus: number
+): Promise<void> {
+  if (!checkoutSessionId) return
+  try {
+    await trackCheckoutError(checkoutSessionId, {
+      source: 'payment_provider',
+      code: 'PAYMENT_CREATE_FAILED',
+      message: errorMessage,
+      httpStatus,
+    })
+  } catch (error) {
+    console.error('[orders] checkout-session tracking (payment error) failed:', error)
+  }
+}
 
 /** Код НДС для чека 54-ФЗ (1–12 по справочнику ЮKassa). По умолчанию 1 — без НДС. */
 function parseVatCode(value: string | undefined, fallback: number): number {
@@ -73,7 +158,7 @@ export async function POST(request: Request) {
         }
       )
     }
-    const { items, promoCodeId, deliverySum = 0, shipping } = parsed.data
+    const { items, promoCodeId, deliverySum = 0, shipping, checkoutSessionId } = parsed.data
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = await productService.getProductsForOrder(productIds, brandId)
@@ -169,6 +254,12 @@ export async function POST(request: Request) {
       },
     })
 
+    const checkoutOwner: CheckoutOwnerContext = {
+      userId,
+      guestToken: (await cookies()).get(CHECKOUT_GUEST_COOKIE_NAME)?.value ?? null,
+    }
+    await trackOrderCreatedBestEffort(checkoutSessionId, checkoutOwner, order.id)
+
     const yookassaSettings = await settingsService.getYookassaSettingsMap({ brandId })
     const yookassaCredentials = await settingsService.getYookassaCredentials({ brandId })
 
@@ -194,6 +285,7 @@ export async function POST(request: Request) {
           deliverySum,
           vatCodeDelivery
         )
+        await trackPaymentInitializedBestEffort(checkoutSessionId)
         const { paymentId, confirmationUrl } = await createYookassaPayment({
           amount: total,
           description: `Заказ №${order.orderNumber ?? order.id}`,
@@ -205,6 +297,7 @@ export async function POST(request: Request) {
           credentials: yookassaCredentials,
         })
         await orderService.updateOrder(order.id, { yookassaPaymentId: paymentId })
+        await trackPaymentCreatedBestEffort(checkoutSessionId, paymentId, 'pending')
         return NextResponse.json(
           {
             id: order.id,
@@ -230,6 +323,7 @@ export async function POST(request: Request) {
         } as const
         notifyTelegramPaymentError(paymentErrorPayload)
         after(() => notifyMaxPaymentError(paymentErrorPayload))
+        await trackCheckoutPaymentErrorBestEffort(checkoutSessionId, errorMessage, 502)
         return NextResponse.json(
           { error: 'Заказ создан, но не удалось создать платёж. Мы свяжемся с вами.' },
           {
@@ -241,6 +335,10 @@ export async function POST(request: Request) {
         )
       }
     }
+
+    // Без ЮKassa (бренд не настроен на онлайн-оплату) — заказ создан, дальше в
+    // воронке checkout нечего отслеживать, финализируем сессию сразу.
+    await completeCheckoutBestEffort(checkoutSessionId, order.id)
 
     return NextResponse.json(
       { id: order.id, success: true },

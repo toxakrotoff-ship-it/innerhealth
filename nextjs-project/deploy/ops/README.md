@@ -3,14 +3,16 @@
 Эти скрипты живут на VPS и решают две задачи:
 
 - защита от «убийства VPS» по диску/памяти + алерты в Telegram админам;
-- фолбэк-синхронизация заказов ЮKassa, если webhook потерялся.
+- фолбэк-синхронизация заказов ЮKassa, если webhook потерялся;
+- пометка зависших checkout-сессий как ABANDONED (незавершённые оформления).
 
 ### Автоматический подъём из деплоя
 
 `deploy/deploy.sh` и `deploy/deploy-quick.sh` сами поднимают всё что нужно:
 
 1. вызывают `deploy/ops/setup-secrets.sh` — идемпотентно дописывают в `.env` отсутствующие
-   секреты (`YOOKASSA_POLL_TOKEN`, `INFRA_ALERT_TOKEN`), генерируя их через `openssl rand`;
+   секреты (`YOOKASSA_POLL_TOKEN`, `INFRA_ALERT_TOKEN`, `CHECKOUT_ABANDON_SCAN_TOKEN`),
+   генерируя их через `openssl rand`;
 2. после деплоя вызывают `deploy/ops/install-vps-safeguards.sh --non-interactive` —
    копирует ops-скрипты в `/opt/innerhealth/ops` и переустанавливает три cron-строки.
 
@@ -42,7 +44,14 @@ SKIP_VPS_SAFEGUARDS=1 ./deploy/deploy-quick.sh
 30 3 * * * /opt/innerhealth/ops/docker-maintenance.sh # innerhealth-ops
 */5 * * * * SITE_URL="…" INFRA_ALERT_TOKEN="…" /opt/innerhealth/ops/vps-monitor.sh # innerhealth-ops
 * * * * * SITE_URL="…" YOOKASSA_POLL_TOKEN="…" /opt/innerhealth/ops/yookassa-poll.sh # innerhealth-ops
+*/5 * * * * SITE_URL="…" CHECKOUT_ABANDON_SCAN_TOKEN="…" /opt/innerhealth/ops/checkout-abandon-scan.sh # innerhealth-ops
 ```
+
+`checkout-abandon-scan.sh` помечает зависшие checkout-сессии (незавершённые оформления,
+раздел админки «Незавершённые оформления») как `ABANDONED`, если активности не было
+дольше таймаута (`CHECKOUT_ABANDON_TIMEOUT_MINUTES` в `.env` приложения, по умолчанию
+60 минут). В отличие от поллера ЮKassa не критичен по задержке — достаточно раз в
+5–10 минут.
 
 Поллер ЮKassa дёргается каждую минуту, а throttle по возрасту заказа делается
 в приложении (`src/lib/yookassa-sync-service.ts`):
@@ -77,6 +86,11 @@ SKIP_VPS_SAFEGUARDS=1 ./deploy/deploy-quick.sh
 
 - `DAYS` (default 7) — глубина просмотра pending-заказов
 - `TAKE` (default 100) — лимит на размер пачки за прогон
+
+`checkout-abandon-scan.sh`:
+
+- `MINUTES` (default — берётся `CHECKOUT_ABANDON_TIMEOUT_MINUTES` на стороне приложения, обычно 60)
+- `TAKE` (default 500) — лимит на размер пачки за прогон
 
 Опционально на стороне приложения:
 

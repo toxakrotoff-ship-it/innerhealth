@@ -131,6 +131,8 @@ export const createOrderBodySchema = z.object({
   /** Стоимость доставки СДЭК (добавляется к сумме заказа) */
   deliverySum: z.number().min(0).optional(),
   shipping: shippingSchema,
+  /** Опциональная связка с checkout-сессией трекинга незавершённых заказов (см. checkout-tracking.ts) */
+  checkoutSessionId: z.string().min(1).max(100).optional(),
 })
 
 export type CreateOrderBody = z.infer<typeof createOrderBodySchema>

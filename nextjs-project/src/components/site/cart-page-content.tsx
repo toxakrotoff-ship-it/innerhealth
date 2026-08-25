@@ -30,6 +30,16 @@ import type { BrandId } from '@/lib/brand/brand'
 import { usePromoStore } from '@/store/promo-store'
 import { pushMetrikaEcommerceEvent } from '@/lib/analytics/metrika-ecommerce'
 import { reachMetrikaGoal } from '@/lib/analytics/metrika'
+import {
+  startCheckoutSession,
+  patchCheckoutContact,
+  patchCheckoutCart,
+  patchCheckoutDelivery,
+  patchCheckoutPromo,
+} from '@/lib/checkout-tracking-client'
+
+const CHECKOUT_CONTACT_SYNC_DEBOUNCE_MS = 800
+const CHECKOUT_CART_SYNC_DEBOUNCE_MS = 800
 
 interface PromoResult {
   valid: boolean
@@ -136,6 +146,14 @@ export function CartPageContent({
   const mergeItemDetails = useCartStore((s) => s.mergeItemDetails)
   const setHasPromoCode = usePromoStore((s) => s.setHasPromoCode)
 
+  // Служебный id checkout-tracking сессии для текущей вкладки — не бизнес-данные,
+  // поэтому не в zustand-сторе. Ref, т.к. используется только внутри fire-and-forget
+  // обработчиков и не должен вызывать перерендер.
+  const checkoutSessionIdRef = useRef<string | null>(null)
+  const checkoutSessionStartedRef = useRef(false)
+  const checkoutContactSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const checkoutCartSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     warmupCdekWidget({ brandId, items })
     logCartDebug({
@@ -148,6 +166,16 @@ export function CartPageContent({
       },
     })
   }, [brandId, canUseSavedAddresses, itemsSignature, items.length])
+
+  // Открываем checkout-tracking сессию при первом непустом состоянии корзины —
+  // трекинг не должен блокировать/задерживать основной UX оформления.
+  useEffect(() => {
+    if (checkoutSessionStartedRef.current || items.length === 0) return
+    checkoutSessionStartedRef.current = true
+    void startCheckoutSession(brandId).then((sessionId) => {
+      checkoutSessionIdRef.current = sessionId
+    })
+  }, [brandId, items.length])
 
   function handleCdekWarmup() {
     warmupCdekWidget({ brandId, items })
@@ -341,6 +369,33 @@ export function CartPageContent({
         : 0
   // Итого к оплате = (сумма товаров со скидкой) + доставка; доставка всегда без скидки
   const totalWithDelivery = total + deliverySum
+
+  // Синхронизация снимка корзины (debounce) — только последнее состояние, не история.
+  useEffect(() => {
+    if (!checkoutSessionIdRef.current) return
+    if (checkoutCartSyncTimerRef.current) clearTimeout(checkoutCartSyncTimerRef.current)
+    checkoutCartSyncTimerRef.current = setTimeout(() => {
+      const sessionId = checkoutSessionIdRef.current
+      if (!sessionId) return
+      patchCheckoutCart(sessionId, brandId, {
+        items: items
+          .filter((i) => i.isGift !== true)
+          .map((i) => ({
+            productId: i.productId,
+            title: i.title,
+            quantity: i.quantity,
+            price: i.price ?? 0,
+          })),
+        cartTotal: totalWithDelivery,
+        deliveryMethod,
+        deliverySum: deliverySum > 0 ? deliverySum : undefined,
+        promoCode: promoResult?.valid ? promoResult.code : undefined,
+      })
+    }, CHECKOUT_CART_SYNC_DEBOUNCE_MS)
+    return () => {
+      if (checkoutCartSyncTimerRef.current) clearTimeout(checkoutCartSyncTimerRef.current)
+    }
+  }, [brandId, items, itemsSignature, deliveryMethod, deliverySum, totalWithDelivery, promoResult])
   const selectedDeliveryTariff = deliveryMethod === 'cdek_pvz' ? pvzTariff : doorTariff
   const rawCityCode = selectedCity?.code ?? (selectedCity as { city_code?: number } | null)?.city_code
   const cityCode =
@@ -376,6 +431,9 @@ export function CartPageContent({
     })
     setDeliveryMethod('pickup')
     setHasWidgetTariffSelection(false)
+    if (checkoutSessionIdRef.current) {
+      patchCheckoutDelivery(checkoutSessionIdRef.current, brandId, { deliveryMethod: 'pickup' })
+    }
   }
 
   function handleCdekModeSelect() {
@@ -386,6 +444,9 @@ export function CartPageContent({
         event: 'delivery_mode_changed',
         data: { deliveryMethod: next, previous: prev },
       })
+      if (next !== prev && checkoutSessionIdRef.current) {
+        patchCheckoutDelivery(checkoutSessionIdRef.current, brandId, { deliveryMethod: next })
+      }
       return next
     })
   }
@@ -546,12 +607,32 @@ export function CartPageContent({
       const data = await res.json()
       setPromoResult(data)
       setHasPromoCode(Boolean(data?.valid))
+      if (data?.valid && checkoutSessionIdRef.current) {
+        patchCheckoutPromo(checkoutSessionIdRef.current, brandId, code)
+      }
     } catch {
       setPromoResult({ valid: false, error: 'Ошибка запроса' })
       setHasPromoCode(false)
     } finally {
       setPromoLoading(false)
     }
+  }
+
+  /** Debounce ~800мс: поле подтверждено (blur), но не шлём PATCH на каждое нажатие клавиши. */
+  function scheduleContactSync() {
+    if (checkoutContactSyncTimerRef.current) clearTimeout(checkoutContactSyncTimerRef.current)
+    checkoutContactSyncTimerRef.current = setTimeout(() => {
+      if (!checkoutSessionIdRef.current) return
+      const fullName = formData.fullName.trim()
+      const phone = formData.phone.trim()
+      const email = formData.email.trim()
+      const contact: { fullName?: string; phone?: string; email?: string } = {}
+      if (fullName) contact.fullName = fullName
+      if (phone && validatePhoneRu(phone).valid) contact.phone = phone
+      if (email && validateEmail(email).valid) contact.email = email
+      if (Object.keys(contact).length === 0) return
+      patchCheckoutContact(checkoutSessionIdRef.current, brandId, contact)
+    }, CHECKOUT_CONTACT_SYNC_DEBOUNCE_MS)
   }
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
@@ -701,6 +782,7 @@ export function CartPageContent({
           total: totalWithDelivery,
           deliverySum: deliverySum > 0 ? deliverySum : undefined,
           promoCodeId: promoResult?.valid ? promoResult.id : null,
+          checkoutSessionId: checkoutSessionIdRef.current ?? undefined,
           shipping: {
             ...formData,
             fullName,
@@ -1313,6 +1395,7 @@ export function CartPageContent({
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, fullName: e.target.value }))
                   }}
+                  onBlur={scheduleContactSync}
                   className={cn(
                     'form-input min-h-[44px] w-full rounded-lg text-base',
                     isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
@@ -1337,6 +1420,7 @@ export function CartPageContent({
                     setPhoneError(
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
+                    scheduleContactSync()
                   }}
                   className={cn(
                     'form-input min-h-[44px] w-full rounded-lg text-base',
@@ -1370,6 +1454,7 @@ export function CartPageContent({
                     setEmailError(
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
+                    scheduleContactSync()
                   }}
                   className={cn(
                     'form-input min-h-[44px] w-full rounded-lg text-base',

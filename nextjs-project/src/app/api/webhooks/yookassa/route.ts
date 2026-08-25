@@ -1,5 +1,5 @@
 import { after, NextResponse } from 'next/server'
-import { getYookassaPayment } from '@/lib/yookassa'
+import { getYookassaPayment, isYookassaDeclineReason, normalizeYookassaError, type YookassaCancellationDetails } from '@/lib/yookassa'
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
 import {
@@ -13,6 +13,30 @@ import {
 } from '@/lib/order-payment-flow'
 import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
+import * as checkoutSessionService from '@/services/checkout-session.service'
+import {
+  trackPaymentCallback,
+  transitionCheckoutToPaymentCancelled,
+  transitionCheckoutToPaymentFailed,
+  transitionCheckoutToPaymentSucceeded,
+} from '@/lib/checkout-session-flow'
+
+/**
+ * Checkout-tracking по orderId — best-effort, не должен ронять webhook. Заказы,
+ * оформленные до раскатки фичи, не имеют CheckoutSession — это ожидаемо, не ошибка.
+ */
+async function trackCheckoutForOrderBestEffort(
+  orderId: string,
+  run: (sessionId: string) => Promise<void>
+): Promise<void> {
+  try {
+    const session = await checkoutSessionService.findSessionByOrderId(orderId)
+    if (!session) return
+    await run(session.id)
+  } catch (error) {
+    console.error('[webhook/yookassa] checkout-session tracking failed:', orderId, error)
+  }
+}
 
 /**
  * Webhook ЮKassa: обновление статуса заказа по уведомлениям.
@@ -36,6 +60,7 @@ interface YookassaNotificationPayload {
     id: string
     status: string
     metadata?: { orderId?: string }
+    cancellation_details?: YookassaCancellationDetails
   }
 }
 
@@ -129,15 +154,35 @@ export async function POST(request: Request) {
     if (payment.status !== 'succeeded') {
       // Платёж ещё не успешен: 200, но статус заказа не трогаем — ЮKassa пришлёт
       // следующий callback при `succeeded`.
+      await trackCheckoutForOrderBestEffort(orderId, (sessionId) =>
+        trackPaymentCallback(sessionId, 'webhook', { status: payment!.status })
+      )
       return NextResponse.json({ ok: true, paymentStatus: payment.status })
     }
 
     await transitionOrderToPaid(orderId, 'webhook')
+    await trackCheckoutForOrderBestEffort(orderId, async (sessionId) => {
+      await trackPaymentCallback(sessionId, 'webhook', { status: payment!.status })
+      await transitionCheckoutToPaymentSucceeded(sessionId, 'webhook')
+    })
     return NextResponse.json({ ok: true })
   }
 
   if (body.event === 'payment.canceled') {
     await transitionOrderToCanceled(orderId, 'webhook')
+    await trackCheckoutForOrderBestEffort(orderId, async (sessionId) => {
+      await trackPaymentCallback(sessionId, 'webhook', { status: 'canceled' })
+      const reason = body.object.cancellation_details?.reason
+      if (isYookassaDeclineReason(reason)) {
+        await transitionCheckoutToPaymentFailed(
+          sessionId,
+          'webhook',
+          normalizeYookassaError(body.object.cancellation_details)
+        )
+      } else {
+        await transitionCheckoutToPaymentCancelled(sessionId, 'webhook')
+      }
+    })
     return NextResponse.json({ ok: true })
   }
 

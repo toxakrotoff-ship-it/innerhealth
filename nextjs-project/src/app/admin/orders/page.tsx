@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatOrderLabel } from '@/lib/order-label';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 import type { PromoOrderTotalsResult } from '@/lib/promo-order-totals';
@@ -109,7 +109,10 @@ export default function AdminOrdersPage() {
   const [popupOrderDetail, setPopupOrderDetail] = useState<AdminOrderDetailResponse | null>(null);
   const [popupLoading, setPopupLoading] = useState(false);
   const [popupError, setPopupError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Позволяет открыть список сразу отфильтрованным по номеру заказа — используется
+  // для deep-link из карточки checkout-сессии («Незавершённые оформления»).
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') ?? '');
   const [cdekLoadingId, setCdekLoadingId] = useState<string | null>(null);
   const [yookassaLoadingId, setYookassaLoadingId] = useState<string | null>(null);
   const [yookassaBulkLoading, setYookassaBulkLoading] = useState(false);

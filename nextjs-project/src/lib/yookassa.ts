@@ -111,11 +111,17 @@ export interface YookassaPaymentResponse {
   }
 }
 
+export interface YookassaCancellationDetails {
+  party: string
+  reason: string
+}
+
 /** Ответ GET /payments/{id} — только нужные поля для верификации webhook. */
 export interface YookassaGetPaymentResponse {
   id: string
   status: string
   metadata?: { orderId?: string }
+  cancellation_details?: YookassaCancellationDetails
 }
 
 /**
@@ -194,7 +200,11 @@ export async function createYookassaPayment(
 export async function getYookassaPayment(
   paymentId: string,
   credentials?: YookassaCredentials | null
-): Promise<{ status: string; metadata?: { orderId?: string } } | null> {
+): Promise<{
+  status: string
+  metadata?: { orderId?: string }
+  cancellationDetails?: YookassaCancellationDetails
+} | null> {
   let creds: YookassaCredentials
   try {
     creds = resolveCredentialsForRequest(credentials)
@@ -209,7 +219,61 @@ export async function getYookassaPayment(
   })
   if (!res.ok) return null
   const data = (await res.json()) as YookassaGetPaymentResponse
-  return { status: data.status, metadata: data.metadata }
+  return { status: data.status, metadata: data.metadata, cancellationDetails: data.cancellation_details }
+}
+
+/**
+ * Whitelist-маппинг известных `cancellation_details.reason` ЮKassa на короткий код и
+ * человеко-читаемое сообщение. Никогда не пробрасывает сырой ответ банка/провайдера.
+ */
+export function normalizeYookassaError(details: YookassaCancellationDetails | undefined | null): {
+  code: string
+  message: string
+  providerStatus: string
+} {
+  const reason = details?.reason ?? 'unknown'
+  const messages: Record<string, string> = {
+    payment_declined: 'Банк отклонил платёж',
+    insufficient_funds: 'Недостаточно средств на карте',
+    invalid_card_number: 'Неверный номер карты',
+    expired_card: 'Истёк срок действия карты',
+    general_decline: 'Платёж отклонён банком',
+    fraud_suspected: 'Платёж заблокирован по подозрению в мошенничестве',
+    card_expired: 'Истёк срок действия карты',
+    call_issuer: 'Банк отклонил платёж, обратитесь в банк',
+    expired_on_confirmation: 'Время на подтверждение оплаты истекло',
+    canceled_by_merchant: 'Платёж отменён продавцом',
+  }
+  return {
+    code: reason.toUpperCase(),
+    message: messages[reason] ?? 'Оплата не прошла',
+    providerStatus: details?.party ?? 'unknown',
+  }
+}
+
+/**
+ * Отличает «банк отклонил платёж» от «пользователь не завершил оплату» (таймаут
+ * подтверждения, отмена продавцом) — граница из ТЗ между payment_failed и abandoned.
+ */
+const YOOKASSA_DECLINE_REASONS = new Set([
+  'payment_declined',
+  'insufficient_funds',
+  'invalid_card_number',
+  'invalid_csc',
+  'expired_card',
+  'card_expired',
+  'general_decline',
+  'fraud_suspected',
+  'call_issuer',
+  'issuer_unavailable',
+  '3d_secure_failed',
+  'identification_required',
+  'payment_method_limit_exceeded',
+  'payment_method_restricted',
+])
+
+export function isYookassaDeclineReason(reason: string | undefined | null): boolean {
+  return reason != null && YOOKASSA_DECLINE_REASONS.has(reason)
 }
 
 /** Result of checking YooKassa API connection (credentials and network). */

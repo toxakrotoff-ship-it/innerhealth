@@ -7,6 +7,7 @@ set -euo pipefail
 #   - /opt/innerhealth/ops/docker-maintenance.sh (раз в сутки)
 #   - /opt/innerhealth/ops/vps-monitor.sh        (раз в 5 минут — алерты диск/память)
 #   - /opt/innerhealth/ops/yookassa-poll.sh      (раз в минуту — фолбэк-поллер ЮKassa)
+#   - /opt/innerhealth/ops/checkout-abandon-scan.sh (раз в 5 минут — пометка ABANDONED checkout-сессий)
 #
 # Идемпотентно: повторный запуск обновляет скрипты и cron-строки.
 #
@@ -15,7 +16,7 @@ set -euo pipefail
 #   - Без вопросов:             sudo -E ./deploy/ops/install-vps-safeguards.sh --non-interactive
 #
 # Источники конфигурации (по приоритету, побеждает первое непустое):
-#   1) Переменные окружения вызова: SITE_URL, INFRA_ALERT_TOKEN, YOOKASSA_POLL_TOKEN
+#   1) Переменные окружения вызова: SITE_URL, INFRA_ALERT_TOKEN, YOOKASSA_POLL_TOKEN, CHECKOUT_ABANDON_SCAN_TOKEN
 #   2) ENV_FILE (по умолчанию <nextjs-project>/.env)
 #       — оттуда же читаем NEXTAUTH_URL, если SITE_URL не задан
 #   3) Интерактивный ввод (если STDIN привязан к терминалу и не задано --non-interactive)
@@ -141,6 +142,9 @@ INFRA_ALERT_TOKEN="$(prompt_value 'Infra alert token (== INFRA_ALERT_TOKEN in ap
 YOOKASSA_POLL_TOKEN="$(resolve_value YOOKASSA_POLL_TOKEN || true)"
 YOOKASSA_POLL_TOKEN="$(prompt_value 'ЮKassa poll token (== YOOKASSA_POLL_TOKEN in app .env)' "$YOOKASSA_POLL_TOKEN")"
 
+CHECKOUT_ABANDON_SCAN_TOKEN="$(resolve_value CHECKOUT_ABANDON_SCAN_TOKEN || true)"
+CHECKOUT_ABANDON_SCAN_TOKEN="$(prompt_value 'Checkout abandon-scan token (== CHECKOUT_ABANDON_SCAN_TOKEN in app .env)' "$CHECKOUT_ABANDON_SCAN_TOKEN")"
+
 log "Creating ${TARGET_SCRIPTS_DIR}..."
 mkdir -p "${TARGET_SCRIPTS_DIR}"
 
@@ -148,6 +152,7 @@ log "Copying scripts (overwrite)..."
 install -m 0755 "${OPS_SRC}/docker-maintenance.sh" "${TARGET_SCRIPTS_DIR}/docker-maintenance.sh"
 install -m 0755 "${OPS_SRC}/vps-monitor.sh"        "${TARGET_SCRIPTS_DIR}/vps-monitor.sh"
 install -m 0755 "${OPS_SRC}/yookassa-poll.sh"      "${TARGET_SCRIPTS_DIR}/yookassa-poll.sh"
+install -m 0755 "${OPS_SRC}/checkout-abandon-scan.sh" "${TARGET_SCRIPTS_DIR}/checkout-abandon-scan.sh"
 
 log "Refreshing cron entries (replace lines tagged with '${CRON_MARKER}')..."
 CRON_TEMP="$(mktemp)"
@@ -161,13 +166,15 @@ cat >>"${CRON_TEMP}" <<EOF
 30 3 * * * ${TARGET_SCRIPTS_DIR}/docker-maintenance.sh ${CRON_MARKER}
 */5 * * * * SITE_URL="${SITE_URL}" INFRA_ALERT_TOKEN="${INFRA_ALERT_TOKEN}" ${TARGET_SCRIPTS_DIR}/vps-monitor.sh ${CRON_MARKER}
 * * * * * SITE_URL="${SITE_URL}" YOOKASSA_POLL_TOKEN="${YOOKASSA_POLL_TOKEN}" ${TARGET_SCRIPTS_DIR}/yookassa-poll.sh ${CRON_MARKER}
+*/5 * * * * SITE_URL="${SITE_URL}" CHECKOUT_ABANDON_SCAN_TOKEN="${CHECKOUT_ABANDON_SCAN_TOKEN}" ${TARGET_SCRIPTS_DIR}/checkout-abandon-scan.sh ${CRON_MARKER}
 EOF
 
 crontab "${CRON_TEMP}"
 
 log "Done. Scripts: ${TARGET_SCRIPTS_DIR}"
-log "Cron entries refreshed (3 lines tagged '${CRON_MARKER}'):"
+log "Cron entries refreshed (4 lines tagged '${CRON_MARKER}'):"
 crontab -l | grep -F "${CRON_MARKER}" | sed -e 's/INFRA_ALERT_TOKEN="[^"]*"/INFRA_ALERT_TOKEN="***"/' \
-                                              -e 's/YOOKASSA_POLL_TOKEN="[^"]*"/YOOKASSA_POLL_TOKEN="***"/'
+                                              -e 's/YOOKASSA_POLL_TOKEN="[^"]*"/YOOKASSA_POLL_TOKEN="***"/' \
+                                              -e 's/CHECKOUT_ABANDON_SCAN_TOKEN="[^"]*"/CHECKOUT_ABANDON_SCAN_TOKEN="***"/'
 
-log "Reminder: INFRA_ALERT_TOKEN and YOOKASSA_POLL_TOKEN must match the app's .env values."
+log "Reminder: INFRA_ALERT_TOKEN, YOOKASSA_POLL_TOKEN and CHECKOUT_ABANDON_SCAN_TOKEN must match the app's .env values."

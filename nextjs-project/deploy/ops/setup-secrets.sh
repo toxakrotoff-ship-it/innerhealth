@@ -8,6 +8,7 @@ set -euo pipefail
 #
 # - YOOKASSA_POLL_TOKEN — для /api/cron/yookassa-poll и yookassa-poll.sh
 # - INFRA_ALERT_TOKEN   — для /api/admin/infra-alert и vps-monitor.sh
+# - CHECKOUT_ABANDON_SCAN_TOKEN — для /api/cron/checkout-abandon-scan и checkout-abandon-scan.sh
 #
 # Если переменная отсутствует/пуста — генерируется криптостойкий
 # случайный токен (`openssl rand -hex 32`) и дописывается в .env.
@@ -26,6 +27,7 @@ ENV_FILE="${ENV_FILE:-${PROJECT_ROOT}/.env}"
 REQUIRED_SECRETS=(
   "YOOKASSA_POLL_TOKEN"
   "INFRA_ALERT_TOKEN"
+  "CHECKOUT_ABANDON_SCAN_TOKEN"
 )
 
 timestamp() {

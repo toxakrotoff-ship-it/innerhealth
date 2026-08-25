@@ -1,6 +1,6 @@
 import 'server-only'
 import type { BrandId } from '@/lib/brand/brand'
-import { getYookassaPayment } from '@/lib/yookassa'
+import { getYookassaPayment, isYookassaDeclineReason, normalizeYookassaError } from '@/lib/yookassa'
 import {
   transitionOrderToCanceled,
   transitionOrderToPaid,
@@ -10,6 +10,32 @@ import * as orderService from '@/services/order.service'
 import * as settingsService from '@/services/settings.service'
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
+import * as checkoutSessionService from '@/services/checkout-session.service'
+import {
+  trackPaymentCallback,
+  transitionCheckoutToPaymentCancelled,
+  transitionCheckoutToPaymentFailed,
+  transitionCheckoutToPaymentSucceeded,
+  type CheckoutTransitionSource,
+} from '@/lib/checkout-session-flow'
+
+function toCheckoutSource(source: OrderPaymentTransitionSource): CheckoutTransitionSource {
+  return source === 'cron-poll' ? 'cron-scan' : 'admin-sync'
+}
+
+/** Checkout-tracking по orderId — best-effort, не должен ронять синхронизацию платежей. */
+async function trackCheckoutForOrderBestEffort(
+  orderId: string,
+  run: (sessionId: string) => Promise<void>
+): Promise<void> {
+  try {
+    const session = await checkoutSessionService.findSessionByOrderId(orderId)
+    if (!session) return
+    await run(session.id)
+  } catch (error) {
+    console.error('[yookassa-sync] checkout-session tracking failed:', orderId, error)
+  }
+}
 
 /**
  * Шкала throttle для крон-поллера. Сравнивается с возрастом заказа от createdAt.
@@ -136,6 +162,10 @@ export async function syncOnePendingOrder(
 
     if (paymentStatus === 'succeeded' && previousOrderStatus !== 'paid') {
       const result = await transitionOrderToPaid(candidate.id, source)
+      await trackCheckoutForOrderBestEffort(candidate.id, async (sessionId) => {
+        await trackPaymentCallback(sessionId, toCheckoutSource(source), { status: paymentStatus })
+        await transitionCheckoutToPaymentSucceeded(sessionId, toCheckoutSource(source))
+      })
       return {
         orderId: candidate.id,
         paymentId,
@@ -147,6 +177,19 @@ export async function syncOnePendingOrder(
     }
     if (paymentStatus === 'canceled' && previousOrderStatus === 'pending') {
       const result = await transitionOrderToCanceled(candidate.id, source)
+      await trackCheckoutForOrderBestEffort(candidate.id, async (sessionId) => {
+        await trackPaymentCallback(sessionId, toCheckoutSource(source), { status: paymentStatus })
+        const reason = payment?.cancellationDetails?.reason
+        if (isYookassaDeclineReason(reason)) {
+          await transitionCheckoutToPaymentFailed(
+            sessionId,
+            toCheckoutSource(source),
+            normalizeYookassaError(payment?.cancellationDetails)
+          )
+        } else {
+          await transitionCheckoutToPaymentCancelled(sessionId, toCheckoutSource(source))
+        }
+      })
       return {
         orderId: candidate.id,
         paymentId,
