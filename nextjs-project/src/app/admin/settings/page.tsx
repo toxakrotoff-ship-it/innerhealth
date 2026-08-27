@@ -339,7 +339,7 @@ export default function AdminSettingsPage() {
 
   async function loadAdmins() {
     try {
-      const res = await fetch('/api/admin/settings/admins');
+      const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/admins'));
       if (res.ok) {
         const data = await res.json();
         setAdmins(data);
@@ -800,7 +800,7 @@ export default function AdminSettingsPage() {
           <div className="card mt-8">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Почтовые ящики администраторов</h2>
             <p className="text-sm text-gray-600 mb-4">
-              Уведомления о новых заказах отправляются с support@innerhealth.ru. По умолчанию — на email входа. Можно привязать отдельный ящик для уведомлений.
+              Уведомления о новых заказах отправляются с support@innerhealth.ru. По умолчанию — на email входа. Можно привязать отдельный ящик для уведомлений — настройка задаётся отдельно для каждого бренда (переключается вкладкой выше).
             </p>
             <div className="overflow-x-auto">
               <table className="table table-horizontal min-w-[500px]">
@@ -836,7 +836,7 @@ export default function AdminSettingsPage() {
                               const value = (mailboxEdit[a.id] ?? '').trim();
                               setUpdatingUserId(a.id);
                               try {
-                                const res = await fetch('/api/admin/settings/admins', {
+                                const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/admins'), {
                                   method: 'PATCH',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
@@ -872,7 +872,7 @@ export default function AdminSettingsPage() {
                               onClick={async () => {
                                 setUpdatingUserId(a.id);
                                 try {
-                                  const res = await fetch('/api/admin/settings/admins', {
+                                  const res = await fetch(buildScopedAdminEndpoint('/api/admin/settings/admins'), {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ userId: a.id, notificationEmail: null }),

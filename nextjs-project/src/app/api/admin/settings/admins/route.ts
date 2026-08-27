@@ -2,24 +2,26 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as userService from '@/services/user.service';
+import { parseBrandFromSearchParams } from '@/lib/brand/brand-settings';
 
 const patchAdminSchema = z.object({
   userId: z.string().min(1, 'userId обязателен'),
   notificationEmail: z.string().trim().transform((s) => s || null).nullable().optional(),
 });
 
-/** GET: список администраторов (роль ADMIN) с полями email, notificationEmail. Только для ADMIN. */
-export async function GET() {
+/** GET: список администраторов (роль ADMIN) с полями email, notificationEmail для текущего бренда. Только для ADMIN. */
+export async function GET(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
 
   try {
-    const admins = await userService.getAdminsForSettingsList();
+    const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
+    const admins = await userService.getAdminsForSettingsList(brandId);
     const list = admins.map((u) => ({
       id: u.id,
       email: u.email,
       name: [u.name, u.lastName].filter(Boolean).join(' ') || u.email,
-      notificationEmail: u.notificationEmail?.trim() || null,
+      notificationEmail: u.notificationEmails[0]?.email?.trim() || null,
     }));
     return NextResponse.json(list);
   } catch (e) {
@@ -31,10 +33,12 @@ export async function GET() {
   }
 }
 
-/** PATCH: установить или снять привязанный ящик для администратора. Только для ADMIN. */
+/** PATCH: установить или снять привязанный ящик для администратора в рамках текущего бренда. Только для ADMIN. */
 export async function PATCH(request: Request) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
+
+  const brandId = parseBrandFromSearchParams(new URL(request.url).searchParams) ?? 'inner';
 
   let body: z.infer<typeof patchAdminSchema>;
   try {
@@ -52,16 +56,12 @@ export async function PATCH(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Пользователь не найден или не администратор' }, { status: 404 });
     }
-    await userService.updateUser(userId, { notificationEmail });
-    const updated = await userService.findUserProfile(userId);
-    if (!updated) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    await userService.upsertAdminNotificationEmail({ userId, brandId, email: notificationEmail ?? null });
     return NextResponse.json({
-      id: updated.id,
-      email: updated.email,
-      name: [updated.name, updated.lastName].filter(Boolean).join(' ') || updated.email,
-      notificationEmail: updated.notificationEmail?.trim() || null,
+      id: user.id,
+      email: user.email,
+      name: [user.name, user.lastName].filter(Boolean).join(' ') || user.email,
+      notificationEmail: notificationEmail?.trim() || null,
     });
   } catch (e) {
     console.error('Settings admins PATCH error:', e);

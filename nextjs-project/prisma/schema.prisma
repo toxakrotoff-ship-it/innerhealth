@@ -432,8 +432,6 @@ model User {
   lastName                 String?
   /// Телефон (для связи и отображения в профиле)
   phone                    String?
-  /// Ящик для уведомлений о заказах (если задан — письма идут сюда, иначе на email)
-  notificationEmail        String?
   /// Включена ли двухфакторная аутентификация
   twoFactorEnabled         Boolean                   @default(false)
   /// Способ 2FA: 'email' | 'totp'
@@ -460,6 +458,21 @@ model User {
   twoFactorGrants          TwoFactorGrant[]
   twoFactorPending         TwoFactorPending?
   addresses                UserAddress[]
+  notificationEmails       AdminNotificationEmail[]
+}
+
+/// Ящик для уведомлений о заказах у администратора, отдельно на каждый бренд.
+/// Если для (brand, userId) записи нет — письма идут на email входа.
+model AdminNotificationEmail {
+  id        String   @id @default(cuid())
+  brand     String   @default("inner")
+  userId    String
+  email     String
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([brand, userId])
+  @@index([brand, userId])
 }
 
 model UserAddress {

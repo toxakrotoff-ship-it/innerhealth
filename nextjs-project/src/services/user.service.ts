@@ -161,7 +161,6 @@ export async function updateUser(
     twoFactorEnabled?: boolean;
     twoFactorMethod?: string | null;
     totpSecretEncrypted?: string | null;
-    notificationEmail?: string | null;
     emailVerifiedAt?: Date | null;
     sessionVersion?: number;
   },
@@ -190,16 +189,22 @@ const CORE_ORDER_NOTIFICATIONS_EMAIL: Record<BrandId, string> = {
   'sprint-power': 'sprintpower@bk.ru',
 };
 
-/** Get admins for notifications (email, notificationEmail), plus the brand's core address. */
+/** Get admins for notifications (email, per-brand notificationEmail), plus the brand's core address. */
 export async function getAdminNotificationEmails(brandId: BrandId) {
   const admins = await prisma.user.findMany({
     where: { role: 'ADMIN' },
-    select: { email: true, notificationEmail: true },
+    select: {
+      email: true,
+      notificationEmails: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { email: true },
+      },
+    },
   });
   return Array.from(
     new Set(
       [
-        ...admins.map((a) => (a.notificationEmail?.trim() || a.email).trim()),
+        ...admins.map((a) => (a.notificationEmails[0]?.email?.trim() || a.email).trim()),
         CORE_ORDER_NOTIFICATIONS_EMAIL[brandId],
       ]
         .map((email) => email.trim().toLowerCase())
@@ -229,11 +234,11 @@ export async function findUserByIdMinimal(id: string) {
   });
 }
 
-/** Find user profile (email, name, lastName, phone, notificationEmail) for admin profile/settings. */
+/** Find user profile (email, name, lastName, phone) for admin profile/settings. */
 export async function findUserProfile(id: string) {
   return prisma.user.findUnique({
     where: { id },
-    select: { id: true, email: true, name: true, lastName: true, phone: true, notificationEmail: true },
+    select: { id: true, email: true, name: true, lastName: true, phone: true },
   });
 }
 
@@ -288,8 +293,8 @@ export async function getAdminsWithMaxWhitelist(brandId?: BrandId | null) {
   });
 }
 
-/** Get admins for settings list (email, notificationEmail). */
-export async function getAdminsForSettingsList() {
+/** Get admins for settings list (email, per-brand notificationEmail). */
+export async function getAdminsForSettingsList(brandId?: BrandId | null) {
   return prisma.user.findMany({
     where: { role: 'ADMIN' },
     select: {
@@ -297,9 +302,32 @@ export async function getAdminsForSettingsList() {
       email: true,
       name: true,
       lastName: true,
-      notificationEmail: true,
+      notificationEmails: {
+        where: { brand: resolveDbBrand(brandId) },
+        select: { email: true },
+      },
     },
     orderBy: { email: 'asc' },
+  });
+}
+
+/** Set or clear the per-brand notification mailbox for an ADMIN user. */
+export async function upsertAdminNotificationEmail(params: {
+  userId: string;
+  brandId: BrandId;
+  email: string | null;
+}) {
+  const brand = resolveDbBrand(params.brandId);
+  if (!params.email) {
+    await prisma.adminNotificationEmail.deleteMany({
+      where: { userId: params.userId, brand },
+    });
+    return null;
+  }
+  return prisma.adminNotificationEmail.upsert({
+    where: { brand_userId: { brand, userId: params.userId } },
+    update: { email: params.email },
+    create: { brand, userId: params.userId, email: params.email },
   });
 }
 
