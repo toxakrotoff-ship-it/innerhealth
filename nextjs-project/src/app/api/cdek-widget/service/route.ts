@@ -183,6 +183,13 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+// CDEK has been observed returning slow 504s (Gateway Timeout) for the bulk "all offices in
+// country" query specifically for some brand accounts. Without a timeout here, a single attempt
+// can sit for tens of seconds; combined with retries that used to number 3, the widget's own
+// 45s init timeout (WIDGET_INIT_TIMEOUT_MS in cdek-widget.tsx) would fire before we ever finish.
+const CDEK_PROXY_TIMEOUT_MS = 10_000
+const CDEK_PROXY_MAX_ATTEMPTS = 2
+
 async function proxyToCdekWithRetry(params: {
   baseUrl: string
   token: string
@@ -191,16 +198,17 @@ async function proxyToCdekWithRetry(params: {
 }): Promise<OfficesProxyResult> {
   let lastResult: OfficesProxyResult | null = null
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < CDEK_PROXY_MAX_ATTEMPTS; attempt += 1) {
+    const isLastAttempt = attempt === CDEK_PROXY_MAX_ATTEMPTS - 1
     try {
       const result = await proxyToCdek(params)
       lastResult = result
       if (result.status < 500) return result
     } catch (error) {
-      if (attempt === 2) throw error
+      if (isLastAttempt) throw error
     }
 
-    if (attempt < 2) {
+    if (!isLastAttempt) {
       await sleep(250 * (attempt + 1))
     }
   }
@@ -264,7 +272,10 @@ async function proxyToCdek(params: {
       if (v === undefined || v === null) continue
       qs.set(k, typeof v === 'string' ? v : JSON.stringify(v))
     }
-    const res = await fetch(`${baseUrl}/deliverypoints?${qs.toString()}`, { headers })
+    const res = await fetch(`${baseUrl}/deliverypoints?${qs.toString()}`, {
+      headers,
+      signal: AbortSignal.timeout(CDEK_PROXY_TIMEOUT_MS),
+    })
     const text = await res.text()
     return { status: res.status, text, responseHeaders: res.headers }
   }
@@ -274,6 +285,7 @@ async function proxyToCdek(params: {
     method: 'POST',
     headers,
     body: JSON.stringify(data),
+    signal: AbortSignal.timeout(CDEK_PROXY_TIMEOUT_MS),
   })
   const text = await res.text()
   return { status: res.status, text, responseHeaders: res.headers }
