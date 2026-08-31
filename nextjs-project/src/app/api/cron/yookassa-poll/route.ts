@@ -2,6 +2,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { syncPendingOrdersBatch } from '@/lib/yookassa-sync-service'
+import { syncCdekTrackNumbersBatch } from '@/lib/cdek'
 
 /**
  * Фолбэк-поллер для ЮKassa: на случай, если webhook не дошёл (или дошёл, но
@@ -55,6 +56,10 @@ export async function POST(request: Request) {
     source: 'cron-poll',
     honorThrottle: true,
   })
+  const cdek = await syncCdekTrackNumbersBatch({
+    since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    take,
+  })
 
   return NextResponse.json({
     ok: true,
@@ -66,6 +71,7 @@ export async function POST(request: Request) {
     updatedToPaid: result.updatedToPaid,
     updatedToCanceled: result.updatedToCanceled,
     errors: result.errors,
+    cdek,
   })
 }
 

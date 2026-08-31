@@ -31,10 +31,10 @@ function isCdekTestBase(base: string): boolean {
 
 function getCdekTrackSyncIntervalMs(createdAt: Date, now = new Date()): number | null {
   const ageMs = Math.max(0, now.getTime() - createdAt.getTime())
-  if (ageMs <= 6 * HOUR_MS) return 15 * MINUTE_MS
-  if (ageMs <= DAY_MS) return HOUR_MS
-  if (ageMs <= 7 * DAY_MS) return 6 * HOUR_MS
-  if (ageMs <= 30 * DAY_MS) return DAY_MS
+  if (ageMs <= 6 * HOUR_MS) return 5 * MINUTE_MS
+  if (ageMs <= DAY_MS) return 15 * MINUTE_MS
+  if (ageMs <= 7 * DAY_MS) return HOUR_MS
+  if (ageMs <= 30 * DAY_MS) return 6 * HOUR_MS
   return null
 }
 
@@ -1830,7 +1830,7 @@ export async function syncCdekTrackNumberIfDue(
       ...(snapshot.validationError ? { cdekOrderError: snapshot.validationError } : {}),
     })
     if (!candidate.cdekTrackNumber && trackNumber) {
-      void cdekTrackEmail.sendCdekTrackEmailsForOrder(orderId, trackNumber)
+      await cdekTrackEmail.sendCdekTrackEmailsForOrder(orderId, trackNumber)
     }
     return { checked: true, trackNumber }
   } catch (error) {
@@ -1846,5 +1846,56 @@ export async function syncCdekTrackNumbersForOrderIds(orderIds: string[]): Promi
   const uniqueOrderIds = Array.from(new Set(orderIds.filter(Boolean))).slice(0, CDEK_TRACK_SYNC_BATCH_LIMIT)
   for (const orderId of uniqueOrderIds) {
     await syncCdekTrackNumberIfDue(orderId)
+  }
+}
+
+export interface CdekTrackPollBatchResult {
+  scanned: number
+  checked: number
+  tracksFound: number
+  notificationRetries: number
+  errors: number
+}
+
+/** Cron batch: polls missing tracks and retries incomplete email channels. */
+export async function syncCdekTrackNumbersBatch(options: {
+  since: Date
+  take: number
+}): Promise<CdekTrackPollBatchResult> {
+  const orderService = await import('@/services/order.service')
+  const cdekTrackEmail = await import('@/lib/cdek-track-email')
+  const candidates = await orderService.getCdekTrackPollCandidates(options)
+  let checked = 0
+  let tracksFound = 0
+  let notificationRetries = 0
+  let errors = 0
+
+  for (const candidate of candidates) {
+    try {
+      if (candidate.cdekTrackNumber) {
+        notificationRetries += 1
+        const result = await cdekTrackEmail.sendCdekTrackEmailsForOrder(
+          candidate.id,
+          candidate.cdekTrackNumber
+        )
+        errors += result.errors.length
+        continue
+      }
+
+      const result = await syncCdekTrackNumberIfDue(candidate.id)
+      if (result.checked) checked += 1
+      if (result.trackNumber) tracksFound += 1
+    } catch (error) {
+      errors += 1
+      console.error('[CDEK track poll]', candidate.id, error)
+    }
+  }
+
+  return {
+    scanned: candidates.length,
+    checked,
+    tracksFound,
+    notificationRetries,
+    errors,
   }
 }

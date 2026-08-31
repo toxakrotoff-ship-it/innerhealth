@@ -14,7 +14,18 @@ vi.mock('@/lib/yookassa-sync-service', () => ({
   }),
 }))
 
+vi.mock('@/lib/cdek', () => ({
+  syncCdekTrackNumbersBatch: vi.fn().mockResolvedValue({
+    scanned: 0,
+    checked: 0,
+    tracksFound: 0,
+    notificationRetries: 0,
+    errors: 0,
+  }),
+}))
+
 import { syncPendingOrdersBatch } from '@/lib/yookassa-sync-service'
+import { syncCdekTrackNumbersBatch } from '@/lib/cdek'
 import { POST } from '@/app/api/cron/yookassa-poll/route'
 
 const ORIGINAL_TOKEN = process.env.YOOKASSA_POLL_TOKEN
@@ -64,6 +75,10 @@ describe('POST /api/cron/yookassa-poll', () => {
     expect(opts?.honorThrottle).toBe(true)
     expect(opts?.source).toBe('cron-poll')
     expect(opts?.brandId).toBe(null)
+    expect(syncCdekTrackNumbersBatch).toHaveBeenCalledWith({
+      since: expect.any(Date),
+      take: 100,
+    })
   })
 
   it('respects days/take query params with bounds', async () => {

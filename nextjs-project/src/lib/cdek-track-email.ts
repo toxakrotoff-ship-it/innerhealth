@@ -11,12 +11,14 @@ import * as userService from '@/services/user.service'
 export async function sendCdekTrackEmailsForOrder(
   orderId: string,
   trackNumber: string | null | undefined
-): Promise<void> {
+): Promise<{ adminSent: boolean; customerSent: boolean; errors: string[] }> {
   const normalizedTrack = trackNumber?.trim()
-  if (!normalizedTrack) return
+  if (!normalizedTrack) return { adminSent: false, customerSent: false, errors: [] }
 
   const order = await orderService.findOrderForPaidEmail(orderId)
-  if (!order?.shippingInfo) return
+  if (!order?.shippingInfo) {
+    return { adminSent: false, customerSent: false, errors: ['Заказ или адрес доставки не найден'] }
+  }
 
   const brandId = await orderService.findOrderBrandIdForNotify(orderId)
   const shippingCost = resolveShippingCostForOrderNotify(order)
@@ -45,14 +47,41 @@ export async function sendCdekTrackEmailsForOrder(
     brandId,
   } as const
 
-  const adminEmails = await userService.getAdminNotificationEmails(brandId)
-  await sendAdminCdekTrackNotification(adminEmails, payload)
+  const errors: string[] = []
+  const deliveryState = await orderService.findCdekTrackEmailState(orderId)
+  let adminSent = deliveryState?.cdekTrackAdminEmailSentAt != null
+  let customerSent = deliveryState?.cdekTrackCustomerEmailSentAt != null
 
-  if (order.shippingInfo.email && order.shippingInfo.fullName) {
-    await sendCustomerCdekTrackNotification(
-      order.shippingInfo.email,
-      order.shippingInfo.fullName,
-      payload
-    )
+  if (!adminSent && await orderService.claimCdekTrackEmailChannel(orderId, 'admin')) {
+    const adminEmails = await userService.getAdminNotificationEmails(brandId)
+    const result = await sendAdminCdekTrackNotification(adminEmails, payload)
+    await orderService.finishCdekTrackEmailChannel({
+      orderId,
+      channel: 'admin',
+      ok: result.ok,
+      error: result.error,
+    })
+    adminSent = result.ok
+    if (!result.ok) errors.push(`admin: ${result.error ?? 'SMTP error'}`)
   }
+
+  if (!customerSent && await orderService.claimCdekTrackEmailChannel(orderId, 'customer')) {
+    const result = order.shippingInfo.email && order.shippingInfo.fullName
+      ? await sendCustomerCdekTrackNotification(
+          order.shippingInfo.email,
+          order.shippingInfo.fullName,
+          payload
+        )
+      : { ok: true as const }
+    await orderService.finishCdekTrackEmailChannel({
+      orderId,
+      channel: 'customer',
+      ok: result.ok,
+      error: result.error,
+    })
+    customerSent = result.ok
+    if (!result.ok) errors.push(`customer: ${result.error ?? 'SMTP error'}`)
+  }
+
+  return { adminSent, customerSent, errors }
 }

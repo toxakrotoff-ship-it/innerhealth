@@ -321,6 +321,13 @@ export interface CdekTrackSyncOrderCandidate {
   } | null;
 }
 
+export interface CdekTrackPollCandidate extends CdekTrackSyncOrderCandidate {
+  cdekTrackAdminEmailSentAt: Date | null;
+  cdekTrackCustomerEmailSentAt: Date | null;
+}
+
+export type CdekTrackEmailChannel = 'admin' | 'customer';
+
 /** Get orders for admin with optional trash filter. */
 export async function getOrdersForAdminWithTrash(options: {
   mode: 'active' | 'trash';
@@ -463,6 +470,106 @@ export async function findOrderForCdekTrackSync(
     } as Prisma.OrderSelect,
   });
   return order as CdekTrackSyncOrderCandidate | null;
+}
+
+export async function findCdekTrackEmailState(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      cdekTrackAdminEmailSentAt: true,
+      cdekTrackCustomerEmailSentAt: true,
+    },
+  });
+}
+
+/** Candidates are selected before throttling; oldest checks go first to avoid starvation. */
+export async function getCdekTrackPollCandidates(options: {
+  since: Date;
+  take: number;
+}): Promise<CdekTrackPollCandidate[]> {
+  const orders = await prisma.order.findMany({
+    where: {
+      deletedAt: null,
+      status: 'paid',
+      createdAt: { gte: options.since },
+      cdekOrderUuid: { not: null },
+      shippingInfo: { deliveryMethod: { in: ['cdek_pvz', 'cdek_door'] } },
+      OR: [
+        { cdekTrackNumber: null },
+        { cdekTrackAdminEmailSentAt: null },
+        { cdekTrackCustomerEmailSentAt: null },
+      ],
+    },
+    select: {
+      id: true,
+      createdAt: true,
+      cdekOrderUuid: true,
+      cdekTrackNumber: true,
+      cdekTrackCheckedAt: true,
+      cdekTrackAdminEmailSentAt: true,
+      cdekTrackCustomerEmailSentAt: true,
+      shippingInfo: { select: { deliveryMethod: true } },
+    },
+    orderBy: [
+      { cdekTrackCheckedAt: { sort: 'asc', nulls: 'first' } },
+      { createdAt: 'asc' },
+    ],
+    take: options.take,
+  });
+  return orders as CdekTrackPollCandidate[];
+}
+
+/**
+ * Claims one email channel. A stale claim is recoverable after ten minutes, so a
+ * killed worker cannot suppress notifications permanently.
+ */
+export async function claimCdekTrackEmailChannel(
+  orderId: string,
+  channel: CdekTrackEmailChannel,
+  now = new Date()
+): Promise<boolean> {
+  const attemptedField = channel === 'admin'
+    ? 'cdekTrackAdminEmailAttemptedAt'
+    : 'cdekTrackCustomerEmailAttemptedAt';
+  const sentField = channel === 'admin'
+    ? 'cdekTrackAdminEmailSentAt'
+    : 'cdekTrackCustomerEmailSentAt';
+  const staleBefore = new Date(now.getTime() - 10 * 60 * 1000);
+  const result = await prisma.order.updateMany({
+    where: {
+      id: orderId,
+      [sentField]: null,
+      OR: [{ [attemptedField]: null }, { [attemptedField]: { lt: staleBefore } }],
+    } as Prisma.OrderWhereInput,
+    data: { [attemptedField]: now } as Prisma.OrderUpdateManyMutationInput,
+  });
+  return result.count === 1;
+}
+
+export async function finishCdekTrackEmailChannel(args: {
+  orderId: string;
+  channel: CdekTrackEmailChannel;
+  ok: boolean;
+  error?: string;
+  now?: Date;
+}): Promise<void> {
+  const attemptedField = args.channel === 'admin'
+    ? 'cdekTrackAdminEmailAttemptedAt'
+    : 'cdekTrackCustomerEmailAttemptedAt';
+  const sentField = args.channel === 'admin'
+    ? 'cdekTrackAdminEmailSentAt'
+    : 'cdekTrackCustomerEmailSentAt';
+  const errorField = args.channel === 'admin'
+    ? 'cdekTrackAdminEmailError'
+    : 'cdekTrackCustomerEmailError';
+  await prisma.order.update({
+    where: { id: args.orderId },
+    data: {
+      [attemptedField]: args.ok ? (args.now ?? new Date()) : null,
+      ...(args.ok ? { [sentField]: args.now ?? new Date() } : {}),
+      [errorField]: args.ok ? null : (args.error ?? 'Неизвестная ошибка SMTP'),
+    } as Prisma.OrderUpdateInput,
+  });
 }
 
 /** Update order status. */

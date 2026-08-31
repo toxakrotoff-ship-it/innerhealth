@@ -14,6 +14,8 @@ const txOrderUpdateMock = vi.fn()
 const txShippingInfoCreateMock = vi.fn()
 const txPromoCodeUpdateMock = vi.fn()
 const orderFindManyMock = vi.fn()
+const rootOrderUpdateManyMock = vi.fn()
+const rootOrderUpdateMock = vi.fn()
 
 vi.mock('@/services/gift-promotion.service', () => ({
   calculateGiftsForOrder: (...args: unknown[]) => calculateGiftsForOrderMock(...args),
@@ -24,6 +26,8 @@ vi.mock('@/lib/prisma', () => ({
     $transaction: (...args: unknown[]) => transactionMock(...args),
     order: {
       findMany: (...args: unknown[]) => orderFindManyMock(...args),
+      updateMany: (...args: unknown[]) => rootOrderUpdateManyMock(...args),
+      update: (...args: unknown[]) => rootOrderUpdateMock(...args),
     },
   },
 }))
@@ -222,5 +226,56 @@ describe('getPendingOrdersWithYookassaPayment brand filtering', () => {
 
     const call = orderFindManyMock.mock.calls[0][0]
     expect(call.where.brand).toBe('sprint-power')
+  })
+})
+
+describe('CDEK track polling persistence', () => {
+  beforeEach(() => {
+    orderFindManyMock.mockReset()
+    rootOrderUpdateManyMock.mockReset()
+    rootOrderUpdateMock.mockReset()
+  })
+
+  it('selects only paid CDEK shipments and prioritizes never-checked orders', async () => {
+    orderFindManyMock.mockResolvedValue([])
+    const service = await import('@/services/order.service')
+
+    await service.getCdekTrackPollCandidates({
+      since: new Date('2026-08-01T00:00:00Z'),
+      take: 50,
+    })
+
+    expect(orderFindManyMock).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: 'paid',
+        cdekOrderUuid: { not: null },
+        shippingInfo: { deliveryMethod: { in: ['cdek_pvz', 'cdek_door'] } },
+      }),
+      orderBy: [
+        { cdekTrackCheckedAt: { sort: 'asc', nulls: 'first' } },
+        { createdAt: 'asc' },
+      ],
+      take: 50,
+    }))
+  })
+
+  it('claims an email channel atomically with a recoverable stale lock', async () => {
+    rootOrderUpdateManyMock.mockResolvedValue({ count: 1 })
+    const service = await import('@/services/order.service')
+    const now = new Date('2026-08-31T13:00:00Z')
+
+    await expect(service.claimCdekTrackEmailChannel('order-1', 'customer', now)).resolves.toBe(true)
+
+    expect(rootOrderUpdateManyMock).toHaveBeenCalledWith({
+      where: {
+        id: 'order-1',
+        cdekTrackCustomerEmailSentAt: null,
+        OR: [
+          { cdekTrackCustomerEmailAttemptedAt: null },
+          { cdekTrackCustomerEmailAttemptedAt: { lt: new Date('2026-08-31T12:50:00Z') } },
+        ],
+      },
+      data: { cdekTrackCustomerEmailAttemptedAt: now },
+    })
   })
 })
