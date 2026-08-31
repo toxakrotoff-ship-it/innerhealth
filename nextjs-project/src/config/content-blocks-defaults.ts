@@ -110,9 +110,9 @@ const SPRINT_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   },
   { page: 'home', key: 'hero.cta.primary' },
   { page: 'home', key: 'hero.cta.secondary' },
+  { page: 'home', key: 'hero.cta.secondary.href', adminLabel: 'Hero — CTA вторичная ссылка' },
   { page: 'home', key: 'hero.featured' },
-  { page: 'home', key: 'about.title', adminLabel: 'Главная — блок «О нас» заголовок' },
-  { page: 'home', key: 'hits.title', adminLabel: 'Главная — лайфстайл-баннер, подпись' },
+  { page: 'home', key: 'hits.title', adminLabel: 'Главная — блок «Хиты продаж», заголовок' },
   { page: 'home', key: 'reviews.title' },
   { page: 'home', key: 'markers.title' },
   { page: 'home', key: 'markers.item1' },
@@ -373,8 +373,6 @@ const SPRINT_HOME_SHARED_DEFAULTS: readonly ContentBlockDefault[] = [
   sprintHomeDefault('home.directions.cta.href', 'Направления — CTA ссылка', '/catalog'),
   sprintHomeDefault('home.new.title', 'Новинки — заголовок', 'Новинки ассортимента'),
   sprintHomeDefault('home.new.isVisible', 'Новинки — показывать блок', '1'),
-  sprintHomeDefault('home.about.body', 'О нас — основной текст', 'Мы создаем спортивное питание нового поколения в России: от разработки формул и контроля сырья до производства готового продукта. В основе каждой формулы - чистые составы, биодоступные компоненты и синергия для уверенного восстановления.'),
-  sprintHomeDefault('home.about.isVisible', 'О нас — показывать блок', '1'),
   sprintHomeDefault('home.faq.subtitle', 'FAQ — подпись', 'Ответы о выборе продуктов, доставке и оформлении заказа.'),
   sprintHomeDefault('home.faq.cta.label', 'FAQ — CTA текст', 'Посмотреть все ответы'),
   sprintHomeDefault('home.faq.cta.href', 'FAQ — CTA ссылка', '/faq'),
@@ -418,6 +416,41 @@ const SPRINT_FOOTER_DEFAULTS: readonly ContentBlockDefault[] = [
   sprintFooterDefault('footer.link.faq', 'Футер — ссылка «FAQ»', 'FAQ'),
   sprintFooterDefault('footer.link.privacy', 'Футер — ссылка «Политика конфиденциальности»', 'Политика конфиденциальности'),
   sprintFooterDefault('footer.link.offer', 'Футер — ссылка «Публичная оферта»', 'Публичная оферта'),
+]
+
+const SPRINT_CONTACTS_AND_CERTIFICATES_DEFAULTS: readonly ContentBlockDefault[] = [
+  {
+    brand: 'sprint-power',
+    page: 'contacts',
+    key: 'contacts.email',
+    label: 'Контакты — email',
+    type: 'short',
+    text: 'sprintpower@mail.ru',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'contacts',
+    key: 'contacts.address',
+    label: 'Контакты — адрес шоурума',
+    type: 'short',
+    text: 'г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис Sprint Power',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'certificates',
+    key: 'certificates.section.about.p1',
+    label: 'Сертификаты — секция “О документах” абзац 1',
+    type: 'short',
+    text: 'Sprint Power уделяет особое внимание качеству и безопасности продукции. Ниже представлены сертификаты соответствия, декларации о соответствии и иные документы, подтверждающие соответствие товаров действующим нормам и стандартам.',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'certificates',
+    key: 'certificates.section.contacts.email',
+    label: 'Сертификаты — email для запросов',
+    type: 'short',
+    text: 'sprintpower@mail.ru',
+  },
 ]
 
 const ADMIN_CONTENT_SCHEMA: Record<
@@ -474,6 +507,7 @@ export function getAdminContentSchemaForBrandPage(
 export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   ...SPRINT_HOME_SHARED_DEFAULTS,
   ...SPRINT_FOOTER_DEFAULTS,
+  ...SPRINT_CONTACTS_AND_CERTIFICATES_DEFAULTS,
   { page: 'about', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
   { page: 'about', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
   { page: 'about', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
@@ -996,8 +1030,16 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'hero.cta.secondary',
     label: 'Hero — CTA вторичная',
     type: 'short',
-    text: 'Читать отзывы',
+    text: 'Наши сертификаты',
     colorToken: 'text-slate-100',
+  },
+  {
+    brand: 'sprint-power',
+    page: 'home',
+    key: 'hero.cta.secondary.href',
+    label: 'Hero — CTA вторичная ссылка',
+    type: 'short',
+    text: '/sertifikaty-sootvetstviya',
   },
   {
     brand: 'sprint-power',
@@ -1019,19 +1061,10 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   {
     brand: 'sprint-power',
     page: 'home',
-    key: 'about.title',
-    label: 'Главная — О нас заголовок',
-    type: 'short',
-    text: 'О нас',
-    colorToken: 'text-slate-900',
-  },
-  {
-    brand: 'sprint-power',
-    page: 'home',
     key: 'hits.title',
-    label: 'Лайфстайл-баннер — подпись',
+    label: 'Главная — блок «Хиты продаж», заголовок',
     type: 'short',
-    text: 'Сила и восстановление',
+    text: 'Хиты продаж',
     colorToken: 'text-slate-100',
   },
   {

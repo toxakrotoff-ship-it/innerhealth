@@ -57,6 +57,30 @@ describe('getAdminBlocksForPage', () => {
     expect(JSON.stringify(block2Text?.richJson)).not.toContain('PreventAge')
   })
 
+  it('uses Sprint Power contact and certificate defaults', async () => {
+    findManyMock.mockResolvedValue([])
+
+    const contacts = await getAdminBlocksForPage('contacts', 'sprint-power')
+    const certificates = await getAdminBlocksForPage('certificates', 'sprint-power')
+
+    expect(contacts.find((block) => block.key === 'contacts.email')).toMatchObject({
+      text: 'sprintpower@mail.ru',
+      valueSource: 'brand_default',
+    })
+    expect(contacts.find((block) => block.key === 'contacts.address')?.text).toContain(
+      'Sprint Power'
+    )
+    expect(
+      certificates.find((block) => block.key === 'certificates.section.about.p1')?.text
+    ).toContain('Sprint Power')
+    expect(
+      certificates.find((block) => block.key === 'certificates.section.contacts.email')
+    ).toMatchObject({
+      text: 'sprintpower@mail.ru',
+      valueSource: 'brand_default',
+    })
+  })
+
   it('keeps an empty string override as an explicit hidden value', async () => {
     findManyMock.mockResolvedValue([
       {

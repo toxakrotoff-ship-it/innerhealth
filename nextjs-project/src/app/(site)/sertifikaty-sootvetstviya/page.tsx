@@ -4,6 +4,8 @@ import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { GalleryBlock } from '@/components/site/gallery-block'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import { buildContentPageMetadata } from '@/lib/seo'
 
@@ -34,7 +36,9 @@ function getBlockText(
 }
 
 export default async function CertificatesPage() {
-  const { brandId } = await getServerBrandContext()
+  const { brandId, siteTitle } = await getServerBrandContext()
+  const isSprintTheme = isSprintPowerBrand(brandId)
+  const siteConfig = getBrandSiteConfig(brandId)
   const blocks = await getResolvedBlocksForPage('certificates', brandId)
 
   const title = getBlockText(blocks, 'certificates.title', 'Сертификаты соответствия')
@@ -43,7 +47,7 @@ export default async function CertificatesPage() {
   const aboutP1 = getBlockText(
     blocks,
     'certificates.section.about.p1',
-    'Inner Health уделяет особое внимание качеству и безопасности продукции. Ниже представлены сертификаты соответствия, декларации о соответствии и иные документы, подтверждающие соответствие товаров действующим нормам и стандартам.'
+    `${siteTitle} уделяет особое внимание качеству и безопасности продукции. Ниже представлены сертификаты соответствия, декларации о соответствии и иные документы, подтверждающие соответствие товаров действующим нормам и стандартам.`
   )
   const aboutP2 = getBlockText(
     blocks,
@@ -89,7 +93,11 @@ export default async function CertificatesPage() {
     'certificates.section.contacts.intro',
     'По вопросам сертификатов и документов:'
   )
-  const contactsEmail = getBlockText(blocks, 'certificates.section.contacts.email', 'innerhealth@mail.ru')
+  const contactsEmail = getBlockText(
+    blocks,
+    'certificates.section.contacts.email',
+    siteConfig.contact.email
+  )
   const contactsPageLabel = getBlockText(blocks, 'certificates.section.contacts.contactsPageLabel', 'Контакты')
 
   const galleryImages = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -102,22 +110,22 @@ export default async function CertificatesPage() {
     .filter((img): img is { src: string; alt: string } => img != null)
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className={isSprintTheme ? 'min-h-screen bg-[#060A14] text-slate-100' : 'min-h-screen bg-white'}>
       <AdaptiveContainer maxWidth="default" className="pt-6 pb-2">
-        <Breadcrumbs items={breadcrumbItems} />
+        <Breadcrumbs items={breadcrumbItems} isInverted={isSprintTheme} />
       </AdaptiveContainer>
 
       <AdaptiveContainer maxWidth="default" className="py-8 pb-16">
         <article>
         <header className="mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-text">
+          <h1 className={`text-3xl font-bold sm:text-4xl ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
             {title}
           </h1>
         </header>
 
-        <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
-          <section className="rounded-2xl border border-gray-200 bg-soft-background/50 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
+        <div className={`prose max-w-none space-y-10 leading-relaxed ${isSprintTheme ? 'prose-invert text-slate-300' : 'prose-gray text-gray-700'}`}>
+          <section className={`rounded-2xl border p-6 sm:p-8 ${isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-soft-background/50'}`}>
+            <h2 className={`mb-4 text-xl font-bold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {aboutTitle}
             </h2>
             <p className="mb-4">
@@ -127,7 +135,7 @@ export default async function CertificatesPage() {
               {aboutP2}{' '}
               <a
                 href={`mailto:${contactsEmail}`}
-                className="text-action-blue hover:underline"
+                className={isSprintTheme ? 'text-[#7AA2FF] hover:underline' : 'text-action-blue hover:underline'}
               >
                 {contactsEmail}
               </a>
@@ -135,52 +143,52 @@ export default async function CertificatesPage() {
             </p>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
+          <section className={`rounded-2xl border p-6 sm:p-8 ${isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200'}`}>
+            <h2 className={`mb-4 text-xl font-bold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {declarationsTitle}
             </h2>
             <p className="mb-4">
               {declarationsP1}
             </p>
-            <p className="text-gray-600 text-sm">
+            <p className={`text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
               {declarationsNote}
             </p>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
+          <section className={`rounded-2xl border p-6 sm:p-8 ${isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200'}`}>
+            <h2 className={`mb-4 text-xl font-bold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {productCertificatesTitle}
             </h2>
             <p className="mb-4">
               {productCertificatesP1}
             </p>
-            <p className="text-gray-600 text-sm">
+            <p className={`text-sm ${isSprintTheme ? 'text-slate-400' : 'text-gray-600'}`}>
               {productCertificatesNote}
             </p>
           </section>
 
           <GalleryBlock images={galleryImages} />
 
-          <section className="rounded-2xl border border-gray-200 p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-text mb-4">
+          <section className={`rounded-2xl border p-6 sm:p-8 ${isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200'}`}>
+            <h2 className={`mb-4 text-xl font-bold ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {contactsTitle}
             </h2>
             <p className="mb-2">
               {contactsIntro}
             </p>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700">
+            <ul className={`list-disc space-y-1 pl-6 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               <li>
                 Email:{' '}
                 <a
                   href={`mailto:${contactsEmail}`}
-                  className="text-action-blue hover:underline"
+                  className={isSprintTheme ? 'text-[#7AA2FF] hover:underline' : 'text-action-blue hover:underline'}
                 >
                   {contactsEmail}
                 </a>
               </li>
               <li>
                 Раздел{' '}
-                <Link href="/contacts" className="text-action-blue hover:underline">
+                <Link href="/contacts" className={isSprintTheme ? 'text-[#7AA2FF] hover:underline' : 'text-action-blue hover:underline'}>
                   {contactsPageLabel}
                 </Link>{' '}
                 — форма обратной связи и другие способы связи.
@@ -189,10 +197,10 @@ export default async function CertificatesPage() {
           </section>
         </div>
 
-        <nav className="mt-12 pt-6 border-t border-gray-200">
+        <nav className={`mt-12 border-t pt-6 ${isSprintTheme ? 'border-slate-700' : 'border-gray-200'}`}>
           <Link
             href="/"
-            className="text-action-blue hover:underline font-medium"
+            className={`font-medium hover:underline ${isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'}`}
           >
             ← Вернуться на главную
           </Link>

@@ -100,8 +100,8 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
                 width={1680}
                 height={845}
                 priority
-                className="h-7 w-auto max-h-7 max-w-[min(11.5rem,42vw)] object-contain object-left sm:h-8 sm:max-h-8 sm:max-w-[min(13rem,38vw)] 2xl:h-9 2xl:max-h-9 2xl:max-w-[min(15rem,32vw)] 3xl:h-10 3xl:max-h-10 3xl:max-w-[min(17rem,28vw)]"
-                sizes="(max-width: 640px) 42vw, (max-width: 1536px) 13rem, 17rem"
+                className="h-9 w-auto max-h-9 max-w-[min(13rem,42vw)] object-contain object-left sm:h-10 sm:max-h-10 sm:max-w-[min(15rem,38vw)] 2xl:h-12 2xl:max-h-12 2xl:max-w-[min(17rem,32vw)] 3xl:h-14 3xl:max-h-14 3xl:max-w-[min(20rem,28vw)]"
+                sizes="(max-width: 640px) 42vw, (max-width: 1536px) 15rem, 20rem"
               />
             </Link>
           ) : (

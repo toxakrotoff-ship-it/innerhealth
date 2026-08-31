@@ -332,6 +332,7 @@ type SprintHomeData = {
     previewImage: string | null
   }>
   publicGiftPromotionCount: number
+  hits: HomeProductCardRow[]
 }
 
 async function getSprintHomeData(): Promise<SprintHomeData> {
@@ -341,7 +342,7 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
   const emptySprintReviews = [] as SprintHomeData['reviews']
   const emptySprintPosts = [] as SprintHomeData['newsPosts']
 
-  const [categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount] =
+  const [categories, reviews, newsPosts, articlePosts, publicGiftPromotionCount, hits] =
     await Promise.all([
       (async (): Promise<SprintHomeData['categories']> => {
         try {
@@ -448,6 +449,11 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
         emptySprintPosts
       ),
       withTimeout(countPublicGiftPromotions(new Date(), 'sprint-power'), dbTimeoutMs, 0),
+      withTimeout(
+        productService.getProductsForHomeInBrandScope(3, 'sprint-power'),
+        dbTimeoutMs,
+        [] as HomeProductCardRow[]
+      ),
     ])
 
   return {
@@ -456,67 +462,8 @@ async function getSprintHomeData(): Promise<SprintHomeData> {
     newsPosts,
     articlePosts,
     publicGiftPromotionCount,
+    hits,
   }
-}
-
-function SprintPowerHomeAboutSection({ blocks }: { blocks: ContentBlockResolved[] }) {
-  const title = getBlockTextForBrand(blocks, 'home', 'about.title', 'sprint-power', 'О нас')
-  return (
-    <div className="rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] shadow-sm ring-1 ring-slate-200/80 md:rounded-3xl md:p-8">
-      <h2 className="text-balance text-[clamp(1.25rem,2.5vw+0.75rem,1.75rem)] font-bold tracking-tight text-slate-900 md:text-3xl">{title}</h2>
-      <div className="mt-5 max-w-3xl space-y-4 text-[clamp(0.9rem,0.45vw+0.82rem,1rem)] leading-relaxed text-slate-700 sm:mt-6 md:text-base md:leading-relaxed">
-        <p>
-          Мы гордимся тем, что являемся отечественным производителем спортивного питания нового поколения. Все
-          этапы, начиная с разработки уникальных формул продуктов для питания спортсменов, контроля сырья и
-          заканчивая производством высококачественного товара, проходят в России. Мы амбициозны и стремимся
-          переосмыслить рынок, бросив вызов импортным аналогам протеина, коллагена, аминокислот, креатина,
-          обезжиренного бульона и значительно превзойдя их по качеству.
-        </p>
-        <p>
-          Наша команда состоит из высококвалифицированных специалистов в области спортивного питания: биологов,
-          спортивных врачей, врачей превентивной медицины, технологов, тренеров и профессиональных спортсменов.
-          Мы уверены, что каждый этап разработки продукта требует тщательной работы и внимания к деталям. В основе
-          нашего спортивного питания лежит принцип синергии: активные компоненты в наших составах взаимно усиливают
-          действие друг друга, что позволяет многократно увеличить их эффективность.
-        </p>
-        <p>
-          Каждый продукт обладает еще и выраженным хондропротекторным действием, что принципиально важно как для
-          любительского спорта, так и спорта высоких достижений.
-        </p>
-        <p className="font-semibold text-slate-900">Линейка включает в себя:</p>
-        <ul className="list-none space-y-3 border-l-2 border-[#7AA2FF]/40 pl-4">
-          <li>
-            <span className="font-semibold text-slate-900">Мультипротеин. </span>
-            Сывороточный белок дополнили гидролизатом куриного белка в ди-и трипептидной форме, усилили пребиотиком
-            Floracia™, снизили содержание сахара. 4 вкуса на выбор.
-          </li>
-          <li>
-            <span className="font-semibold text-slate-900">Гидропротеин. </span>
-            Первый протеин без казеина и лактозы, в котором 95% белка ди-и трипептидной формы, 19 аминокислот.
-            Аналога на российском рынке нет.
-          </li>
-          <li>
-            <span className="font-semibold text-slate-900">ВСАА. </span>
-            Усилили пребиотиком Floracia™ и аргинином, получили эффективное мышцеобразующее и восстанавливающее
-            средство.
-          </li>
-          <li>
-            <span className="font-semibold text-slate-900">Пептиды коллагена II типа. </span>
-            Те самые с противоспалительным и хондропротекторным действием для защиты опорно-двигательного аппарата.
-          </li>
-          <li>
-            <span className="font-semibold text-slate-900">Пептидный костный куриный бульон. </span>
-            Нутрицевтическое белковое питание для восполнения белка, восстановления ЖКТ, поддержки активности.
-          </li>
-        </ul>
-        <p>
-          Sprint Power – это всегда нужное количество белка, активация синтеза внутреннего коллагена, набор
-          мышечной массы, красивое, рельефное тело, здоровые суставы и связки, продуктивные тренировки, сила,
-          выносливость, работоспособность. Побеждайте с нами, покоряйте новые высоты.
-        </p>
-      </div>
-    </div>
-  )
 }
 
 /**
@@ -604,8 +551,14 @@ function SprintPowerHome({
           showDescription={sharedHeroContent.showDescription}
           showPrimaryCta={sharedHeroContent.showPrimaryCta}
           showImage={sharedHeroContent.showImage}
-          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
-          secondaryCtaHref="/otzyvy"
+          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Наши сертификаты')}
+          secondaryCtaHref={getBlockTextForBrand(
+            blocks,
+            'home',
+            'hero.cta.secondary.href',
+            'sprint-power',
+            '/sertifikaty-sootvetstviya'
+          )}
           isSprintTheme
         />
       ) : null}
@@ -679,18 +632,22 @@ function SprintPowerHome({
                       {getBlockTextForBrand(blocks, 'home', 'hero.cta.primary', 'sprint-power', 'Выбрать продукт')}
                     </Link>
                     <Link
-                      href="/otzyvy"
+                      href={getBlockTextForBrand(
+                        blocks,
+                        'home',
+                        'hero.cta.secondary.href',
+                        'sprint-power',
+                        '/sertifikaty-sootvetstviya'
+                      )}
                       className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.35rem] border border-white/14 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/10 sm:w-auto sm:min-w-[14rem]"
                     >
-                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Читать отзывы')}
+                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Наши сертификаты')}
                     </Link>
                   </div>
                 </div>
                 <span className="sr-only">{heroBrandLabel}</span>
               </div>
             </div>
-
-            <SprintPowerHomeAboutSection blocks={blocks} />
 
             {sharedDirectionsContent.items.length > 0 ? (
               <InnerHomeDirectionsSection
@@ -701,6 +658,52 @@ function SprintPowerHome({
                 items={sharedDirectionsContent.items}
                 isSprintTheme
               />
+            ) : null}
+
+            {data.hits.length > 0 ? (
+              <section className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#1B2946] bg-[#0A1128] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
+                <div className="mb-6 flex items-end justify-between gap-4">
+                  <Heading2 className="font-semibold tracking-tighter text-slate-100">
+                    {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Хиты продаж')}
+                  </Heading2>
+                  <Link
+                    href="/catalog"
+                    className="shrink-0 text-xs font-semibold uppercase tracking-widest text-[#7AA2FF] transition-colors hover:text-[#9AB8FF] sm:text-sm"
+                  >
+                    Смотреть всё
+                  </Link>
+                </div>
+                <FluidGrid
+                  cols={1}
+                  colsTablet={2}
+                  colsDesktop={3}
+                  colsXl={3}
+                  cols2xl={3}
+                  cols3xl={3}
+                  cols4xl={3}
+                  gap="6"
+                  adaptiveGap={false}
+                  className="gap-6 md:gap-8"
+                >
+                  {data.hits.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      id={product.id}
+                      title={product.title}
+                      brand={product.brand}
+                      sku={product.sku}
+                      weight={product.weight}
+                      price={product.price}
+                      priceOld={product.priceOld}
+                      photo={product.photo}
+                      slug={product.slug}
+                      quantity={product.quantity}
+                      isPreorderEnabled={product.isPreorderEnabled}
+                      priority={index === 0}
+                    />
+                  ))}
+                </FluidGrid>
+              </section>
             ) : null}
 
             <HowToOrderSteps
@@ -978,6 +981,7 @@ export default async function HomePage() {
       newsPosts: [],
       articlePosts: [],
       publicGiftPromotionCount: 0,
+      hits: [],
     }
     const emptySprintContentBlocks = [] as ContentBlockResolved[]
     const emptySprintFaqList = [] as Awaited<ReturnType<typeof faqService.getPublishedFaqItems>>

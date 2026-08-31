@@ -10,6 +10,7 @@ import { getYandexMapsApiKey } from '@/services/settings.service'
 import type { Metadata } from 'next'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { buildContentPageMetadata } from '@/lib/seo'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,8 +29,6 @@ const breadcrumbItems = [
   { label: 'Контакты' },
 ]
 
-const DEFAULT_PHONE = '+7 (989) 103-91-92'
-const DEFAULT_EMAIL = 'innerhealth@mail.ru'
 const DEFAULT_ADDRESS_PREFIX = 'г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис'
 const DEFAULT_WORKING_WEEKDAYS = 'Будние дни: с 10 до 22'
 const DEFAULT_WORKING_WEEKENDS = 'Выходные: с 12 до 18'
@@ -52,14 +51,15 @@ function getText(block: { text: string | null } | undefined, fallback: string): 
 export default async function ContactsPage() {
   const { siteTitle, brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
+  const siteConfig = getBrandSiteConfig(brandId)
   const [blocks, yandexMapsApiKey] = await Promise.all([
     getResolvedBlocksForPage('contacts', brandId),
     getYandexMapsApiKey({ brandId }),
   ])
   const byKey = (key: string) => blocks.find((b) => b.key === key)
 
-  const phone = getText(byKey('contacts.phone'), DEFAULT_PHONE)
-  const email = getText(byKey('contacts.email'), DEFAULT_EMAIL)
+  const phone = getText(byKey('contacts.phone'), siteConfig.contact.phone)
+  const email = getText(byKey('contacts.email'), siteConfig.contact.email)
   const address = getText(byKey('contacts.address'), `${DEFAULT_ADDRESS_PREFIX} ${siteTitle}`)
   const workingWeekdays = getText(
     byKey('contacts.working_weekdays'),
@@ -92,7 +92,7 @@ export default async function ContactsPage() {
   return (
     <div className={isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}>
       <AdaptiveContainer maxWidth="default">
-        <Breadcrumbs items={breadcrumbItems} />
+        <Breadcrumbs items={breadcrumbItems} isInverted={isSprintTheme} />
       </AdaptiveContainer>
 
       <AdaptiveContainer maxWidth="default" className="pb-16 sm:pb-20">

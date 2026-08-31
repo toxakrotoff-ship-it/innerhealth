@@ -167,6 +167,8 @@ describe('home content admin schema brand isolation', () => {
     // src/app/(site)/page.tsx), поэтому эти ключи должны быть editable и там
     expect(sprintKeys).toContain('home.directions.item1.categorySlug')
     expect(sprintKeys).toContain('hero.image.src')
+    expect(sprintKeys).toContain('hero.cta.secondary.href')
+    expect(sprintKeys).not.toContain('about.title')
     // а вот порядок секций управляет только inner-версией главной
     expect(sprintKeys).not.toContain('home.sections.order')
   })

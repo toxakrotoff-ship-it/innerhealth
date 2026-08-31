@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ProductEditorForm, createEmptyProductEditorValues, type ProductEditorFormValues, type ProductEditorSubmitPayload } from '../../components/ProductEditorForm';
 import type { ProductGalleryEditorPhoto } from '../../components/ProductGalleryEditor';
 import { useAdminBasePath } from '@/app/admin/context/admin-base-path';
-import { buildInnerProductTabsForEditor, productTabsForEditor } from '@/lib/product-tabs';
+import { buildInnerProductTabsForEditor } from '@/lib/product-tabs';
 
 interface ProductResponse {
   id: string;
@@ -94,10 +94,7 @@ function mapProductToFormValues(
     quantity: product.quantity ?? null,
     description: product.description || '',
     text: product.text || '',
-    tabs:
-      (product.brand === 'sprint-power' ? 'sprint-power' : 'inner') === 'inner'
-        ? buildInnerProductTabsForEditor(product)
-        : productTabsForEditor(product),
+    tabs: buildInnerProductTabsForEditor(product),
     photo: product.photo || '',
     priceOld: product.priceOld || null,
     discountPrice: product.discountPrice || null,

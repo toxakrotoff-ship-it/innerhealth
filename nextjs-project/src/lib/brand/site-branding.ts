@@ -79,6 +79,7 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
       { label: 'Акции', href: '/catalog/aktsii' },
       { label: 'Статьи', href: '/informaciya' },
       { label: 'B2B', href: '/b2b' },
+      { label: 'Партнерство', href: '/sotrudnichestvo' },
       { label: 'Отзывы', href: '/otzyvy' },
       { label: 'FAQ', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },

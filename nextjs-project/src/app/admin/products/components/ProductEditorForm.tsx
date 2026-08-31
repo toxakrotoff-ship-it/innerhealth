@@ -124,22 +124,19 @@ export function createEmptyProductEditorValues(
   activeBrand: AdminBrand | null
 ): ProductEditorFormValues {
   const initialBrand = activeBrand === 'sprint-power' ? 'sprint-power' : 'inner'
-  const initialTabs =
-    initialBrand === 'inner'
-      ? buildInnerProductTabsForEditor({
-          description: null,
-          text: null,
-          tab1: null,
-          tab2: null,
-          tab3: null,
-          tab4: null,
-          tab1Title: null,
-          tab2Title: null,
-          tab3Title: null,
-          tab4Title: null,
-          tabs: null,
-        })
-      : []
+  const initialTabs = buildInnerProductTabsForEditor({
+    description: null,
+    text: null,
+    tab1: null,
+    tab2: null,
+    tab3: null,
+    tab4: null,
+    tab1Title: null,
+    tab2Title: null,
+    tab3Title: null,
+    tab4Title: null,
+    tabs: null,
+  })
 
   return {
     brand: initialBrand,
@@ -197,7 +194,6 @@ export function ProductEditorForm({
     activeBrand === 'sprint-power'
       ? 'Показывать в блоке "Хиты продаж"'
       : 'Показывать в блоке "Новинки ассортимента"';
-  const isInnerBrandEditor = formData.brand === 'inner'
   const hasFlavorGroup = flavorSiblings.length > 1
 
   useEffect(() => {
@@ -740,7 +736,7 @@ export function ProductEditorForm({
             <ProductTabsEditor
               value={formData.tabs}
               onChange={(tabs) => setFormData((prev) => ({ ...prev, tabs }))}
-              managedMode={isInnerBrandEditor}
+              managedMode
             />
           </div>
 

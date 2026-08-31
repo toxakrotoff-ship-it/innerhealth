@@ -162,29 +162,6 @@ function looksLikeHtmlMarkup(text: string): boolean {
   return /<[a-z][\s\S]*>/i.test(text.trim())
 }
 
-function ProductDescriptionBlock({
-  description,
-  isSprintTheme,
-}: {
-  description: string
-  isSprintTheme: boolean
-}) {
-  const className = cn(
-    'mt-6 prose prose-sm max-w-none [&_img]:max-w-full [&_ul]:list-disc [&_ol]:list-decimal',
-    isSprintTheme
-      ? 'prose-invert text-slate-300 prose-headings:text-slate-100 [&_p]:text-slate-300 [&_li]:text-slate-300 [&_strong]:text-slate-100'
-      : 'text-text [&_p]:text-text [&_li]:text-text [&_strong]:text-gray-900'
-  )
-  if (looksLikeHtmlMarkup(description)) {
-    return <div className={className} dangerouslySetInnerHTML={{ __html: description }} />
-  }
-  return (
-    <div className={className}>
-      <p>{description}</p>
-    </div>
-  )
-}
-
 function ProductShortDescription({
   description,
   isSprintTheme,
@@ -229,7 +206,6 @@ function ProductLongTextBlock({ text, isSprintTheme }: { text: string; isSprintT
 
 export function ProductPageContent({
   product,
-  tabs,
   photos,
   flavorVariants = [],
   relatedProducts,
@@ -240,28 +216,19 @@ export function ProductPageContent({
   relatedProductsCategoryTitle,
   isSprintTheme = false,
 }: ProductPageContentProps) {
-  const shouldRenderDescription =
-    !!product.description &&
-    (isSprintTheme || !shouldHideInnerProductDescription(product.description, product.text))
-  const innerContent = !isSprintTheme ? normalizeInnerProductContent(product) : null
-  const explicitInnerTabs = !isSprintTheme ? parseProductTabsJson(product.tabs) : null
-  const shortDescription = innerContent?.shortDescription
+  const normalizedContent = normalizeInnerProductContent(product)
+  const explicitTabs = parseProductTabsJson(product.tabs)
+  const shortDescription = normalizedContent.shortDescription
   const shouldRenderShortDescription =
-    !isSprintTheme && !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
-  const shouldRenderInnerLongText =
-    !isSprintTheme &&
+    !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
+  const shouldRenderLongText =
     !!product.text?.trim() &&
-    Array.isArray(explicitInnerTabs) &&
-    explicitInnerTabs.length > 0
+    Array.isArray(explicitTabs) &&
+    explicitTabs.length > 0
   const hasStructuredDocuments = structuredDocuments.length > 0
-  const visibleInnerSections = !isSprintTheme && innerContent
-    ? innerContent.sections.filter(
-        (section) => !(hasStructuredDocuments && isLegacyDocumentSectionTitle(section.title))
-      )
-    : []
-  const visibleSprintTabs = isSprintTheme && hasStructuredDocuments
-    ? tabs.filter((tab) => !isLegacyDocumentSectionTitle(tab.title))
-    : tabs
+  const visibleContentSections = normalizedContent.sections.filter(
+    (section) => !(hasStructuredDocuments && isLegacyDocumentSectionTitle(section.title))
+  )
   const displayWeight =
     typeof product.weight === 'number' && Number.isFinite(product.weight) && product.weight > 0
       ? `${product.weight.toLocaleString('ru-RU')} г`
@@ -415,47 +382,28 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
           <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
-          {isSprintTheme && shouldRenderDescription && product.description && (
-            <ProductDescriptionBlock description={product.description} isSprintTheme={isSprintTheme} />
-          )}
         </div>
       </FluidGrid>
 
-      {isSprintTheme && product.text && (
+      {shouldRenderLongText && product.text && (
         <ScalableSpacing size="lg">
-          <section
-            className={`pt-8 ${isSprintTheme ? 'border-t border-slate-700' : 'border-t border-gray-200 dark:border-gray-700'}`}
-          >
+          <section className={isSprintTheme ? 'border-t border-slate-700 pt-8' : 'border-t border-gray-200 pt-8 dark:border-gray-700'}>
             <ProductLongTextBlock text={product.text} isSprintTheme={isSprintTheme} />
-          </section>
-        </ScalableSpacing>
-      )}
-
-      {shouldRenderInnerLongText && product.text && (
-        <ScalableSpacing size="lg">
-          <section className="border-t border-gray-200 pt-8 dark:border-gray-700">
-            <ProductLongTextBlock text={product.text} isSprintTheme={false} />
           </section>
         </ScalableSpacing>
       )}
 
       {showDocumentsBeforeTabs ? documentsSection : null}
 
-      {!isSprintTheme && visibleInnerSections.length > 0 && (
+      {visibleContentSections.length > 0 && (
         <ScalableSpacing size="lg">
           <ProductTabs
-            tabs={visibleInnerSections.map((section) => ({
+            tabs={visibleContentSections.map((section) => ({
               title: section.title,
               content: section.content,
             }))}
-            isSprintTheme={false}
+            isSprintTheme={isSprintTheme}
           />
-        </ScalableSpacing>
-      )}
-
-      {isSprintTheme && visibleSprintTabs.length > 0 && (
-        <ScalableSpacing size="lg">
-          <ProductTabs tabs={visibleSprintTabs} isSprintTheme={isSprintTheme} />
         </ScalableSpacing>
       )}
 
@@ -469,7 +417,7 @@ export function ProductPageContent({
           <ScalableSpacing size="lg" key={section.type}>
             <section
               className={
-                (isSprintTheme ? visibleSprintTabs.length > 0 || hasStructuredDocuments : visibleInnerSections.length > 0 || hasStructuredDocuments)
+                visibleContentSections.length > 0 || hasStructuredDocuments
                   ? 'pt-6 sm:pt-8'
                   : isSprintTheme
                     ? 'border-t border-slate-700 pt-6 sm:pt-8'
@@ -527,7 +475,7 @@ export function ProductPageContent({
         <ScalableSpacing size="lg">
           <section
             className={
-              (isSprintTheme ? tabs.length > 0 : (innerContent?.sections.length ?? 0) > 0)
+              visibleContentSections.length > 0
                 ? 'pt-6 sm:pt-8'
                 : isSprintTheme
                   ? 'border-t border-slate-700 pt-6 sm:pt-8'

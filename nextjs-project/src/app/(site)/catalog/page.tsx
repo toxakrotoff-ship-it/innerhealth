@@ -37,7 +37,10 @@ import {
 } from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { trimToNull } from '@/lib/seo'
-import { getCatalogBlockCategories } from '@/services/category.service'
+import {
+  getCatalogBlockCategories,
+  type PublicCatalogCategory,
+} from '@/services/category.service'
 
 /** Статический рендер каталога, ревалидация раз в 10 минут. */
 export const revalidate = 600
@@ -145,6 +148,24 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories, { brandId })
+  const hasPromotionContent = publicGiftPromotionCount + publicPromotionProductCount > 0
+  const visibleCatalogBlockCategories =
+    hasPromotionContent && !catalogBlockCategories.some((category) => category.slug === 'aktsii')
+      ? [
+          ...catalogBlockCategories,
+          {
+            id: '__promotions__',
+            brand: isSprintTheme ? 'sprint-power' : 'inner',
+            title: 'Акции',
+            slug: 'aktsii',
+            image: null,
+            imageAlt: 'Акции',
+            catalogTeaser: null,
+            sortOrder: Number.MAX_SAFE_INTEGER,
+            _count: { products: publicPromotionProductCount },
+          } satisfies PublicCatalogCategory,
+        ]
+      : catalogBlockCategories
   const hasNextPage = catalogResult.hasNextPage
   const products = catalogResult.items
   const listingItems = groupProductsForListing(products)
@@ -219,13 +240,14 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             gap={4}
             adaptiveGap
           >
-            {catalogBlockCategories.map((cat) => {
+            {visibleCatalogBlockCategories.map((cat) => {
               const bgImage = resolveCategoryImage(cat.slug, cat.image, {
                 sprintFallback: isSprintTheme,
               })
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
-              const categorySubtitle =
-                cat.slug === 'aktsii'
+              const categorySubtitle = isSprintTheme
+                ? null
+                : cat.slug === 'aktsii'
                   ? formatAktsiiCatalogBlockSubtitleRu(
                       publicPromotionProductCount,
                       publicGiftPromotionCount
@@ -261,19 +283,21 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                         </>
                       )}
                       <span
-                        className={`relative z-10 block max-w-[24ch] line-clamp-2 text-balance text-lg font-medium leading-tight drop-shadow-md ${categoryTitleFont} ${
+                        className={`relative z-10 block min-h-[2.5em] max-w-[24ch] line-clamp-2 text-balance text-lg font-medium leading-tight drop-shadow-md ${categoryTitleFont} ${
                           bgImage ? 'text-white' : isSprintTheme ? 'text-slate-100' : 'text-text'
                         }`}
                       >
                         {cat.title}
                       </span>
-                      <span
-                        className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
-                          bgImage ? 'text-white/88' : isSprintTheme ? 'text-slate-300' : 'text-gray-600'
-                        }`}
-                      >
-                        {categorySubtitle}
-                      </span>
+                      {categorySubtitle ? (
+                        <span
+                          className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
+                            bgImage ? 'text-white/88' : 'text-gray-600'
+                          }`}
+                        >
+                          {categorySubtitle}
+                        </span>
+                      ) : null}
                     </div>
                   </TiltCard>
                 </Link>

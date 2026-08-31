@@ -99,8 +99,8 @@ export function HeaderNavMobile({
                   alt={logoText}
                   width={1680}
                   height={845}
-                  className="h-8 w-auto max-w-[200px] object-contain object-left"
-                  sizes="200px"
+                  className="h-10 w-auto max-w-[220px] object-contain object-left"
+                  sizes="220px"
                 />
               ) : (
                 logoText
