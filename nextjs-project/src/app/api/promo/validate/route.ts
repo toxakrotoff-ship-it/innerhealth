@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import * as promoService from '@/services/promo.service'
 import { validatePromoBodySchema } from '@/lib/validations/promo'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const PROMO_VALIDATE_RATE_LIMIT = 30 // requests per minute per IP
 
@@ -37,8 +38,9 @@ export async function POST(request: Request) {
       )
     }
     const code = parsed.data.code
+    const brandId = resolveBrandOrDefaultFromRequest(request)
 
-    const promo = await promoService.findPromoByCode(code)
+    const promo = await promoService.findPromoByCode(code, brandId)
 
     if (!promo || !promo.isActive) {
       return NextResponse.json(

@@ -3,6 +3,7 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { checkoutPromoBodySchema } from '@/lib/validations/checkout-session'
 import { CheckoutSessionNotFoundError, trackCheckoutSessionEvent } from '@/lib/checkout-tracking'
 import { resolveCheckoutOwnerFromRequest } from '@/lib/checkout-session-request'
+import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 import * as promoService from '@/services/promo.service'
 
 const PATCH_RATE_LIMIT = 60 // requests per minute per IP
@@ -32,7 +33,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // Полная проверка (срок действия, лимит) уже сделана клиентом через
     // POST /api/promo/validate — здесь только фиксируем факт применения в трекинге,
     // не дублируя бизнес-логику проверки промокода.
-    const promo = await promoService.findPromoByCode(parsed.data.promoCode)
+    const brandId = resolveBrandOrDefaultFromRequest(request)
+    const promo = await promoService.findPromoByCode(parsed.data.promoCode, brandId)
     if (!promo || !promo.isActive) {
       return NextResponse.json(
         { error: 'Промокод не найден' },

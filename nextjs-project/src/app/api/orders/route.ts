@@ -196,7 +196,7 @@ export async function POST(request: Request) {
 
     let promo: { discountType: string; discountValue: number } | null = null
     if (promoCodeId) {
-      const promoRecord = await promoService.findPromoById(promoCodeId)
+      const promoRecord = await promoService.findPromoById(promoCodeId, brandId)
       if (promoRecord?.isActive) {
         const now = new Date()
         const validFrom = !promoRecord.validFrom || now >= promoRecord.validFrom
