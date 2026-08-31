@@ -1044,6 +1044,7 @@ export function CartPageContent({
             addresses={savedAddresses}
             selectedAddressId={selectedSavedAddressId}
             usingSavedAddress={usingSavedAddress}
+            isSprintTheme={isSprintTheme}
             onSelectAddress={(addressId) => {
               setSelectedSavedAddressId(addressId)
               if (usingSavedAddress) applySavedAddress(addressId)
