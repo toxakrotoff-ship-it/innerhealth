@@ -276,7 +276,7 @@ export default function AdminCategoriesPage() {
         {
           title: formData.title,
           pageTitle: formData.pageTitle.trim() || null,
-          slug: formData.slug || formData.title.toLowerCase().replace(/\s+/g, '-'),
+          slug: formData.slug,
           seoTitle: formData.seoTitle.trim() || null,
           seoDescription: formData.seoDescription.trim() || null,
           seoKeywords: formData.seoKeywords.trim() || null,
@@ -656,9 +656,13 @@ export default function AdminCategoriesPage() {
                     type="text"
                     value={formData.slug}
                     onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                    placeholder="автоматически генерируется из названия"
+                    placeholder="например, crema-i-mazi"
                     className="form-input"
+                    required
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Только латинские буквы, цифры и дефисы.
+                  </p>
                 </div>
 
                 <div>

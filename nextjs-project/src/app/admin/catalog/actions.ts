@@ -20,6 +20,7 @@ import {
   MAX_CATEGORY_TEASER_LENGTH,
   normalizeCategoryTeaser,
 } from '@/lib/category-teaser';
+import { CATEGORY_SLUG_PATTERN, normalizeCategorySlug } from '@/lib/category-slug';
 
 export interface Category {
   id: string;
@@ -91,7 +92,14 @@ async function resolveEffectiveBrandId(brandId?: BrandId | null): Promise<BrandI
 const categoryInputSchema = z.object({
   title: z.string().trim().min(1, 'Название категории обязательно'),
   pageTitle: z.string().trim().nullable().optional(),
-  slug: z.string().trim().min(1, 'Slug обязателен'),
+  slug: z
+    .string()
+    .trim()
+    .min(1, 'Slug обязателен')
+    .regex(
+      CATEGORY_SLUG_PATTERN,
+      'Slug может содержать только латинские буквы, цифры и дефисы'
+    ),
   seoTitle: z.string().trim().nullable().optional(),
   seoDescription: z.string().trim().max(5000).nullable().optional(),
   seoKeywords: z.string().trim().max(2000).nullable().optional(),
@@ -555,7 +563,7 @@ export async function createCategory(
     const parsed = categoryInputSchema.parse({
       ...dataScoped,
       pageTitle: dataScoped.pageTitle?.trim() ? dataScoped.pageTitle.trim() : null,
-      slug: dataScoped.slug.trim().toLowerCase(),
+      slug: normalizeCategorySlug(dataScoped.slug),
       seoTitle: dataScoped.seoTitle?.trim() ? dataScoped.seoTitle.trim() : null,
       seoDescription: dataScoped.seoDescription?.trim() ? dataScoped.seoDescription.trim() : null,
       seoKeywords: dataScoped.seoKeywords?.trim() ? dataScoped.seoKeywords.trim() : null,
@@ -683,7 +691,7 @@ export async function updateCategory(
       slug:
         dataScoped.slug === undefined
           ? undefined
-          : dataScoped.slug.trim().toLowerCase(),
+          : normalizeCategorySlug(dataScoped.slug),
       seoTitle:
         dataScoped.seoTitle === undefined
           ? undefined

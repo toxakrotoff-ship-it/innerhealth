@@ -35,15 +35,23 @@ export async function generateMetadata(): Promise<Metadata> {
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
 
+  const icons: Metadata['icons'] =
+    activeBrand === 'sprint-power'
+      ? {
+          icon: [{ url: '/sprint-power-favicon.svg', type: 'image/svg+xml', sizes: 'any' }],
+          shortcut: ['/sprint-power-favicon.svg'],
+        }
+      : {
+          icon: [
+            { url: '/favicon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.ico' },
+            { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+          ],
+          apple: [{ url: '/apple-touch-icon.png', type: 'image/png' }],
+        }
+
   return {
-    icons: {
-      icon: [
-        { url: '/favicon.svg', type: 'image/svg+xml' },
-        { url: '/favicon.ico' },
-        { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
-      ],
-      apple: [{ url: '/apple-touch-icon.png', type: 'image/png' }],
-    },
+    icons,
     ...(activeBrand === 'sprint-power'
       ? {
           themeColor: '#060A14',
