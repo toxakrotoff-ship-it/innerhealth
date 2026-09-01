@@ -206,7 +206,10 @@ describe('product-tabs', () => {
 
     expect(tabs[0]?.key).toBe('description')
     expect(tabs[0]?.content).toBe('<p>Описание</p>')
+    expect(tabs[0]?.isVisible).toBe(true)
     expect(tabs[1]?.key).toBe('characteristics')
+    expect(tabs[1]?.content).toBe('')
+    expect(tabs[1]?.isVisible).toBe(false)
     expect(tabs.every((tab) => typeof tab.isVisible === 'boolean')).toBe(true)
   })
 

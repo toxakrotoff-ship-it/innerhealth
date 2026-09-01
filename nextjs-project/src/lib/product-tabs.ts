@@ -455,8 +455,9 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
       }
     }
 
-    return createSystemTab(key, fallbackSections.get(key) ?? '', {
-      isVisible: false,
+    const fallbackContent = fallbackSections.get(key)
+    return createSystemTab(key, fallbackContent ?? '', {
+      isVisible: Boolean(fallbackContent),
     })
   })
 
