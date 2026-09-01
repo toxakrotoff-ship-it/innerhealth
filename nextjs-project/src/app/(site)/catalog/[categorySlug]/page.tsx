@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect, redirect } from 'next/navigation'
 import { ProductCard } from '@/components/site/product-card'
 import { GroupedProductCard } from '@/components/site/grouped-product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
@@ -19,7 +19,7 @@ import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { filterVisibleProducts } from '@/lib/catalog-visibility'
 import { resolveSiteBrand } from '@/lib/brand/brand-context'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
-import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { getPromotionsCategorySlug, isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getResolvedBlock } from '@/services/content-block.service'
 import { TipTapDocRenderer } from '@/components/site/tiptap-doc-renderer'
@@ -75,13 +75,13 @@ interface PageProps {
   params: Promise<{ categorySlug: string }>
 }
 
-function buildPromotionsCategoryFallback(brandTitle: string) {
+function buildPromotionsCategoryFallback(brandTitle: string, slug: string) {
   return {
     id: '__promotions__',
     brand: null,
     title: 'Акции',
     pageTitle: 'Акции',
-    slug: 'aktsii',
+    slug,
     catalogTeaser: `Актуальные акции и подарки ${brandTitle}.`,
     linePageBodyRichJson: null,
     showLegacyLinePageBlocks: false,
@@ -106,7 +106,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   })
   const brandSite = getBrandSiteConfig(activeBrand)
   const category = await getPublicCategoryMetadataBySlug(categorySlug, activeBrand)
-  if (!category && categorySlug === 'aktsii') {
+  if (!category && categorySlug === getPromotionsCategorySlug(activeBrand)) {
     return buildMetadataWithSocial({
       title: 'Акции',
       description: `Актуальные акции и подарки ${brandSite.title}.`,
@@ -158,6 +158,10 @@ export default async function CategoryPage({ params }: PageProps) {
     host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
   })
   const isSprintTheme = isSprintPowerBrand(activeBrand)
+  const promotionsCategorySlug = getPromotionsCategorySlug(activeBrand)
+  if (isSprintTheme && categorySlug === 'aktsii') {
+    permanentRedirect('/catalog/sale')
+  }
   const categoriesFontBlock = await getResolvedBlock('catalog', 'categories.fontVariant', activeBrand)
   const categoryTitleFont =
     categoriesFontBlock?.text?.trim()?.toLowerCase() === 'sans'
@@ -166,7 +170,10 @@ export default async function CategoryPage({ params }: PageProps) {
         ? 'font-script'
         : 'font-display'
   const brandSite = getBrandSiteConfig(activeBrand)
-  const fallbackCategory = categorySlug === 'aktsii' ? buildPromotionsCategoryFallback(brandSite.title) : null
+  const fallbackCategory =
+    categorySlug === promotionsCategorySlug
+      ? buildPromotionsCategoryFallback(brandSite.title, promotionsCategorySlug)
+      : null
   const category = (await getPublicCategoryBySlug(categorySlug, activeBrand)) ?? fallbackCategory
 
   if (!category) notFound()
@@ -187,12 +194,12 @@ export default async function CategoryPage({ params }: PageProps) {
   ]
 
   const autoPromotionProducts =
-    categorySlug === 'aktsii' ? await getPublicPromotionProducts(activeBrand) : []
+    categorySlug === promotionsCategorySlug ? await getPublicPromotionProducts(activeBrand) : []
   const categoryProductRows = category.products.map((pc) => pc.product) as Array<
     (typeof category.products)[number]['product'] & { isDraft: boolean }
   >
   const productRows =
-    categorySlug === 'aktsii'
+    categorySlug === promotionsCategorySlug
       ? Array.from(
           new Map(
             [...autoPromotionProducts, ...categoryProductRows].map((product) => [product.id, product])
@@ -204,6 +211,15 @@ export default async function CategoryPage({ params }: PageProps) {
     ? visible.map((p) => ({ ...p, primaryCategorySlug: categorySlug }))
     : visible
   const listingItems = groupProductsForListing(products)
+
+  if (isSprintTheme && categorySlug !== promotionsCategorySlug && listingItems.length === 1) {
+    const onlyItem = listingItems[0]!
+    const targetSlug =
+      onlyItem.kind === 'single'
+        ? onlyItem.product.slug
+        : onlyItem.variants.find((variant) => variant.id === onlyItem.defaultVariantId)?.slug
+    if (targetSlug) redirect(`/product/${targetSlug}`)
+  }
   const legacyDescriptionDoc = category.showLegacyLinePageBlocks
     ? getCategoryPageContentDoc(categorySlug, activeBrand)
     : null
@@ -219,7 +235,8 @@ export default async function CategoryPage({ params }: PageProps) {
   const categoryImage = trimToNull(category.image)
   const categoryImageAlt = resolveCategoryImageAlt(category)
 
-  const giftPromos = categorySlug === 'aktsii' ? await getPublicGiftPromotions(new Date(), activeBrand) : []
+  const giftPromos =
+    categorySlug === promotionsCategorySlug ? await getPublicGiftPromotions(new Date(), activeBrand) : []
 
   return (
     <>
@@ -334,7 +351,7 @@ export default async function CategoryPage({ params }: PageProps) {
               </div>
             </div>
           )}
-          {categorySlug === 'aktsii' && giftPromos.length > 0 && (
+          {categorySlug === promotionsCategorySlug && giftPromos.length > 0 && (
             <div className="mb-10">
               <ScrollReveal as="div" variant="fade-up">
                 <FluidGrid

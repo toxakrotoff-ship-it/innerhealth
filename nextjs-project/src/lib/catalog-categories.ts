@@ -42,6 +42,8 @@ const CATEGORY_IMAGE_SLUG_ALIASES: Record<string, string> = {
   gydro: 'hydro',
   'hydro-protein': 'hydro',
   'gidro-protein': 'hydro',
+  /** Sprint Power canonical "промо" slug — переиспользуем обложку категории aktsii. */
+  sale: 'aktsii',
 }
 
 function dedupeKeys(keys: readonly string[]): string[] {

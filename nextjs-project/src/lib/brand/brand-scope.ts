@@ -9,6 +9,11 @@ export function isSprintPowerBrand(brandId: BrandId | null | undefined): boolean
   return brandId === 'sprint-power';
 }
 
+/** Canonical slug of the "promotions" catalog category per brand: `sale` for Sprint Power, `aktsii` for Inner. */
+export function getPromotionsCategorySlug(brandId: BrandId | null | undefined): string {
+  return isSprintPowerBrand(brandId) ? 'sale' : 'aktsii';
+}
+
 export function normalizeProductBrandForScope(
   value: string | null | undefined,
   brandId: BrandId | null | undefined

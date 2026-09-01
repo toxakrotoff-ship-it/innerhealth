@@ -30,7 +30,7 @@ import {
 import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
-import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
+import { getPromotionsCategorySlug, isSprintPowerBrand } from '@/lib/brand/brand-scope'
 import {
   formatAktsiiCatalogBlockSubtitleRu,
   formatProductsCountRu,
@@ -148,16 +148,17 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   ])
 
   const catalogBlockCategories = filterCatalogBlockCategories(categories, { brandId })
+  const promotionsCategorySlug = getPromotionsCategorySlug(brandId)
   const hasPromotionContent = publicGiftPromotionCount + publicPromotionProductCount > 0
   const visibleCatalogBlockCategories =
-    hasPromotionContent && !catalogBlockCategories.some((category) => category.slug === 'aktsii')
+    hasPromotionContent && !catalogBlockCategories.some((category) => category.slug === promotionsCategorySlug)
       ? [
           ...catalogBlockCategories,
           {
             id: '__promotions__',
             brand: isSprintTheme ? 'sprint-power' : 'inner',
             title: 'Акции',
-            slug: 'aktsii',
+            slug: promotionsCategorySlug,
             image: null,
             imageAlt: 'Акции',
             catalogTeaser: null,
@@ -247,7 +248,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
               const categorySubtitle = isSprintTheme
                 ? null
-                : cat.slug === 'aktsii'
+                : cat.slug === promotionsCategorySlug
                   ? formatAktsiiCatalogBlockSubtitleRu(
                       publicPromotionProductCount,
                       publicGiftPromotionCount
