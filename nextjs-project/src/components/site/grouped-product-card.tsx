@@ -150,7 +150,7 @@ export function GroupedProductCard({
             </p>
           )}
 
-          <div className="mt-2 flex flex-wrap gap-1.5 md:gap-2">
+          <div className="relative z-10 mt-2 flex flex-wrap gap-1.5 md:gap-2">
             {group.flavorOptions.map((option) => {
               const isSelected = option.id === activeVariant.id
               const label = option.label ?? `Вкус ${group.flavorOptions.findIndex((item) => item.id === option.id) + 1}`
@@ -177,7 +177,7 @@ export function GroupedProductCard({
             })}
           </div>
 
-          <div className="mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
+          <div className="relative z-10 mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
             <AddToCartButton
               productId={activeVariant.id}
               title={activeVariant.title}
@@ -209,6 +209,15 @@ export function GroupedProductCard({
             ) : null}
           </div>
         </div>
+        {/* Stretched click target: makes the whole card open the product, not just the "Подробнее" button/flavor buttons above (z-10). */}
+        {showDetailsButton ? (
+          <Link
+            href={detailHref}
+            aria-hidden
+            tabIndex={-1}
+            className="absolute inset-0 z-0"
+          />
+        ) : null}
       </article>
     </ScrollReveal>
   )

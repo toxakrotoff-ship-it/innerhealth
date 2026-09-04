@@ -233,7 +233,7 @@ export function ProductCard({
             </p>
           )}
 
-          <div className="mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
+          <div className="relative z-10 mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
             <AddToCartButton
               productId={id}
               title={title}
@@ -273,6 +273,15 @@ export function ProductCard({
           )}
           aria-hidden
         />
+        {/* Stretched click target: makes the whole card open the product, not just the "Подробнее" button/link above (z-10). */}
+        {showDetailsButton ? (
+          <Link
+            href={detailHref}
+            aria-hidden
+            tabIndex={-1}
+            className="absolute inset-0 z-0"
+          />
+        ) : null}
       </article>
       </div>
     </ScrollReveal>

@@ -84,4 +84,37 @@ describe('ProductCard', () => {
     expect(screen.getByRole('heading', { level: 3 })).not.toHaveTextContent('90 капсул')
     expect(screen.getByText('90 капсул')).toBeInTheDocument()
   })
+
+  it('makes the whole card a click target to the product page, in addition to the "Подробнее" link', () => {
+    const { container } = render(
+      <ProductCard id="p-3" title="Магний B6" price={900} slug="magnesium-b6" quantity={5} />
+    )
+
+    const links = container.querySelectorAll('a[href="/product/magnesium-b6"]')
+    expect(links).toHaveLength(2)
+
+    const detailsLink = screen.getByText('Подробнее').closest('a')
+    expect(detailsLink).toHaveAttribute('href', '/product/magnesium-b6')
+
+    const stretchedLink = Array.from(links).find((link) => link !== detailsLink)
+    expect(stretchedLink).toHaveAttribute('aria-hidden')
+    expect(stretchedLink).toHaveAttribute('tabIndex', '-1')
+    expect(stretchedLink?.className).toContain('absolute')
+    expect(stretchedLink?.className).toContain('inset-0')
+  })
+
+  it('omits the whole-card click target when showDetailsButton is false', () => {
+    const { container } = render(
+      <ProductCard
+        id="p-4"
+        title="Магний B6"
+        price={900}
+        slug="magnesium-b6"
+        quantity={5}
+        showDetailsButton={false}
+      />
+    )
+
+    expect(container.querySelectorAll('a[href="/product/magnesium-b6"]')).toHaveLength(0)
+  })
 })
