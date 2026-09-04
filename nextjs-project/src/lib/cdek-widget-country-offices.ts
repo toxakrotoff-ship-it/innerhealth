@@ -1,5 +1,6 @@
 import type { BrandId } from '@/lib/brand/brand'
 import { OFFICES_PAGE_SIZE } from '@/lib/cdek-widget-offices'
+import { readCountryOfficesCache, writeCountryOfficesCache } from '@/lib/cdek-widget-offices-client-cache'
 
 /** Pages fetched between widget map updates (~1500 PVZ at 500/page). */
 export const COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES = 3
@@ -151,21 +152,33 @@ export async function fetchCountryOfficesStaged(params: {
 export async function expandCountryOfficesIntoWidget(params: {
   brandId?: BrandId
   signal?: AbortSignal
+  applyEveryPages?: number
+  batchPauseMs?: number
   applyOffices: (offices: unknown[]) => Promise<void>
 }): Promise<number> {
+  const cached = readCountryOfficesCache()
+  if (cached) {
+    await params.applyOffices(cached)
+    return cached.length
+  }
+
   let totalLoaded = 0
+  let accumulatedOffices: unknown[] = []
 
   await fetchCountryOfficesStaged({
     brandId: params.brandId,
     signal: params.signal,
-    applyEveryPages: COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES,
-    batchPauseMs: COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS,
+    applyEveryPages: params.applyEveryPages ?? COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES,
+    batchPauseMs: params.batchPauseMs ?? COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS,
     onBatch: async ({ accumulated, meta }) => {
       if (!meta.shouldApply) return
       totalLoaded = meta.totalLoaded
+      accumulatedOffices = accumulated
       await params.applyOffices(accumulated)
     },
   })
+
+  if (totalLoaded > 0) writeCountryOfficesCache(accumulatedOffices)
 
   return totalLoaded
 }

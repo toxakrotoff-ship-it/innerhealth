@@ -90,7 +90,16 @@ function parseWidgetInt(value: unknown): number {
 
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_INIT_TIMEOUT_MS = 45_000
-const COUNTRY_OFFICES_BACKGROUND_DEFER_MS = 4_000
+// Country-wide office expansion is deliberately always-on (even on mobile, even after a
+// successful region bootstrap) — see shouldExpandCountryOfficesAfterInit in
+// cdek-widget-geo-region.ts for why skipping it broke city search. What we tune here per
+// device is only *how gently* it happens: on mobile, defer the start further past `onReady`
+// and spread network/main-thread work (each applied batch repaints the map) over more time,
+// so it doesn't compete with the user's first interaction or spike memory on a phone.
+const COUNTRY_OFFICES_BACKGROUND_PACING = {
+  desktop: { deferMs: 4_000, applyEveryPages: 3, batchPauseMs: 500 },
+  mobile: { deferMs: 8_000, applyEveryPages: 5, batchPauseMs: 1_200 },
+} as const
 // iOS Safari fires `pageshow` with `persisted: true` on brief backgrounding (screen lock,
 // app switch, notification banner) — not just on genuine back/forward-cache navigation.
 // Only treat it as a real bfcache restore (where the widget's WebGL map state can actually
@@ -486,9 +495,15 @@ export function CdekWidget({
                 regionCode: geoRegion?.regionCode ?? null,
               })
 
+              const pacing = isMobileClient
+                ? COUNTRY_OFFICES_BACKGROUND_PACING.mobile
+                : COUNTRY_OFFICES_BACKGROUND_PACING.desktop
+
               void expandCountryOfficesIntoWidget({
                 brandId,
                 signal: countryExpandAbortController.signal,
+                applyEveryPages: pacing.applyEveryPages,
+                batchPauseMs: pacing.batchPauseMs,
                 applyOffices: async (offices) => {
                   if (
                     !isCurrentInitGeneration(expandGeneration) ||
@@ -569,7 +584,9 @@ export function CdekWidget({
                 return
               }
               startBackgroundExpand()
-            }, COUNTRY_OFFICES_BACKGROUND_DEFER_MS)
+            }, isMobileClient
+              ? COUNTRY_OFFICES_BACKGROUND_PACING.mobile.deferMs
+              : COUNTRY_OFFICES_BACKGROUND_PACING.desktop.deferMs)
           }
 
           requestAnimationFrame(() => {
