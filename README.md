@@ -80,7 +80,7 @@ npm run dev
 | `npm run db:push` | Синхронизировать схему с БД без миграций |
 | `npm run add-admin` | Интерактивное добавление пользователя (email, пароль, роль) |
 | `npm run create-admin` | Создание первого админа |
-| `npm run seed:categories` | Сид категорий |
+| `npm run seed:categories -- --apply` | Сид категорий (запись только с явным `--apply`) |
 | `npm run import-tilda-leads` | Импорт лидов из Tilda |
 | `npm run telegram-bot` | Запуск Telegram-бота (уведомления, промокоды) |
 | `npm run tilda:download-images` | Скачивание изображений с Tilda CDN в локальный `public` |

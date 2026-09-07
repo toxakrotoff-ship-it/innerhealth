@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { getSeedExecutionMode } from '../src/lib/seed-safety';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
@@ -17,6 +18,7 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+const dryRun = getSeedExecutionMode() === 'dry-run';
 
 async function seedCategories() {
   // Список из docs/categories.md (разделы по умолчанию)
@@ -32,7 +34,15 @@ async function seedCategories() {
   ];
 
   try {
-    console.log('Starting to seed categories...');
+    if (dryRun) {
+      console.log('Dry run: категории не изменены. Для записи нужен явный флаг --apply');
+      for (const category of categories) {
+        console.log(`Would recreate category: ${category.title} (${category.slug})`);
+      }
+      return;
+    }
+
+    console.log('Starting to seed categories (--apply confirmed)...');
 
     await prisma.category.deleteMany({});
     console.log('Deleted existing categories');

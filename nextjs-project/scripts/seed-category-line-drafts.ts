@@ -10,6 +10,7 @@ import {
   SEED_CATEGORY_LINE_PAGE_SLUGS,
   shouldSeedCategoryLinePage,
 } from '../src/lib/seed-category-line-page-drafts';
+import { getSeedExecutionMode } from '../src/lib/seed-safety';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
@@ -22,9 +23,14 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+const dryRun = getSeedExecutionMode() === 'dry-run';
 
 async function seedCategoryLineDrafts(): Promise<void> {
-  console.log('Seeding Sprint category line page drafts (без bento)...');
+  console.log(
+    dryRun
+      ? 'Dry run: изменения не применяются. Для записи нужен явный флаг --apply'
+      : 'Seeding Sprint category line page drafts (без bento, --apply подтверждён)...'
+  );
 
   const categories = await prisma.category.findMany({
     where: {
@@ -55,15 +61,17 @@ async function seedCategoryLineDrafts(): Promise<void> {
       continue;
     }
 
-    await prisma.category.update({
-      where: { id: category.id },
-      data: {
-        linePageBodyRichJson: draft,
-        updatedAt: new Date(),
-      },
-    });
+    if (!dryRun) {
+      await prisma.category.update({
+        where: { id: category.id },
+        data: {
+          linePageBodyRichJson: draft,
+          updatedAt: new Date(),
+        },
+      });
+    }
 
-    console.log(`  updated ${category.slug} (${category.title})`);
+    console.log(`  ${dryRun ? 'would update' : 'updated'} ${category.slug} (${category.title})`);
     updated += 1;
   }
 

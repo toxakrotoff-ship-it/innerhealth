@@ -131,6 +131,7 @@ function toPhotosJson(entries: PhotoEntry[]): Array<Record<string, unknown>> {
 
 const putProductSchema = z.object({
   id: z.string().min(1, 'Product ID is required'),
+  expectedUpdatedAt: z.string().datetime().optional(),
   categoryIds: z.array(z.string()).optional(),
   brand: allowedBrandSchema.optional(),
   parentUid: z.string().trim().min(1).nullable().optional(),
@@ -150,7 +151,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const { id, categoryIds, ...data } = parsed;
+  const { id, expectedUpdatedAt, categoryIds, ...data } = parsed;
 
   try {
 
@@ -159,6 +160,21 @@ export async function PUT(request: Request) {
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
+      );
+    }
+
+    if (
+      expectedUpdatedAt &&
+      existingProduct.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime()
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Товар уже изменён после открытия этой страницы. Обновите страницу и перенесите свои правки в актуальную версию.',
+          code: 'PRODUCT_EDIT_CONFLICT',
+          updatedAt: existingProduct.updatedAt.toISOString(),
+        },
+        { status: 409 }
       );
     }
 

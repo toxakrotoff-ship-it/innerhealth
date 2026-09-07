@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import { PrismaClient, Prisma } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
+import { getSeedExecutionMode } from '../src/lib/seed-safety'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 dotenv.config({ path: path.resolve(process.cwd(), '.env') })
@@ -19,7 +20,8 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
-const dryRun = process.argv.includes('--dry-run')
+const executionMode = getSeedExecutionMode()
+const dryRun = executionMode === 'dry-run'
 
 type InnerCategorySeed = {
   title: string
@@ -238,7 +240,11 @@ const INNER_CATEGORY_CONTENT: Record<string, InnerCategorySeed> = {
 }
 
 async function seedInnerCategoryContent() {
-  console.log(dryRun ? 'Dry run: проверка контента категорий Inner' : 'Обновление контента категорий Inner')
+  console.log(
+    dryRun
+      ? 'Dry run: изменения не применяются. Для записи нужен явный флаг --apply'
+      : 'Обновление контента категорий Inner (--apply подтверждён)'
+  )
 
   for (const [slug, payload] of Object.entries(INNER_CATEGORY_CONTENT)) {
     const category = await prisma.category.findUnique({

@@ -38,7 +38,8 @@ nextjs-project/
 ## Запуск
 
 1. Миграции: `npx prisma migrate dev --name add_categories`
-2. Seed категорий: `npm run seed:categories`
+2. Seed категорий: сначала `npm run seed:categories` для dry-run, затем
+   `npm run seed:categories -- --apply` для явного применения.
 3. Приложение: `npm run dev`
 
 ## Маршруты

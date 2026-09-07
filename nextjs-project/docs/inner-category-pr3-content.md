@@ -38,7 +38,7 @@
 Скрипт наполнения:
 
 ```bash
-npm run seed:inner-category-content
+npm run seed:inner-category-content -- --apply
 ```
 
 Проверочный прогон без записи:

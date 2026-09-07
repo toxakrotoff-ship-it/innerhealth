@@ -9,6 +9,7 @@ import { buildInnerProductTabsForEditor } from '@/lib/product-tabs';
 
 interface ProductResponse {
   id: string;
+  updatedAt: string;
   brand: string | null;
   parentUid: string | null;
   title: string;
@@ -131,6 +132,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
     createEmptyProductEditorValues(activeBrand)
   );
   const [loading, setLoading] = useState(true);
+  const [loadedUpdatedAt, setLoadedUpdatedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flavorSiblings, setFlavorSiblings] = useState<
     NonNullable<ProductResponse['flavorSiblings']>
@@ -170,6 +172,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
 
         if (cancelled) return;
         setFormValues(mapProductToFormValues(data, activeBrand));
+        setLoadedUpdatedAt(data.updatedAt);
         setFlavorSiblings(data.flavorSiblings ?? []);
       } catch (fetchError) {
         if (cancelled) return;
@@ -196,6 +199,7 @@ export function EditProductForm({ productId }: EditProductFormProps) {
       body: JSON.stringify({
         ...payload,
         id: productId,
+        ...(loadedUpdatedAt ? { expectedUpdatedAt: loadedUpdatedAt } : {}),
       }),
     });
 
