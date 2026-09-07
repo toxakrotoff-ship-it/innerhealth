@@ -71,6 +71,15 @@ export function GroupedProductCard({
             isSprintTheme ? 'bg-slate-800 max-sm:bg-slate-900' : 'bg-highlight-blue max-sm:bg-white'
           )}
         >
+          {showDetailsButton ? (
+            <Link
+              href={detailHref}
+              aria-hidden
+              tabIndex={-1}
+              data-product-photo-link
+              className="absolute inset-0 z-[15]"
+            />
+          ) : null}
           <ProductDiscountBadge
             price={activeVariant.price}
             priceOld={activeVariant.priceOld}

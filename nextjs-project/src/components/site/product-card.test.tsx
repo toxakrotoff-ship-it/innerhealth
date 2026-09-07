@@ -91,12 +91,18 @@ describe('ProductCard', () => {
     )
 
     const links = container.querySelectorAll('a[href="/product/magnesium-b6"]')
-    expect(links).toHaveLength(2)
+    expect(links).toHaveLength(3)
 
     const detailsLink = screen.getByText('Подробнее').closest('a')
     expect(detailsLink).toHaveAttribute('href', '/product/magnesium-b6')
 
-    const stretchedLink = Array.from(links).find((link) => link !== detailsLink)
+    const photoLink = container.querySelector('[data-product-photo-link]')
+    expect(photoLink).toHaveAttribute('href', '/product/magnesium-b6')
+    expect(photoLink?.className).toContain('z-[15]')
+
+    const stretchedLink = Array.from(links).find(
+      (link) => link !== detailsLink && link !== photoLink
+    )
     expect(stretchedLink).toHaveAttribute('aria-hidden')
     expect(stretchedLink).toHaveAttribute('tabIndex', '-1')
     expect(stretchedLink?.className).toContain('absolute')
