@@ -258,7 +258,9 @@ function getFieldFallbackSections(product: ProductTabFields): Map<ProductSystemS
 }
 
 export function parseProductTabsJson(input: unknown): ProductTabEditorItem[] | null {
-  if (!Array.isArray(input) || input.length === 0) return null
+  // An array, including an empty one, means the product has already been
+  // managed in the new editor. Do not fall back to stale legacy columns.
+  if (!Array.isArray(input)) return null
 
   const parsed: ProductTabEditorItem[] = []
   for (const item of input) {
@@ -276,7 +278,7 @@ export function parseProductTabsJson(input: unknown): ProductTabEditorItem[] | n
     parsed.push({ id, title, content, editorType, key, isVisible })
   }
 
-  return parsed.length > 0 ? parsed : null
+  return parsed
 }
 
 export function productTabsFromLegacyFields(product: ProductTabFields): ProductTabEditorItem[] {
@@ -336,7 +338,9 @@ export function buildProductTabs(product: ProductTabFields): ProductTabItem[] {
 
 export function normalizeInnerProductContent(product: ProductTabFields): NormalizedProductContent {
   const explicitTabs = productTabsForEditor(product)
-  const fallbackSections = getFieldFallbackSections(product)
+  const fallbackSections = Array.isArray(product.tabs)
+    ? new Map<ProductSystemSectionKey, string>()
+    : getFieldFallbackSections(product)
   const managedTabs = explicitTabs.some((tab) => typeof tab.key === 'string' || tab.isVisible === false)
   const seenKeys = new Set<string>()
   const sections: ProductContentSection[] = []
@@ -411,7 +415,9 @@ export function normalizeInnerProductContent(product: ProductTabFields): Normali
 
 export function buildInnerProductTabsForEditor(product: ProductTabFields): ProductTabEditorItem[] {
   const explicitTabs = productTabsForEditor(product)
-  const fallbackSections = getFieldFallbackSections(product)
+  const fallbackSections = Array.isArray(product.tabs)
+    ? new Map<ProductSystemSectionKey, string>()
+    : getFieldFallbackSections(product)
   const explicitSystemTabs = new Map<ProductSystemSectionKey, ProductTabEditorItem>()
   const orderedSystemKeys: ProductSystemSectionKey[] = []
   const customTabs: ProductTabEditorItem[] = []

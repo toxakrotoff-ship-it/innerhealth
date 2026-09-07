@@ -120,7 +120,7 @@ describe('product-tabs', () => {
     ])
   })
 
-  it('normalizes inner content with system block visibility and legacy fallbacks', () => {
+  it('does not mix legacy fallbacks into managed tabs JSON', () => {
     const normalized = normalizeInnerProductContent({
       description: '<p>Короткое описание</p>',
       text: '<p>Подробное описание</p>',
@@ -154,11 +154,7 @@ describe('product-tabs', () => {
     })
 
     expect(normalized.shortDescription).toBe('<p>Короткое описание</p>')
-    expect(normalized.sections.map((section) => section.key)).toEqual([
-      'usage',
-      'description',
-      'composition',
-    ])
+    expect(normalized.sections.map((section) => section.key)).toEqual(['usage'])
   })
 
   it('does not re-add hidden system sections from fallback fields', () => {
@@ -211,6 +207,56 @@ describe('product-tabs', () => {
     expect(tabs[1]?.content).toBe('')
     expect(tabs[1]?.isVisible).toBe(false)
     expect(tabs.every((tab) => typeof tab.isVisible === 'boolean')).toBe(true)
+  })
+
+  it('treats an empty tabs array as an explicit removal and never restores legacy tabs', () => {
+    const product = {
+      description: null,
+      text: '<p>Старое описание</p>',
+      tab1: '<p>Старые преимущества</p>',
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: 'Преимущества',
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      tabs: [],
+    }
+
+    expect(productTabsForEditor(product)).toEqual([])
+    expect(buildProductTabs(product)).toEqual([])
+    expect(normalizeInnerProductContent(product).sections).toEqual([])
+
+    const editorTabs = buildInnerProductTabsForEditor(product)
+    expect(editorTabs.every((tab) => tab.content === '' && tab.isVisible === false)).toBe(true)
+  })
+
+  it('keeps missing managed sections empty instead of filling them from legacy fields', () => {
+    const tabs = buildInnerProductTabsForEditor({
+      description: null,
+      text: '<p>Старое описание</p>',
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      tabs: [
+        {
+          id: 'usage-1',
+          key: 'usage',
+          title: 'Способ применения',
+          content: '<p>Актуальный текст</p>',
+          editorType: 'richtext',
+        },
+      ],
+    })
+
+    const description = tabs.find((tab) => tab.key === 'description')
+    expect(description).toMatchObject({ content: '', isVisible: false })
   })
 
   it('preserves explicit system tab order in inner editor', () => {
