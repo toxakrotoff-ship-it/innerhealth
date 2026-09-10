@@ -1,6 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
 import { notifyMaxForm } from '@/lib/max-notify'
+import { sendB2bLeadNotification } from '@/lib/email'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
 import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
@@ -10,6 +11,7 @@ import {
   isPlausiblePhone,
 } from '@/lib/security/public-form-abuse'
 import * as b2bService from '@/services/b2b.service'
+import * as userService from '@/services/user.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const B2B_RATE_LIMIT = 3
@@ -102,6 +104,10 @@ export async function POST(request: Request) {
     } as const
     notifyTelegramForm(formNotifyPayload)
     after(() => notifyMaxForm(formNotifyPayload))
+    after(async () => {
+      const adminEmails = await userService.getAdminNotificationEmails(brandId)
+      await sendB2bLeadNotification(adminEmails, { name, email, phone, brandId })
+    })
 
     return NextResponse.json({ success: true })
   } catch (e) {
