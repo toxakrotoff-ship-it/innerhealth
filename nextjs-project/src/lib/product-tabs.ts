@@ -270,10 +270,15 @@ export function parseProductTabsJson(input: unknown): ProductTabEditorItem[] | n
     const title = typeof record.title === 'string' ? record.title : ''
     const editorType = isEditorType(record.editorType) ? record.editorType : 'richtext'
     const id = typeof record.id === 'string' && record.id.trim() ? record.id : createTabId()
-    const key =
-      typeof record.key === 'string' && record.key.trim()
+    // A stored `key` (including an explicit null) means this tab was already
+    // saved by the new editor, which always records intent — trust it as-is
+    // and never re-derive it from the title. Only infer when the `key` field
+    // is missing entirely, i.e. truly legacy data predating this field.
+    const key = 'key' in record
+      ? typeof record.key === 'string' && record.key.trim()
         ? record.key.trim()
-        : inferSystemSectionKey(title, editorType)
+        : null
+      : inferSystemSectionKey(title, editorType)
     const isVisible = typeof record.isVisible === 'boolean' ? record.isVisible : true
     parsed.push({ id, title, content, editorType, key, isVisible })
   }
@@ -361,9 +366,12 @@ export function normalizeInnerProductContent(product: ProductTabFields): Normali
   }
 
   explicitTabs.forEach((tab, index) => {
-    const resolvedSystemKey = isSystemSectionKey(tab.key)
-      ? tab.key
-      : inferSystemSectionKey(tab.title, tab.editorType)
+    // The key was already resolved once in parseProductTabsJson (falling back
+    // to title inference only for true legacy data). Trust it here instead of
+    // re-inferring from the title, otherwise a custom tab whose title happens
+    // to match a system section name collides with — and silently loses to —
+    // the real system tab of that name.
+    const resolvedSystemKey = isSystemSectionKey(tab.key) ? tab.key : null
     const tabKey = trimToNull(resolvedSystemKey) ?? trimToNull(tab.key) ?? `custom:${tab.id}`
     const isSystem = resolvedSystemKey !== null
     if (tab.isVisible === false) {
@@ -423,9 +431,10 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
   const customTabs: ProductTabEditorItem[] = []
 
   explicitTabs.forEach((tab) => {
-    const key = isSystemSectionKey(tab.key)
-      ? tab.key
-      : inferSystemSectionKey(tab.title, tab.editorType)
+    // Trust the resolved key as-is (see parseProductTabsJson) instead of
+    // re-inferring from the title, so a custom tab titled e.g. "Характеристики"
+    // isn't mistaken for the system "characteristics" tab.
+    const key = isSystemSectionKey(tab.key) ? tab.key : null
 
     if (key && !explicitSystemTabs.has(key)) {
       explicitSystemTabs.set(key, {
@@ -492,7 +501,7 @@ export function serializeProductTabsForStorage(
       title: tab.title.trim(),
       content: tab.content,
       editorType: tab.editorType,
-      ...(typeof tab.key === 'string' && tab.key.trim() ? { key: tab.key.trim() } : {}),
+      key: typeof tab.key === 'string' && tab.key.trim() ? tab.key.trim() : null,
       ...(tab.isVisible === false ? { isVisible: false } : {}),
     }))
     .filter((tab) => tab.title.length > 0 || tab.content.trim().length > 0)

@@ -259,6 +259,75 @@ describe('product-tabs', () => {
     expect(description).toMatchObject({ content: '', isVisible: false })
   })
 
+  it('trusts an explicit null key from storage instead of re-inferring it from the title', () => {
+    const parsed = parseProductTabsJson([
+      { id: 'custom-1', title: 'Характеристики', content: 'text', editorType: 'richtext', key: null },
+    ])
+
+    expect(parsed).toEqual([
+      {
+        id: 'custom-1',
+        title: 'Характеристики',
+        content: 'text',
+        editorType: 'richtext',
+        key: null,
+        isVisible: true,
+      },
+    ])
+  })
+
+  it('infers a system key only when the key field is missing entirely (true legacy data)', () => {
+    const parsed = parseProductTabsJson([
+      { id: 'legacy-1', title: 'Характеристики', content: 'text', editorType: 'richtext' },
+    ])
+
+    expect(parsed?.[0]?.key).toBe('characteristics')
+  })
+
+  it('always stores an explicit key (including null) so intent survives a round trip', () => {
+    const stored = serializeProductTabsForStorage([
+      { id: 'custom-1', title: 'Характеристики', content: '<p>Текст</p>', editorType: 'richtext', key: null },
+    ])
+
+    expect(stored[0]).toMatchObject({ key: null })
+  })
+
+  it('renders a renamed custom tab alongside a same-titled system tab instead of dropping it', () => {
+    const normalized = normalizeInnerProductContent({
+      description: null,
+      text: null,
+      tab1: null,
+      tab2: null,
+      tab3: null,
+      tab4: null,
+      tab1Title: null,
+      tab2Title: null,
+      tab3Title: null,
+      tab4Title: null,
+      tabs: [
+        {
+          id: 'characteristics-1',
+          key: 'characteristics',
+          title: 'Характеристики',
+          content: '<table></table>',
+          editorType: 'characteristics',
+          isVisible: true,
+        },
+        {
+          id: 'custom-1',
+          key: null,
+          title: 'Характеристики',
+          content: '<p>Переименованный блок преимуществ</p>',
+          editorType: 'richtext',
+          isVisible: true,
+        },
+      ],
+    })
+
+    expect(normalized.sections).toHaveLength(2)
+    expect(normalized.sections.map((section) => section.kind)).toEqual(['system', 'custom'])
+  })
+
   it('preserves explicit system tab order in inner editor', () => {
     const tabs = buildInnerProductTabsForEditor({
       description: null,
