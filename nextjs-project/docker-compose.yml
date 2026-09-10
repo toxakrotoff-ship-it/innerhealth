@@ -50,6 +50,26 @@ services:
       - ops
     logging: *default-logging
 
+  # One-off ops scripts (backfills/migrations under scripts/*.ts). Never starts
+  # automatically (profiles: ops). Usage:
+  #   docker compose run --rm script-runner scripts/<name>.ts --dry-run
+  #   docker compose run --rm script-runner scripts/<name>.ts --apply
+  script-runner:
+    image: nextjs-project-script-runner:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: script-runner
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-innerhealth}:${POSTGRES_PASSWORD:-innerhealth_secret}@db:5432/${POSTGRES_DB:-innerhealth}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - ops
+    logging: *default-logging
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped

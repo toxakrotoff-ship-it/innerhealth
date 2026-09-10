@@ -28,6 +28,17 @@ ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 RUN npm run build
 RUN npm run build:bot
 
+# --- One-off ops scripts (backfills/migrations under scripts/*.ts) ---
+# Reuses the builder stage's full source + devDependencies (ts-node included),
+# so this stays in sync with the app's own code instead of duplicating logic.
+# Usage: docker compose run --rm script-runner scripts/<name>.ts --dry-run
+FROM builder AS script-runner
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+ENTRYPOINT ["npx", "ts-node"]
+
 FROM build-base AS prod-deps
 
 WORKDIR /app
