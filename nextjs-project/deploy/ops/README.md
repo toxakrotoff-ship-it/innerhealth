@@ -45,6 +45,7 @@ SKIP_VPS_SAFEGUARDS=1 ./deploy/deploy-quick.sh
 */5 * * * * SITE_URL="…" INFRA_ALERT_TOKEN="…" /opt/innerhealth/ops/vps-monitor.sh # innerhealth-ops
 * * * * * SITE_URL="…" YOOKASSA_POLL_TOKEN="…" /opt/innerhealth/ops/yookassa-poll.sh # innerhealth-ops
 */5 * * * * SITE_URL="…" CHECKOUT_ABANDON_SCAN_TOKEN="…" /opt/innerhealth/ops/checkout-abandon-scan.sh # innerhealth-ops
+30 2 * * * SITE_URL="…" CDEK_CACHE_SYNC_TOKEN="…" /opt/innerhealth/ops/cdek-cache-sync.sh # innerhealth-ops
 ```
 
 `checkout-abandon-scan.sh` помечает зависшие checkout-сессии (незавершённые оформления,
@@ -52,6 +53,14 @@ SKIP_VPS_SAFEGUARDS=1 ./deploy/deploy-quick.sh
 дольше таймаута (`CHECKOUT_ABANDON_TIMEOUT_MINUTES` в `.env` приложения, по умолчанию
 60 минут). В отличие от поллера ЮKassa не критичен по задержке — достаточно раз в
 5–10 минут.
+
+`cdek-cache-sync.sh` раз в сутки ночью (02:30 по времени хоста) прогревает Postgres-кэш
+СДЭК: полный список ПВЗ по всем регионам РФ + тарифы до популярных/реально используемых
+городов назначения (история заказов + список крупных городов). Чекаут читает доставку
+только из этого кэша (см. `src/app/api/cdek-widget/service/route.ts`), с фолбэком на
+живой запрос к api.cdek.ru, если региона/города ещё нет в кэше — это убирает синхронную
+зависимость виджета от ответа СДЭК, который иногда зависает на минуты. Долгий прогон —
+`--max-time 1800` в самом скрипте.
 
 Поллер ЮKassa дёргается каждую минуту, а throttle по возрасту заказа делается
 в приложении (`src/lib/yookassa-sync-service.ts`):

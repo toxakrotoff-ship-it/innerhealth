@@ -13,6 +13,14 @@ vi.mock('@/lib/cdek', () => ({
   resolveCdekSenderSettings: vi.fn(),
 }))
 
+// Ночной Postgres-кэш ПВЗ/тарифов (см. cdek-cache-sync.ts) — в этих тестах всегда
+// "пусто" (cache miss), чтобы проверять существующее поведение живого прокси.
+vi.mock('@/lib/cdek-db-cache-read', () => ({
+  getRegionOfficesFromDb: vi.fn().mockResolvedValue(null),
+  getTariffFromDb: vi.fn().mockResolvedValue(null),
+  tariffCacheHitToResult: vi.fn(),
+}))
+
 const settingsService = await import('@/services/settings.service')
 const cdek = await import('@/lib/cdek')
 

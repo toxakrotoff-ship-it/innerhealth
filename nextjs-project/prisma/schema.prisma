@@ -899,6 +899,63 @@ model SiteSetting {
   value String
 }
 
+/// Ночной прогреваемый кэш ПВЗ СДЭК по региону (`is_handout=true&region_code=X`).
+/// Источник правды для выдачи офисов на чекауте — избавляет от синхронной
+/// зависимости от ответа api.cdek.ru (которое иногда зависает на минуты).
+/// Обновляется джобой /api/cron/cdek-cache-sync, читается в cdek-widget/service.
+model CdekOfficeCache {
+  id          String   @id @default(cuid())
+  regionCode  Int      @unique
+  /// Сырой JSON-массив офисов СДЭК (формат /v2/deliverypoints) для региона целиком.
+  payload     Json
+  totalCount  Int
+  /// true, если последняя ночная синхронизация этого региона завершилась ошибкой
+  /// (тогда payload/totalCount — устаревшие данные с предыдущего успешного прогона).
+  isStale     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// Ночной прогреваемый кэш тарифов СДЭК: от статичной точки отправки до города
+/// назначения, по весовой корзине (см. CDEK_TARIFF_WEIGHT_BUCKETS_G в cdek-cache-sync.ts).
+model CdekTariffCache {
+  id             String   @id @default(cuid())
+  toCityCode     Int
+  tariffCode     Int
+  /// Верхняя граница весового бакета в граммах (напр. 1000 = "до 1 кг").
+  weightBucketG  Int
+  deliverySum    Float
+  periodMin      Int
+  periodMax      Int
+  isStale        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([toCityCode, tariffCode, weightBucketG])
+  @@index([updatedAt])
+}
+
+/// Лог запусков ночной синхронизации кэша СДЭК (наблюдаемость: что синкнулось,
+/// что упало, сколько заняло). Одна запись = один вызов /api/cron/cdek-cache-sync.
+model CdekCacheSyncRun {
+  id                  String    @id @default(cuid())
+  startedAt           DateTime  @default(now())
+  finishedAt          DateTime?
+  ok                  Boolean   @default(false)
+  regionsTotal        Int       @default(0)
+  regionsOk           Int       @default(0)
+  regionsFailed       Int       @default(0)
+  tariffCitiesTotal   Int       @default(0)
+  tariffCitiesOk      Int       @default(0)
+  tariffCitiesFailed  Int       @default(0)
+  /// Компактный список ошибок (регион/город + сообщение), максимум ~50 записей.
+  errors              Json?
+
+  @@index([startedAt])
+}
+
 /// Отзывы с формы на странице /otzyvy: имя автора, ссылка на профиль в соцсети, текст, опциональное фото. На сайте показываются только со статусом APPROVED.
 model Review {
   id         String       @id @default(cuid())

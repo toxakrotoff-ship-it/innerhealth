@@ -28,6 +28,12 @@ import {
   serializeOfficesResult,
   writeSharedOfficesCache,
 } from '@/lib/cdek-offices-cache'
+import {
+  getRegionOfficesFromDb,
+  getTariffFromDb,
+  tariffCacheHitToResult,
+  type RegionOfficesCacheHit,
+} from '@/lib/cdek-db-cache-read'
 import * as settingsService from '@/services/settings.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
@@ -291,6 +297,37 @@ async function proxyToCdek(params: {
   return { status: res.status, text, responseHeaders: res.headers }
 }
 
+function buildRegionOfficesResponseFromCache(params: {
+  hit: RegionOfficesCacheHit
+  normalized: Record<string, unknown>
+  isProbe: boolean
+}): { status: number; text: string; responseHeaders: Record<string, string> } {
+  const text = JSON.stringify(params.hit.payload)
+
+  if (params.isProbe) {
+    return buildProbeOfficesResponse(
+      { status: 200, text, responseHeaders: new Headers() },
+      params.hit.totalCount
+    )
+  }
+
+  const rawPage = params.normalized.page
+  const rawSize = params.normalized.size
+  const page = typeof rawPage === 'number' ? rawPage : Number(rawPage ?? 0)
+  const size = typeof rawSize === 'number' ? rawSize : Number(rawSize ?? OFFICES_PAGE_SIZE)
+  const safeSize = Number.isFinite(size) && size > 0 ? size : OFFICES_PAGE_SIZE
+  const offset = Number.isFinite(page) && page > 0 ? page * safeSize : 0
+
+  return {
+    status: 200,
+    text: sliceOfficesPayload(text, offset, safeSize),
+    responseHeaders: mergeOfficesProxyHeaders({
+      upstreamHeaders: new Headers(),
+      totalElements: offset === 0 ? params.hit.totalCount : undefined,
+    }),
+  }
+}
+
 async function proxyWidgetOffices(params: {
   baseUrl: string
   token: string
@@ -303,6 +340,28 @@ async function proxyWidgetOffices(params: {
     defaultCityCode: params.defaultCityCode,
     officesScope,
   })
+
+  if (officesScope === 'region') {
+    const regionCode = typeof normalized.region_code === 'number' ? normalized.region_code : null
+    if (regionCode != null) {
+      const dbHit = await getRegionOfficesFromDb(regionCode)
+      if (dbHit) {
+        console.info('[cdek/widget][offices][db_cache_hit]', {
+          brandId: params.brandId,
+          regionCode,
+          totalElements: dbHit.totalCount,
+          isStale: dbHit.isStale,
+          updatedAt: dbHit.updatedAt,
+        })
+        return buildRegionOfficesResponseFromCache({
+          hit: dbHit,
+          normalized,
+          isProbe: isWidgetOfficesProbeRequest(normalized),
+        })
+      }
+      console.info('[cdek/widget][offices][db_cache_miss]', { brandId: params.brandId, regionCode })
+    }
+  }
 
   if (normalized._injected_city_code) {
     console.warn('[cdek/widget][offices][inject_city_code]', {
@@ -452,6 +511,17 @@ async function proxyWidgetOffices(params: {
   }
 }
 
+function extractCityCodeForTariffCache(toLocation: unknown): number | null {
+  if (!toLocation || typeof toLocation !== 'object') return null
+  const code = (toLocation as Record<string, unknown>).code
+  if (typeof code === 'number' && Number.isFinite(code) && code > 0) return code
+  if (typeof code === 'string' && code.trim().length > 0) {
+    const parsed = Number.parseInt(code, 10)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+  return null
+}
+
 async function calculateForWidgetTariffs(params: {
   brandId: string | null
   data: Record<string, unknown>
@@ -463,10 +533,42 @@ async function calculateForWidgetTariffs(params: {
     return json({ message: 'Widget calculate payload is invalid' }, { status: 400 })
   }
 
+  const mode = detectWidgetDeliveryMode(parsed.data.to_location) ?? 'door'
+  const tariffCodeForCache = mode === 'office' ? 136 : 137
+  const toCityCodeForCache = extractCityCodeForTariffCache(parsed.data.to_location)
+  const actualWeightG = parsed.data.packages.reduce((sum, pkg) => sum + pkg.weight, 0)
+
+  if (toCityCodeForCache != null) {
+    const cacheHit = await getTariffFromDb({
+      toCityCode: toCityCodeForCache,
+      tariffCode: tariffCodeForCache,
+      actualWeightG,
+    })
+    if (cacheHit) {
+      console.info('[cdek/widget][calculate][db_cache_hit]', {
+        brandId: params.brandId,
+        toCityCode: toCityCodeForCache,
+        tariffCode: tariffCodeForCache,
+        actualWeightG,
+        isStale: cacheHit.isStale,
+      })
+      return json(
+        { tariff_codes: [tariffCacheHitToResult(cacheHit, tariffCodeForCache)] },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
+    console.info('[cdek/widget][calculate][db_cache_miss]', {
+      brandId: params.brandId,
+      toCityCode: toCityCodeForCache,
+      tariffCode: tariffCodeForCache,
+      actualWeightG,
+    })
+  }
+
   const attempts = await buildWidgetTariffAttempts({
     request: parsed.data,
     senderSettings: params.senderSettings,
-    mode: detectWidgetDeliveryMode(parsed.data.to_location) ?? 'door',
+    mode,
   })
 
   try {
