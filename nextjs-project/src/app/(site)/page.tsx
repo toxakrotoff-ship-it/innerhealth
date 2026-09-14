@@ -1380,10 +1380,9 @@ export default async function HomePage() {
         />
       ) : null}
 
-      {orderedSections}
-
-      {/* Баннер — бегущая строка Sprint Power (рядом с остальными cross-promo блоками, подальше от зоны первого скролла) */}
+      {/* Баннер — бегущая строка Sprint Power */}
       <SprintPowerBanner />
+      {orderedSections}
 
       {/* Блок Sprint Power */}
       <SprintPowerBlock />
