@@ -1,4 +1,6 @@
 import 'client-only'
+import { resolveClientSiteBrandFromWindow } from '@/lib/brand/client-site-brand'
+import { METRIKA_COUNTER_ID_BY_BRAND } from '@/lib/analytics/metrika-config'
 
 declare global {
   interface Window {
@@ -6,13 +8,14 @@ declare global {
   }
 }
 
-const INNER_METRIKA_COUNTER_ID = 92621260 as const
-
 export function reachMetrikaGoal(goal: string, params?: Record<string, unknown>): void {
   if (typeof window === 'undefined') return
   if (typeof window.ym !== 'function') return
+  const brand = resolveClientSiteBrandFromWindow()
+  const counterId = METRIKA_COUNTER_ID_BY_BRAND[brand]
+  if (!counterId) return
   try {
-    window.ym(INNER_METRIKA_COUNTER_ID, 'reachGoal', goal, params)
+    window.ym(counterId, 'reachGoal', goal, params)
   } catch {
     // ignore
   }

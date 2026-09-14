@@ -8,6 +8,7 @@ import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { headers } from 'next/headers'
 import { unstable_noStore as noStore } from 'next/cache'
 import { resolveBrandByHost } from '@/lib/brand/brand'
+import { METRIKA_COUNTER_ID_BY_BRAND } from '@/lib/analytics/metrika-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,8 +133,16 @@ export default async function RootLayout({
   const headerStore = await headers()
   const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
   const hostBrandId = resolveBrandByHost(host)
-  const shouldRenderMetrika = hostBrandId === 'inner'
-  const metrikaBootstrapScriptInner = `
+  const metrikaCounterId =
+    hostBrandId === 'inner' || hostBrandId === 'sprint-power'
+      ? METRIKA_COUNTER_ID_BY_BRAND[hostBrandId]
+      : null
+  const shouldRenderMetrika = metrikaCounterId !== null
+  const metrikaInitOptions =
+    hostBrandId === 'sprint-power'
+      ? 'ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true'
+      : 'webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true'
+  const metrikaBootstrapScript = `
 (function(m,e,t,r,i,k,a){
     m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
     m[i].l=1*new Date();
@@ -141,12 +150,12 @@ export default async function RootLayout({
     k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
 })(window, document,'script','https://mc.yandex.ru/metrika/tag.js', 'ym');
 
-ym(92621260, 'init', {webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+ym(${metrikaCounterId}, 'init', {${metrikaInitOptions}});
 `.trim()
 
-  const metrikaNoscriptInner = `
+  const metrikaNoscript = `
 <div>
-  <img src="https://mc.yandex.ru/watch/92621260" style="position:absolute; left:-9999px;" alt="" />
+  <img src="https://mc.yandex.ru/watch/${metrikaCounterId}" style="position:absolute; left:-9999px;" alt="" />
 </div>
 `.trim()
 
@@ -174,15 +183,15 @@ ym(92621260, 'init', {webvisor:true, clickmap:true, ecommerce:"dataLayer", refer
         />
         {shouldRenderMetrika ? (
           <Script
-            id="yandex-metrika-inner"
+            id={`yandex-metrika-${hostBrandId}`}
             strategy="beforeInteractive"
-            dangerouslySetInnerHTML={{ __html: metrikaBootstrapScriptInner }}
+            dangerouslySetInnerHTML={{ __html: metrikaBootstrapScript }}
           />
         ) : null}
       </head>
       <body className={bodySurfaceClass}>
         {shouldRenderMetrika ? (
-          <noscript suppressHydrationWarning dangerouslySetInnerHTML={{ __html: metrikaNoscriptInner }} />
+          <noscript suppressHydrationWarning dangerouslySetInnerHTML={{ __html: metrikaNoscript }} />
         ) : null}
         <IconoirProvider
           iconProps={{

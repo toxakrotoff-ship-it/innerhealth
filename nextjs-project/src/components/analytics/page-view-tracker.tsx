@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { detectAnalyticsDeviceType } from '@/lib/analytics/device-type'
 import { resolveClientSiteBrandFromWindow } from '@/lib/brand/client-site-brand'
+import { METRIKA_COUNTER_ID_BY_BRAND } from '@/lib/analytics/metrika-config'
 
 declare global {
   interface Window {
@@ -79,9 +80,10 @@ export function PageViewTracker() {
       innerWidth: width,
     })
 
-    if (activeBrand === 'inner' && typeof window.ym === 'function') {
+    const metrikaCounterId = METRIKA_COUNTER_ID_BY_BRAND[activeBrand]
+    if (metrikaCounterId && typeof window.ym === 'function') {
       const fullUrl = `${window.location.origin}${fullPath}`
-      window.ym(92621260, 'hit', fullUrl, { title: document.title, referer: document.referrer })
+      window.ym(metrikaCounterId, 'hit', fullUrl, { title: document.title, referer: document.referrer })
     }
 
     logAnalyticsEvent({
