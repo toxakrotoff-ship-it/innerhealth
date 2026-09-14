@@ -29,4 +29,14 @@ if [ "$RUN_MIGRATE" = "1" ]; then
   echo "==> Migrations applied successfully."
 fi
 
+# Раздача /_next/static/* напрямую через nginx (в обход Node): синхронизируем
+# билд-статику в расшаренный volume при каждом старте, чтобы nginx всегда
+# отдавал файлы текущего образа. Каталог примонтирован только если volume
+# подключён в docker-compose — на локальной разработке шаг просто пропускается.
+if [ -d /app/shared-next-static ]; then
+  echo "==> Syncing .next/static to shared volume for nginx..."
+  mkdir -p /app/shared-next-static
+  cp -a ./.next/static/. /app/shared-next-static/
+fi
+
 exec "$@"

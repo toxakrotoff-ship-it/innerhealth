@@ -23,6 +23,9 @@ services:
     # Загрузки с админки: путь на диске должен совпадать с getProjectRoot() + public/uploads (= /app/public/uploads при standalone)
     volumes:
       - ./public/uploads:/app/public/uploads
+      # Расшаренный volume: entrypoint копирует сюда .next/static при каждом старте,
+      # nginx раздаёт из него /_next/static/* напрямую с диска, в обход Node.
+      - next_static:/app/shared-next-static
     depends_on:
       db:
         condition: service_healthy
@@ -206,6 +209,8 @@ services:
       - certbot_www:/var/www/certbot:ro
       # Раздача /uploads/ с диска (nginx), без прокси через Node; тот же каталог, что у app volume
       - ./public/uploads:/var/www/uploads:ro
+      # Раздача /_next/static/* с диска (nginx), без прокси через Node; см. docker-entrypoint.sh
+      - next_static:/var/www/next-static:ro
     depends_on:
       - app
     logging: *default-logging
@@ -218,3 +223,4 @@ services:
 volumes:
   postgres_data:
   certbot_www:
+  next_static:
