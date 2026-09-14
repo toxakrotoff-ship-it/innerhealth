@@ -35,8 +35,9 @@ fi
 # подключён в docker-compose — на локальной разработке шаг просто пропускается.
 if [ -d /app/shared-next-static ]; then
   echo "==> Syncing .next/static to shared volume for nginx..."
-  mkdir -p /app/shared-next-static
-  cp -a ./.next/static/. /app/shared-next-static/
+  if ! cp -a ./.next/static/. /app/shared-next-static/; then
+    echo "WARN: failed to sync .next/static to shared volume (nginx will serve stale/missing static files until this is fixed)."
+  fi
 fi
 
 exec "$@"

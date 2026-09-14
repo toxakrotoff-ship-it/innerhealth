@@ -5,6 +5,15 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
+  # Именованный volume next_static создаётся Docker от root; app и nginx-static
+  # читают/пишут его от непривилегированного uid 1001 (см. Dockerfile: `USER nextjs`).
+  # Выставляем права один раз перед стартом app.
+  next-static-init:
+    image: busybox
+    command: ["sh", "-c", "chown -R 1001:1001 /data"]
+    volumes:
+      - next_static:/data
+
   app:
     image: nextjs-project-app:latest
     build:
@@ -29,6 +38,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      next-static-init:
+        condition: service_completed_successfully
     # No ports to host — only nginx talks to app
     logging: *default-logging
     deploy:
