@@ -61,7 +61,7 @@ export default async function AboutPage() {
           weight="bold"
           className={`mb-10 mt-0 font-display ${isSprintTheme ? 'text-slate-100' : ''}`}
         >
-          {pageTitle?.text?.trim() || 'О нас'}
+          {pageTitle?.text != null ? pageTitle.text.trim() : 'О нас'}
         </ResponsiveText>
 
         {/* Блок 1: основной текст + изображение */}
@@ -134,20 +134,21 @@ export default async function AboutPage() {
           }`}
         >
           <p className={`mb-4 font-medium ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
-            {ctaText?.text?.trim() ||
-              (isSprintTheme
+            {ctaText?.text != null
+              ? ctaText.text.trim()
+              : isSprintTheme
                 ? 'Выберите продукты для силы, восстановления и результата'
-                : 'Выберите продукты для красоты и здоровья изнутри')}
+                : 'Выберите продукты для красоты и здоровья изнутри'}
           </p>
           <Link
-            href={ctaHref?.text?.trim() || '/catalog'}
+            href={ctaHref?.text != null ? ctaHref.text.trim() : '/catalog'}
             className={`inline-flex min-h-[44px] items-center justify-center rounded-full px-6 py-2.5 font-medium transition-colors ${
               isSprintTheme
                 ? 'bg-[#7AA2FF] text-[#06101f] hover:bg-[#8fb0ff]'
                 : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
             }`}
           >
-            {ctaLabel?.text?.trim() || 'Перейти в каталог'}
+            {ctaLabel?.text != null ? ctaLabel.text.trim() : 'Перейти в каталог'}
           </Link>
         </section>
       </AdaptiveContainer>

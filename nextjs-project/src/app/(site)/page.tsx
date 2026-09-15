@@ -16,7 +16,7 @@ import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { filterCatalogBlockCategories } from '@/lib/catalog-categories'
 import { getPostPreviewImageAlt, getSprintPowerHomePromoAlt } from '@/lib/image-alt-text'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { CheckCircle, NavArrowRight } from 'iconoir-react'
+import { NavArrowRight } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import {
   getResolvedBlocksForPage,
@@ -162,8 +162,8 @@ function parseAffirmativeContentBlockFlag(raw: string | null | undefined): boole
 }
 
 function getBlockText(blocks: ContentBlockResolved[], key: string, fallback: string): string {
-  const text = getBlockByKey(blocks, key)?.text?.trim()
-  return text && text.length > 0 ? text : fallback
+  const text = getBlockByKey(blocks, key)?.text
+  return text != null ? text.trim() : fallback
 }
 
 function getBlockTextForBrand(
@@ -511,11 +511,6 @@ function SprintPowerHome({
   const sharedHeroContent = resolveInnerHomeHeroContent(blocks)
   const sharedDirectionsContent = resolveInnerHomeDirectionsContent(blocks, data.categories)
   const howToOrder = getHowToOrderContent(blocks)
-  const markers = [
-    getBlockTextForBrand(blocks, 'home', 'markers.item1', 'sprint-power', 'GMP и HACCP стандарты'),
-    getBlockTextForBrand(blocks, 'home', 'markers.item2', 'sprint-power', 'Прозрачный состав'),
-    getBlockTextForBrand(blocks, 'home', 'markers.item3', 'sprint-power', 'Регулярные обзоры'),
-  ]
   const reviewsCtaHref = getBlockTextForBrand(blocks, 'home', 'reviewsCta.href', 'sprint-power', '/otzyvy')
   const heroBrandLabel = getBlockTextForBrand(blocks, 'home', 'hero.badge', 'sprint-power', 'SPRINT POWER')
   const heroTitle = getBlockTextForBrand(
@@ -712,35 +707,6 @@ function SprintPowerHome({
               isSprintTheme
               showBorders={false}
             />
-
-          <div className="grid gap-4 rounded-[clamp(1rem,2.5vw,1.75rem)] bg-linear-to-b from-slate-100/90 via-white to-slate-50/70 p-[clamp(1rem,2.8vw,1.75rem)] md:grid-cols-[1fr_360px] md:rounded-3xl md:p-8">
-            <div className="space-y-3">
-              <h3 className="text-xl font-bold text-slate-900">
-                {getBlockTextForBrand(blocks, 'home', 'reviews.title', 'sprint-power', 'Отзывы спортсменов')}
-              </h3>
-              <ReviewsCarousel reviews={data.reviews} isSprintTheme />
-            </div>
-            <div className="space-y-3">
-              <h3 className="text-xl font-bold text-slate-900">
-                {getBlockTextForBrand(
-                  blocks,
-                  'home',
-                  'markers.title',
-                  'sprint-power',
-                  'Доверительные маркеры'
-                )}
-              </h3>
-              {markers.map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-700"
-                >
-                  <CheckCircle className="h-5 w-5 shrink-0 text-[#7AA2FF]" aria-hidden />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="relative overflow-hidden rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#22304F] bg-[#0C1730] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
             <div

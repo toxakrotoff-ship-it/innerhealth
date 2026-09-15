@@ -35,8 +35,8 @@ export default async function FaqPage() {
     getResolvedBlocksForPage('home', brandId),
   ])
   const getBlockText = (key: string, fallback: string): string => {
-    const text = faqBlocks.find((b) => b.key === key)?.text?.trim()
-    return text && text.length > 0 ? text : fallback
+    const text = faqBlocks.find((b) => b.key === key)?.text
+    return text != null ? text.trim() : fallback
   }
   const faqItems = faqItemsFromDb
 

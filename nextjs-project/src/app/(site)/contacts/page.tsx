@@ -44,8 +44,8 @@ const DEFAULT_WRITE_TITLE = 'Написать или позвонить:'
 export const revalidate = 86400
 
 function getText(block: { text: string | null } | undefined, fallback: string): string {
-  const t = block?.text?.trim()
-  return t && t.length > 0 ? t : fallback
+  const t = block?.text
+  return t != null ? t.trim() : fallback
 }
 
 export default async function ContactsPage() {

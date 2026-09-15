@@ -31,8 +31,8 @@ function getText(
   key: string,
   fallback: string
 ): string {
-  const value = blocks.find((b) => b.key === key)?.text?.trim()
-  return value || fallback
+  const value = blocks.find((b) => b.key === key)?.text
+  return value != null ? value.trim() : fallback
 }
 
 export default async function B2bPage() {
