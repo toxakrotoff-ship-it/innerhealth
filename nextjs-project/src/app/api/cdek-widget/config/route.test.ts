@@ -86,8 +86,8 @@ describe('POST /api/cdek-widget/config', () => {
         },
       ],
       tariffs: {
-        office: [136],
-        door: [137],
+        office: [136, 234],
+        door: [137, 233],
       },
     })
   })

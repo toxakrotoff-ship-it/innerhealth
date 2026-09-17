@@ -137,7 +137,7 @@ describe('normalizeWidgetPayload', () => {
           country_code: 'RU',
         },
         packages: [{ weight: 100, length: 10, width: 20, height: 30 }],
-        tariff_codes: [136],
+        tariff_codes: [136, 234],
       }),
       {
         clientId: 'client-id',
@@ -225,13 +225,88 @@ describe('normalizeWidgetPayload', () => {
           country_code: 'RU',
         },
         packages: [{ weight: 100, length: 10, width: 20, height: 30 }],
-        tariff_codes: [137],
+        tariff_codes: [137, 233],
       }),
       {
         clientId: 'client-id',
         clientSecret: 'client-secret',
         useTest: false,
       }
+    )
+  })
+
+  it('falls back to economy tariff when the primary PVZ tariff is unavailable for the route', async () => {
+    vi.mocked(settingsService.getCdekCredentials).mockResolvedValue({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      useTest: false,
+    })
+    vi.mocked(cdek.resolveCdekSenderSettings).mockResolvedValue({
+      ok: true,
+      settings: {
+        fromPvzCode: 'SPB55',
+        fromCityCode: 137,
+        senderAddress: 'Санкт-Петербург, склад',
+        senderName: 'Inner Health',
+        senderPhone: '+78120000000',
+        scopeUsed: 'global',
+        fromPostalCode: null,
+        calculatorFromLocation: {
+          code: 137,
+          country_code: 'RU',
+        },
+      },
+    })
+    // Тариф 136 недоступен для этого маршрута (СДЭК возвращает пустой список),
+    // но виджет запрашивает оба кода одним вызовом tarifflist — эконом-тариф 234
+    // в том же ответе покрывает эту точку.
+    vi.mocked(cdek.calculateCdekTariffList).mockResolvedValue([
+      {
+        tariff_code: 234,
+        tariff_name: 'Экономичная посылка склад-склад',
+        delivery_mode: 4,
+        delivery_sum: 350,
+        period_min: 3,
+        period_max: 5,
+      },
+    ])
+
+    const response = await POST(
+      new Request('http://localhost/api/cdek-widget/service?brand=inner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'calculate',
+          from: {
+            code: 44,
+            address: 'Москва, старый склад',
+            country_code: 'RU',
+          },
+          to: {
+            code: 9999,
+            country_code: 'RU',
+          },
+          goods: [{ weight: 100, length: 10, width: 20, height: 30 }],
+        }),
+      })
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      tariff_codes: [
+        {
+          tariff_code: 234,
+          tariff_name: 'Экономичная посылка склад-склад',
+          delivery_mode: 4,
+          delivery_sum: 350,
+          period_min: 3,
+          period_max: 5,
+        },
+      ],
+    })
+    expect(cdek.calculateCdekTariffList).toHaveBeenCalledWith(
+      expect.objectContaining({ tariff_codes: [136, 234] }),
+      expect.anything()
     )
   })
 

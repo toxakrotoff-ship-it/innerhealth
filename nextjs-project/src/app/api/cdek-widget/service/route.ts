@@ -161,7 +161,10 @@ async function buildWidgetTariffAttempts(params: {
   mode: WidgetDeliveryMode
 }): Promise<WidgetTariffAttempt[]> {
   const { request, senderSettings, mode } = params
-  const tariffCodes = mode === 'office' ? [136] : [137]
+  // 136/137 — основной тариф ("Посылка"), 234/233 — экономичный вариант того же
+  // способа сдачи (сдаём сами на склад СДЭК). Не все ПВЗ/маршруты поддерживают
+  // основной тариф, поэтому пробуем оба, чтобы не оставлять точку без расчёта.
+  const tariffCodes = mode === 'office' ? [136, 234] : [137, 233]
 
   const baseRequest: CdekCalculatorTariffListRequest = {
     from_location: senderSettings.calculatorFromLocation,
