@@ -95,6 +95,7 @@ export default async function SeoHubPage({ params }: PageProps) {
     { label: hub.title },
   ]
   const currentPath = `/guides/${slug}`
+  const sourceUrl = await toAbsoluteSiteUrl(currentPath)
 
   return (
     <section className={isSprintTheme ? 'bg-[#060A14]' : ''}>
@@ -160,12 +161,12 @@ export default async function SeoHubPage({ params }: PageProps) {
                 Материал {siteTitle}:{' '}
               </span>
               <a
-                href={toAbsoluteSiteUrl(currentPath)}
+                href={sourceUrl}
                 className={`break-all underline-offset-2 hover:underline ${
                   isSprintTheme ? 'text-[#7AA2FF]' : 'text-action-blue'
                 }`}
               >
-                {toAbsoluteSiteUrl(currentPath)}
+                {sourceUrl}
               </a>
             </p>
           </footer>

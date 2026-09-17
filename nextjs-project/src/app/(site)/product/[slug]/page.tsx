@@ -9,10 +9,9 @@ import { parseProductGalleryPhotos } from '@/lib/product-gallery'
 import { getSettingsMap } from '@/services/settings.service'
 import { getResolvedBlocksForPage } from '@/services/content-block.service'
 import { buildProductJsonLd } from '@/lib/schema-org'
-import { toAbsoluteSiteUrl } from '@/lib/site-url'
 import { BreadcrumbJsonLd } from '@/components/site/breadcrumb-json-ld'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
-import { getBrandSiteConfig } from '@/lib/brand/site-branding'
+import { getBrandSiteConfig, getBrandSiteUrl } from '@/lib/brand/site-branding'
 import { isSprintPowerBrand, productBelongsToBrandScope } from '@/lib/brand/brand-scope'
 import { buildMetadataWithSocial, normalizeSeoDescription, parseSeoKeywords, trimToNull } from '@/lib/seo'
 import { resolveProductDocumentsPlacement } from '@/lib/product-page-layout'
@@ -143,8 +142,11 @@ export default async function ProductPage({ params }: PageProps) {
   const documentsPlacement = resolveProductDocumentsPlacement(productBlocks)
 
   const settings = await getSettingsMap(undefined, { brandId })
-  const schemaUrl = settings.schema_org_url?.trim()
-  const url = schemaUrl ? `${schemaUrl.replace(/\/+$/, '')}/product/${slug}` : toAbsoluteSiteUrl(`/product/${slug}`)
+  // Всегда берём домен из брендового конфига (env-based), а не из свободно
+  // редактируемой настройки schema_org_url: та не гарантированно заполнена
+  // для каждого бренда и раньше приводила к тому, что offers.url на
+  // sprintpower.ru указывал на innerhealth.ru.
+  const url = `${getBrandSiteUrl(brandId).replace(/\/+$/, '')}/product/${slug}`
   const imageUrls = photos.map((p) => p.url)
   const seoDescription =
     normalizeSeoDescription(product.seoDescr, 200) ??
@@ -158,7 +160,10 @@ export default async function ProductPage({ params }: PageProps) {
       price: product.price,
       quantity: product.quantity,
       isPreorderEnabled: product.isPreorderEnabled,
-      brand: product.brand ?? null,
+      // product.brand в БД — служебный тег принадлежности витрине
+      // ('sprint-power'/null), а не название бренда для покупателя. В
+      // публичной микроразметке должно быть человекочитаемое имя витрины.
+      brand: getBrandSiteConfig(brandId).title,
       sku: product.sku ?? null,
     },
     url,

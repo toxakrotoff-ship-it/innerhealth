@@ -1,8 +1,10 @@
 import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { getPostPath } from '@/lib/post-url'
 import { getBrandSiteUrl } from '@/lib/brand/site-branding'
 import { SPRINT_POWER_PRODUCT_BRAND } from '@/lib/brand/brand-scope'
+import { resolveSiteBrand } from '@/lib/brand/brand-context'
 
 /** Регенерация sitemap не чаще раза в час — при добавлении товаров/статей/категорий ссылки появятся в течение часа. */
 export const revalidate = 3600
@@ -25,10 +27,20 @@ const STATIC_PATHS: { path: string; changeFrequency: 'yearly' | 'monthly' | 'wee
 ]
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const brands = [
-    { id: 'inner' as const, baseUrl: getBrandSiteUrl('inner') },
-    { id: 'sprint-power' as const, baseUrl: getBrandSiteUrl('sprint-power') },
-  ]
+  // Каждый домен должен получать sitemap только со своими URL — иначе
+  // innerhealth.ru/sitemap.xml и sprintpower.ru/sitemap.xml отдают
+  // одинаковый список, перемешивая ссылки двух разных сайтов.
+  const headerStore = await headers()
+  const requestBrandId = resolveSiteBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+  const brands = (
+    [
+      { id: 'inner' as const, baseUrl: getBrandSiteUrl('inner') },
+      { id: 'sprint-power' as const, baseUrl: getBrandSiteUrl('sprint-power') },
+    ]
+  ).filter(({ id }) => id === requestBrandId)
   const now = new Date()
 
   const entries: MetadataRoute.Sitemap = brands.flatMap(({ baseUrl }) =>

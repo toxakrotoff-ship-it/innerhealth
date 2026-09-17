@@ -35,7 +35,10 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     logoText: 'INNER HEALTH',
     navLinks: [
       { label: 'Каталог', href: '/catalog' },
-      { label: 'Новости', href: '/#news' },
+      // Полноценная страница /news уже есть и участвует в sitemap — ведём
+      // сюда, как это уже сделано у Sprint Power, а не на якорь-тизер на
+      // главной (был `/#news`).
+      { label: 'Новости', href: '/news' },
       { label: 'О нас', href: '/o-nas' },
       { label: 'Акции', href: '/catalog/aktsii' },
       { label: 'Статьи', href: '/informaciya' },
@@ -44,7 +47,7 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     ],
     mobileNavLinks: [
       { label: 'Каталог', href: '/catalog' },
-      { label: 'Новости', href: '/#news' },
+      { label: 'Новости', href: '/news' },
       { label: 'О нас', href: '/o-nas' },
       { label: 'Статьи', href: '/informaciya' },
       { label: 'АКЦИИ', href: '/catalog/aktsii' },

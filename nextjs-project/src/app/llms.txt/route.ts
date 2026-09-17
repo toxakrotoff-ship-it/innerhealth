@@ -1,15 +1,20 @@
 import { getSiteBaseUrl } from '@/lib/site-url'
+import { getServerBrandContext } from '@/lib/brand/brand-server'
+import { isSprintPowerBrand } from '@/lib/brand/brand-scope'
 
 /**
- * llms.txt-style discovery file for AI crawlers (dynamic origin from NEXT_PUBLIC_SITE_URL).
+ * llms.txt-style discovery file for AI crawlers (dynamic origin + copy per brand).
  * @see https://llmstxt.org/
  */
 export async function GET(): Promise<Response> {
-  const base = getSiteBaseUrl()
+  const [base, { brandId, siteTitle }] = await Promise.all([getSiteBaseUrl(), getServerBrandContext()])
+  const summary = isSprintPowerBrand(brandId)
+    ? 'Интернет-магазин спортивного питания, протеина и нутриентов для активной формы (Россия).'
+    : 'Интернет-магазин нутриентов, коллагена и продуктов для здоровья (Россия).'
 
-  const body = `# Inner Health
+  const body = `# ${siteTitle}
 
-> Интернет-магазин нутриентов, коллагена и продуктов для здоровья (Россия).
+> ${summary}
 
 ## Основные разделы
 - ${base}/ — главная

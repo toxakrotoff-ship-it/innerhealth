@@ -6,9 +6,11 @@ import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { LegalPageRichOrStatic } from '@/components/site/legal/legal-page-rich-or-static'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteTitle, siteUrl } = await getServerBrandContext()
+  const { siteUrl } = await getServerBrandContext()
   return {
-    title: `Публичная оферта | ${siteTitle}`,
+    // Бренд в <title> уже добавляет шаблон title.template из корневого layout —
+    // добавлять его здесь ещё раз даёт "... | Inner Health | Inner Health".
+    title: 'Публичная оферта',
     description:
       `Публичная оферта. Договор розничной купли-продажи товаров дистанционным способом на сайте ${siteUrl}.`,
   }

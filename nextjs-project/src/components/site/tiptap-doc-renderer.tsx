@@ -206,12 +206,18 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
       )
     }
     case 'heading': {
+      // Тело статьи/карточки товара рендерится ПОСЛЕ настоящего h1 страницы
+      // (заголовок товара/статьи выше по разметке), поэтому авторский
+      // заголовок 1-го уровня здесь никогда не должен становиться вторым
+      // <h1> на странице — сдвигаем уровень на +1 (h1→h2, h2→h3, h3→h4),
+      // а визуальный размер оставляем прежним через classMap.
       const level = node.attrs?.level ?? 1
-      const Tag = `h${Math.min(3, Math.max(1, level))}` as 'h1' | 'h2' | 'h3'
+      const clampedLevel = Math.min(3, Math.max(1, level))
+      const Tag = `h${clampedLevel + 1}` as 'h2' | 'h3' | 'h4'
       const classMap = {
-        h1: 'tiptap-block-text text-2xl font-bold mt-8 mb-4 whitespace-pre-line leading-tight last:mb-0',
-        h2: 'tiptap-block-text text-xl font-bold mt-6 mb-3 whitespace-pre-line leading-snug last:mb-0',
-        h3: 'tiptap-block-text text-lg font-semibold mt-4 mb-2 whitespace-pre-line leading-snug last:mb-0',
+        h2: 'tiptap-block-text text-2xl font-bold mt-8 mb-4 whitespace-pre-line leading-tight last:mb-0',
+        h3: 'tiptap-block-text text-xl font-bold mt-6 mb-3 whitespace-pre-line leading-snug last:mb-0',
+        h4: 'tiptap-block-text text-lg font-semibold mt-4 mb-2 whitespace-pre-line leading-snug last:mb-0',
       }
       return (
         <Tag key={stableKey} className={classMap[Tag]}>

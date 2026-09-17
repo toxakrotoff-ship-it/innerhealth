@@ -7,10 +7,12 @@ import { getBrandSiteConfig } from '@/lib/brand/site-branding'
 import { LegalPageRichOrStatic } from '@/components/site/legal/legal-page-rich-or-static'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { brandId, siteTitle, siteUrl } = await getServerBrandContext()
+  const { brandId, siteUrl } = await getServerBrandContext()
   const email = getBrandSiteConfig(brandId).contact.email
   return {
-    title: `Политика конфиденциальности | ${siteTitle}`,
+    // Бренд в <title> уже добавляет шаблон title.template из корневого layout —
+    // добавлять его здесь ещё раз даёт "... | Inner Health | Inner Health".
+    title: 'Политика конфиденциальности',
     description: `Политика обработки персональных данных. Порядок обработки и защиты персональных данных на сайте ${siteUrl}. Контакты: ${email}.`,
   }
 }

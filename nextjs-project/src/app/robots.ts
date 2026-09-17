@@ -12,8 +12,9 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: [
-          `/${adminPath}/`,
-          '/admin/',
+          // ADMIN_SECRET_PATH по умолчанию равен 'admin' — раньше это давало
+          // задвоенный `Disallow: /admin/` в выдаче.
+          ...new Set([`/${adminPath}/`, '/admin/']),
           '/login/',
           '/api/',
           '/debug-table',

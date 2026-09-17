@@ -7,11 +7,11 @@ interface BreadcrumbJsonLdProps {
   currentPath: string
 }
 
-export function BreadcrumbJsonLd({ items, currentPath }: BreadcrumbJsonLdProps) {
+export async function BreadcrumbJsonLd({ items, currentPath }: BreadcrumbJsonLdProps) {
   const json = buildBreadcrumbListJsonLd({
     items,
     currentPath,
-    siteOrigin: getSiteBaseUrl(),
+    siteOrigin: await getSiteBaseUrl(),
   })
   if (!json) return null
   return (
