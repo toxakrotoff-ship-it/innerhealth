@@ -149,6 +149,39 @@ export async function fetchCountryOfficesStaged(params: {
   return accumulated
 }
 
+// Keyed by brandId so a component remount (e.g. user navigates /cart -> /product -> /cart
+// mid-download) joins the already-running country-wide fetch instead of restarting it from
+// page 0. Without this, every remount paid the full ~25-request, multi-MB download again —
+// the sessionStorage cache in cdek-widget-offices-client-cache.ts only helps once a download
+// has fully *completed*, which a remount-triggered abort used to prevent it from ever doing.
+const inFlightCountryOfficesExpansions = new Map<string, Promise<unknown[]>>()
+
+async function runCountryOfficesExpansion(params: {
+  brandId?: BrandId
+  applyEveryPages?: number
+  batchPauseMs?: number
+  applyOffices: (offices: unknown[]) => Promise<void>
+}): Promise<unknown[]> {
+  let totalLoaded = 0
+  let accumulatedOffices: unknown[] = []
+
+  await fetchCountryOfficesStaged({
+    brandId: params.brandId,
+    applyEveryPages: params.applyEveryPages ?? COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES,
+    batchPauseMs: params.batchPauseMs ?? COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS,
+    onBatch: async ({ accumulated, meta }) => {
+      if (!meta.shouldApply) return
+      totalLoaded = meta.totalLoaded
+      accumulatedOffices = accumulated
+      await params.applyOffices(accumulated)
+    },
+  })
+
+  if (totalLoaded > 0) writeCountryOfficesCache(accumulatedOffices)
+
+  return accumulatedOffices
+}
+
 export async function expandCountryOfficesIntoWidget(params: {
   brandId?: BrandId
   signal?: AbortSignal
@@ -162,25 +195,22 @@ export async function expandCountryOfficesIntoWidget(params: {
     return cached.length
   }
 
-  let totalLoaded = 0
-  let accumulatedOffices: unknown[] = []
+  const key = params.brandId ?? 'default'
+  const existing = inFlightCountryOfficesExpansions.get(key)
+  if (existing) {
+    const offices = await existing
+    await params.applyOffices(offices)
+    return offices.length
+  }
 
-  await fetchCountryOfficesStaged({
-    brandId: params.brandId,
-    signal: params.signal,
-    applyEveryPages: params.applyEveryPages ?? COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES,
-    batchPauseMs: params.batchPauseMs ?? COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS,
-    onBatch: async ({ accumulated, meta }) => {
-      if (!meta.shouldApply) return
-      totalLoaded = meta.totalLoaded
-      accumulatedOffices = accumulated
-      await params.applyOffices(accumulated)
-    },
-  })
-
-  if (totalLoaded > 0) writeCountryOfficesCache(accumulatedOffices)
-
-  return totalLoaded
+  const task = runCountryOfficesExpansion(params)
+  inFlightCountryOfficesExpansions.set(key, task)
+  try {
+    const offices = await task
+    return offices.length
+  } finally {
+    inFlightCountryOfficesExpansions.delete(key)
+  }
 }
 
 export async function fetchCountryOfficesForWidget(params: {

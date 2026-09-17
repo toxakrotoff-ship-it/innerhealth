@@ -174,6 +174,44 @@ describe('cdek-widget-country-offices', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('reuses an in-flight expansion across concurrent callers instead of duplicating fetches', async () => {
+    const storage = createMemoryStorage()
+    vi.stubGlobal('window', { sessionStorage: storage })
+    const fetchMock = mockCountryOfficesFetch(
+      [[{ code: 'A1' }], [{ code: 'A2' }]],
+      1000
+    )
+
+    const appliedFirst: unknown[][] = []
+    const appliedSecond: unknown[][] = []
+
+    const [totalFirst, totalSecond] = await Promise.all([
+      expandCountryOfficesIntoWidget({
+        brandId: 'inner',
+        applyEveryPages: 1,
+        batchPauseMs: 0,
+        applyOffices: async (offices) => {
+          appliedFirst.push([...offices])
+        },
+      }),
+      expandCountryOfficesIntoWidget({
+        brandId: 'inner',
+        applyEveryPages: 1,
+        batchPauseMs: 0,
+        applyOffices: async (offices) => {
+          appliedSecond.push([...offices])
+        },
+      }),
+    ])
+
+    // probe + 2 pages = 3 requests total, not doubled for the second concurrent caller.
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(totalFirst).toBe(2)
+    expect(totalSecond).toBe(2)
+    expect(appliedFirst.length).toBeGreaterThan(0)
+    expect(appliedSecond).toEqual([[{ code: 'A1' }, { code: 'A2' }]])
+  })
+
   it('writes the fetched country offices to sessionStorage once complete', async () => {
     const storage = createMemoryStorage()
     vi.stubGlobal('window', { sessionStorage: storage })

@@ -218,7 +218,6 @@ export function CdekWidget({
     let cancelled = false
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
-    const countryExpandAbortController = new AbortController()
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
     let backgroundExpandDeferTimerId: ReturnType<typeof setTimeout> | null = null
     let backgroundExpandIdleCallbackId: number | null = null
@@ -501,24 +500,17 @@ export function CdekWidget({
 
               void expandCountryOfficesIntoWidget({
                 brandId,
-                signal: countryExpandAbortController.signal,
                 applyEveryPages: pacing.applyEveryPages,
                 batchPauseMs: pacing.batchPauseMs,
                 applyOffices: async (offices) => {
-                  if (
-                    !isCurrentInitGeneration(expandGeneration) ||
-                    countryExpandAbortController.signal.aborted
-                  ) {
+                  if (!isCurrentInitGeneration(expandGeneration)) {
                     return
                   }
                   const widget = widgetRef.current
                   if (!widget?.updateOfficesRaw) return
 
                   await runWhenIdle(async () => {
-                    if (
-                      !isCurrentInitGeneration(expandGeneration) ||
-                      countryExpandAbortController.signal.aborted
-                    ) {
+                    if (!isCurrentInitGeneration(expandGeneration)) {
                       return
                     }
                     await widget.updateOfficesRaw!(offices)
@@ -526,10 +518,7 @@ export function CdekWidget({
                 },
               })
                 .then((count) => {
-                  if (
-                    !isCurrentInitGeneration(expandGeneration) ||
-                    countryExpandAbortController.signal.aborted
-                  ) {
+                  if (!isCurrentInitGeneration(expandGeneration)) {
                     return
                   }
 
@@ -550,10 +539,7 @@ export function CdekWidget({
                   })
                 })
                 .catch((expandError) => {
-                  if (
-                    !isCurrentInitGeneration(expandGeneration) ||
-                    countryExpandAbortController.signal.aborted
-                  ) {
+                  if (!isCurrentInitGeneration(expandGeneration)) {
                     return
                   }
                   countryOfficesExpandedRef.current = false
@@ -763,7 +749,6 @@ export function CdekWidget({
       })
       if (initTimeoutId != null) clearTimeout(initTimeoutId)
       clearBackgroundExpandScheduling()
-      countryExpandAbortController.abort()
       removeMobileLayoutSync?.()
       removeRootInteractionListeners?.()
       widgetRef.current = null
