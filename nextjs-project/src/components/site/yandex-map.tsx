@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
-const MAP_CENTER: [number, number] = [55.78284, 37.45149]
+export const MAP_CENTER: [number, number] = [55.78284, 37.45149]
 const MAP_ZOOM = 16
 
 /** Тип экземпляра карты (совместим с объявлением в yandex-map-pvz.tsx) */

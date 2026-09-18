@@ -1,6 +1,7 @@
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { ContactLinks } from '@/components/site/contact-links'
 import { YandexMapDynamic } from '@/components/site/yandex-map-dynamic'
+import { MAP_CENTER } from '@/components/site/yandex-map'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
@@ -88,6 +89,7 @@ export default async function ContactsPage() {
   const writeTitle = getText(byKey('contacts.section.write_title'), DEFAULT_WRITE_TITLE)
 
   const phoneHref = `tel:${phone.replace(/\s|\(|\)|-/g, '')}`
+  const routeHref = `https://yandex.ru/maps/?rtext=~${MAP_CENTER[0]},${MAP_CENTER[1]}&rtt=auto`
 
   return (
     <div className={isSprintTheme ? 'bg-[#060A14] text-slate-100' : 'bg-white'}>
@@ -114,7 +116,7 @@ export default async function ContactsPage() {
             className="lg:gap-5 xl:gap-6 2xl:gap-6 3xl:gap-8 4xl:gap-8"
           >
             <div
-              className={`rounded-2xl overflow-hidden border min-h-[320px] ${
+              className={`order-2 lg:order-none rounded-2xl overflow-hidden border min-h-[320px] ${
                 isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-gray-100'
               }`}
             >
@@ -124,7 +126,7 @@ export default async function ContactsPage() {
               />
             </div>
 
-            <div className={`flex flex-col justify-center space-y-5 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
+            <div className={`order-1 lg:order-none flex flex-col justify-center space-y-5 ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
               <div>
                 <ResponsiveText
                   as="h2"
@@ -187,6 +189,21 @@ export default async function ContactsPage() {
                 >
                   {workingNote}
                 </p>
+              </div>
+
+              <div>
+                <a
+                  href={routeHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${
+                    isSprintTheme
+                      ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#7AA2FF]/90'
+                      : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'
+                  }`}
+                >
+                  Построить маршрут
+                </a>
               </div>
 
               <div className="pt-2">
