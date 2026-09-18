@@ -232,33 +232,33 @@ export function HeroBlock({
 
       {showImage && imageSrc ? (
         <div
-          className="absolute right-0 bottom-0 w-full lg:w-1/2 h-[60vh] sm:h-[70vh] lg:h-full pointer-events-none"
+          className="absolute inset-0 h-full w-full lg:inset-auto lg:right-0 lg:bottom-0 lg:h-full lg:w-1/2 pointer-events-none"
           aria-hidden
         >
           <div className="relative w-full h-full">
             <div
-              className="absolute inset-0 w-full h-full"
-              style={{
-                maskImage: 'linear-gradient(to left, black 40%, transparent)',
-                WebkitMaskImage: 'linear-gradient(to left, black 40%, transparent)',
-              }}
+              className="absolute inset-0 w-full h-full lg:[mask-image:linear-gradient(to_left,black_40%,transparent)] lg:[-webkit-mask-image:linear-gradient(to_left,black_40%,transparent)]"
             >
               <Image
                 src={imageSrc}
                 alt={imageAlt}
                 width={1008}
                 height={1016}
-                className={`absolute inset-0 h-full w-full opacity-80 sm:opacity-90 hero-portrait-image ${
+                className={`absolute inset-0 h-full w-full opacity-90 hero-portrait-image ${
                   isSprintTheme
                     ? 'object-cover object-center mix-blend-normal'
                     : 'object-contain object-bottom-right mix-blend-lighten'
                 }`}
-                sizes="(max-width: 640px) 80vw, (max-width: 1024px) 60vw, 50vw"
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 priority
                 fetchPriority="high"
                 style={{ imageOrientation: 'none' }}
               />
             </div>
+            <div
+              className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-black via-black/55 to-transparent lg:hidden"
+              aria-hidden
+            />
             <div
               className={`absolute top-1/4 left-1/4 w-48 h-48 sm:w-64 sm:h-64 blur-[80px] sm:blur-[120px] rounded-full ${
                 isSprintTheme ? 'bg-[#7AA2FF]/20' : 'bg-blue-500/20'
