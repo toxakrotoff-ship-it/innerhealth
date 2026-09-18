@@ -85,7 +85,7 @@ export function InnerHomeDirectionsSection({
                         {item.title}
                       </h3>
                       {item.description ? (
-                        <p className="max-w-sm text-sm text-white/80 2xl:text-base">
+                        <p className="line-clamp-3 max-w-sm text-sm text-white/80 2xl:text-base">
                           {item.description}
                         </p>
                       ) : null}
