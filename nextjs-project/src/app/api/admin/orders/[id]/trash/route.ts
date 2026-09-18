@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as orderService from '@/services/order.service';
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request';
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request';
 
 const paramsSchema = z.object({
   id: z.string().min(1),
@@ -15,7 +15,7 @@ export async function POST(
 ) {
   const session = await requireAdminSession();
   if (session instanceof NextResponse) return session;
-  const brandId = resolveBrandOrDefaultFromRequest(request);
+  const brandId = resolveAdminBrandFromRequest(request);
 
   const parsedParams = paramsSchema.safeParse(await context.params);
   if (!parsedParams.success) {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { syncCdekTrackNumberIfDue } from '@/lib/cdek'
 import { requireAdminSession } from '@/lib/require-admin'
 import * as orderService from '@/services/order.service'
-import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
+import { resolveAdminBrandFromRequest } from '@/lib/brand/brand-request'
 
 export async function GET(
   request: Request,
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const session = await requireAdminSession()
   if (session instanceof NextResponse) return session
-  const brandId = resolveBrandOrDefaultFromRequest(request)
+  const brandId = resolveAdminBrandFromRequest(request)
 
   const { id: orderId } = await context.params
   await syncCdekTrackNumberIfDue(orderId)
