@@ -546,13 +546,13 @@ function SprintPowerHome({
           showDescription={sharedHeroContent.showDescription}
           showPrimaryCta={sharedHeroContent.showPrimaryCta}
           showImage={sharedHeroContent.showImage}
-          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Наши сертификаты')}
+          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Акции')}
           secondaryCtaHref={getBlockTextForBrand(
             blocks,
             'home',
             'hero.cta.secondary.href',
             'sprint-power',
-            '/sertifikaty-sootvetstviya'
+            '/catalog/sale'
           )}
           isSprintTheme
         />
@@ -632,11 +632,11 @@ function SprintPowerHome({
                         'home',
                         'hero.cta.secondary.href',
                         'sprint-power',
-                        '/sertifikaty-sootvetstviya'
+                        '/catalog/sale'
                       )}
                       className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.35rem] border border-white/14 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/10 sm:w-auto sm:min-w-[14rem]"
                     >
-                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Наши сертификаты')}
+                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Акции')}
                     </Link>
                   </div>
                 </div>

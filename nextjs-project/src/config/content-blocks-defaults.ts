@@ -1040,7 +1040,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'hero.cta.secondary',
     label: 'Hero — CTA вторичная',
     type: 'short',
-    text: 'Наши сертификаты',
+    text: 'Акции',
     colorToken: 'text-slate-100',
   },
   {
@@ -1049,7 +1049,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'hero.cta.secondary.href',
     label: 'Hero — CTA вторичная ссылка',
     type: 'short',
-    text: '/sertifikaty-sootvetstviya',
+    text: '/catalog/sale',
   },
   {
     brand: 'sprint-power',
