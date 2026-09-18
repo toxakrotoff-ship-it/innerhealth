@@ -123,4 +123,16 @@ describe('ProductCard', () => {
 
     expect(container.querySelectorAll('a[href="/product/magnesium-b6"]')).toHaveLength(0)
   })
+
+  it('shows the "Партнёр" badge only when isPartner is true', () => {
+    const { rerender } = render(
+      <ProductCard id="p-5" title="Биойодин" price={1700} slug="bioiodine" quantity={5} />
+    )
+    expect(screen.queryByText('Партнёр')).not.toBeInTheDocument()
+
+    rerender(
+      <ProductCard id="p-5" title="Биойодин" price={1700} slug="bioiodine" quantity={5} isPartner />
+    )
+    expect(screen.getByText('Партнёр')).toBeInTheDocument()
+  })
 })

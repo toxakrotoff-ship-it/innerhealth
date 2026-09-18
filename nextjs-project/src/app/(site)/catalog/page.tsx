@@ -339,6 +339,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       discountPrice={item.product.discountPrice}
                       quantity={item.product.quantity}
                       isPreorderEnabled={item.product.isPreorderEnabled}
+                      isPartner={item.product.isPartner}
                       priority={index < 2}
                       blurDataURL={'photos' in item.product ? getFirstPhotoBlurDataURL(item.product.photos) : undefined}
                     />

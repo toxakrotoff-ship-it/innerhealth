@@ -20,6 +20,7 @@ interface WishlistProduct {
   discountPrice: number | null
   quantity: number | null
   isPreorderEnabled: boolean
+  isPartner?: boolean
 }
 
 export function WishlistPageContent() {
@@ -82,6 +83,7 @@ export function WishlistPageContent() {
               discountPrice={product.discountPrice}
               quantity={product.quantity}
               isPreorderEnabled={product.isPreorderEnabled}
+              isPartner={product.isPartner}
             />
           ))}
         </div>

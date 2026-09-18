@@ -25,6 +25,7 @@ interface RecentlyViewedProductItem {
   discountPrice: number | null;
   quantity: number | null;
   isPreorderEnabled: boolean;
+  isPartner?: boolean;
 }
 
 export function RecentlyViewedProducts({
@@ -80,6 +81,7 @@ export function RecentlyViewedProducts({
             discountPrice={product.discountPrice}
             quantity={product.quantity}
             isPreorderEnabled={product.isPreorderEnabled}
+            isPartner={product.isPartner}
           />
         ))}
       </div>

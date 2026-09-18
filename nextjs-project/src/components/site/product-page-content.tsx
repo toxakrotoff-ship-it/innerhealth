@@ -459,6 +459,7 @@ export function ProductPageContent({
                       discountPrice={item.product.discountPrice}
                       quantity={item.product.quantity}
                       isPreorderEnabled={item.product.isPreorderEnabled}
+                      isPartner={item.product.isPartner}
                       blurDataURL={getFirstPhotoBlurDataURL(item.product.photos)}
                     />
                   ) : (
@@ -518,6 +519,7 @@ export function ProductPageContent({
                     discountPrice={item.product.discountPrice}
                     quantity={item.product.quantity}
                     isPreorderEnabled={item.product.isPreorderEnabled}
+                    isPartner={item.product.isPartner}
                     blurDataURL={getFirstPhotoBlurDataURL(item.product.photos)}
                   />
                 ) : (

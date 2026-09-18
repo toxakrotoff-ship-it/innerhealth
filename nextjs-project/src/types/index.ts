@@ -12,6 +12,7 @@ export interface ProductCardDTO {
   slug: string | null;
   isPromoEligible?: boolean;
   discountPrice?: number | null;
+  isPartner?: boolean;
 }
 
 /** Minimal cart item shape (e.g. persisted in localStorage or API payload). */

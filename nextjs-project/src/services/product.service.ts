@@ -112,6 +112,7 @@ export const productCardSelect = {
   discountPrice: true,
   isPreorderEnabled: true,
   isFeaturedInNewArrivals: true,
+  isPartner: true,
 } as const;
 
 const promotionListingProductSelect = Prisma.validator<Prisma.ProductSelect>()({
@@ -516,6 +517,7 @@ export async function getProductsForCart(productIds: string[], brandId?: BrandId
       discountPrice: true,
       quantity: true,
       isPreorderEnabled: true,
+      isPartner: true,
     },
   });
 }

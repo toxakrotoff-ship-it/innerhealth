@@ -76,6 +76,7 @@ export default async function SeoHubPage({ params }: PageProps) {
             discountPrice: true,
             quantity: true,
             isPreorderEnabled: true,
+            isPartner: true,
             brand: true,
             sku: true,
             weight: true,
@@ -141,6 +142,7 @@ export default async function SeoHubPage({ params }: PageProps) {
                     discountPrice={p.discountPrice}
                     quantity={p.quantity}
                     isPreorderEnabled={p.isPreorderEnabled}
+                    isPartner={p.isPartner}
                     priority={index < 2}
                     blurDataURL={getFirstPhotoBlurDataURL(p.photos)}
                   />

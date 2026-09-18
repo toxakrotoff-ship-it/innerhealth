@@ -9,6 +9,7 @@ import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ProductQuickView } from '@/components/site/product-quick-view'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ProductDiscountBadge } from '@/components/site/product-discount-badge'
+import { ProductPartnerBadge } from '@/components/site/product-partner-badge'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { getPhotoTransformByUrl } from '@/lib/product-photo-transform'
 import { getProductListingTitlePresentation } from '@/lib/product-grouping'
@@ -33,6 +34,7 @@ interface ProductCardProps {
   discountPrice?: number | null
   quantity?: number | null
   isPreorderEnabled?: boolean
+  isPartner?: boolean
   /** Set for above-the-fold images (e.g. first 2 products) to improve LCP */
   priority?: boolean
   /** Base64 blur placeholder from upload pipeline for placeholder="blur" */
@@ -58,6 +60,7 @@ export function ProductCard({
   discountPrice = null,
   quantity = null,
   isPreorderEnabled = false,
+  isPartner = false,
   priority = false,
   blurDataURL = null,
 }: ProductCardProps) {
@@ -153,6 +156,7 @@ export function ProductCard({
             priceOld={priceOld}
             className="absolute right-2 top-2 z-30"
           />
+          <ProductPartnerBadge isPartner={isPartner} className="absolute left-2 top-2 z-30" />
           <div className={cn('absolute right-2 z-20 flex items-center gap-2', hasDiscountBadge ? 'top-14' : 'top-2')}>
             <ProductQuickView
               id={id}

@@ -79,6 +79,8 @@ model Product {
   isFeaturedInNewArrivals              Boolean           @default(false)
   /// Ручная отметка для блока «Хиты продаж» на главной
   isFeaturedInHits                     Boolean           @default(false)
+  /// Партнёрский (аффилиатный) продукт — показывать бейдж «Партнёр» на карточке
+  isPartner                            Boolean           @default(false)
   cartItems                            CartItem[]
   orderItems                           OrderItem[]
   categories                           ProductCategory[]

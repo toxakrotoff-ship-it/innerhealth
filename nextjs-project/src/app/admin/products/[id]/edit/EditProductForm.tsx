@@ -36,6 +36,7 @@ interface ProductResponse {
   isPreorderEnabled?: boolean;
   isFeaturedInNewArrivals?: boolean;
   isFeaturedInHits?: boolean;
+  isPartner?: boolean;
   isDraft?: boolean;
   categories?: Array<{ categoryId: string }>;
   weight: number | null;
@@ -104,6 +105,7 @@ function mapProductToFormValues(
     isPreorderEnabled: product.isPreorderEnabled ?? false,
     isFeaturedInNewArrivals: product.isFeaturedInNewArrivals ?? false,
     isFeaturedInHits: product.isFeaturedInHits ?? false,
+    isPartner: product.isPartner ?? false,
     isDraft: product.isDraft ?? false,
     categories: product.categories?.map((category) => category.categoryId) || [],
     weight: product.weight ?? null,

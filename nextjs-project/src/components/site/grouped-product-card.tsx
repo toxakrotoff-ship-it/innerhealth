@@ -7,6 +7,7 @@ import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
 import { ProductQuickView } from '@/components/site/product-quick-view'
 import { ProductDiscountBadge } from '@/components/site/product-discount-badge'
+import { ProductPartnerBadge } from '@/components/site/product-partner-badge'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import { cn } from '@/lib/utils'
@@ -85,6 +86,7 @@ export function GroupedProductCard({
             priceOld={activeVariant.priceOld}
             className="absolute right-2 top-2 z-30"
           />
+          <ProductPartnerBadge isPartner={activeVariant.isPartner} className="absolute left-2 top-2 z-30" />
           <div className={cn('absolute right-2 z-20 flex items-center gap-2', hasDiscountBadge ? 'top-14' : 'top-2')}>
             <ProductQuickView
               id={activeVariant.id}

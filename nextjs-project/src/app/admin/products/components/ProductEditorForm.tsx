@@ -42,6 +42,7 @@ export interface ProductEditorFormValues {
   isPreorderEnabled: boolean;
   isFeaturedInNewArrivals: boolean;
   isFeaturedInHits: boolean;
+  isPartner: boolean;
   isDraft: boolean;
   categories: string[];
   weight: number | null;
@@ -85,6 +86,7 @@ export interface ProductEditorSubmitPayload {
   isPreorderEnabled: boolean;
   isFeaturedInNewArrivals: boolean;
   isFeaturedInHits: boolean;
+  isPartner: boolean;
   isDraft: boolean;
   categoryIds: string[];
   weight: number | null;
@@ -158,6 +160,7 @@ export function createEmptyProductEditorValues(
     isPreorderEnabled: false,
     isFeaturedInNewArrivals: false,
     isFeaturedInHits: false,
+    isPartner: false,
     isDraft: false,
     categories: [],
     weight: null,
@@ -304,6 +307,7 @@ export function ProductEditorForm({
       isPreorderEnabled: formData.isPreorderEnabled,
       isFeaturedInNewArrivals: formData.isFeaturedInNewArrivals,
       isFeaturedInHits: formData.isFeaturedInHits,
+      isPartner: formData.isPartner,
       isDraft: formData.isDraft,
       categoryIds: formData.categories,
       weight: formData.weight ?? null,
@@ -629,6 +633,20 @@ export function ProductEditorForm({
                 </label>
               </div>
             ) : null}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isPartner"
+                checked={formData.isPartner}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, isPartner: event.target.checked }))
+                }
+                className="form-input h-4 w-4 rounded"
+              />
+              <label htmlFor="isPartner" className="text-sm font-medium text-gray-700">
+                Партнёрский продукт (значок «Партнёр» на карточке)
+              </label>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

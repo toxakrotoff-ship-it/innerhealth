@@ -700,6 +700,7 @@ function SprintPowerHome({
                       slug={product.slug}
                       quantity={product.quantity}
                       isPreorderEnabled={product.isPreorderEnabled}
+                      isPartner={product.isPartner}
                       priority={index === 0}
                     />
                   ))}
@@ -1069,6 +1070,7 @@ export default async function HomePage() {
                       slug={newProducts[0].slug}
                       quantity={newProducts[0].quantity}
                       isPreorderEnabled={newProducts[0].isPreorderEnabled}
+                      isPartner={newProducts[0].isPartner}
                       priority
                       blurDataURL={
                         'photos' in newProducts[0]
@@ -1108,6 +1110,7 @@ export default async function HomePage() {
                     slug={p.slug}
                     quantity={p.quantity}
                     isPreorderEnabled={p.isPreorderEnabled}
+                    isPartner={p.isPartner}
                     priority={index < 2}
                     blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                   />
@@ -1178,6 +1181,7 @@ export default async function HomePage() {
                       slug={hitsProducts[0].slug}
                       quantity={hitsProducts[0].quantity}
                       isPreorderEnabled={hitsProducts[0].isPreorderEnabled}
+                      isPartner={hitsProducts[0].isPartner}
                       blurDataURL={
                         'photos' in hitsProducts[0]
                           ? getFirstPhotoBlurDataURL(hitsProducts[0].photos)
@@ -1216,6 +1220,7 @@ export default async function HomePage() {
                     slug={p.slug}
                     quantity={p.quantity}
                     isPreorderEnabled={p.isPreorderEnabled}
+                    isPartner={p.isPartner}
                     blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
                   />
                 ))}

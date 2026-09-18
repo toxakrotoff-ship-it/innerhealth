@@ -16,6 +16,7 @@ export interface ProductVariantForListing {
   isPromoEligible: boolean
   discountPrice: number | null
   isPreorderEnabled?: boolean
+  isPartner?: boolean
 }
 
 export interface GroupedFlavorOption {
