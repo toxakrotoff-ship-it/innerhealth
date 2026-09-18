@@ -29,6 +29,7 @@ build/
 dist/
 nextjs-project/dist-bot/
 *.tsbuildinfo
+nextjs-project/next-env.d.ts
 # Tailwind/PostCSS compiled output (generated)
 output.css
 **/public/output.css
