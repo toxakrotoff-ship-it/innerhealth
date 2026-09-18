@@ -29,7 +29,7 @@ export function AdaptiveNav({ forceMobile = false, links, variant = 'light' }: A
     <nav
       className={`
         hidden xl:flex items-center
-        gap-8 2xl:gap-10 3xl:gap-12 4xl:gap-14 5xl:gap-16 6xl:gap-20
+        gap-5 2xl:gap-5 3xl:gap-8 4xl:gap-10 5xl:gap-12 6xl:gap-16
         text-xs 2xl:text-sm 3xl:text-base 4xl:text-lg 5xl:text-xl 6xl:text-2xl
         font-medium uppercase tracking-widest ${variant === 'dark' ? 'text-slate-300' : 'text-slate-500'}
       `}

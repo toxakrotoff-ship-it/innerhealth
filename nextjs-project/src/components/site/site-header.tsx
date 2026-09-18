@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { HeaderCartButton } from './header-cart-button'
 import { HeaderNavMobile } from './header-nav-mobile'
 import { HeaderProfileMenu } from './header-profile-menu'
+import { HeaderContactMenu } from './header-contact-menu'
 import { AdaptiveNav } from './adaptive-nav'
 import { ClearInvalidSession } from './clear-invalid-session'
 import { getBrandSiteConfig } from '@/lib/brand/site-branding'
@@ -78,7 +79,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
           flex items-center justify-between gap-4 lg:gap-6 2xl:gap-8
         `}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-8 2xl:gap-12 3xl:gap-16 4xl:gap-20 5xl:gap-24 6xl:gap-28">
+        <div className="flex min-w-0 flex-1 items-center gap-6 lg:gap-8 2xl:gap-12 3xl:gap-16 4xl:gap-20 5xl:gap-24 6xl:gap-28 overflow-hidden">
           <HeaderNavMobile
             variant={isSprintTheme ? 'dark' : 'light'}
             isAuthenticated={isAuthenticated}
@@ -136,53 +137,26 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
               Ежедневно 9:00 — 21:00
             </span>
           </div>
-          <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 3xl:gap-2">
-            <a
-              href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
-              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
-                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-              aria-label="Позвонить"
-            >
-              <PhoneIcon />
-            </a>
-            <a
-              href={`mailto:${contact.email}`}
-              className={`rounded-full transition-colors min-h-[44px] min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0 p-2 ${
-                isSprintTheme ? 'text-slate-300 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-              aria-label="Написать на почту"
-            >
-              <MailIcon />
-            </a>
-          </div>
-          <HeaderCartButton variant={isSprintTheme ? 'dark' : 'light'} />
           <div className="hidden xl:block">
-            <HeaderProfileMenu
+            <HeaderContactMenu
               variant={isSprintTheme ? 'dark' : 'light'}
+              contact={contact}
               isAuthenticated={isAuthenticated}
-              role={session?.user?.role}
             />
           </div>
+          <HeaderCartButton variant={isSprintTheme ? 'dark' : 'light'} />
+          {isAuthenticated ? (
+            <div className="hidden xl:block">
+              <HeaderProfileMenu
+                variant={isSprintTheme ? 'dark' : 'light'}
+                isAuthenticated={isAuthenticated}
+                role={session?.user?.role}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
     </>
-  )
-}
-
-function PhoneIcon() {
-  return (
-    <svg className="w-5 h-5 2xl:w-6 2xl:h-6 3xl:w-7 3xl:h-7 4xl:w-8 4xl:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-    </svg>
-  )
-}
-
-function MailIcon() {
-  return (
-    <svg className="w-5 h-5 2xl:w-6 2xl:h-6 3xl:w-7 3xl:h-7 4xl:w-8 4xl:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
   )
 }
