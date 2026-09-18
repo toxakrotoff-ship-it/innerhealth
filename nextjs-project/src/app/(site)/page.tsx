@@ -1130,7 +1130,7 @@ export default async function HomePage() {
         title={howToOrder.title}
         steps={[howToOrderSingleStep]}
       />
-      {(showHomeHitsSection || showHomeArticlesSection) && (
+      {showHomeHitsSection && (
         <SpacingVertical
           size="lg"
           className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
