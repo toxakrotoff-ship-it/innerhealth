@@ -50,7 +50,7 @@ export function SprintPowerBlock() {
                 Sprint Power
               </h3>
               <p className="text-[clamp(0.6875rem,0.35vw+0.62rem,0.75rem)] font-light leading-relaxed text-slate-500 sm:text-xs 2xl:text-base">
-                Спортивное питание нового поколения. Брутальный дизайн и научный подход.
+                Линейка спортивного питания для активного образа жизни.
               </p>
             </div>
           </div>
@@ -77,13 +77,14 @@ export function SprintPowerBlock() {
                 Без искусственных красителей
               </li>
             </ul>
+            <p className="text-sm font-medium text-slate-500">Другой проект нашей команды</p>
             <Link
               href="https://sprintpower.ru/catalog"
               target="_blank"
               rel="noopener noreferrer"
               className="desktop-button-scale inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue sm:w-auto"
             >
-              В каталог Sprint Power
+              Переход на сайт
               <NavArrowRight className="h-4 w-4 shrink-0" aria-hidden />
             </Link>
           </div>

@@ -281,7 +281,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       </span>
                       {categorySubtitle ? (
                         <span
-                          className={`relative z-10 mt-2 max-w-[32ch] line-clamp-4 text-sm font-normal leading-6 tracking-normal drop-shadow ${
+                          className={`relative z-10 mt-1.5 max-w-[32ch] line-clamp-6 text-xs font-normal leading-[1.15] tracking-normal drop-shadow ${
                             bgImage ? 'text-white/88' : 'text-gray-600'
                           }`}
                         >
