@@ -11,7 +11,7 @@ import * as faqService from '@/services/faq.service'
 import { ProductCard } from '@/components/site/product-card'
 import { getFirstPhotoBlurDataURL } from '@/lib/product-photos'
 import { HeroBlock } from '@/components/site/hero-block'
-import { SprintPowerBanner } from '@/components/site/sprint-power-banner'
+import { InnerHealthMarquee } from '@/components/site/inner-health-marquee'
 import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { filterCatalogBlockCategories } from '@/lib/catalog-categories'
 import { getPostPreviewImageAlt, getSprintPowerHomePromoAlt } from '@/lib/image-alt-text'
@@ -138,12 +138,14 @@ type HomeReview = {
   socialLink: string | null
   text: string
   imageUrl: string | null
+  productName: string | null
   createdAt: string
 }
 
 type HomeDataPayload = {
   categories: HomeCategoryWithProductCount[]
   newProducts: HomeProductCardRow[]
+  hitsProducts: HomeProductCardRow[]
   newsPosts: HomePostTeaser[]
   articlePosts: HomePostTeaser[]
   reviews: HomeReview[]
@@ -251,9 +253,10 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
     withTimeout(countPublicGiftPromotions(new Date(), activeBrand), dbTimeoutMs, 0),
   ])
 
-  const [newProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
+  const [newProductsResult, hitsProductsResult, newsPostsResult, articlePostsResult, approvedReviewsResult] =
     await Promise.allSettled([
       withTimeout(productService.getProductsForHomeInBrandScope(8, activeBrand), dbTimeoutMs, emptyHomeProducts),
+      withTimeout(productService.getHitsProductsInBrandScope(4, activeBrand), dbTimeoutMs, emptyHomeProducts),
       withTimeout(
         prisma.post.findMany({
           where: { published: true, type: 'news', ...postScopeWhere } as PostWhereInput,
@@ -283,6 +286,8 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
 
   const newProducts =
     newProductsResult.status === 'fulfilled' ? newProductsResult.value : []
+  const hitsProducts =
+    hitsProductsResult.status === 'fulfilled' ? hitsProductsResult.value : []
   const newsPosts =
     newsPostsResult.status === 'fulfilled' ? newsPostsResult.value : []
   const articlePosts =
@@ -296,10 +301,11 @@ async function getHomeData(activeBrand: 'inner' | 'sprint-power'): Promise<HomeD
     socialLink: r.socialLink,
     text: r.text,
     imageUrl: r.imageUrl,
+    productName: r.productName,
     createdAt: r.createdAt.toISOString(),
   }))
 
-  return { categories, newProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount }
+  return { categories, newProducts, hitsProducts, newsPosts, articlePosts, reviews, publicGiftPromotionCount }
 }
 
 type SprintHomeData = {
@@ -970,7 +976,7 @@ export default async function HomePage() {
     )
   }
 
-  const { categories, newProducts, newsPosts, articlePosts, reviews } =
+  const { categories, newProducts, hitsProducts, articlePosts, reviews } =
     await getHomeData(activeBrand)
   const emptyInnerContentBlocks = [] as ContentBlockResolved[]
   const [homeBlocks, popup] = await Promise.all([
@@ -979,7 +985,6 @@ export default async function HomePage() {
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
-  const newsSubtitle = getBlockByKey(homeBlocks, 'home.news.subtitle')
   const articlesSubtitle = getBlockByKey(homeBlocks, 'home.articles.subtitle')
   const reviewsSubtitle = getBlockByKey(homeBlocks, 'home.reviews.subtitle')
 
@@ -993,9 +998,17 @@ export default async function HomePage() {
   const sectionOrder = resolveInnerHomeSectionOrder(homeBlocks)
 
   const howToOrder = getHowToOrderContent(homeBlocks)
-  const showHomeNewsSection =
-    newsPosts.length > 0 ||
-    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.news.showWhenEmpty')?.text)
+  const howToOrderSingleStep = {
+    title: getBlockText(homeBlocks, 'howToOrder.single.title', 'Доставка и оплата'),
+    text: getBlockText(
+      homeBlocks,
+      'howToOrder.single.text',
+      'Доставляем заказы по России в пункты выдачи СДЭК или курьером. Оплата — онлайн через ЮKassa.'
+    ),
+    href: getBlockText(homeBlocks, 'howToOrder.single.href', '/faq'),
+    linkLabel: getBlockText(homeBlocks, 'howToOrder.single.linkLabel', 'Подробнее о доставке'),
+  }
+  const showHomeHitsSection = hitsProducts.length > 0
   const showHomeArticlesSection =
     articlePosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.articles.showWhenEmpty')?.text)
@@ -1115,9 +1128,9 @@ export default async function HomePage() {
       <HowToOrderSteps
         showBorders={newProducts.length > 0}
         title={howToOrder.title}
-        steps={howToOrder.steps}
+        steps={[howToOrderSingleStep]}
       />
-      {(showHomeNewsSection || showHomeArticlesSection) && (
+      {(showHomeHitsSection || showHomeArticlesSection) && (
         <SpacingVertical
           size="lg"
           className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
@@ -1126,75 +1139,96 @@ export default async function HomePage() {
     </>
   )
 
-  const newsSection = showHomeNewsSection ? (
-    <>
-      <section
-        id="news"
-        className="bg-white py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 scroll-mt-24"
-      >
-        <AdaptiveContainer maxWidth="default">
-          <div className="flex justify-between items-end mb-10 sm:mb-12">
-            <div className="space-y-1">
-              <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
-              <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-                {newsSubtitle?.text ?? 'Актуальные события и обновления'}
-              </p>
+  const hitsSection =
+    hitsProducts.length > 0 ? (
+      <>
+        <section id="hits" className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-white scroll-mt-24">
+          <AdaptiveContainer maxWidth="default">
+            <div className="flex justify-between items-end mb-10 sm:mb-12">
+              <div className="space-y-1">
+                <Heading2 className="font-semibold tracking-tighter text-slate-900">
+                  Хиты продаж
+                </Heading2>
+                <p className="max-w-md text-sm font-semibold text-slate-500 2xl:text-base 3xl:text-lg">
+                  Самые популярные товары наших покупателей
+                </p>
+              </div>
+              <Link
+                href="/catalog"
+                className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm"
+              >
+                СМОТРЕТЬ ВСЁ <NavArrowRight className="w-4 h-4" aria-hidden />
+              </Link>
             </div>
-            <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-              ВСЕ НОВОСТИ
-              <NavArrowRight className="w-4 h-4" aria-hidden />
-            </Link>
-          </div>
-          {newsPosts.length > 0 ? (
-            <ScrollReveal as="div" variant="fade-up">
-              <FluidGrid cols={1} colsTablet={2} colsDesktop={3} colsXl={3} cols2xl={3} cols3xl={3} cols4xl={3} gap={4} adaptiveGap>
-                {newsPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/news/${post.slug}`}
-                    className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
-                  >
-                    <TiltCard>
-                      <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
-                        {post.previewImage && (
-                          <>
-                            <Image
-                              src={post.previewImage}
-                              alt={getPostPreviewImageAlt(post.title)}
-                              fill
-                              className="object-cover object-center"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            />
-                            <div
-                              className="absolute inset-0 rounded-2xl bg-black/38"
-                              aria-hidden
-                            />
-                          </>
-                        )}
-                        <div className="relative z-10 max-w-xs">
-                          <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
-                            {post.title}
-                          </span>
-                        </div>
-                      </div>
-                    </TiltCard>
-                  </Link>
+            {hitsProducts.length <= 1 ? (
+              <div className="flex justify-center">
+                {hitsProducts[0] && (
+                  <div className="w-full max-w-[14.4rem] md:max-w-[16.8rem]">
+                    <ProductCard
+                      key={hitsProducts[0].id}
+                      id={hitsProducts[0].id}
+                      title={hitsProducts[0].title}
+                      brand={hitsProducts[0].brand}
+                      sku={hitsProducts[0].sku}
+                      weight={hitsProducts[0].weight}
+                      price={hitsProducts[0].price}
+                      priceOld={hitsProducts[0].priceOld}
+                      photo={hitsProducts[0].photo}
+                      photos={'photos' in hitsProducts[0] ? hitsProducts[0].photos : undefined}
+                      slug={hitsProducts[0].slug}
+                      quantity={hitsProducts[0].quantity}
+                      isPreorderEnabled={hitsProducts[0].isPreorderEnabled}
+                      blurDataURL={
+                        'photos' in hitsProducts[0]
+                          ? getFirstPhotoBlurDataURL(hitsProducts[0].photos)
+                          : undefined
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <FluidGrid
+                cols={Math.min(2, hitsProducts.length || 1)}
+                colsTablet={Math.min(3, hitsProducts.length || 1)}
+                colsDesktop={Math.min(4, hitsProducts.length || 1)}
+                colsXl={4}
+                cols2xl={4}
+                cols3xl={4}
+                cols4xl={4}
+                gap="6"
+                adaptiveGap={false}
+                className="max-sm:grid-cols-1 gap-6 md:gap-7 lg:gap-8 xl:gap-10 2xl:gap-12 3xl:gap-14 4xl:gap-16 5xl:gap-20 6xl:gap-24"
+                justify={hitsProducts.length < 4 ? 'center' : 'start'}
+              >
+                {hitsProducts.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    id={p.id}
+                    title={p.title}
+                    brand={p.brand}
+                    sku={p.sku}
+                    weight={p.weight}
+                    price={p.price}
+                    priceOld={p.priceOld}
+                    photo={p.photo}
+                    photos={'photos' in p ? p.photos : undefined}
+                    slug={p.slug}
+                    quantity={p.quantity}
+                    isPreorderEnabled={p.isPreorderEnabled}
+                    blurDataURL={'photos' in p ? getFirstPhotoBlurDataURL(p.photos) : undefined}
+                  />
                 ))}
               </FluidGrid>
-            </ScrollReveal>
-          ) : (
-            <p className="text-gray-500">Пока нет новостей.</p>
-          )}
-        </AdaptiveContainer>
-      </section>
-      {showHomeArticlesSection ? (
+            )}
+          </AdaptiveContainer>
+        </section>
         <SpacingVertical
           size="lg"
           className="lg:[&]:my-5 xl:[&]:my-6 2xl:[&]:my-7 3xl:[&]:my-8 4xl:[&]:my-9 5xl:[&]:my-10 6xl:[&]:my-12"
         />
-      ) : null}
-    </>
-  ) : null
+      </>
+    ) : null
 
   const articlesSection = showHomeArticlesSection ? (
     <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
@@ -1264,7 +1298,7 @@ export default async function HomePage() {
               Отзывы
             </Heading2>
             <p className="text-xs font-light text-slate-500 2xl:text-sm 3xl:text-base">
-              {reviewsSubtitle?.text ?? 'Мнения наших клиентов'}
+              {reviewsSubtitle?.text ?? 'Опыт покупателей INNER HEALTH'}
             </p>
           </div>
           <Link
@@ -1295,8 +1329,8 @@ export default async function HomePage() {
           return newArrivalsSection
         case 'howToOrder':
           return howToOrderSection
-        case 'news':
-          return newsSection
+        case 'hits':
+          return hitsSection
         case 'articles':
           return articlesSection
         case 'reviews':
@@ -1343,11 +1377,13 @@ export default async function HomePage() {
           showDescription={heroContent.showDescription}
           showPrimaryCta={heroContent.showPrimaryCta}
           showImage={heroContent.showImage}
+          secondaryCtaLabel="ХИТЫ ПРОДАЖ"
+          secondaryCtaHref="#hits"
         />
       ) : null}
 
-      {/* Баннер — бегущая строка Sprint Power */}
-      <SprintPowerBanner />
+      {/* Бегущая строка с преимуществами Inner Health */}
+      <InnerHealthMarquee />
       {orderedSections}
 
       {/* Блок Sprint Power */}

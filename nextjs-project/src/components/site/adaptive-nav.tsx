@@ -1,12 +1,17 @@
 'use client'
 
 import { useMediaConflictDetection } from '@/hooks/use-overlap-detection'
-import type { BrandNavLink } from '@/lib/brand/site-branding'
+import type { BrandNavDropdown, BrandNavEntry, BrandNavLink } from '@/lib/brand/site-branding'
+import { HeaderNavDropdown } from './header-nav-dropdown'
+
+function isDropdownEntry(entry: BrandNavEntry): entry is BrandNavDropdown {
+  return (entry as BrandNavLink).href === undefined
+}
 
 interface AdaptiveNavProps {
   /** Принудительно использовать мобильный вариант (переопределяет автоматическое определение) */
   forceMobile?: boolean
-  links: readonly BrandNavLink[]
+  links: readonly BrandNavEntry[]
   variant?: 'light' | 'dark'
 }
 
@@ -35,15 +40,19 @@ export function AdaptiveNav({ forceMobile = false, links, variant = 'light' }: A
       `}
       aria-label="Основное меню"
     >
-      {links.map(({ label, href }) => (
-        <a
-          key={href}
-          href={href}
-          className={`transition-colors whitespace-nowrap ${variant === 'dark' ? 'hover:text-white' : 'hover:text-slate-900'}`}
-        >
-          {label}
-        </a>
-      ))}
+      {links.map((entry) =>
+        isDropdownEntry(entry) ? (
+          <HeaderNavDropdown key={entry.label} label={entry.label} items={entry.items} variant={variant} />
+        ) : (
+          <a
+            key={entry.href}
+            href={entry.href}
+            className={`transition-colors whitespace-nowrap ${variant === 'dark' ? 'hover:text-white' : 'hover:text-slate-900'}`}
+          >
+            {entry.label}
+          </a>
+        )
+      )}
     </nav>
   )
 }

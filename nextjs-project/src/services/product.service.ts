@@ -440,6 +440,25 @@ export async function getProductsForHomeInBrandScope(take: number, brandId?: Bra
   });
 }
 
+/** Get products for home "Хиты продаж" block. Does not fetch photos Json. */
+export async function getHitsProductsInBrandScope(take: number, brandId?: BrandId | null) {
+  const safeTake = Math.max(1, take);
+  const brandFilter: Prisma.ProductWhereInput = isSprintPowerBrand(brandId)
+    ? { brand: SPRINT_POWER_PRODUCT_BRAND }
+    : { OR: [{ brand: null }, { brand: { not: SPRINT_POWER_PRODUCT_BRAND } }] };
+  return prisma.product.findMany({
+    where: {
+      slug: { not: null },
+      isDraft: false,
+      isFeaturedInHits: true,
+      ...brandFilter,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: safeTake,
+    select: productCardSelect,
+  });
+}
+
 /** Get products by ids with price/promo fields (for order creation). */
 export async function getProductsForOrder(productIds: string[], brandId?: BrandId | null) {
   const where: Prisma.ProductWhereInput = {

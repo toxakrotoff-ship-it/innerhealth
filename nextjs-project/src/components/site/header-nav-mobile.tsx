@@ -107,11 +107,11 @@ export function HeaderNavMobile({
               )}
             </Link>
             <div className="flex flex-col">
-              {navLinks.map(({ label, href }) => (
+              {navLinks.map(({ label, href, dividerBefore }) => (
                   <Link
-                    key={href}
+                    key={href + label}
                     href={href}
-                    className={navLinkClass}
+                    className={`${navLinkClass} ${dividerBefore ? `mt-2 border-t-4 ${navBorder}` : ''}`}
                     onClick={() => setOpen(false)}
                   >
                   {label}
@@ -151,14 +151,6 @@ export function HeaderNavMobile({
               )}
             </div>
             <div className={`mt-auto pt-4 pb-2 px-5 border-t ${navBorder}`}>
-                <a
-                  href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}
-                className={`flex items-center gap-2 mb-3 text-sm font-medium ${variant === 'dark' ? 'text-white' : 'text-slate-900'}`}
-                onClick={() => setOpen(false)}
-              >
-                <PhoneIcon />
-                  {contact.phone}
-              </a>
               <div className="flex items-center gap-0.5 2xl:gap-1 3xl:gap-2">
                 <a
                     href={`tel:${contact.phone.replace(/\s|\(|\)|-/g, '')}`}

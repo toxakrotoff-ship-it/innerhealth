@@ -45,7 +45,7 @@ export function SprintPowerBlock() {
                 </div>
               </div>
             </div>
-            <div className="absolute bottom-3 left-3 right-3 z-10 mx-auto max-w-[min(15.5rem,calc(100%-1.5rem))] rounded-2xl border border-slate-100 bg-white p-4 shadow-xl sm:bottom-4 sm:left-auto sm:right-4 sm:mx-0 sm:max-w-[240px] sm:rounded-3xl sm:p-6 md:-bottom-6 md:-right-6 2xl:max-w-[320px] 2xl:p-8">
+            <div className="absolute top-3 left-3 right-3 z-10 mx-auto max-w-[min(15.5rem,calc(100%-1.5rem))] rounded-2xl border border-slate-100 bg-white p-4 shadow-xl sm:top-4 sm:left-auto sm:right-4 sm:mx-0 sm:max-w-[240px] sm:rounded-3xl sm:p-6 md:-top-6 md:-right-6 2xl:max-w-[320px] 2xl:p-8">
               <h3 className="mb-1.5 text-xs font-semibold tracking-tight text-slate-900 uppercase sm:mb-2 sm:text-sm 2xl:text-base 3xl:text-lg">
                 Sprint Power
               </h3>
@@ -65,7 +65,7 @@ export function SprintPowerBlock() {
               Чистая энергия.
             </h2>
             <p className="max-w-prose font-light leading-relaxed text-slate-600 text-[clamp(0.9375rem,0.5vw+0.82rem,1.125rem)] 2xl:text-xl">
-              Sprint Power — это инновационные формулы, правильные пропорции и высококачественное сырье в биодоступной форме. Добавки, которые сделают ваши тренировки эффективнее, а победы — ярче.
+              Инновационные формулы и биодоступное сырьё для эффективных тренировок.
             </p>
             <ul className="space-y-4 2xl:space-y-5" role="list">
               <li className="flex items-center gap-3 text-sm font-medium text-slate-700 2xl:text-base">
@@ -78,7 +78,9 @@ export function SprintPowerBlock() {
               </li>
             </ul>
             <Link
-              href="/catalog"
+              href="https://sprintpower.ru/catalog"
+              target="_blank"
+              rel="noopener noreferrer"
               className="desktop-button-scale inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-8 py-4 text-sm font-semibold text-white transition-colors hover:bg-action-blue sm:w-auto"
             >
               В каталог Sprint Power

@@ -3,27 +3,44 @@ import type { BrandId } from '@/lib/brand/brand';
 export interface BrandNavLink {
   label: string;
   href: string;
+  /** Мобильное меню: показать разделитель перед этим пунктом (визуально отделяет группу). */
+  dividerBefore?: boolean;
 }
+
+/** Группа ссылок, собранных в выпадающее меню в десктоп-шапке (чтобы не плодить пункты в один ряд). */
+export interface BrandNavDropdown {
+  type: 'dropdown';
+  label: string;
+  items: readonly BrandNavLink[];
+}
+
+export type BrandNavEntry = BrandNavLink | BrandNavDropdown;
 
 export interface BrandContactConfig {
   phone: string;
   email: string;
 }
 
+export interface BrandFooterColumn {
+  title: string;
+  links: readonly BrandNavLink[];
+}
+
 export interface BrandSiteConfig {
   id: BrandId;
   title: string;
   logoText: string;
-  navLinks: readonly BrandNavLink[];
+  navLinks: readonly BrandNavEntry[];
   mobileNavLinks: readonly BrandNavLink[];
-  footerLinks: readonly BrandNavLink[];
+  /** Подвал: набор колонок ссылок (без учёта колонки бренда и юридических ссылок — те рендерятся отдельно). */
+  footerColumns: readonly BrandFooterColumn[];
   contact: BrandContactConfig;
 }
 
 const DEFAULT_INNER_SITE_URL = 'https://innerhealth.ru';
 const DEFAULT_SPRINT_SITE_URL = 'https://sprintpower.ru';
 
-const sharedFooterLegalLinks: readonly BrandNavLink[] = [
+export const sharedFooterLegalLinks: readonly BrandNavLink[] = [
   { label: 'Политика конфиденциальности', href: '/privacy' },
   { label: 'Публичная оферта', href: '/oferta' },
 ];
@@ -35,36 +52,56 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
     logoText: 'INNER HEALTH',
     navLinks: [
       { label: 'Каталог', href: '/catalog' },
-      // Полноценная страница /news уже есть и участвует в sitemap — ведём
-      // сюда, как это уже сделано у Sprint Power, а не на якорь-тизер на
-      // главной (был `/#news`).
-      { label: 'Новости', href: '/news' },
-      { label: 'О нас', href: '/o-nas' },
       { label: 'Акции', href: '/catalog/aktsii' },
-      { label: 'Статьи', href: '/informaciya' },
-      { label: 'B2B', href: '/b2b' },
+      { label: 'О нас', href: '/o-nas' },
+      { label: 'Доставка и оплата', href: '/faq' },
+      { label: 'Вопросы и ответы', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },
+      {
+        type: 'dropdown',
+        label: 'Сотрудничество',
+        items: [
+          { label: 'Специалистам', href: '/sotrudnichestvo' },
+          { label: 'Оптовым партнёрам', href: '/b2b' },
+        ],
+      },
     ],
     mobileNavLinks: [
       { label: 'Каталог', href: '/catalog' },
-      { label: 'Новости', href: '/news' },
+      { label: 'Акции', href: '/catalog/aktsii' },
       { label: 'О нас', href: '/o-nas' },
-      { label: 'Статьи', href: '/informaciya' },
-      { label: 'АКЦИИ', href: '/catalog/aktsii' },
-      { label: 'B2B', href: '/b2b' },
-      { label: 'Сотрудничество', href: '/sotrudnichestvo' },
+      { label: 'Доставка и оплата', href: '/faq' },
+      { label: 'Вопросы и ответы', href: '/faq' },
       { label: 'Контакты', href: '/contacts' },
-      { label: 'FAQ', href: '/faq' },
+      { label: 'Специалистам', href: '/sotrudnichestvo', dividerBefore: true },
+      { label: 'Оптовым партнёрам', href: '/b2b' },
     ],
-    footerLinks: [
-      { label: 'О нас', href: '/o-nas' },
-      { label: 'Контакты', href: '/contacts' },
-      { label: 'B2B', href: '/b2b' },
-      { label: 'Сотрудничество', href: '/sotrudnichestvo' },
-      { label: 'Отзывы', href: '/otzyvy' },
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Информация', href: '/informaciya' },
-      ...sharedFooterLegalLinks,
+    footerColumns: [
+      {
+        title: 'Покупателям',
+        links: [
+          { label: 'Каталог', href: '/catalog' },
+          { label: 'Доставка и оплата', href: '/faq' },
+          { label: 'Вопросы и ответы', href: '/faq' },
+          { label: 'Новости', href: '/news' },
+          { label: 'Отзывы', href: '/otzyvy' },
+          { label: 'Контакты', href: '/contacts' },
+        ],
+      },
+      {
+        title: 'О бренде',
+        links: [
+          { label: 'О нас', href: '/o-nas' },
+          { label: 'Партнёрские проекты', href: '/#partners-heading' },
+        ],
+      },
+      {
+        title: 'Сотрудничество',
+        links: [
+          { label: 'Специалистам', href: '/sotrudnichestvo' },
+          { label: 'Оптовым партнёрам', href: '/b2b' },
+        ],
+      },
     ],
     contact: {
       phone: '+7 (989) 103-91-92',
@@ -99,15 +136,24 @@ const BRAND_SITE_CONFIGS: Record<BrandId, BrandSiteConfig> = {
       { label: 'Контакты', href: '/contacts' },
       { label: 'Партнерство', href: '/sotrudnichestvo' },
     ],
-    footerLinks: [
-      { label: 'Каталог', href: '/catalog' },
-      { label: 'Хиты продаж', href: '/catalog?sort=newest' },
-      { label: 'Отзывы', href: '/otzyvy' },
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Контакты', href: '/contacts' },
-      { label: 'Партнерство', href: '/sotrudnichestvo' },
-      { label: 'О бренде', href: '/o-nas' },
-      ...sharedFooterLegalLinks,
+    footerColumns: [
+      {
+        title: 'Информация',
+        links: [
+          { label: 'Каталог', href: '/catalog' },
+          { label: 'Хиты продаж', href: '/catalog?sort=newest' },
+          { label: 'Отзывы', href: '/otzyvy' },
+        ],
+      },
+      {
+        title: 'Покупателям',
+        links: [
+          { label: 'FAQ', href: '/faq' },
+          { label: 'Контакты', href: '/contacts' },
+          { label: 'Партнерство', href: '/sotrudnichestvo' },
+          { label: 'О бренде', href: '/o-nas' },
+        ],
+      },
     ],
     contact: {
       phone: '+7 (989) 103-91-92',

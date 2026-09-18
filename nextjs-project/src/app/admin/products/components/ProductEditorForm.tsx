@@ -41,6 +41,7 @@ export interface ProductEditorFormValues {
   isPromoEligible: boolean;
   isPreorderEnabled: boolean;
   isFeaturedInNewArrivals: boolean;
+  isFeaturedInHits: boolean;
   isDraft: boolean;
   categories: string[];
   weight: number | null;
@@ -83,6 +84,7 @@ export interface ProductEditorSubmitPayload {
   isPromoEligible: boolean;
   isPreorderEnabled: boolean;
   isFeaturedInNewArrivals: boolean;
+  isFeaturedInHits: boolean;
   isDraft: boolean;
   categoryIds: string[];
   weight: number | null;
@@ -155,6 +157,7 @@ export function createEmptyProductEditorValues(
     isPromoEligible: true,
     isPreorderEnabled: false,
     isFeaturedInNewArrivals: false,
+    isFeaturedInHits: false,
     isDraft: false,
     categories: [],
     weight: null,
@@ -300,6 +303,7 @@ export function ProductEditorForm({
       isPromoEligible: formData.isPromoEligible,
       isPreorderEnabled: formData.isPreorderEnabled,
       isFeaturedInNewArrivals: formData.isFeaturedInNewArrivals,
+      isFeaturedInHits: formData.isFeaturedInHits,
       isDraft: formData.isDraft,
       categoryIds: formData.categories,
       weight: formData.weight ?? null,
@@ -606,6 +610,25 @@ export function ProductEditorForm({
                 {featuredBlockLabel}
               </label>
             </div>
+            {activeBrand === 'inner' ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="isFeaturedInHits"
+                  checked={formData.isFeaturedInHits}
+                  onChange={(event) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      isFeaturedInHits: event.target.checked,
+                    }))
+                  }
+                  className="form-input h-4 w-4 rounded"
+                />
+                <label htmlFor="isFeaturedInHits" className="text-sm font-medium text-gray-700">
+                  Показывать в блоке «Хиты продаж»
+                </label>
+              </div>
+            ) : null}
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

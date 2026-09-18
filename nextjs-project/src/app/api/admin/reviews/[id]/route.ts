@@ -18,9 +18,9 @@ function isServiceRequest(request: Request): boolean {
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * PATCH /api/admin/reviews/[id] — смена статуса отзыва (approved/rejected).
- * Вызов с X-Service-Key (бот): только отзывы в PENDING.
- * Вызов с сессией ADMIN (админка): любой статус можно сменить на approved/rejected.
+ * PATCH /api/admin/reviews/[id] — смена статуса отзыва (approved/rejected) и/или названия товара.
+ * Вызов с X-Service-Key (бот): только статус, только отзывы в PENDING.
+ * Вызов с сессией ADMIN (админка): статус (любой) и/или productName, можно менять по отдельности.
  */
 export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
@@ -28,25 +28,24 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Missing review id' }, { status: 400 });
   }
 
-  const patchReviewSchema = z.object({
-    status: z.enum(['approved', 'rejected']),
-  });
-  let body: z.infer<typeof patchReviewSchema>;
-  try {
-    const raw = await request.json();
-    body = patchReviewSchema.parse(raw);
-  } catch {
-    return NextResponse.json(
-      { error: 'status must be "approved" or "rejected"' },
-      { status: 400 }
-    );
-  }
-
-  const newStatus = body.status === 'approved' ? 'APPROVED' : 'REJECTED';
-
   const isBot = isServiceRequest(request);
 
   if (isBot) {
+    const botPatchSchema = z.object({
+      status: z.enum(['approved', 'rejected']),
+    });
+    let body: z.infer<typeof botPatchSchema>;
+    try {
+      const raw = await request.json();
+      body = botPatchSchema.parse(raw);
+    } catch {
+      return NextResponse.json(
+        { error: 'status must be "approved" or "rejected"' },
+        { status: 400 }
+      );
+    }
+    const newStatus = body.status === 'approved' ? 'APPROVED' : 'REJECTED';
+
     try {
       const review = await reviewService.findReviewById(id);
       if (!review) {
@@ -70,15 +69,38 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (session instanceof NextResponse) return session;
   const brandId = resolveBrandOrDefaultFromRequest(request);
 
+  const adminPatchSchema = z
+    .object({
+      status: z.enum(['approved', 'rejected']).optional(),
+      productName: z.string().max(200).nullable().optional(),
+    })
+    .refine((data) => data.status !== undefined || data.productName !== undefined, {
+      message: 'Provide status and/or productName',
+    });
+  let body: z.infer<typeof adminPatchSchema>;
+  try {
+    const raw = await request.json();
+    body = adminPatchSchema.parse(raw);
+  } catch {
+    return NextResponse.json(
+      { error: 'Provide status ("approved"/"rejected") and/or productName' },
+      { status: 400 }
+    );
+  }
+
   try {
     const review = await reviewService.findReviewById(id, brandId);
     if (!review) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
-    await reviewService.updateReview(id, { status: newStatus });
-    return NextResponse.json({ success: true, status: newStatus });
+    const newStatus = body.status === 'approved' ? 'APPROVED' : body.status === 'rejected' ? 'REJECTED' : undefined;
+    const updated = await reviewService.updateReview(id, {
+      ...(newStatus ? { status: newStatus } : {}),
+      ...(body.productName !== undefined ? { productName: body.productName?.trim() || null } : {}),
+    });
+    return NextResponse.json({ success: true, status: updated.status, productName: updated.productName });
   } catch (e) {
-    console.error('PATCH review status (admin) error:', e);
+    console.error('PATCH review (admin) error:', e);
     return NextResponse.json({ error: 'Failed to update review' }, { status: 500 });
   }
 }

@@ -874,13 +874,11 @@ html.preloader-skip .preloader-overlay {
     }
   }
 
-  /* Sprint Power banner: ровно две одинаковые полосы без лишних gap — иначе -50% даёт скачок.
-     Не используем постоянный will-change: transform — в Firefox это часто перегружает композитор
-     и даёт рывки у других анимаций на странице; translate3d в keyframes достаточно для слоя. */
-  .animate-marquee-sprint {
-    animation: marquee-sprint 30s linear infinite;
+  /* Inner Health бегущая строка под первым экраном: тот же паттерн, что и у Sprint Power banner (см. выше). */
+  .animate-marquee-inner {
+    animation: marquee-inner 30s linear infinite;
   }
-  @keyframes marquee-sprint {
+  @keyframes marquee-inner {
     0% {
       transform: translate3d(0, 0, 0);
     }
@@ -889,7 +887,7 @@ html.preloader-skip .preloader-overlay {
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .animate-marquee-sprint {
+    .animate-marquee-inner {
       animation: none;
       transform: none !important;
       width: 100%;
@@ -900,8 +898,7 @@ html.preloader-skip .preloader-overlay {
       column-gap: 3rem;
     }
 
-    /* Вторая копия полосы нужна только для бесшовного цикла анимации */
-    .animate-marquee-sprint > div:last-child {
+    .animate-marquee-inner > div:last-child {
       display: none;
     }
   }

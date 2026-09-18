@@ -31,10 +31,6 @@ import { getCatalogListingRobots } from '@/lib/catalog-listing-robots'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { getServerBrandContext } from '@/lib/brand/brand-server'
 import { getPromotionsCategorySlug, isSprintPowerBrand } from '@/lib/brand/brand-scope'
-import {
-  formatAktsiiCatalogBlockSubtitleRu,
-  formatProductsCountRu,
-} from '@/lib/ru-product-count'
 import { countPublicGiftPromotions } from '@/services/gift-promotion.service'
 import { trimToNull } from '@/lib/seo'
 import {
@@ -246,14 +242,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                 sprintFallback: isSprintTheme,
               })
               const imagePosition = getCategoryImageObjectPosition(cat.slug)
-              const categorySubtitle = isSprintTheme
-                ? null
-                : cat.slug === promotionsCategorySlug
-                  ? formatAktsiiCatalogBlockSubtitleRu(
-                      publicPromotionProductCount,
-                      publicGiftPromotionCount
-                    )
-                  : trimToNull(cat.catalogTeaser) ?? formatProductsCountRu(cat._count.products)
+              const categorySubtitle = isSprintTheme ? null : trimToNull(cat.catalogTeaser)
               return (
                 <Link
                   key={cat.id}

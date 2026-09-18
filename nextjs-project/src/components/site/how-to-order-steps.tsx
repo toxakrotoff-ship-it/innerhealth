@@ -62,7 +62,7 @@ export function HowToOrderSteps({
           {resolvedTitle} — три шага
         </p>
       )}
-      <ol className="grid gap-6 sm:grid-cols-3">
+      <ol className={`grid gap-6 ${resolvedSteps.length === 1 ? 'max-w-md mx-auto' : 'sm:grid-cols-3'}`}>
         {resolvedSteps.map((step, i) => (
           <li
             key={`${i}-${step.title}`}
@@ -70,7 +70,9 @@ export function HowToOrderSteps({
               isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-white'
             }`}
           >
-            <span className="text-xs font-semibold text-action-blue mb-2">Шаг {i + 1}</span>
+            {resolvedSteps.length > 1 ? (
+              <span className="text-xs font-semibold text-action-blue mb-2">Шаг {i + 1}</span>
+            ) : null}
             <h3 className={`text-lg font-semibold mb-2 ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
               {step.title}
             </h3>

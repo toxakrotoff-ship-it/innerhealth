@@ -77,6 +77,8 @@ model Product {
   isPreorderEnabled                    Boolean           @default(false)
   /// Ручная отметка для блока «Новинки ассортимента» на главной
   isFeaturedInNewArrivals              Boolean           @default(false)
+  /// Ручная отметка для блока «Хиты продаж» на главной
+  isFeaturedInHits                     Boolean           @default(false)
   cartItems                            CartItem[]
   orderItems                           OrderItem[]
   categories                           ProductCategory[]
@@ -98,6 +100,7 @@ model Product {
   @@index([isDraft, priceOld])
   @@index([isDraft, title, createdAt])
   @@index([isDraft, isFeaturedInNewArrivals, createdAt])
+  @@index([isDraft, isFeaturedInHits, createdAt])
 }
 
 model ProductRelation {
@@ -964,6 +967,8 @@ model Review {
   socialLink String?
   text       String
   imageUrl   String?
+  /// Название товара, к которому относится отзыв (заполняется вручную в админке)
+  productName String?
   createdAt  DateTime     @default(now())
   status     ReviewStatus @default(PENDING)
 

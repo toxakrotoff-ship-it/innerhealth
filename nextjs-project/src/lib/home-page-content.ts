@@ -52,7 +52,7 @@ export const INNER_HOME_SECTION_IDS = [
   'directions',
   'newArrivals',
   'howToOrder',
-  'news',
+  'hits',
   'articles',
   'reviews',
 ] as const

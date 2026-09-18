@@ -11,6 +11,7 @@ interface Review {
   socialLink: string | null;
   text: string;
   imageUrl: string | null;
+  productName: string | null;
   status: ReviewStatus;
   createdAt: string;
 }
@@ -42,6 +43,7 @@ export default function AdminReviewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | ReviewStatus>('all');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [productNameDrafts, setProductNameDrafts] = useState<Record<string, string>>({});
 
   const fetchReviews = async () => {
     try {
@@ -70,6 +72,28 @@ export default function AdminReviewsPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Ошибка');
+      }
+      await fetchReviews();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Ошибка');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const saveProductName = async (id: string) => {
+    const productName = productNameDrafts[id] ?? '';
+    setActingId(id);
+    try {
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ productName }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -193,6 +217,26 @@ export default function AdminReviewsPage() {
 
                   <p className="mt-2 text-sm text-gray-700">{truncate(review.text, 220)}</p>
 
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Название товара"
+                      defaultValue={review.productName ?? ''}
+                      onChange={(e) =>
+                        setProductNameDrafts((prev) => ({ ...prev, [review.id]: e.target.value }))
+                      }
+                      className="form-input flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => saveProductName(review.id)}
+                    >
+                      Сохранить
+                    </Button>
+                  </div>
+
                   {review.imageUrl && (
                     <a
                       href={review.imageUrl.startsWith('/') ? review.imageUrl : `/${review.imageUrl}`}
@@ -305,6 +349,25 @@ export default function AdminReviewsPage() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 max-w-xs">
                           {truncate(review.text, 120)}
+                          <div className="mt-2 flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Название товара"
+                              defaultValue={review.productName ?? ''}
+                              onChange={(e) =>
+                                setProductNameDrafts((prev) => ({ ...prev, [review.id]: e.target.value }))
+                              }
+                              className="form-input w-full rounded-lg border border-gray-200 px-2 py-1 text-xs"
+                            />
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => saveProductName(review.id)}
+                            >
+                              ОК
+                            </Button>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <span

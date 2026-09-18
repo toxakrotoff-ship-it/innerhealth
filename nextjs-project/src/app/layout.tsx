@@ -168,7 +168,7 @@ ym(${metrikaCounterId}, 'init', {${metrikaInitOptions}});
     <html
       lang="ru"
       data-brand={brandId}
-      className={`${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}
+      className={`scroll-smooth ${montserrat.variable} ${marckScript.variable} ${unbounded.variable}`}
       suppressHydrationWarning
     >
       <head>

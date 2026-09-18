@@ -13,12 +13,7 @@ const SITE_DEVELOPER_TELEGRAM_LABEL = '@Tony_CoffeeZombie'
 export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const siteConfig = getBrandSiteConfig(brandId)
   const isSprintTheme = brandId === 'sprint-power'
-  const footerLinks = siteConfig.footerLinks
-  const legalHrefs = new Set<string>(['/privacy', '/oferta'])
-  const legalLinks = footerLinks.filter((link) => legalHrefs.has(link.href))
-  const nonLegalLinks = footerLinks.filter((link) => !legalHrefs.has(link.href))
-  const infoLinks = nonLegalLinks.slice(0, 3)
-  const customerLinks = nonLegalLinks.slice(3)
+  const footerColumns = siteConfig.footerColumns
   const blocks = await getResolvedBlocksForPage('footer', brandId)
   const fullName = blocks.find((b) => b.key === 'footer.legal.fullName')
   const address = blocks.find((b) => b.key === 'footer.legal.address')
@@ -29,7 +24,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
   const ogrnip = blocks.find((b) => b.key === 'footer.bank.ogrnip')
   const inn = blocks.find((b) => b.key === 'footer.bank.inn')
   const getText = (key: string, fallback: string) => blocks.find((b) => b.key === key)?.text?.trim() || fallback
-  const getLinkKey = (href: string) => {
+  const getLinkKey = (href: string, label: string) => {
     if (href === '/catalog') return 'footer.link.catalog'
     if (href === '/news') return 'footer.link.news'
     if (href === '/o-nas') return 'footer.link.about'
@@ -39,13 +34,14 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
     if (href === '/contacts') return 'footer.link.contacts'
     if (href === '/sotrudnichestvo') return 'footer.link.cooperation'
     if (href === '/otzyvy') return 'footer.link.reviews'
-    if (href === '/faq') return 'footer.link.faq'
+    if (href === '/faq') return label.startsWith('Доставка') ? 'footer.link.delivery' : 'footer.link.faq'
     if (href === '/privacy') return 'footer.link.privacy'
     if (href === '/oferta') return 'footer.link.offer'
+    if (href.startsWith('/#partners')) return 'footer.link.partners'
     return null
   }
   const getLinkLabel = (label: string, href: string) => {
-    const key = getLinkKey(href)
+    const key = getLinkKey(href, label)
     return key ? getText(key, label) : label
   }
 
@@ -107,129 +103,54 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                 leading="relaxed"
                 adaptive
               >
-                {getText('footer.brand.description', 'Нутриенты и продукты для здоровья')}
+                {getText(
+                  'footer.brand.description',
+                  isSprintTheme ? 'Нутриенты и продукты для здоровья' : 'Российский бренд функционального питания'
+                )}
               </ResponsiveText>
             </div>
 
-            {/* Колонка 2: Информация */}
-            <div className={footerLinkSectionClass}>
-              <ResponsiveText
-                as="h3"
-                variant="xs"
-                weight="semibold"
-                uppercase
-                tracking="widest"
-                color="primary"
-                className={footerColumnHeadingClass}
-                adaptive
-              >
-                {getText('footer.column.info.title', 'Информация')}
-              </ResponsiveText>
-              <ul className="space-y-4 2xl:space-y-5">
-                {infoLinks.map(({ label, href }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                        isSprintTheme
-                          ? 'text-slate-400 hover:text-white'
-                          : 'hover:text-action-blue'
-                      }`}
-                    >
-                      <ResponsiveText
-                        as="span"
-                        variant="sm"
-                        weight="light"
-                        color={isSprintTheme ? 'current' : 'secondary'}
-                        adaptive
+            {/* Колонки 2-4: собраны из siteConfig.footerColumns (разный состав у разных брендов) */}
+            {footerColumns.map((column) => (
+              <div key={column.title} className={footerLinkSectionClass}>
+                <ResponsiveText
+                  as="h3"
+                  variant="xs"
+                  weight="semibold"
+                  uppercase
+                  tracking="widest"
+                  color="primary"
+                  className={footerColumnHeadingClass}
+                  adaptive
+                >
+                  {getText(`footer.column.${column.title}.title`, column.title)}
+                </ResponsiveText>
+                <ul className="space-y-4 2xl:space-y-5">
+                  {column.links.map(({ label, href }) => (
+                    <li key={href + label}>
+                      <Link
+                        href={href}
+                        className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                          isSprintTheme
+                            ? 'text-slate-400 hover:text-white'
+                            : 'hover:text-action-blue'
+                        }`}
                       >
-                        {getLinkLabel(label, href)}
-                      </ResponsiveText>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Колонка 3: Покупателям */}
-            <div className={footerLinkSectionClass}>
-              <ResponsiveText
-                as="h3"
-                variant="xs"
-                weight="semibold"
-                uppercase
-                tracking="widest"
-                color="primary"
-                className={footerColumnHeadingClass}
-                adaptive
-              >
-                {getText('footer.column.customer.title', 'Покупателям')}
-              </ResponsiveText>
-              <ul className="space-y-4 2xl:space-y-5">
-                {customerLinks.map(({ label, href }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                        isSprintTheme
-                          ? 'text-slate-400 hover:text-white'
-                          : 'hover:text-action-blue'
-                      }`}
-                    >
-                      <ResponsiveText
-                        as="span"
-                        variant="sm"
-                        weight="light"
-                        color={isSprintTheme ? 'current' : 'secondary'}
-                        adaptive
-                      >
-                        {getLinkLabel(label, href)}
-                      </ResponsiveText>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Колонка 4: Юридическое */}
-            <div className={footerLinkSectionClass}>
-              <ResponsiveText
-                as="h3"
-                variant="xs"
-                weight="semibold"
-                uppercase
-                tracking="widest"
-                color="primary"
-                className={footerColumnHeadingClass}
-                adaptive
-              >
-                {getText('footer.column.legal.title', 'Юридическое')}
-              </ResponsiveText>
-              <ul className="space-y-4 2xl:space-y-5">
-                {legalLinks.map(({ label, href }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
-                        isSprintTheme
-                          ? 'text-slate-400 hover:text-white'
-                          : 'hover:text-action-blue'
-                      }`}
-                    >
-                      <ResponsiveText
-                        as="span"
-                        variant="sm"
-                        weight="light"
-                        color={isSprintTheme ? 'current' : 'secondary'}
-                        adaptive
-                      >
-                        {getLinkLabel(label, href)}
-                      </ResponsiveText>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                        <ResponsiveText
+                          as="span"
+                          variant="sm"
+                          weight="light"
+                          color={isSprintTheme ? 'current' : 'secondary'}
+                          adaptive
+                        >
+                          {getLinkLabel(label, href)}
+                        </ResponsiveText>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </FluidGrid>
 
           {/* Реквизиты */}
@@ -335,6 +256,25 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
                   adaptive
                 >
                   {getText('footer.privacyLabel', 'Политика конфиденциальности')}
+                </ResponsiveText>
+              </Link>
+              <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>
+                |
+              </span>
+              <Link
+                href="/oferta"
+                className={`desktop-microtext-scale inline-flex min-h-[36px] items-center transition-colors ${
+                  isSprintTheme ? 'text-[#7AA2FF] hover:text-[#93b7ff]' : 'text-orange-600 hover:text-orange-700'
+                }`}
+              >
+                <ResponsiveText
+                  as="span"
+                  variant="sm"
+                  weight="medium"
+                  className={isSprintTheme ? 'text-[#7AA2FF]' : undefined}
+                  adaptive
+                >
+                  {getText('footer.offerLabel', 'Публичная оферта')}
                 </ResponsiveText>
               </Link>
               <span className={isSprintTheme ? 'text-slate-600' : 'text-slate-300'} aria-hidden>

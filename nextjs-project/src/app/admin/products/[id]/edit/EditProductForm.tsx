@@ -35,6 +35,7 @@ interface ProductResponse {
   isPromoEligible?: boolean;
   isPreorderEnabled?: boolean;
   isFeaturedInNewArrivals?: boolean;
+  isFeaturedInHits?: boolean;
   isDraft?: boolean;
   categories?: Array<{ categoryId: string }>;
   weight: number | null;
@@ -102,6 +103,7 @@ function mapProductToFormValues(
     isPromoEligible: product.isPromoEligible ?? true,
     isPreorderEnabled: product.isPreorderEnabled ?? false,
     isFeaturedInNewArrivals: product.isFeaturedInNewArrivals ?? false,
+    isFeaturedInHits: product.isFeaturedInHits ?? false,
     isDraft: product.isDraft ?? false,
     categories: product.categories?.map((category) => category.categoryId) || [],
     weight: product.weight ?? null,

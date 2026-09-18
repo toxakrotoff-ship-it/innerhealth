@@ -23,6 +23,7 @@ export async function getReviewsForAdmin(brandId?: BrandId | null) {
       socialLink: true,
       text: true,
       imageUrl: true,
+      productName: true,
       status: true,
       createdAt: true,
     },

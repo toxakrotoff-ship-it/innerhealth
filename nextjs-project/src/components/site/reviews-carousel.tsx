@@ -10,6 +10,7 @@ export interface ReviewItem {
   socialLink: string | null;
   text: string;
   imageUrl: string | null;
+  productName?: string | null;
   createdAt: string;
 }
 
@@ -91,6 +92,11 @@ export function ReviewsCarousel({ reviews, isSprintTheme = false }: ReviewsCarou
               isSprintTheme ? 'border-slate-700 bg-[#0F172A]' : 'border-gray-200 bg-white'
             }`}
           >
+            {review.productName ? (
+              <p className={`mb-2 text-[11px] font-semibold uppercase tracking-wide lg:text-xs ${isSprintTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                {review.productName}
+              </p>
+            ) : null}
             <p className={`whitespace-pre-wrap text-[13px] font-normal leading-[1.5] lg:text-sm 2xl:text-base ${isSprintTheme ? 'text-slate-200' : 'text-slate-800'}`}>
               {review.text}
             </p>
