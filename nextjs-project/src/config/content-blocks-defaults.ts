@@ -37,7 +37,7 @@ const INNER_HOME_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
   { page: 'home', key: 'hero.description.isVisible', adminLabel: 'Hero — показывать описание (1 / да / on)' },
   { page: 'home', key: 'hero.cta.isVisible', adminLabel: 'Hero — показывать основную кнопку (1 / да / on)' },
   { page: 'home', key: 'hero.image.isVisible', adminLabel: 'Hero — показывать изображение (1 / да / on)' },
-  { page: 'home', key: 'home.sections.order', adminLabel: 'Главная — порядок секций (CSV: directions,newArrivals,howToOrder,news,articles,reviews)' },
+  { page: 'home', key: 'home.sections.order', adminLabel: 'Главная — порядок секций (CSV: directions,newArrivals,howToOrder,hits,articles,reviews)' },
   { page: 'home', key: 'home.directions.title' },
   { page: 'home', key: 'home.directions.subtitle' },
   { page: 'home', key: 'home.directions.cta.label' },
@@ -657,7 +657,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'home.sections.order',
     label: 'Главная — порядок секций',
     type: 'short',
-    text: 'directions,newArrivals,howToOrder,news,articles,reviews',
+    text: 'directions,newArrivals,howToOrder,hits,articles,reviews',
   },
   {
     page: 'home',
