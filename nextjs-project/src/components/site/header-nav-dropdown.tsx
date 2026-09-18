@@ -98,7 +98,7 @@ export function HeaderNavDropdown({ label, items, variant = 'light' }: HeaderNav
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`flex items-center gap-1 transition-colors whitespace-nowrap ${variant === 'dark' ? 'hover:text-white' : 'hover:text-slate-900'}`}
+        className={`flex items-center gap-1 font-medium uppercase tracking-widest transition-colors whitespace-nowrap ${variant === 'dark' ? 'hover:text-white' : 'hover:text-slate-900'}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
