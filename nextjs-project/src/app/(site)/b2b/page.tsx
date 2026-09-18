@@ -14,15 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
     brandId,
     page: 'b2b',
     path: '/b2b',
-    fallbackTitle: 'B2B',
+    fallbackTitle: isSprintPowerBrand(brandId) ? 'B2B' : 'Оптовым партнёрам',
     fallbackDescription: `Оптовые поставки продукции ${siteTitle}. Оставьте заявку на получение оптового прайс-листа.`,
   })
 }
-
-const breadcrumbItems = [
-  { label: 'Главная', href: '/' },
-  { label: 'B2B' },
-]
 
 export const revalidate = 86400
 
@@ -41,7 +36,13 @@ export default async function B2bPage() {
   const blocks = await getResolvedBlocksForPage('b2b', brandId)
   const bodyBlock = blocks.find((b) => b.key === 'b2b.body')
 
-  const pageTitle = getText(blocks, 'b2b.title', 'B2B')
+  const menuLabel = isSprintTheme ? 'B2B' : 'Оптовым партнёрам'
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: menuLabel },
+  ]
+
+  const pageTitle = getText(blocks, 'b2b.title', menuLabel)
   const formTitle = getText(blocks, 'b2b.form.title', 'Заявка на оптовый прайс-лист')
   const formSubtitle = getText(
     blocks,
