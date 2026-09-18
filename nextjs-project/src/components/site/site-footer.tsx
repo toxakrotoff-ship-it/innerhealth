@@ -45,9 +45,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
     return key ? getText(key, label) : label
   }
 
-  const footerLinkSectionClass = isSprintTheme
-    ? 'max-md:border-t max-md:border-slate-700 max-md:pt-9 md:border-0 md:pt-0'
-    : 'max-md:border-t max-md:border-slate-200 max-md:pt-9 md:border-0 md:pt-0'
+  const footerLinkSectionClass = ''
 
   const footerColumnHeadingClass = isSprintTheme
     ? 'mb-3 text-slate-100 md:mb-6 2xl:mb-7'
@@ -65,9 +63,9 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
           adaptivePadding
           className="py-8 sm:py-10 lg:py-12 2xl:py-14 3xl:py-16"
         >
-          {/* Основная сетка с 4 колонками на десктопе и выше */}
+          {/* Основная сетка: 2 колонки на мобильных, 4 — на десктопе и выше */}
           <FluidGrid
-            cols={1}
+            cols={2}
             colsTablet={2}
             colsDesktop={4}
             colsXl={4}
