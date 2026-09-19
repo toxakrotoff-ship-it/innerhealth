@@ -1,7 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
 import { resolveWeightBucketG } from '@/lib/cdek-cache-sync'
-import type { CdekTariffResult } from '@/lib/cdek'
+import { enrichTariffResult, type CdekTariffResult } from '@/lib/cdek'
 
 /**
  * Read-путь для ночного Postgres-кэша СДЭК (см. cdek-cache-sync.ts).
@@ -69,10 +69,15 @@ export async function getTariffFromDb(params: {
 }
 
 export function tariffCacheHitToResult(hit: TariffCacheHit, tariffCode: number): CdekTariffResult {
-  return {
-    tariff_code: tariffCode,
-    delivery_sum: hit.deliverySum,
-    period_min: hit.periodMin,
-    period_max: hit.periodMax,
-  }
+  // Виджет СДЭК раскладывает тарифы по delivery_mode; без него тариф отбрасывается
+  // и показывается «Не могу посчитать стоимость».
+  return enrichTariffResult(
+    {
+      tariff_code: tariffCode,
+      delivery_sum: hit.deliverySum,
+      period_min: hit.periodMin,
+      period_max: hit.periodMax,
+    },
+    tariffCode
+  )
 }

@@ -200,7 +200,7 @@ const CDEK_WIDGET_TARIFF_METADATA: Record<number, { tariff_name: string; deliver
   },
 }
 
-function enrichTariffResult(result: Partial<CdekTariffResult>, tariffCode: number): CdekTariffResult {
+export function enrichTariffResult(result: Partial<CdekTariffResult>, tariffCode: number): CdekTariffResult {
   const metadata = CDEK_WIDGET_TARIFF_METADATA[tariffCode]
   return {
     ...result,
