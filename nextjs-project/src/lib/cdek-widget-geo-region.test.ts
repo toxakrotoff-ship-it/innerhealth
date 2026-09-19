@@ -56,7 +56,7 @@ describe('cdek-widget-geo-region', () => {
     expect(shouldExpandCountryOfficesAfterInit({})).toBe(false)
   })
 
-  it('expands background country offices on mobile after geo_region bootstrap too', () => {
+  it('skips background country expansion on mobile after region/city bootstrap (iOS tab memory crash)', () => {
     // The widget's own city search only re-centers the map (it re-geocodes the typed
     // text) — it never re-scopes which offices are loaded, so skipping the country-wide
     // background expansion on mobile left mobile users unable to see any pickup points
@@ -89,7 +89,7 @@ describe('cdek-widget-geo-region', () => {
         bootstrapSource: 'geo_region',
         isMobileClient: true,
       })
-    ).toBe(true)
+    ).toBe(false)
 
     expect(
       shouldExpandCountryOfficesAfterInit({
@@ -105,7 +105,7 @@ describe('cdek-widget-geo-region', () => {
         bootstrapSource: 'sender_city',
         isMobileClient: true,
       })
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('expands country offices when bootstrap fully fails (server silently falls back to a default city)', () => {

@@ -456,7 +456,7 @@ export function shouldExpandCountryOfficesAfterInit(params: {
   regionCode?: number | null
   fallbackCityCode?: number | null
   bootstrapSource?: WidgetOfficesBootstrapSource | null
-  /** @deprecated No longer used — country-wide expansion always runs regardless of device. */
+  /** Mobile skips country-wide expansion when a region/city is already resolved (iOS memory crash). */
   isMobileClient?: boolean
 }): boolean {
   const hasRegionBootstrap = params.regionCode != null && params.regionCode > 0
@@ -478,5 +478,12 @@ export function shouldExpandCountryOfficesAfterInit(params: {
   // zero pickup points there — only their own region's offices were ever fetched. Desktop
   // testing tends to mask this because a denied/unavailable geolocation permission falls
   // through to the 'country' bootstrap source, which already expanded to everything.
+  //
+  // Exception: iPhone Safari kills the tab (page silently reloads on picking a PVZ) when the
+  // whole-country offices set is pushed into the Yandex map on top of the WebGL scene.
+  // Confirmed on device: with expansion off (?cdekNoExpand=1) the crash disappears. So on
+  // mobile with a resolved region/city we keep only that region's offices; the full fallback
+  // ('country') still expands, otherwise the user would be stuck with a single default city.
+  if (params.isMobileClient && !isFullFallback) return false
   return true
 }
