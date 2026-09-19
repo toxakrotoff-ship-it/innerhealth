@@ -38,8 +38,7 @@ interface CdekManualDeliveryProps {
 }
 
 const PVZ_PAGE_SIZE = 50
-const PVZ_MAX_PAGES = 30
-const PVZ_PARALLEL_PAGES = 5
+const PVZ_LIVE_MAX_PAGES = 6
 const REQUIRED_TARIFF: Record<ManualDeliveryMethod, number> = { cdek_pvz: 136, cdek_door: 137 }
 
 function brandQuery(brandId?: string, prefix: '&' | '?' = '&'): string {
@@ -223,7 +222,7 @@ export function CdekManualDelivery({
     }
   }
 
-  // --- ПВЗ: постраничная загрузка по городу ---
+  // --- ПВЗ: сначала весь город из кэша, при промахе — последовательная (без параллели) постраничная загрузка ---
   useEffect(() => {
     setPoints([])
     setPointsError(null)
@@ -231,37 +230,41 @@ export function CdekManualDelivery({
     const controller = new AbortController()
     setPointsLoading(true)
 
-    async function fetchPage(page: number): Promise<CdekPvzOption[]> {
-      const res = await fetch(
-        `/api/cdek/deliverypoints?cityCode=${cityCode}&size=${PVZ_PAGE_SIZE}&page=${page}${brandQuery(brandId)}`,
-        { signal: controller.signal }
-      )
+    async function fetchPoints(params: string) {
+      const res = await fetch(`/api/cdek/deliverypoints?cityCode=${cityCode}${params}${brandQuery(brandId)}`, {
+        signal: controller.signal,
+      })
       const data = (await res.json().catch(() => null)) as
-        | { deliveryPoints?: CdekPvzOption[]; error?: string }
+        | { deliveryPoints?: CdekPvzOption[]; source?: string; error?: string }
         | null
-      if (!res.ok) throw new Error(data?.error ?? 'Не удалось загрузить пункты выдачи')
-      return Array.isArray(data?.deliveryPoints) ? data.deliveryPoints : []
+      if (!res.ok) throw new Error(res.status === 500 ? 'Сервис СДЭК временно недоступен, попробуйте позже' : (data?.error ?? 'Не удалось загрузить пункты выдачи'))
+      return { list: Array.isArray(data?.deliveryPoints) ? data.deliveryPoints : [], source: data?.source }
     }
 
     void (async () => {
+      const all: CdekPvzOption[] = []
       try {
-        const all: CdekPvzOption[] = []
-        let page = 0
-        let done = false
-        while (!done && page < PVZ_MAX_PAGES) {
-          const batch = await Promise.all(
-            Array.from({ length: PVZ_PARALLEL_PAGES }, (_, i) => fetchPage(page + i))
-          )
-          for (const list of batch) {
-            all.push(...list)
-            if (list.length < PVZ_PAGE_SIZE) done = true
-          }
-          page += PVZ_PARALLEL_PAGES
+        const cached = await fetchPoints(`&all=1&size=${PVZ_PAGE_SIZE}&page=0`)
+        if (cached.source === 'cache') {
+          setPoints(cached.list)
+          return
+        }
+        all.push(...cached.list)
+        setPoints([...all])
+        if (cached.list.length < PVZ_PAGE_SIZE) return
+        // Живой режим: страницы строго по одной — параллельные всплески СДЭК режет антибот-защитой (403).
+        for (let page = 1; page < PVZ_LIVE_MAX_PAGES; page += 1) {
+          const { list } = await fetchPoints(`&size=${PVZ_PAGE_SIZE}&page=${page}`)
+          all.push(...list)
           setPoints([...all])
+          if (list.length < PVZ_PAGE_SIZE) break
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return
-        setPointsError(e instanceof Error ? e.message : 'Не удалось загрузить пункты выдачи')
+        // Уже загруженные пункты остаются доступными; ошибку показываем только если нет ничего.
+        if (all.length === 0) {
+          setPointsError(e instanceof Error ? e.message : 'Не удалось загрузить пункты выдачи')
+        }
       } finally {
         if (!controller.signal.aborted) setPointsLoading(false)
       }
