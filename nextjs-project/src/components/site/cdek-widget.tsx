@@ -349,12 +349,18 @@ export function CdekWidget({
       const fallbackCityCodeForPath = geoRegion ? null : fallbackCityCode
       const containerWidth = hostRef.current?.getBoundingClientRect().width ?? 0
       const isMobileClient = isCdekWidgetMobileClient({ containerWidth })
-      const shouldBackgroundExpandCountry = shouldExpandCountryOfficesAfterInit({
-        regionCode: geoRegion?.regionCode ?? null,
-        fallbackCityCode: fallbackCityCodeForPath,
-        bootstrapSource: officesBootstrapSource,
-        isMobileClient,
-      })
+      // Диагностика падений вкладки на iOS по памяти: `?cdekNoExpand=1` отключает фоновую
+      // догрузку ПВЗ всей страны. По умолчанию поведение не меняется.
+      const isCountryExpandDisabledByQuery =
+        new URLSearchParams(window.location.search).get('cdekNoExpand') === '1'
+      const shouldBackgroundExpandCountry =
+        !isCountryExpandDisabledByQuery &&
+        shouldExpandCountryOfficesAfterInit({
+          regionCode: geoRegion?.regionCode ?? null,
+          fallbackCityCode: fallbackCityCodeForPath,
+          bootstrapSource: officesBootstrapSource,
+          isMobileClient,
+        })
 
       logCartDebug({
         scope: 'cdek-widget',
