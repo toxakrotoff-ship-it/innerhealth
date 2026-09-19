@@ -14,6 +14,7 @@ import {
   type CdekLocation,
 } from '@/lib/cdek'
 import { cdekCalculatorBodySchema } from '@/lib/validations/cdek'
+import { getTariffFromDb } from '@/lib/cdek-db-cache-read'
 
 /**
  * POST /api/cdek/calculator
@@ -134,6 +135,41 @@ export async function POST(request: Request) {
           },
         }
       )
+    }
+
+    // Кэш-первым, как в виджете (/api/cdek-widget/service): ночной Postgres-кэш тарифов 136/137
+    // не ходит в api.cdek.ru и не зависит от параметров живого расчёта (у него type/контракт могут
+    // давать пустой tarifflist, из-за чего ручной режим показывал «недоступно для города»).
+    if (toLocation.cityCode != null) {
+      const cacheTariffCode = deliveryKind === 'pvz' ? 136 : 137
+      const actualWeightG = packages.reduce((sum, pkg) => sum + (Number(pkg.weight) || 0), 0)
+      try {
+        const cacheHit = await getTariffFromDb({
+          toCityCode: toLocation.cityCode,
+          tariffCode: cacheTariffCode,
+          actualWeightG,
+        })
+        if (cacheHit) {
+          return NextResponse.json(
+            {
+              deliveryKind,
+              source: 'cache',
+              tariffs: [
+                {
+                  tariffCode: cacheTariffCode,
+                  tariffName: null,
+                  deliverySum: cacheHit.deliverySum,
+                  periodMin: cacheHit.periodMin,
+                  periodMax: cacheHit.periodMax,
+                },
+              ],
+            },
+            { headers: { 'Cache-Control': 'no-store' } }
+          )
+        }
+      } catch (e) {
+        console.warn('[cdek/calculator] tariff db cache read failed, fallback to live', e)
+      }
     }
 
     const cdekSettings = await settingsService.getSettingsMap(
