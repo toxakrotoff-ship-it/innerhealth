@@ -66,6 +66,8 @@ interface CdekWidgetProps {
     door: Array<{ tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }>
   }) => void
   onModeChange?: (deliveryMethod: 'cdek_pvz' | 'cdek_door') => void
+  /** Статус загрузки виджета — для перехода на ручной ввод, если карта не работает. */
+  onStatusChange?: (status: 'loading' | 'ready' | 'error') => void
 }
 
 type WidgetConfigResponse = CdekWidgetConfigResponse
@@ -153,6 +155,7 @@ export function CdekWidget({
   onChoose,
   onCalculate,
   onModeChange,
+  onStatusChange,
 }: CdekWidgetProps) {
   const [instanceKey, setInstanceKey] = useState<string>(() => Math.random().toString(16).slice(2))
   const rootId = useMemo(() => `cdek-widget-${instanceKey}`, [instanceKey])
@@ -160,6 +163,7 @@ export function CdekWidget({
   const onChooseRef = useRef<CdekWidgetProps['onChoose']>(onChoose)
   const onCalculateRef = useRef<CdekWidgetProps['onCalculate']>(onCalculate)
   const onModeChangeRef = useRef<CdekWidgetProps['onModeChange']>(onModeChange)
+  const onStatusChangeRef = useRef<CdekWidgetProps['onStatusChange']>(onStatusChange)
   const itemsRef = useRef(items)
   const initGenerationRef = useRef(0)
   const lastSyncedItemsSignatureRef = useRef('')
@@ -189,7 +193,12 @@ export function CdekWidget({
     onChooseRef.current = onChoose
     onCalculateRef.current = onCalculate
     onModeChangeRef.current = onModeChange
-  }, [onChoose, onCalculate, onModeChange])
+    onStatusChangeRef.current = onStatusChange
+  }, [onChoose, onCalculate, onModeChange, onStatusChange])
+
+  useEffect(() => {
+    onStatusChangeRef.current?.(error ? 'error' : isReady ? 'ready' : 'loading')
+  }, [error, isReady])
 
   useEffect(() => {
     let hiddenSinceMs: number | null = null

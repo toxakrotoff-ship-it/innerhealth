@@ -12,6 +12,7 @@ import {
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
 import { CdekWidget } from '@/components/site/cdek-widget'
+import { CdekManualDelivery } from '@/components/site/cdek-manual-delivery'
 import { warmupCdekWidget } from '@/lib/cdek-widget-preload'
 import { buildCdekWidgetItemsSignature } from '@/lib/cdek-widget-items'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
@@ -132,6 +133,10 @@ function parseDoorAddressFromWidget(formattedAddress: string): {
   return { street, house, apartment }
 }
 
+const CDEK_INPUT_MODE_STORAGE_KEY = 'ih_cdek_input_mode'
+/** Через сколько мс без готовности карты предложить ручной ввод. */
+const CDEK_MAP_SLOW_MS = 12_000
+
 export function CartPageContent({
   isSprintTheme = false,
   brandId,
@@ -236,6 +241,10 @@ export function CartPageContent({
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
   const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
   const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
+  const [cdekInputMode, setCdekInputModeState] = useState<'map' | 'manual'>('map')
+  const [cdekMapAutoFallback, setCdekMapAutoFallback] = useState(false)
+  const [cdekWidgetStatus, setCdekWidgetStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [cdekWidgetSlow, setCdekWidgetSlow] = useState(false)
   const [selectedPvz, setSelectedPvz] = useState<CdekPvzOption | null>(null)
   const [doorAddress, setDoorAddress] = useState({
     street: '',
@@ -435,6 +444,47 @@ export function CartPageContent({
       patchCheckoutDelivery(checkoutSessionIdRef.current, brandId, { deliveryMethod: 'pickup' })
     }
   }
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(CDEK_INPUT_MODE_STORAGE_KEY) === 'manual') {
+        setCdekInputModeState('manual')
+      }
+    } catch {
+      /* localStorage недоступен — остаёмся на карте */
+    }
+  }, [])
+
+  function setCdekInputMode(mode: 'map' | 'manual') {
+    setCdekInputModeState(mode)
+    setCdekMapAutoFallback(false)
+    setCdekWidgetSlow(false)
+    if (mode === 'map') setCdekWidgetStatus('loading')
+    try {
+      window.localStorage.setItem(CDEK_INPUT_MODE_STORAGE_KEY, mode)
+    } catch {
+      /* ignore */
+    }
+    logCartDebug({ scope: 'cart', event: 'cdek_input_mode_changed', data: { mode } })
+  }
+
+  function handleCdekWidgetStatus(status: 'loading' | 'ready' | 'error') {
+    setCdekWidgetStatus(status)
+    if (status === 'error') {
+      setCdekInputModeState('manual')
+      setCdekMapAutoFallback(true)
+      logCartDebug({ scope: 'cart', event: 'manual_mode_auto_fallback', level: 'warn' })
+    }
+  }
+
+  useEffect(() => {
+    if (cdekInputMode !== 'map' || cdekWidgetStatus !== 'loading' || !isCdekDeliverySelected) {
+      setCdekWidgetSlow(false)
+      return
+    }
+    const timer = setTimeout(() => setCdekWidgetSlow(true), CDEK_MAP_SLOW_MS)
+    return () => clearTimeout(timer)
+  }, [cdekInputMode, cdekWidgetStatus, isCdekDeliverySelected])
 
   function handleCdekModeSelect() {
     setDeliveryMethod((prev) => {
@@ -1116,7 +1166,142 @@ export function CartPageContent({
         ) : null}
 
         {!usingSavedAddress && isCdekDeliverySelected ? (
+          <div
+            role="tablist"
+            aria-label="Способ выбора доставки СДЭК"
+            className={cn(
+              'flex gap-1 rounded-xl border p-1',
+              isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-gray-50'
+            )}
+          >
+            {(
+              [
+                ['map', 'Выбрать на карте'],
+                ['manual', 'Заполнить вручную'],
+              ] as const
+            ).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                aria-selected={cdekInputMode === mode}
+                onClick={() => setCdekInputMode(mode)}
+                className={cn(
+                  'min-h-[44px] flex-1 rounded-lg px-3 text-sm font-medium transition-colors',
+                  cdekInputMode === mode
+                    ? isSprintTheme
+                      ? 'bg-slate-700 text-white'
+                      : 'bg-white text-gray-900 shadow-sm'
+                    : isSprintTheme
+                      ? 'text-slate-300 hover:text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {!usingSavedAddress && isCdekDeliverySelected && cdekInputMode === 'map' && cdekWidgetSlow ? (
+          <p className={cn('text-sm', isSprintTheme ? 'text-amber-300' : 'text-amber-700')}>
+            Карта грузится долго.{' '}
+            <button type="button" className="underline" onClick={() => setCdekInputMode('manual')}>
+              Заполнить вручную
+            </button>
+          </p>
+        ) : null}
+
+        {!usingSavedAddress && isCdekDeliverySelected && cdekInputMode === 'manual' ? (
+          <div
+            className={cn(
+              'space-y-4 rounded-2xl border p-4 sm:p-6',
+              isSprintTheme ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-200 bg-white'
+            )}
+          >
+            <div className="text-lg font-semibold">Доставка (СДЭК)</div>
+            {cdekMapAutoFallback ? (
+              <p className={cn('text-sm', isSprintTheme ? 'text-amber-300' : 'text-amber-700')}>
+                Карта не загрузилась — заполните данные вручную.{' '}
+                <button type="button" className="underline" onClick={() => setCdekInputMode('map')}>
+                  Попробовать карту снова
+                </button>
+              </p>
+            ) : null}
+            <div className="flex gap-2">
+              {(
+                [
+                  ['cdek_pvz', 'В пункт выдачи'],
+                  ['cdek_door', 'До двери'],
+                ] as const
+              ).map(([method, label]) => (
+                <button
+                  key={method}
+                  type="button"
+                  aria-pressed={deliveryMethod === method}
+                  onClick={() => setDeliveryMethod(method)}
+                  className={cn(
+                    'min-h-[44px] flex-1 rounded-lg border px-3 text-sm font-medium',
+                    deliveryMethod === method
+                      ? 'border-action-blue bg-action-blue/10 text-action-blue'
+                      : isSprintTheme
+                        ? 'border-slate-600 text-slate-300'
+                        : 'border-gray-300 text-gray-700'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <CdekManualDelivery
+              brandId={brandId}
+              items={items}
+              deliveryMethod={deliveryMethod === 'cdek_door' ? 'cdek_door' : 'cdek_pvz'}
+              selectedCity={selectedCity}
+              selectedPvz={selectedPvz}
+              isSprintTheme={isSprintTheme}
+              onCitySelect={(city) => {
+                setSelectedCity(city)
+                setSelectedPvz(null)
+                setPvzTariff(null)
+                setDoorTariff(null)
+                setHasWidgetTariffSelection(false)
+              }}
+              onPvzChosen={({ city, pvz, tariff }) => {
+                setHasWidgetTariffSelection(true)
+                setDeliveryMethod('cdek_pvz')
+                setSelectedCity(city)
+                setPvzTariff(tariff)
+                setSelectedPvz(pvz)
+                const pvzAddress = pvz.full_address || pvz.address || pvz.name || ''
+                setFormData((prev) => ({
+                  ...prev,
+                  city: city.city ?? prev.city,
+                  address: `СДЭК ПВЗ ${pvz.code ?? ''}: ${pvzAddress}`.trim(),
+                }))
+                logCartDebug({
+                  scope: 'cart',
+                  event: 'manual_pvz_chosen',
+                  data: { pvzCode: pvz.code ?? null, tariffCode: tariff.tariffCode },
+                })
+              }}
+              onDoorReady={({ city, tariff }) => {
+                setHasWidgetTariffSelection(true)
+                setDeliveryMethod('cdek_door')
+                setSelectedCity(city)
+                setDoorTariff(tariff)
+                setFormData((prev) => ({ ...prev, city: city.city ?? prev.city }))
+              }}
+              onStreetChosen={({ street, house }) =>
+                setDoorAddress((prev) => ({ ...prev, street, house: house ?? prev.house }))
+              }
+            />
+          </div>
+        ) : null}
+
+        {!usingSavedAddress && isCdekDeliverySelected && cdekInputMode === 'map' ? (
           <CdekWidget
+              onStatusChange={handleCdekWidgetStatus}
               key={[
                 'cdek-widget',
                 // When user changes the selected saved address, remount the widget to force recalculation.
@@ -1251,7 +1436,7 @@ export function CartPageContent({
               Адрес доставки
             </Heading2>
             <p className={cn('mb-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
-              Виджет СДЭК заполняет улицу и дом. Проверьте их и добавьте детали для курьера.
+              {cdekInputMode === 'manual' ? 'Укажите улицу и дом и добавьте детали для курьера.' : 'Виджет СДЭК заполняет улицу и дом. Проверьте их и добавьте детали для курьера.'}
             </p>
 
             <div className="grid gap-3 xl:gap-4 sm:grid-cols-2">
