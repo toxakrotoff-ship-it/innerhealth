@@ -79,6 +79,13 @@ function SuggestionList<T>({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onPick(item)}
+            onTouchEnd={(e) => {
+              // На тач-устройствах лёгкий сдвиг пальца между touchstart и touchend
+              // браузер трактует как скролл/жест и не синтезирует click — обрабатываем
+              // выбор явно по touchend и глушим последующий click, чтобы не сработало дважды.
+              e.preventDefault()
+              onPick(item)
+            }}
             className={cn(
               'w-full border-b px-4 py-3 text-left text-sm last:border-0',
               isSprintTheme ? 'border-slate-700 hover:bg-slate-700' : 'border-gray-100 hover:bg-gray-50',
