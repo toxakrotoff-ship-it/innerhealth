@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { CheckCircle, NavArrowRight } from 'iconoir-react'
+import { NavArrowRight } from 'iconoir-react'
 
 import sprintPowerMockup from '@/assets/sprint-power-mockup.png'
 import { getSprintPowerMockupAlt } from '@/lib/image-alt-text'
@@ -64,16 +64,6 @@ export function SprintPowerBlock() {
               Больше чем спорт. <br />
               Чистая энергия.
             </h2>
-            <ul className="space-y-4 2xl:space-y-5" role="list">
-              <li className="flex items-center gap-3 text-sm font-medium text-slate-700 2xl:text-base">
-                <CheckCircle className="w-5 h-5 shrink-0 text-action-blue" aria-hidden />
-                Европейские стандарты качества
-              </li>
-              <li className="flex items-center gap-3 text-sm font-medium text-slate-700 2xl:text-base">
-                <CheckCircle className="w-5 h-5 shrink-0 text-action-blue" aria-hidden />
-                Без искусственных красителей
-              </li>
-            </ul>
             <p className="text-sm font-medium text-slate-500">Другой проект нашей команды</p>
             <Link
               href="https://sprintpower.ru/catalog"
