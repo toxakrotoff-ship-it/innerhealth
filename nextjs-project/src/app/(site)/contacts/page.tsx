@@ -183,8 +183,8 @@ export default async function ContactsPage() {
                 <p
                   className={`mt-2 max-w-xl whitespace-pre-line rounded-md border px-3 py-2 text-sm font-semibold leading-snug ${
                     isSprintTheme
-                      ? 'border-amber-400/35 bg-amber-500/10 text-amber-50'
-                      : 'border-amber-200 bg-amber-50 text-amber-950'
+                      ? 'border-slate-700 bg-slate-800/40 text-slate-200'
+                      : 'border-gray-200 bg-gray-50 text-gray-700'
                   }`}
                 >
                   {workingNote}

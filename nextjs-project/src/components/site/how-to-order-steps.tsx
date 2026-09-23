@@ -52,7 +52,7 @@ export function HowToOrderSteps({
 
   const inner = (
     <>
-      {!embedded && (
+      {!embedded && resolvedSteps.length > 1 && (
         <Heading2 className={`mb-6 text-center sm:text-left ${isSprintTheme ? 'text-slate-100' : 'text-text'}`}>
           {resolvedTitle}
         </Heading2>

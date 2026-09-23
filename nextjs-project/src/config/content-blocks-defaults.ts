@@ -156,7 +156,7 @@ const PRODUCT_ADMIN_SCHEMA: readonly AdminContentBlockSchemaEntry[] = [
     page: 'product',
     key: 'product.documents.placement',
     adminLabel:
-      'Карточка товара — где показывать блок «Документы» (before-tabs = до табов, after-tabs = после табов)',
+      'Карточка товара — где показывать блок «Документы» (as-tab = отдельная вкладка «Сертификаты соответствия», before-tabs = до табов, after-tabs = после табов)',
   },
 ] as const
 
@@ -2294,7 +2294,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'product.documents.placement',
     label: 'Карточка товара — расположение блока «Документы»',
     type: 'short',
-    text: 'before-tabs',
+    text: 'as-tab',
   },
   {
     page: 'legal-privacy',

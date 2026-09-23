@@ -221,7 +221,6 @@ export function CatalogControls({
                         {item.title}
                       </p>
                       <p className={cn('text-xs', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
-                        {item.sku ? `SKU: ${item.sku} • ` : ''}
                         {item.price.toLocaleString('ru-RU')} ₽
                       </p>
                     </Link>

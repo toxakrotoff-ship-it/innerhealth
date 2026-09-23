@@ -803,6 +803,8 @@ model B2bLead {
   name      String
   email     String
   phone     String
+  format    String?
+  city      String?
   createdAt DateTime @default(now())
 
   @@index([brand, createdAt])

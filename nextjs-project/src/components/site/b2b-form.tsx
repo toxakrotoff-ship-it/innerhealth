@@ -4,6 +4,14 @@ import { useRef, useState } from 'react'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 
+const B2B_FORMAT_OPTIONS = [
+  'Розничный магазин',
+  'Интернет-магазин',
+  'Клиника',
+  'Специалист',
+  'Другое',
+] as const
+
 interface B2bFormProps {
   isSprintTheme?: boolean
   successMessage: string
@@ -11,6 +19,8 @@ interface B2bFormProps {
 
 export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps) {
   const [name, setName] = useState('')
+  const [format, setFormat] = useState('')
+  const [city, setCity] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [website, setWebsite] = useState('')
@@ -28,6 +38,8 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          format,
+          city: city.trim(),
           email: email.trim(),
           phone: phone.trim(),
           website,
@@ -38,6 +50,8 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
       if (res.ok) {
         setStatus('success')
         setName('')
+        setFormat('')
+        setCity('')
         setEmail('')
         setPhone('')
         setWebsite('')
@@ -98,6 +112,43 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
           placeholder="Ваше имя"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          disabled={status === 'loading'}
+          maxLength={120}
+          className={`w-full ${fieldClassName}`}
+        />
+      </div>
+      <div>
+        <label htmlFor="b2b-format" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
+          Формат сотрудничества <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="b2b-format"
+          required
+          value={format}
+          onChange={(e) => setFormat(e.target.value)}
+          disabled={status === 'loading'}
+          className={`flex h-10 w-full rounded-[16px] border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${fieldClassName}`}
+        >
+          <option value="" disabled>
+            Выберите формат
+          </option>
+          {B2B_FORMAT_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="b2b-city" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
+          Город
+        </label>
+        <Input
+          id="b2b-city"
+          type="text"
+          placeholder="Ваш город"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
           disabled={status === 'loading'}
           maxLength={120}
           className={`w-full ${fieldClassName}`}

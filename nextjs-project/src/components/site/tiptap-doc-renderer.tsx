@@ -111,6 +111,35 @@ function renderMarks(
 /** Блочный текст: сохраняет \n внутри абзаца и нормальные отступы между блоками. */
 const blockTextClassName = 'tiptap-block-text mb-4 whitespace-pre-line leading-relaxed last:mb-0'
 
+/** Пустой абзац (Enter без текста) — используется и при рендере, и при схлопывании повторов. */
+function isEmptyParagraphNode(node: TipTapNode): boolean {
+  if (node.type !== 'paragraph') return false
+  const hasVisibleContent = node.content?.some((child) => {
+    if (child.type === 'hardBreak') return true
+    if (child.type === 'text') return Boolean(child.text?.trim())
+    return true
+  })
+  return !hasVisibleContent
+}
+
+/**
+ * Авторы часто жмут Enter несколько раз подряд для визуального отступа. В редакторе
+ * (компактный prose-sm) это почти незаметно, а на сайте каждый пустой абзац превращается
+ * в отдельный блок — несколько подряд дают огромный пробел. Схлопываем такие цепочки в один.
+ */
+function collapseConsecutiveEmptyParagraphs(nodes: TipTapNode[] | undefined): TipTapNode[] {
+  if (!nodes?.length) return []
+  const result: TipTapNode[] = []
+  let prevWasEmpty = false
+  for (const node of nodes) {
+    const isEmpty = isEmptyParagraphNode(node)
+    if (isEmpty && prevWasEmpty) continue
+    result.push(node)
+    prevWasEmpty = isEmpty
+  }
+  return result
+}
+
 function renderCategoryTextImageSection(
   node: TipTapNode,
   key: number,
@@ -123,7 +152,9 @@ function renderCategoryTextImageSection(
   const imageCaption = node.attrs?.imageCaption?.trim() ?? ''
   const imagePosition = node.attrs?.imagePosition === 'left' ? 'left' : 'right'
   const imageObjectPosition = node.attrs?.imageObjectPosition ?? 'center'
-  const textChildren = node.content?.map((child, index) => renderNode(child, index, tone))
+  const textChildren = collapseConsecutiveEmptyParagraphs(node.content).map((child, index) =>
+    renderNode(child, index, tone)
+  )
 
   const captionClass =
     tone === 'dark' ? 'mt-3 text-center text-sm text-slate-400' : 'mt-3 text-center text-sm text-gray-500'
@@ -187,12 +218,7 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
     case 'hardBreak':
       return <br key={stableKey} />
     case 'paragraph': {
-      const hasVisibleContent = node.content?.some((child) => {
-        if (child.type === 'hardBreak') return true
-        if (child.type === 'text') return Boolean(child.text?.trim())
-        return true
-      })
-      if (!hasVisibleContent) {
+      if (isEmptyParagraphNode(node)) {
         return (
           <p key={stableKey} className="tiptap-block-empty mb-4 min-h-[1.25em] last:mb-0" aria-hidden="true">
             {'\u00A0'}
@@ -352,7 +378,7 @@ function renderTipTapDoc(content: TipTapNode | null, tone: DocTone): React.React
 
   let textImageSectionIndex = 0
 
-  return content.content.map((node, index) => {
+  return collapseConsecutiveEmptyParagraphs(content.content).map((node, index) => {
     if (node.type === 'categoryTextImageSection') {
       const section = renderCategoryTextImageSection(
         node,

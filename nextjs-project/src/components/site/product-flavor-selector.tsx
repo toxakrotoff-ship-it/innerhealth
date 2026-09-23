@@ -5,10 +5,13 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { getBaseTitleAndFlavorLabel, type ProductVariantForListing } from '@/lib/product-grouping'
 
+const FORMAT_LABEL_CATEGORY_SLUGS = new Set(['gribnaya-kollekciya'])
+
 interface ProductFlavorSelectorProps {
   activeProductId: string
   variants: ProductVariantForListing[]
   isSprintTheme: boolean
+  categorySlug?: string | null
 }
 
 function isVariantUnavailable(variant: ProductVariantForListing): boolean {
@@ -19,11 +22,13 @@ export function ProductFlavorSelector({
   activeProductId,
   variants,
   isSprintTheme,
+  categorySlug,
 }: ProductFlavorSelectorProps) {
+  const groupLabel = categorySlug && FORMAT_LABEL_CATEGORY_SLUGS.has(categorySlug) ? 'Формат' : 'Вкус'
   const options = useMemo(() => {
     return variants.map((variant, index) => {
       const { flavorLabel } = getBaseTitleAndFlavorLabel(variant.title)
-      const label = flavorLabel ?? (variant.sku?.trim() ? variant.sku.trim() : `Вкус ${index + 1}`)
+      const label = flavorLabel ?? (variant.sku?.trim() ? variant.sku.trim() : `${groupLabel} ${index + 1}`)
       const href = variant.slug ? `/product/${variant.slug}` : `/product/id/${variant.id}`
       return {
         id: variant.id,
@@ -32,13 +37,13 @@ export function ProductFlavorSelector({
         isUnavailable: isVariantUnavailable(variant),
       }
     })
-  }, [variants])
+  }, [variants, groupLabel])
 
   if (options.length <= 1) return null
 
   return (
     <div className="mt-4">
-      <div className={cn('text-xs font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>Вкус</div>
+      <div className={cn('text-xs font-medium', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>{groupLabel}</div>
       <div className="mt-2 flex flex-wrap gap-2 md:gap-2.5">
         {options.map((option) => {
           const isActive = option.id === activeProductId

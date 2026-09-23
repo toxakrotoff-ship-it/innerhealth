@@ -1,10 +1,10 @@
 import type { ContentBlockResolved } from '@/services/content-block.service'
 
-export const PRODUCT_DOCUMENTS_PLACEMENT_VALUES = ['before-tabs', 'after-tabs'] as const
+export const PRODUCT_DOCUMENTS_PLACEMENT_VALUES = ['before-tabs', 'after-tabs', 'as-tab'] as const
 
 export type ProductDocumentsPlacement = (typeof PRODUCT_DOCUMENTS_PLACEMENT_VALUES)[number]
 
-export const DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT: ProductDocumentsPlacement = 'before-tabs'
+export const DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT: ProductDocumentsPlacement = 'as-tab'
 
 function getText(blocks: ContentBlockResolved[], key: string, fallback = ''): string {
   const block = blocks.find((item) => item.key === key)
@@ -29,6 +29,10 @@ export function resolveProductDocumentsPlacement(
 
   if (raw === 'before-tabs' || raw === 'before' || raw === 'до' || raw === 'до-табов') {
     return 'before-tabs'
+  }
+
+  if (raw === 'as-tab' || raw === 'tab' || raw === 'вкладка' || raw === 'в-табах') {
+    return 'as-tab'
   }
 
   return DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT

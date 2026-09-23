@@ -18,25 +18,35 @@ interface ProductDocumentsSectionProps {
   documents: ProductDocumentSectionItem[]
   isSprintTheme?: boolean
   className?: string
+  /** Hide the section border/heading, e.g. when already shown under its own tab title. */
+  hideHeading?: boolean
 }
 
 export function ProductDocumentsSection({
   documents,
   isSprintTheme = false,
   className,
+  hideHeading = false,
 }: ProductDocumentsSectionProps) {
   if (documents.length === 0) return null
 
   return (
-    <section className={cn('border-t pt-5 sm:pt-6', isSprintTheme ? 'border-slate-700' : 'border-gray-200', className)}>
-      <h2
-        className={cn(
-          'mb-3 text-base font-semibold tracking-tight sm:text-lg',
-          isSprintTheme ? 'text-slate-100' : 'text-gray-900'
-        )}
-      >
-        Документы
-      </h2>
+    <section
+      className={cn(
+        !hideHeading && ['border-t pt-5 sm:pt-6', isSprintTheme ? 'border-slate-700' : 'border-gray-200'],
+        className
+      )}
+    >
+      {!hideHeading && (
+        <h2
+          className={cn(
+            'mb-3 text-base font-semibold tracking-tight sm:text-lg',
+            isSprintTheme ? 'text-slate-100' : 'text-gray-900'
+          )}
+        >
+          Документы
+        </h2>
+      )}
       <div className="space-y-2.5">
         {documents.map((document) => {
           const metaLines = [

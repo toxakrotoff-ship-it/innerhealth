@@ -277,4 +277,25 @@ describe('TipTapDocRenderer', () => {
     expect(paragraphs[1]?.className).toMatch(/tiptap-block-empty/)
     expect(paragraphs[2]?.textContent).toBe('Абзац 2')
   })
+
+  it('collapses several consecutive empty paragraphs into one spacer', () => {
+    const raw = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Абзац 1' }] },
+        { type: 'paragraph' },
+        { type: 'paragraph' },
+        { type: 'paragraph' },
+        { type: 'paragraph', content: [{ type: 'text', text: 'Абзац 2' }] },
+      ],
+    }
+
+    const { container } = render(<TipTapDocRenderer raw={raw} />)
+    const paragraphs = container.querySelectorAll('p')
+
+    expect(paragraphs).toHaveLength(3)
+    expect(paragraphs[0]?.textContent).toBe('Абзац 1')
+    expect(paragraphs[1]?.className).toMatch(/tiptap-block-empty/)
+    expect(paragraphs[2]?.textContent).toBe('Абзац 2')
+  })
 })

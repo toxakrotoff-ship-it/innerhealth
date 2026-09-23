@@ -24,7 +24,7 @@ export function ProductListRow({
   id,
   title,
   sku,
-  showSku = true,
+  showSku = false,
   price,
   priceOld,
   photo,

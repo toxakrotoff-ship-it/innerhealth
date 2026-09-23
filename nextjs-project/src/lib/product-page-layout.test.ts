@@ -34,7 +34,16 @@ describe('resolveProductDocumentsPlacement', () => {
 
   it('falls back to default for unknown values', () => {
     expect(resolveProductDocumentsPlacement([shortBlock('product.documents.placement', 'somewhere')])).toBe(
-      'before-tabs'
+      DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT
+    )
+  })
+
+  it('accepts as-tab aliases', () => {
+    expect(resolveProductDocumentsPlacement([shortBlock('product.documents.placement', 'as-tab')])).toBe(
+      'as-tab'
+    )
+    expect(resolveProductDocumentsPlacement([shortBlock('product.documents.placement', 'вкладка')])).toBe(
+      'as-tab'
     )
   })
 })

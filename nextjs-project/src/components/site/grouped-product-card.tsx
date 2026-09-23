@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { AddToCartButton } from '@/components/site/add-to-cart-button'
 import { getProductImagePostprocessClasses } from '@/components/site/product-image-postprocess'
-import { ProductQuickView } from '@/components/site/product-quick-view'
 import { ProductDiscountBadge } from '@/components/site/product-discount-badge'
 import { ProductPartnerBadge } from '@/components/site/product-partner-badge'
 import { WishlistToggleButton } from '@/components/site/wishlist-toggle-button'
@@ -25,7 +24,7 @@ interface GroupedProductCardProps {
 export function GroupedProductCard({
   group,
   priority = false,
-  showSku = true,
+  showSku = false,
   showDetailsButton = true,
 }: GroupedProductCardProps) {
   const [selectedId, setSelectedId] = useState<string>(group.defaultVariantId)
@@ -88,19 +87,6 @@ export function GroupedProductCard({
           />
           <ProductPartnerBadge isPartner={activeVariant.isPartner} className="absolute left-2 top-2 z-30" />
           <div className={cn('absolute right-2 z-20 flex items-center gap-2', hasDiscountBadge ? 'top-14' : 'top-2')}>
-            <ProductQuickView
-              id={activeVariant.id}
-              title={group.baseTitle}
-              price={activeVariant.price}
-              priceOld={activeVariant.priceOld}
-              photo={activeVariant.photo}
-              slug={activeVariant.slug}
-              isPromoEligible={activeVariant.isPromoEligible}
-              discountPrice={activeVariant.discountPrice}
-              quantity={activeVariant.quantity}
-              isPreorderEnabled={activeVariant.isPreorderEnabled}
-              iconOnly
-            />
             <WishlistToggleButton productId={activeVariant.id} iconOnly />
           </div>
           {activePhotoSrc ? (

@@ -183,6 +183,7 @@ export default async function ProductPage({ params }: PageProps) {
         structuredDocuments={structuredDocuments}
         documentsPlacement={documentsPlacement}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
+        relatedProductsCategorySlug={primaryCategory?.slug ?? null}
         breadcrumbItems={breadcrumbItems}
         isSprintTheme={isSprintTheme}
       />

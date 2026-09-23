@@ -64,9 +64,6 @@ export function SprintPowerBlock() {
               Больше чем спорт. <br />
               Чистая энергия.
             </h2>
-            <p className="max-w-prose font-light leading-relaxed text-slate-600 text-[clamp(0.9375rem,0.5vw+0.82rem,1.125rem)] 2xl:text-xl">
-              Инновационные формулы и биодоступное сырьё для эффективных тренировок.
-            </p>
             <ul className="space-y-4 2xl:space-y-5" role="list">
               <li className="flex items-center gap-3 text-sm font-medium text-slate-700 2xl:text-base">
                 <CheckCircle className="w-5 h-5 shrink-0 text-action-blue" aria-hidden />

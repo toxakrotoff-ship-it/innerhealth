@@ -20,6 +20,15 @@ const B2B_RATE_WINDOW_MS = 10 * 60 * 1000
 const nameMax = 120
 const emailMax = 320
 const phoneMax = 30
+const cityMax = 120
+
+const B2B_FORMAT_OPTIONS = [
+  'Розничный магазин',
+  'Интернет-магазин',
+  'Клиника',
+  'Специалист',
+  'Другое',
+] as const
 
 export async function POST(request: Request) {
   const brandId = resolveBrandOrDefaultFromRequest(request)
@@ -50,6 +59,13 @@ export async function POST(request: Request) {
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const phone =
       typeof body.phone === 'string' ? sanitizePhone(body.phone.trim()).slice(0, phoneMax) : ''
+    const city =
+      typeof body.city === 'string' ? sanitizeHumanName(body.city.trim()).slice(0, cityMax) : ''
+    const format =
+      typeof body.format === 'string' &&
+      (B2B_FORMAT_OPTIONS as readonly string[]).includes(body.format.trim())
+        ? body.format.trim()
+        : ''
 
     if (!isPlausibleHumanName(name)) {
       return NextResponse.json(
@@ -76,6 +92,12 @@ export async function POST(request: Request) {
         { status: 400, headers: { 'Cache-Control': 'no-store' } }
       )
     }
+    if (!format) {
+      return NextResponse.json(
+        { error: 'Укажите формат сотрудничества.' },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
 
     const emailRate = await checkRateLimit(email, 'b2b-form-email', 2, 60 * 60 * 1000)
     if (!emailRate.success) {
@@ -91,12 +113,14 @@ export async function POST(request: Request) {
       )
     }
 
-    await b2bService.createB2bLead({ name, email, phone }, brandId)
+    await b2bService.createB2bLead({ name, email, phone, format, city: city || null }, brandId)
 
     const formNotifyPayload = {
       formName: 'B2B — заявка на оптовый прайс',
       fields: {
         Имя: name,
+        'Формат сотрудничества': format,
+        ...(city ? { Город: city } : {}),
         Email: email,
         Телефон: phone,
       },
@@ -106,7 +130,7 @@ export async function POST(request: Request) {
     after(() => notifyMaxForm(formNotifyPayload))
     after(async () => {
       const adminEmails = await userService.getAdminNotificationEmails(brandId)
-      await sendB2bLeadNotification(adminEmails, { name, email, phone, brandId })
+      await sendB2bLeadNotification(adminEmails, { name, email, phone, format, city, brandId })
     })
 
     return NextResponse.json({ success: true })

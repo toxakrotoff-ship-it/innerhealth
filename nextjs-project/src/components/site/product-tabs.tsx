@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
@@ -150,6 +151,8 @@ function TabContent({ text, isSprintTheme }: { text: string; isSprintTheme: bool
 export interface ProductTabItem {
   title: string
   content: string
+  /** When set, renders this node instead of interpreting `content` as text/HTML. */
+  node?: ReactNode
 }
 
 interface ProductTabsProps {
@@ -219,16 +222,20 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
             value={`tab-${index}`}
             className="mt-4 focus-visible:outline-none"
           >
-            <div
-              className={cn(
-                'prose prose-sm max-w-none prose-ul:my-2 prose-li:my-0 leading-relaxed',
-                isSprintTheme
-                  ? 'prose-invert text-slate-300 prose-headings:text-slate-100'
-                  : 'text-text'
-              )}
-            >
-              <TabContent text={tab.content} isSprintTheme={isSprintTheme} />
-            </div>
+            {tab.node ? (
+              tab.node
+            ) : (
+              <div
+                className={cn(
+                  'prose prose-sm max-w-none prose-ul:my-2 prose-li:my-0 leading-relaxed',
+                  isSprintTheme
+                    ? 'prose-invert text-slate-300 prose-headings:text-slate-100'
+                    : 'text-text'
+                )}
+              >
+                <TabContent text={tab.content} isSprintTheme={isSprintTheme} />
+              </div>
+            )}
           </TabsContent>
         ))}
       </Tabs>

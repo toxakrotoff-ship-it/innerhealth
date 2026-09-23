@@ -70,6 +70,8 @@ interface ProductPageContentProps {
   breadcrumbItems?: BreadcrumbItemType[]
   /** Primary category title for contextual internal links */
   relatedProductsCategoryTitle?: string | null
+  /** Primary category slug, used e.g. to pick the flavor/format selector label */
+  relatedProductsCategorySlug?: string | null
   relatedProducts: Array<{
     id: string
     parentUid: string | null
@@ -214,6 +216,7 @@ export function ProductPageContent({
   documentsPlacement = DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
   breadcrumbItems,
   relatedProductsCategoryTitle,
+  relatedProductsCategorySlug,
   isSprintTheme = false,
 }: ProductPageContentProps) {
   const normalizedContent = normalizeInnerProductContent(product)
@@ -258,12 +261,36 @@ export function ProductPageContent({
     hasStructuredDocuments && documentsPlacement === 'before-tabs'
   const showDocumentsAfterTabs =
     hasStructuredDocuments && documentsPlacement === 'after-tabs'
+  const showDocumentsAsTab =
+    hasStructuredDocuments && documentsPlacement === 'as-tab'
 
   const documentsSection = showDocumentsBeforeTabs || showDocumentsAfterTabs ? (
     <ScalableSpacing size="md">
       <ProductDocumentsSection documents={structuredDocuments} isSprintTheme={isSprintTheme} />
     </ScalableSpacing>
   ) : null
+
+  const productTabItems = [
+    ...visibleContentSections.map((section) => ({
+      title: section.title,
+      content: section.content,
+    })),
+    ...(showDocumentsAsTab
+      ? [
+          {
+            title: 'Сертификаты соответствия',
+            content: '',
+            node: (
+              <ProductDocumentsSection
+                documents={structuredDocuments}
+                isSprintTheme={isSprintTheme}
+                hideHeading
+              />
+            ),
+          },
+        ]
+      : []),
+  ]
 
   return (
     <AdaptiveContainer
@@ -311,16 +338,6 @@ export function ProductPageContent({
           >
             {product.title}
           </Heading1>
-          {product.sku?.trim() && (
-            <p
-              className={cn(
-                'mt-2 min-w-0 break-words [overflow-wrap:anywhere] text-sm',
-                isSprintTheme ? 'text-slate-400' : 'text-gray-600'
-              )}
-            >
-              SKU: {product.sku.trim()}
-            </p>
-          )}
           {shouldRenderShortDescription && shortDescription && (
             <ProductShortDescription description={shortDescription} isSprintTheme={isSprintTheme} />
           )}
@@ -343,6 +360,7 @@ export function ProductPageContent({
             activeProductId={product.id}
             variants={flavorVariants}
             isSprintTheme={isSprintTheme}
+            categorySlug={relatedProductsCategorySlug}
           />
           {displayWeight && (
             <p className={cn('mt-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
@@ -395,13 +413,10 @@ export function ProductPageContent({
 
       {showDocumentsBeforeTabs ? documentsSection : null}
 
-      {visibleContentSections.length > 0 && (
+      {productTabItems.length > 0 && (
         <ScalableSpacing size="lg">
           <ProductTabs
-            tabs={visibleContentSections.map((section) => ({
-              title: section.title,
-              content: section.content,
-            }))}
+            tabs={productTabItems}
             isSprintTheme={isSprintTheme}
           />
         </ScalableSpacing>
@@ -476,7 +491,7 @@ export function ProductPageContent({
         <ScalableSpacing size="lg">
           <section
             className={
-              visibleContentSections.length > 0
+              visibleContentSections.length > 0 || hasStructuredDocuments
                 ? 'pt-6 sm:pt-8'
                 : isSprintTheme
                   ? 'border-t border-slate-700 pt-6 sm:pt-8'

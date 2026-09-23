@@ -1222,6 +1222,8 @@ export interface B2bLeadEmailPayload {
   name: string
   email: string
   phone: string
+  format?: string
+  city?: string
   brandId?: BrandId
 }
 
@@ -1264,6 +1266,8 @@ export async function sendB2bLeadNotification(
     'Новая заявка на оптовый B2B-прайс',
     `Витрина: ${storefront}`,
     `Имя: ${payload.name}`,
+    ...(payload.format ? [`Формат сотрудничества: ${payload.format}`] : []),
+    ...(payload.city ? [`Город: ${payload.city}`] : []),
     `Email: ${payload.email}`,
     `Телефон: ${payload.phone}`,
   ].join('\n')
@@ -1289,6 +1293,8 @@ export async function sendB2bLeadNotification(
           <tr>
             <td style="padding:28px;">
               <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Имя:</strong> ${escapeHtml(payload.name)}</p>
+              ${payload.format ? `<p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Формат сотрудничества:</strong> ${escapeHtml(payload.format)}</p>` : ''}
+              ${payload.city ? `<p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Город:</strong> ${escapeHtml(payload.city)}</p>` : ''}
               <p style="margin:0 0 10px;font-size:14px;color:#374151;"><strong>Email:</strong> <a href="mailto:${escapeHtml(payload.email)}">${escapeHtml(payload.email)}</a></p>
               <p style="margin:0;font-size:14px;color:#374151;"><strong>Телефон:</strong> ${escapeHtml(payload.phone)}</p>
             </td>

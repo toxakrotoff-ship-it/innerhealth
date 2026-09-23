@@ -69,7 +69,7 @@ export default async function B2bPage() {
         </header>
 
         <div
-          className={`max-w-none mb-14 leading-relaxed ${
+          className={`max-w-none mb-14 leading-snug [&_.tiptap-block-text]:mb-2 [&_h2.tiptap-block-text]:mt-5 [&_h2.tiptap-block-text]:mb-2 [&_h3.tiptap-block-text]:mt-4 [&_h3.tiptap-block-text]:mb-1.5 [&_h4.tiptap-block-text]:mt-3 [&_h4.tiptap-block-text]:mb-1 ${
             isSprintTheme ? 'text-slate-300' : 'prose prose-gray text-gray-700'
           }`}
         >

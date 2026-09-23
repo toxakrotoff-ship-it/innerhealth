@@ -85,6 +85,7 @@ export default async function ProductByIdPage({ params }: PageProps) {
         photos={photos}
         relatedProducts={relatedProducts}
         relatedProductsCategoryTitle={primaryCategory?.title ?? null}
+        relatedProductsCategorySlug={primaryCategory?.slug ?? null}
         breadcrumbItems={breadcrumbItems}
         isSprintTheme={isSprintTheme}
       />
