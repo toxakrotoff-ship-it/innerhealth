@@ -16,7 +16,7 @@ import { HowToOrderSteps } from '@/components/site/how-to-order-steps'
 import { filterCatalogBlockCategories } from '@/lib/catalog-categories'
 import { getPostPreviewImageAlt, getSprintPowerHomePromoAlt } from '@/lib/image-alt-text'
 import { TiltCard } from '@/components/ui/tilt-card'
-import { NavArrowRight } from 'iconoir-react'
+import { NavArrowRight, DeliveryTruck } from 'iconoir-react'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import {
   getResolvedBlocksForPage,
@@ -998,7 +998,6 @@ export default async function HomePage() {
   const directionsContent = resolveInnerHomeDirectionsContent(homeBlocks, categories)
   const sectionOrder = resolveInnerHomeSectionOrder(homeBlocks)
 
-  const howToOrder = getHowToOrderContent(homeBlocks)
   const howToOrderSingleStep = {
     title: getBlockText(homeBlocks, 'howToOrder.single.title', 'Доставка и оплата'),
     text: getBlockText(
@@ -1128,11 +1127,22 @@ export default async function HomePage() {
 
   const howToOrderSection = (
     <>
-      <HowToOrderSteps
-        showBorders={newProducts.length > 0}
-        title={howToOrder.title}
-        steps={[howToOrderSingleStep]}
-      />
+      <AdaptiveContainer maxWidth="default" className="py-4 sm:py-6">
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-center text-sm text-gray-700 sm:flex-row sm:justify-center sm:gap-3 sm:text-left">
+          <DeliveryTruck className="h-5 w-5 shrink-0 text-action-blue" aria-hidden />
+          <span>
+            <span className="font-medium">{howToOrderSingleStep.title}:</span>{' '}
+            {howToOrderSingleStep.text}
+          </span>
+          <Link
+            href={howToOrderSingleStep.href}
+            className="inline-flex shrink-0 items-center gap-1 font-medium text-action-blue underline-offset-2 hover:underline"
+          >
+            {howToOrderSingleStep.linkLabel}
+            <NavArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        </div>
+      </AdaptiveContainer>
       {showHomeHitsSection && (
         <SpacingVertical
           size="lg"
@@ -1271,7 +1281,7 @@ export default async function HomePage() {
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                           <div
-                            className="absolute inset-0 rounded-2xl bg-black/38"
+                            className="absolute inset-0 rounded-2xl bg-black/28"
                             aria-hidden
                           />
                         </>

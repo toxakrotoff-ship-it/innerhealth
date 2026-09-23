@@ -30,16 +30,17 @@ const breadcrumbItems = [
   { label: 'Контакты' },
 ]
 
-const DEFAULT_ADDRESS_PREFIX = 'г. Москва, набережная Новикова-Прибоя, 6 к4, 2-й этаж, офис'
-const DEFAULT_WORKING_WEEKDAYS = 'Будние дни: с 10 до 22'
-const DEFAULT_WORKING_WEEKENDS = 'Выходные: с 12 до 18'
-const DEFAULT_WORKING_NOTE = '*по предварительному звонку'
+const DEFAULT_ADDRESS = 'Набережная Новикова-Прибоя, д. 6, корп. 4\n2-й этаж, офис INNER HEALTH'
+const DEFAULT_WORKING_WEEKDAYS = 'Пн–Пт: 10:00–19:00'
+const DEFAULT_WORKING_WEEKENDS = 'Сб–Вс: 10:00–17:00'
+const DEFAULT_WORKING_NOTE = ''
 const DEFAULT_TITLE = 'Контакты'
 const DEFAULT_CONTACTS_TITLE = 'Контакты'
 const DEFAULT_PHONE_LABEL = 'Телефон:'
 const DEFAULT_EMAIL_LABEL = 'Электронная почта:'
-const DEFAULT_SHOWROOM_TITLE = 'Наш шоурум находится по адресу:'
-const DEFAULT_SCHEDULE_TITLE = 'Режим работы:'
+const DEFAULT_SHOWROOM_TITLE = 'Шоурум INNER HEALTH в Москве'
+const DEFAULT_SHOWROOM_NOTE = 'Посещение — только по предварительной записи.'
+const DEFAULT_SCHEDULE_TITLE = 'Время посещения по записи:'
 const DEFAULT_WRITE_TITLE = 'Написать или позвонить:'
 
 export const revalidate = 86400
@@ -50,7 +51,7 @@ function getText(block: { text: string | null } | undefined, fallback: string): 
 }
 
 export default async function ContactsPage() {
-  const { siteTitle, brandId } = await getServerBrandContext()
+  const { brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
   const siteConfig = getBrandSiteConfig(brandId)
   const [blocks, yandexMapsApiKey] = await Promise.all([
@@ -61,7 +62,7 @@ export default async function ContactsPage() {
 
   const phone = getText(byKey('contacts.phone'), siteConfig.contact.phone)
   const email = getText(byKey('contacts.email'), siteConfig.contact.email)
-  const address = getText(byKey('contacts.address'), `${DEFAULT_ADDRESS_PREFIX} ${siteTitle}`)
+  const address = getText(byKey('contacts.address'), DEFAULT_ADDRESS)
   const workingWeekdays = getText(
     byKey('contacts.working_weekdays'),
     DEFAULT_WORKING_WEEKDAYS
@@ -81,6 +82,10 @@ export default async function ContactsPage() {
   const showroomTitle = getText(
     byKey('contacts.section.showroom_title'),
     DEFAULT_SHOWROOM_TITLE
+  )
+  const showroomNote = getText(
+    byKey('contacts.section.showroom_note'),
+    DEFAULT_SHOWROOM_NOTE
   )
   const scheduleTitle = getText(
     byKey('contacts.section.schedule_title'),
@@ -169,6 +174,11 @@ export default async function ContactsPage() {
                 >
                   {showroomTitle}
                 </ResponsiveText>
+                {showroomNote && (
+                  <p className={`mb-2 ${isSprintTheme ? 'text-slate-400' : 'text-gray-500'}`}>
+                    {showroomNote}
+                  </p>
+                )}
                 <p className={`whitespace-pre-line ${isSprintTheme ? 'text-slate-300' : 'text-gray-700'}`}>
                   {address}
                 </p>
@@ -180,15 +190,17 @@ export default async function ContactsPage() {
                 </p>
                 <p className="whitespace-pre-line">{workingWeekdays}</p>
                 <p className="whitespace-pre-line">{workingWeekends}</p>
-                <p
-                  className={`mt-2 max-w-xl whitespace-pre-line rounded-md border px-3 py-2 text-sm font-semibold leading-snug ${
-                    isSprintTheme
-                      ? 'border-slate-700 bg-slate-800/40 text-slate-200'
-                      : 'border-gray-200 bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  {workingNote}
-                </p>
+                {workingNote && (
+                  <p
+                    className={`mt-2 max-w-xl whitespace-pre-line rounded-md border px-3 py-2 text-sm font-semibold leading-snug ${
+                      isSprintTheme
+                        ? 'border-slate-700 bg-slate-800/40 text-slate-200'
+                        : 'border-gray-200 bg-gray-50 text-gray-700'
+                    }`}
+                  >
+                    {workingNote}
+                  </p>
+                )}
               </div>
 
               <div>

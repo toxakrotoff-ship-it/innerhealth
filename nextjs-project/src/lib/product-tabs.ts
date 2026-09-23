@@ -3,7 +3,7 @@ import { sanitizeProductText, sanitizeProductTitleInput } from '@/lib/sanitize-t
 export const DEFAULT_PRODUCT_TAB_TITLES = [
   'Преимущества',
   'Состав',
-  'Способ применения и дозировка',
+  'Как принимать',
   'Характеристики',
 ] as const
 
@@ -43,10 +43,10 @@ export const PRODUCT_SYSTEM_SECTION_META: Record<
   ProductSystemSectionKey,
   { title: string; editorType: ProductTabEditorType }
 > = {
-  description: { title: 'Описание', editorType: 'richtext' },
+  description: { title: 'О продукте', editorType: 'richtext' },
   characteristics: { title: 'Характеристики', editorType: 'characteristics' },
   composition: { title: 'Состав', editorType: 'richtext' },
-  usage: { title: 'Способ применения', editorType: 'richtext' },
+  usage: { title: 'Как принимать', editorType: 'richtext' },
   nutrition: { title: 'Пищевая ценность / активные компоненты', editorType: 'richtext' },
   release_form: { title: 'Форма выпуска', editorType: 'richtext' },
   manufacturer: { title: 'Производитель', editorType: 'richtext' },
@@ -144,6 +144,7 @@ function inferSystemSectionKey(
   if (!normalized) return null
   if (normalized.includes('состав')) return 'composition'
   if (normalized.includes('примен')) return 'usage'
+  if (normalized.includes('принимать')) return 'usage'
   if (normalized.includes('дозиров')) return 'usage'
   if (normalized.includes('пище')) return 'nutrition'
   if (normalized.includes('активн')) return 'nutrition'
@@ -159,6 +160,7 @@ function inferSystemSectionKey(
   if (normalized.includes('отзыв')) return 'reviews'
   if (normalized.includes('характерист')) return 'characteristics'
   if (normalized.includes('описан')) return 'description'
+  if (normalized.includes('о продукте')) return 'description'
   return null
 }
 
