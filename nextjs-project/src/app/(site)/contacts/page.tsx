@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
     page: 'contacts',
     path: '/contacts',
     fallbackTitle: 'Контакты',
-    fallbackDescription: `Телефон, электронная почта и адрес шоурума ${siteTitle}. Москва, набережная Новикова-Прибоя. Режим работы.`,
+    fallbackDescription: `Телефон, электронная почта и адрес шоурума ${siteTitle}. Москва, набережная Новикова-Прибоя. Время посещения по записи.`,
   })
 }
 
