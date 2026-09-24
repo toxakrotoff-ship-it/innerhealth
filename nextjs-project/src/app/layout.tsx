@@ -9,6 +9,8 @@ import { headers } from 'next/headers'
 import { unstable_noStore as noStore } from 'next/cache'
 import { resolveBrandByHost } from '@/lib/brand/brand'
 import { METRIKA_COUNTER_ID_BY_BRAND } from '@/lib/analytics/metrika-config'
+import { CDN_URL } from '@/lib/cdn'
+import { buildCdnFallbackScript } from '@/lib/cdn-fallback'
 
 export const dynamic = 'force-dynamic'
 
@@ -172,6 +174,10 @@ ym(${metrikaCounterId}, 'init', {${metrikaInitOptions}});
       suppressHydrationWarning
     >
       <head>
+        {CDN_URL ? (
+          // Фолбэк на origin, если домен CDN у пользователя недоступен — должен идти первым в <head>.
+          <script dangerouslySetInnerHTML={{ __html: buildCdnFallbackScript(CDN_URL) }} />
+        ) : null}
         {hostBrandId === 'inner' ? (
           <meta name="yandex-verification" content="870f8651339fd2ca" />
         ) : null}

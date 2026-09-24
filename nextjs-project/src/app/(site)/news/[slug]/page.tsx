@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { toCdnUrl } from '@/lib/cdn'
 import { prisma } from '@/lib/prisma'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { getSettingsMap } from '@/services/settings.service'
@@ -153,7 +154,7 @@ export default async function NewsPostPage({ params }: PageProps) {
                 }`}
               >
                 <Image
-                  src={post.previewImage}
+                  src={toCdnUrl(post.previewImage)}
                   alt={post.title}
                   fill
                   className="object-cover"

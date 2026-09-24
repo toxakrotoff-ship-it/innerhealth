@@ -135,6 +135,16 @@ node .next/standalone/server.js
 proxy_set_header X-Accel-Buffering no;
 ```
 
+### CDN (Timeweb, ресурс Inner-CDN)
+
+- Ресурс **Inner-CDN** (ID 39715) в Timeweb → Сети → CDN: источник `innerhealth.ru:443`, домен раздачи `35xzvamvl2.cdn.twcstorage.ru`.
+- Включение: в `.env` на VPS `NEXT_PUBLIC_CDN_URL="https://35xzvamvl2.cdn.twcstorage.ru"` и **пересборка образа** (переменная build-time, передаётся build-arg в `docker-compose.yml`).
+- Через CDN идут `/_next/static/*` (`assetPrefix`) и картинки `/uploads/*` (loader next/image, `src/lib/cdn.ts`). HTML, API и админка — с origin. Sprint Power использует тот же билд и тот же CDN.
+- CSP (`src/proxy.ts`) автоматически разрешает домен CDN в `script-src`/`style-src`/`font-src`.
+- **Фолбэк**: инлайн-скрипт в `<head>` (`src/lib/cdn-fallback.ts`) при ошибке загрузки с CDN перезапрашивает ресурс с origin; если проба CDN не проходит — выключает CDN у этого пользователя на 30 минут (`localStorage.ih_cdn_off`).
+- Настройки ресурса: CDN-кэш можно держать долгим (всё, что идёт через CDN, — `immutable`), query string не учитывать, CORS `*` (нужно для шрифтов).
+- Откат: убрать `NEXT_PUBLIC_CDN_URL` и пересобрать. Если на CDN закэшировалась ошибка — «Очистить кэш» в панели ресурса.
+
 ### Multi-brand domains (one app, multiple hosts)
 
 For host-based brand routing (e.g. `inner...` + `sprintpower...`) point all domains to one VPS IP and include all of them in TLS cert:

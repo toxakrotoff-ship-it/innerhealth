@@ -22,6 +22,7 @@ services:
       target: runner
       args:
         NEXT_PUBLIC_YANDEX_MAPS_API_KEY: ${NEXT_PUBLIC_YANDEX_MAPS_API_KEY:-}
+        NEXT_PUBLIC_CDN_URL: ${NEXT_PUBLIC_CDN_URL:-}
     restart: unless-stopped
     env_file: .env
     environment:

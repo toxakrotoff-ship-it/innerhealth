@@ -25,6 +25,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # NEXT_PUBLIC_* встраиваются в клиентский бандл при сборке (нужны для карты СДЭК и контактов)
 ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=$NEXT_PUBLIC_YANDEX_MAPS_API_KEY
+# Timeweb CDN (Inner-CDN) для /_next/static и /uploads; пусто — всё с origin. См. docs/DEPLOY.md
+ARG NEXT_PUBLIC_CDN_URL
+ENV NEXT_PUBLIC_CDN_URL=$NEXT_PUBLIC_CDN_URL
 RUN npm run build
 RUN npm run build:bot
 

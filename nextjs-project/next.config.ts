@@ -12,6 +12,10 @@ const ADMIN_NO_STORE =
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  /** Timeweb CDN для /_next/static/* (build-time). Пусто — статика с origin. */
+  ...(process.env.NEXT_PUBLIC_CDN_URL?.trim() && {
+    assetPrefix: process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, ''),
+  }),
   serverExternalPackages: ['geoip-lite'],
   outputFileTracingIncludes: {
     '/**': ['./node_modules/geoip-lite/data/**'],
@@ -34,7 +38,9 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    unoptimized: true,
+    /** Без ресайза; loader только переносит /uploads/* на CDN (NEXT_PUBLIC_CDN_URL). */
+    loader: 'custom',
+    loaderFile: './src/lib/next-image-cdn-loader.ts',
   },
   experimental: {
     /** Shorter client router cache so storefront updates appear sooner after admin edits. */

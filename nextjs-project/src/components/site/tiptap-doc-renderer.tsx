@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { Fragment } from 'react'
+import { toCdnUrl } from '@/lib/cdn'
 
 /** TipTap JSON node (minimal typing for rendering) */
 interface TipTapNode {
@@ -163,7 +164,7 @@ function renderCategoryTextImageSection(
     <figure className="min-w-0">
       {typeof imageSrc === 'string' && imageSrc.startsWith('/') ? (
         <Image
-          src={imageSrc}
+          src={toCdnUrl(imageSrc)}
           alt={imageAlt}
           width={800}
           height={800}
@@ -174,7 +175,7 @@ function renderCategoryTextImageSection(
         />
       ) : (
         <img
-          src={imageSrc}
+          src={toCdnUrl(imageSrc)}
           alt={imageAlt}
           className="h-auto w-full max-h-[min(85vh,40rem)] rounded-xl object-cover"
           style={{ objectPosition: imageObjectPosition }}
@@ -297,7 +298,7 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
         <figure key={stableKey} className="my-6 min-w-0">
           {hasIntrinsicSize ? (
             <Image
-              src={src}
+              src={toCdnUrl(src)}
               alt={node.attrs?.alt ?? ''}
               width={intrinsicW}
               height={intrinsicH}
@@ -309,7 +310,7 @@ function renderNode(node: TipTapNode, key: number, tone: DocTone = 'light'): Rea
             // Natural aspect ratio; max-w-full + max-h scale down oversized assets inside the article column.
             // Dimensions unknown in stored JSON; native img preserves ratio.
             <img
-              src={src}
+              src={toCdnUrl(src)}
               alt={node.attrs?.alt ?? ''}
               className={articleBodyImageClassName}
               loading="lazy"

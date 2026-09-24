@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // Timeweb CDN для /_next/static/* (build-time). Пусто — статика с origin.
+  ...(process.env.NEXT_PUBLIC_CDN_URL?.trim()
+    ? { assetPrefix: process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, '') }
+    : {}),
   outputFileTracingRoot: __dirname,
   serverExternalPackages: ['geoip-lite'],
   outputFileTracingIncludes: {
@@ -20,7 +24,9 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    unoptimized: true,
+    /** Без ресайза; loader только переносит /uploads/* на CDN (NEXT_PUBLIC_CDN_URL). */
+    loader: 'custom',
+    loaderFile: './src/lib/next-image-cdn-loader.ts',
   },
   experimental: {
     staleTimes: {

@@ -2,6 +2,7 @@ import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
 import type { BrandId } from '@/lib/brand/brand'
+import { CDN_URL } from '@/lib/cdn'
 
 const SERVICE_HEADER = 'x-service-key'
 const SERVICE_SECRET_ENV = 'TELEGRAM_SERVICE_SECRET'
@@ -101,14 +102,16 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
     'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yastatic.net'
   const yandexMapsConnectSrc =
     'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru https://search-maps.yandex.ru https://api.routing.yandex.net'
+  /** Timeweb CDN: чанки, CSS и шрифты (`assetPrefix`); картинки покрыты `img-src https:`. */
+  const cdnSrc = CDN_URL ? ` ${CDN_URL}` : ''
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${yandexMapsScriptSrc} https://mc.yandex.ru`,
+    `script-src 'self'${cdnSrc} 'unsafe-inline' 'unsafe-eval' ${yandexMapsScriptSrc} https://mc.yandex.ru`,
     // Yandex Maps v3 uses WebWorkers from blob:/data: (e.g. content_provider.worker.js).
     `worker-src 'self' blob: data: ${yandexMapsScriptSrc}`,
-    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${yandexMapsStyleSrc}`,
+    `style-src 'self'${cdnSrc} 'unsafe-inline' https://fonts.googleapis.com ${yandexMapsStyleSrc}`,
     "img-src 'self' data: https: blob:",
-    "font-src 'self' data: https://fonts.gstatic.com",
+    `font-src 'self'${cdnSrc} data: https://fonts.gstatic.com`,
     `connect-src 'self' ${yandexMapsConnectSrc} https://mc.yandex.ru`,
     frameAncestors,
     "base-uri 'self'",
