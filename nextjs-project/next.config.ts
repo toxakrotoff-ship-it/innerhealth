@@ -40,9 +40,12 @@ const nextConfig: NextConfig = {
       },
     ],
     /**
-     * Оптимизатор /_next/image (ресайз + webp) отдаётся с origin. Через CDN — только после того, как в
-     * Inner-CDN реально применён учёт query string: иначе CDN отдаёт одну картинку на все url/w (2026-09-24).
+     * Оптимизатор /_next/image (ресайз + webp) через CDN, если задан NEXT_PUBLIC_CDN_URL.
+     * В Inner-CDN обязателен учёт query string (url, w, q) — иначе CDN отдаёт одну картинку на все url/w.
      */
+    ...(process.env.NEXT_PUBLIC_CDN_URL?.trim()
+      ? { path: `${process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, '')}/_next/image` }
+      : {}),
   },
   experimental: {
     /** Shorter client router cache so storefront updates appear sooner after admin edits. */
