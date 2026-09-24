@@ -46,6 +46,7 @@ function buildGroup(overrides?: Partial<ProductListingGroup>): ProductListingGro
     kind: 'group',
     parentUid: 'parent-1',
     baseTitle: 'Пептиды коллагена',
+    optionKind: 'flavor',
     defaultVariantId: 'v-1',
     flavorOptions: [
       { id: 'v-1', label: 'Капучино', isAvailable: true },

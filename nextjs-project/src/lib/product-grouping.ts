@@ -37,7 +37,11 @@ export interface ProductListingGroup {
   defaultVariantId: string
   baseTitle: string
   flavorOptions: GroupedFlavorOption[]
+  /** `size` — варианты отличаются только фасовкой (105 г / 210 г). */
+  optionKind: VariantOptionKind
 }
+
+export type VariantOptionKind = 'flavor' | 'size'
 
 export type ProductListingItem = ProductListingSingle | ProductListingGroup
 
@@ -79,7 +83,56 @@ export function getBaseTitleAndFlavorLabel(title: string): { baseTitle: string; 
     return { baseTitle, flavorLabel: flavorLabel && flavorLabel.length > 0 ? flavorLabel : null }
   }
 
+  const sizeSuffixMatch = normalized.match(SIZE_SUFFIX_RE)
+  if (sizeSuffixMatch) {
+    const baseTitle = sizeSuffixMatch[1]?.trim() ?? normalized
+    const flavorLabel = sizeSuffixMatch[2]?.replace(/\s+/g, ' ').trim() ?? null
+    return { baseTitle, flavorLabel: flavorLabel && flavorLabel.length > 0 ? flavorLabel : null }
+  }
+
   return { baseTitle: normalized, flavorLabel: null }
+}
+
+const SIZE_UNIT_PATTERN = String.raw`(?:кг|г|гр|мл|л|шт|капсул\p{L}*|таблет\p{L}*|порци\p{L}*)`
+/** «Бульон говяжий сухой, 105 г» → base + «105 г». */
+const SIZE_SUFFIX_RE = new RegExp(String.raw`^(.+?),\s*(\d+(?:[.,]\d+)?\s*${SIZE_UNIT_PATTERN})\.?$`, 'iu')
+const SIZE_LABEL_RE = new RegExp(String.raw`^(\d+(?:[.,]\d+)?)\s*(${SIZE_UNIT_PATTERN})\.?$`, 'iu')
+
+/** Метка варианта похожа на фасовку: «105 г», «1 кг», «90 капсул». */
+export function isSizeLabel(label: string | null | undefined): boolean {
+  return !!label && SIZE_LABEL_RE.test(label.trim())
+}
+
+function sizeLabelToSortValue(label: string | null): number {
+  const match = label?.trim().match(SIZE_LABEL_RE)
+  if (!match) return Number.POSITIVE_INFINITY
+  const amount = Number(match[1]!.replace(',', '.'))
+  const unit = match[2]!.toLowerCase()
+  return unit === 'кг' || unit === 'л' ? amount * 1000 : amount
+}
+
+function getVariantOptionLabel(variant: ProductVariantForListing): string | null {
+  const { flavorLabel } = getBaseTitleAndFlavorLabel(variant.title)
+  if (flavorLabel) return flavorLabel
+  if (typeof variant.weight === 'number' && Number.isFinite(variant.weight) && variant.weight > 0) {
+    return `${variant.weight} г`
+  }
+  return null
+}
+
+/** Все варианты группы отличаются только фасовкой. */
+export function getVariantOptionKind(variants: ProductVariantForListing[]): VariantOptionKind {
+  return variants.length > 0 && variants.every((variant) => isSizeLabel(getVariantOptionLabel(variant)))
+    ? 'size'
+    : 'flavor'
+}
+
+/** Для фасовок — по возрастанию веса, иначе исходный порядок. */
+export function sortVariantsForDisplay(variants: ProductVariantForListing[]): ProductVariantForListing[] {
+  if (getVariantOptionKind(variants) !== 'size') return variants
+  return [...variants].sort(
+    (a, b) => sizeLabelToSortValue(getVariantOptionLabel(a)) - sizeLabelToSortValue(getVariantOptionLabel(b))
+  )
 }
 
 export function getProductListingSizeLabel(title: string, weight?: number | null): string | null {
@@ -141,8 +194,9 @@ export function groupProductsForListing(items: ProductVariantForListing[]): Prod
       continue
     }
 
-    const variants = groupedByParent.get(entry.parentUid)
-    if (!variants || variants.length === 0) continue
+    const groupedVariants = groupedByParent.get(entry.parentUid)
+    if (!groupedVariants || groupedVariants.length === 0) continue
+    const variants = sortVariantsForDisplay(groupedVariants)
     if (variants.length === 1) {
       listingItems.push({ kind: 'single', product: variants[0]! })
       continue
@@ -151,10 +205,9 @@ export function groupProductsForListing(items: ProductVariantForListing[]): Prod
     const defaultVariant = pickDefaultVariant(variants)
     const defaultLabels = getBaseTitleAndFlavorLabel(defaultVariant.title)
     const flavorOptions = variants.map((variant) => {
-      const labels = getBaseTitleAndFlavorLabel(variant.title)
       return {
         id: variant.id,
-        label: labels.flavorLabel,
+        label: getVariantOptionLabel(variant),
         isAvailable: isVariantAvailable(variant),
       }
     })
@@ -166,6 +219,7 @@ export function groupProductsForListing(items: ProductVariantForListing[]): Prod
       defaultVariantId: defaultVariant.id,
       baseTitle: defaultLabels.baseTitle,
       flavorOptions,
+      optionKind: getVariantOptionKind(variants),
     })
   }
 

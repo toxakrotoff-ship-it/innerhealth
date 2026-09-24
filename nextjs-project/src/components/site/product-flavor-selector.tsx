@@ -3,7 +3,12 @@
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { getBaseTitleAndFlavorLabel, type ProductVariantForListing } from '@/lib/product-grouping'
+import {
+  getBaseTitleAndFlavorLabel,
+  getVariantOptionKind,
+  sortVariantsForDisplay,
+  type ProductVariantForListing,
+} from '@/lib/product-grouping'
 
 const FORMAT_LABEL_CATEGORY_SLUGS = new Set(['gribnaya-kollekciya'])
 
@@ -24,11 +29,21 @@ export function ProductFlavorSelector({
   isSprintTheme,
   categorySlug,
 }: ProductFlavorSelectorProps) {
-  const groupLabel = categorySlug && FORMAT_LABEL_CATEGORY_SLUGS.has(categorySlug) ? 'Формат' : 'Вкус'
+  const isSizeGroup = getVariantOptionKind(variants) === 'size'
+  const groupLabel = isSizeGroup
+    ? 'Фасовка'
+    : categorySlug && FORMAT_LABEL_CATEGORY_SLUGS.has(categorySlug)
+      ? 'Формат'
+      : 'Вкус'
   const options = useMemo(() => {
-    return variants.map((variant, index) => {
+    return sortVariantsForDisplay(variants).map((variant, index) => {
       const { flavorLabel } = getBaseTitleAndFlavorLabel(variant.title)
-      const label = flavorLabel ?? (variant.sku?.trim() ? variant.sku.trim() : `${groupLabel} ${index + 1}`)
+      const weightLabel =
+        typeof variant.weight === 'number' && variant.weight > 0 ? `${variant.weight} г` : null
+      const label =
+        flavorLabel ??
+        weightLabel ??
+        (variant.sku?.trim() ? variant.sku.trim() : `${groupLabel} ${index + 1}`)
       const href = variant.slug ? `/product/${variant.slug}` : `/product/id/${variant.id}`
       return {
         id: variant.id,

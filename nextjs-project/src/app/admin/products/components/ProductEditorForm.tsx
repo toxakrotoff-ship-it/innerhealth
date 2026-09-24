@@ -413,7 +413,7 @@ export function ProductEditorForm({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Группа вкусов (parentUid)
+                Группа вариантов — вкус или фасовка (parentUid)
               </label>
               <input
                 type="text"

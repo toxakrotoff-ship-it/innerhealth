@@ -20,6 +20,7 @@ function createProduct(input: Partial<ProductVariantForListing> & Pick<ProductVa
     isPromoEligible: input.isPromoEligible ?? true,
     discountPrice: input.discountPrice ?? null,
     isPreorderEnabled: input.isPreorderEnabled ?? false,
+    weight: input.weight ?? null,
   }
 }
 
@@ -43,6 +44,58 @@ describe('getProductListingTitlePresentation', () => {
       displayTitle: 'Протеин',
       sizeLabel: '210 г',
     })
+  })
+})
+
+describe('size variants', () => {
+  it('parses trailing ", 105 г" as size label', () => {
+    expect(getProductListingTitlePresentation('Бульон говяжий натуральный концентрированный сухой, 105 г', 105)).toEqual({
+      displayTitle: 'Бульон говяжий натуральный концентрированный сухой',
+      sizeLabel: '105 г',
+    })
+  })
+
+  it('keeps commas that are not a size suffix', () => {
+    expect(getProductListingTitlePresentation('Бульон куриный, натуральный')).toEqual({
+      displayTitle: 'Бульон куриный, натуральный',
+      sizeLabel: null,
+    })
+  })
+
+  it('groups packages into one card sorted by weight with size option kind', () => {
+    const listing = groupProductsForListing([
+      createProduct({ id: 'beef-210', parentUid: 'beef', title: 'Бульон говяжий сухой, 210 г', weight: 210 }),
+      createProduct({ id: 'beef-105', parentUid: 'beef', title: 'Бульон говяжий сухой, 105 г', weight: 105 }),
+      createProduct({ id: 'beef-1kg', parentUid: 'beef', title: 'Бульон говяжий сухой, 1 кг', weight: 1000 }),
+    ])
+    expect(listing).toHaveLength(1)
+    const group = listing[0]
+    expect(group?.kind).toBe('group')
+    if (group?.kind !== 'group') return
+    expect(group.optionKind).toBe('size')
+    expect(group.baseTitle).toBe('Бульон говяжий сухой')
+    expect(group.flavorOptions.map((option) => option.label)).toEqual(['105 г', '210 г', '1 кг'])
+  })
+
+  it('falls back to weight for label when title has no size suffix', () => {
+    const listing = groupProductsForListing([
+      createProduct({ id: 'a', parentUid: 'g', title: 'Бульон', weight: 210 }),
+      createProduct({ id: 'b', parentUid: 'g', title: 'Бульон', weight: 105 }),
+    ])
+    const group = listing[0]
+    if (group?.kind !== 'group') throw new Error('expected group')
+    expect(group.optionKind).toBe('size')
+    expect(group.flavorOptions.map((option) => option.label)).toEqual(['105 г', '210 г'])
+  })
+
+  it('keeps flavor kind for flavor groups', () => {
+    const listing = groupProductsForListing([
+      createProduct({ id: 'v', parentUid: 'g', title: 'Протеин - Ваниль' }),
+      createProduct({ id: 'c', parentUid: 'g', title: 'Протеин - Шоколад' }),
+    ])
+    const group = listing[0]
+    if (group?.kind !== 'group') throw new Error('expected group')
+    expect(group.optionKind).toBe('flavor')
   })
 })
 

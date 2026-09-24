@@ -55,6 +55,7 @@ interface ProductPageContentProps {
     title: string
     brand: string | null
     sku: string | null
+    weight?: number | null
     price: number
     priceOld: number | null
     quantity?: number | null
@@ -278,7 +279,7 @@ export function ProductPageContent({
     ...(showDocumentsAsTab
       ? [
           {
-            title: 'Сертификаты соответствия',
+            title: 'Документы',
             content: '',
             node: (
               <ProductDocumentsSection

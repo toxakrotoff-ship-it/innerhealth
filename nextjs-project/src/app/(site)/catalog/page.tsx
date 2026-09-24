@@ -267,7 +267,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                             sizes={isSprintTheme ? '(max-width: 768px) 100vw, 50vw' : '(max-width: 768px) 50vw, 33vw'}
                           />
                           <div
-                            className="absolute inset-0 rounded-2xl bg-black/28"
+                            className="absolute inset-0 rounded-2xl bg-black/12"
                             aria-hidden
                           />
                         </>

@@ -19,7 +19,7 @@ function shortBlock(key: string, text: string | null): ContentBlockResolved {
 }
 
 describe('resolveProductDocumentsPlacement', () => {
-  it('defaults to before-tabs when block is missing', () => {
+  it('defaults to as-tab when block is missing', () => {
     expect(resolveProductDocumentsPlacement([])).toBe(DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT)
   })
 

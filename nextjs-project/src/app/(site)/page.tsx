@@ -977,7 +977,7 @@ export default async function HomePage() {
     )
   }
 
-  const { categories, newProducts, hitsProducts, articlePosts, reviews } =
+  const { categories, newProducts, hitsProducts, newsPosts, reviews } =
     await getHomeData(activeBrand)
   const emptyInnerContentBlocks = [] as ContentBlockResolved[]
   const [homeBlocks, popup] = await Promise.all([
@@ -986,7 +986,7 @@ export default async function HomePage() {
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
-  const articlesSubtitle = getBlockByKey(homeBlocks, 'home.articles.subtitle')
+  const newsSubtitle = getBlockByKey(homeBlocks, 'home.news.subtitle')
   const reviewsSubtitle = getBlockByKey(homeBlocks, 'home.reviews.subtitle')
 
   const heroBadge = getBlockByKey(homeBlocks, 'hero.badge')
@@ -1009,9 +1009,9 @@ export default async function HomePage() {
     linkLabel: getBlockText(homeBlocks, 'howToOrder.single.linkLabel', 'Подробнее о доставке'),
   }
   const showHomeHitsSection = hitsProducts.length > 0
-  const showHomeArticlesSection =
-    articlePosts.length > 0 ||
-    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.articles.showWhenEmpty')?.text)
+  const showHomeNewsSection =
+    newsPosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.news.showWhenEmpty')?.text)
 
   const directionsSection = directionsContent.items.length > 0 ? (
     <>
@@ -1245,28 +1245,28 @@ export default async function HomePage() {
       </>
     ) : null
 
-  const articlesSection = showHomeArticlesSection ? (
+  const newsSection = showHomeNewsSection ? (
     <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
       <AdaptiveContainer maxWidth="default">
         <div className="flex justify-between items-end mb-10 sm:mb-12">
           <div className="space-y-1">
-            <Heading2 className="font-semibold tracking-tighter text-slate-900">Статьи</Heading2>
+            <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
             <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
-              {articlesSubtitle?.text ?? 'Полезные материалы о здоровье и нутриентах'}
+              {newsSubtitle?.text ?? 'Актуальные события и обновления'}
             </p>
           </div>
-          <Link href="/informaciya" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
-            ВСЕ СТАТЬИ
+          <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+            ВСЕ НОВОСТИ
             <NavArrowRight className="w-4 h-4" aria-hidden />
           </Link>
         </div>
-        {articlePosts.length > 0 ? (
+        {newsPosts.length > 0 ? (
           <ScrollReveal as="div" variant="fade-up">
             <FluidGrid cols={1} colsTablet={2} colsDesktop={3} colsXl={3} cols2xl={3} cols3xl={3} cols4xl={3} gap={4} adaptiveGap>
-              {articlePosts.map((post) => (
+              {newsPosts.map((post) => (
                 <Link
                   key={post.id}
-                  href={`/informaciya/${post.slug}`}
+                  href={`/news/${post.slug}`}
                   className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
                 >
                   <TiltCard>
@@ -1298,7 +1298,7 @@ export default async function HomePage() {
             </FluidGrid>
           </ScrollReveal>
         ) : (
-          <p className="text-gray-500">Пока нет статей.</p>
+          <p className="text-gray-500">Пока нет новостей.</p>
         )}
       </AdaptiveContainer>
     </section>
@@ -1346,8 +1346,9 @@ export default async function HomePage() {
           return howToOrderSection
         case 'hits':
           return hitsSection
+        // Секция id `articles` сохранена ради порядка из админки; на главной Inner теперь показываем новости.
         case 'articles':
-          return articlesSection
+          return newsSection
         case 'reviews':
           return reviewsSection
         default:

@@ -150,7 +150,9 @@ export function GroupedProductCard({
           <div className="relative z-10 mt-2 flex flex-wrap gap-1.5 md:gap-2">
             {group.flavorOptions.map((option) => {
               const isSelected = option.id === activeVariant.id
-              const label = option.label ?? `Вкус ${group.flavorOptions.findIndex((item) => item.id === option.id) + 1}`
+              const label =
+                option.label ??
+                `${group.optionKind === 'size' ? 'Фасовка' : 'Вкус'} ${group.flavorOptions.findIndex((item) => item.id === option.id) + 1}`
               return (
                 <button
                   key={option.id}
