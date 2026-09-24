@@ -31,4 +31,32 @@ describe('normalizeCdekCity', () => {
     const result = normalizeCdekCity({ code: 1 })
     expect(result.city).toBeUndefined()
   })
+
+  it('extracts region from full_name middle segments when region field is missing (suggest endpoint)', () => {
+    const result = normalizeCdekCity({
+      code: 1913777,
+      city: 'Москва',
+      full_name: 'Москва, Пеновский муниципальный округ, Тверская область, Россия',
+    })
+    expect(result.region).toBe('Пеновский муниципальный округ, Тверская область')
+  })
+
+  it('leaves region undefined for a capital-style full_name with no middle segment', () => {
+    const result = normalizeCdekCity({
+      code: 44,
+      city: 'Москва',
+      full_name: 'Москва, Россия',
+    })
+    expect(result.region).toBeUndefined()
+  })
+
+  it('prefers an explicit region field over parsing full_name', () => {
+    const result = normalizeCdekCity({
+      code: 1,
+      city: 'Москва',
+      region: 'Явное значение',
+      full_name: 'Москва, Что-то другое, Россия',
+    })
+    expect(result.region).toBe('Явное значение')
+  })
 })

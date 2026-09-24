@@ -1062,6 +1062,23 @@ function extractCityNameFromFullName(fullName: unknown): string | undefined {
 }
 
 /**
+ * Достаёт «регион» из середины `full_name` (после названия города, до страны) —
+ * нужно, чтобы различать одноимённые населённые пункты в разных регионах/странах
+ * (например, несколько «Москва»: столица России и деревни с тем же именем в других
+ * областях/странах), когда СДЭК не отдаёт отдельное поле `region` для suggest-эндпоинта.
+ */
+function extractRegionFromFullName(fullName: unknown): string | undefined {
+  if (typeof fullName !== 'string') return undefined
+  const segments = fullName
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (segments.length <= 2) return undefined
+  const middle = segments.slice(1, -1).join(', ')
+  return middle.length > 0 ? middle : undefined
+}
+
+/**
  * Нормализует элемент города из ответа API: СДЭК может вернуть city/code или cityName/cityId.
  */
 export function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
@@ -1073,7 +1090,7 @@ export function normalizeCdekCity(row: Record<string, unknown>): CdekCity {
     row.settlement ??
     row.name ??
     extractCityNameFromFullName(row.full_name ?? row.fullName)
-  const region = row.region ?? row.region_name
+  const region = row.region ?? row.region_name ?? extractRegionFromFullName(row.full_name ?? row.fullName)
   const countryCode = row.country_code ?? row.countryCode
   return {
     ...(row as unknown as CdekCity),

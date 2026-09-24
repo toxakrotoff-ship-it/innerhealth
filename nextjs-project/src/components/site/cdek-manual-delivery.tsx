@@ -123,7 +123,7 @@ export function CdekManualDelivery({
   const [cityLoading, setCityLoading] = useState(false)
   /** Остаток строки «Москва оре» после названия города — подставляется в поиск ПВЗ/улицы. */
   const pendingRestRef = useRef('')
-  const cityWrapRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const [points, setPoints] = useState<CdekPvzOption[]>([])
   const [pointsLoading, setPointsLoading] = useState(false)
@@ -189,7 +189,7 @@ export function CdekManualDelivery({
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
-      if (cityWrapRef.current && !cityWrapRef.current.contains(e.target as Node)) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setCityOpen(false)
         setStreetOpen(false)
       }
@@ -367,8 +367,8 @@ export function CdekManualDelivery({
   }, [streetQuery, deliveryMethod, selectedCity, brandId])
 
   return (
-    <div className="space-y-4" data-testid="cdek-manual-delivery">
-      <div ref={cityWrapRef} className="relative">
+    <div className="space-y-4" data-testid="cdek-manual-delivery" ref={rootRef}>
+      <div className="relative">
         <label htmlFor="cdek-manual-city" className={labelClass}>
           Город
         </label>
