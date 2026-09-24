@@ -69,7 +69,7 @@ export function InnerHomeDirectionsSection({
                           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                         <div
-                          className="absolute inset-0 bg-linear-to-b from-slate-950/10 via-slate-950/30 to-slate-950/90"
+                          className="absolute inset-0 bg-linear-to-b from-transparent from-40% via-slate-950/25 to-slate-950/75"
                           aria-hidden
                         />
                       </>
@@ -80,12 +80,12 @@ export function InnerHomeDirectionsSection({
                       />
                     )}
 
-                    <div className="relative z-10 space-y-3">
+                    <div className="relative z-10 space-y-3 drop-shadow-md">
                       <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
                         {item.title}
                       </h3>
                       {item.description ? (
-                        <p className="line-clamp-3 max-w-sm text-sm text-white/80 2xl:text-base">
+                        <p className="line-clamp-3 max-w-sm text-sm text-white/90 2xl:text-base">
                           {item.description}
                         </p>
                       ) : null}
