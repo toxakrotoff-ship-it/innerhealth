@@ -8,6 +8,16 @@
  *   setAttribute переписывают CDN-URL на origin, поэтому динамические чанки Turbopack и картинки
  *   React сразу идут на origin, а теги из HTML следующих страниц чинятся MutationObserver'ом.
  *
+ * Turbopack опознаёт чанк по `document.currentScript.getAttribute('src')`, срезая зашитый префикс CDN:
+ * поэтому для перенаправленных <script> `getAttribute('src')` и свойство `src` возвращают исходный
+ * CDN-URL (реальная загрузка — с origin),
+ * иначе промисы загрузки чанков не резолвятся и приложение не стартует.
+ *
+ * Ошибку упавшего <script>/<link> с CDN гасим в capture-фазе на window: иначе Turbopack, успевший
+ * подписаться на этот элемент, реджектит загрузку чанка раньше, чем ретрай с origin его зарегистрирует.
+ * `load` элементов не доходит до window — слушаем на document. <link> чиним на месте (смена href
+ * перезагружает стиль и сохраняет onload Turbopack), <script> — клоном (смена src не перезапускает скрипт).
+ *
  * Повторное выполнение чанка безопасно: рантайм Turbopack выходит, если уже инициализирован,
  * а повторный `TURBOPACK.push` не переустанавливает зарегистрированные модули.
  */
@@ -29,21 +39,26 @@ export function buildCdnFallbackScript(cdnUrl: string): string {
   }).replace(/</g, '\\u003c')
 
   return `(function(o){
-var C=o.c,P=C+'/',d=document,w=window,off=false,probing=null,sa=Element.prototype.setAttribute;
+var C=o.c,P=C+'/',d=document,w=window,off=false,probing=null,sa=Element.prototype.setAttribute,ga=Element.prototype.getAttribute;
 try{var ts=+localStorage.getItem(o.k);off=ts>0&&Date.now()-ts<o.ttl}catch(e){}
 function isCdn(u){return typeof u==='string'&&u.lastIndexOf(P,0)===0}
 function fix(u){return isCdn(u)?u.slice(C.length):u}
 function fixSet(s){return typeof s==='string'?s.split(P).join('/'):s}
 function fixAttr(n,v){n=String(n).toLowerCase();return n==='src'||n==='href'?fix(v):n==='srcset'||n==='imagesrcset'?fixSet(v):v}
-function patch(k,p,f){var x=w[k]&&Object.getOwnPropertyDescriptor(w[k].prototype,p);if(x&&x.set)Object.defineProperty(w[k].prototype,p,{configurable:true,enumerable:x.enumerable,get:x.get,set:function(v){x.set.call(this,off?f(v):v)}})}
+function keepCdn(el,v){if(el.tagName==='SCRIPT'&&isCdn(v))el.__ihCdn=v}
+function patch(k,p,f){var x=w[k]&&Object.getOwnPropertyDescriptor(w[k].prototype,p);if(x&&x.set)Object.defineProperty(w[k].prototype,p,{configurable:true,enumerable:x.enumerable,
+get:k==='HTMLScriptElement'?function(){return this.__ihCdn||x.get.call(this)}:x.get,
+set:function(v){if(off)keepCdn(this,v);x.set.call(this,off?f(v):v)}})}
 patch('HTMLScriptElement','src',fix);patch('HTMLLinkElement','href',fix);patch('HTMLImageElement','src',fix);patch('HTMLImageElement','srcset',fixSet);patch('HTMLSourceElement','srcset',fixSet);
-Element.prototype.setAttribute=function(n,v){return sa.call(this,n,off&&typeof v==='string'?fixAttr(n,v):v)};
-function urlOf(el){return el.tagName==='LINK'?el.getAttribute('href'):el.getAttribute('src')}
-function hasCdn(el){var u=urlOf(el),s=el.getAttribute('srcset')||el.getAttribute('imagesrcset');return isCdn(u)||(!!s&&s.indexOf(P)>=0)}
+Element.prototype.getAttribute=function(n){return this.__ihCdn&&String(n).toLowerCase()==='src'?this.__ihCdn:ga.call(this,n)};
+Element.prototype.setAttribute=function(n,v){if(off&&String(n).toLowerCase()==='src')keepCdn(this,v);return sa.call(this,n,off&&typeof v==='string'?fixAttr(n,v):v)};
+function attr(el,n){return ga.call(el,n)}
+function urlOf(el){return attr(el,el.tagName==='LINK'?'href':'src')}
+function hasCdn(el){var u=urlOf(el),s=attr(el,'srcset')||attr(el,'imagesrcset');return isCdn(u)||(!!s&&s.indexOf(P)>=0)}
 function retry(el){var t=el.tagName;if(!hasCdn(el))return;
-if(t==='IMG'||t==='SOURCE'){['srcset','src'].forEach(function(a){var v=el.getAttribute(a);if(v)sa.call(el,a,fixAttr(a,v))});return}
-if((t!=='SCRIPT'&&t!=='LINK')||!el.parentNode)return;
-var n=d.createElement(t);for(var i=0;i<el.attributes.length;i++){var a=el.attributes[i];sa.call(n,a.name,fixAttr(a.name,a.value))}
+if(t==='IMG'||t==='SOURCE'||t==='LINK'){['srcset','imagesrcset','src','href'].forEach(function(a){var v=attr(el,a);if(v)sa.call(el,a,fixAttr(a,v))});return}
+if(t!=='SCRIPT'||!el.parentNode)return;
+var n=d.createElement(t);keepCdn(n,attr(el,'src'));for(var i=0;i<el.attributes.length;i++){var a=el.attributes[i];sa.call(n,a.name,fixAttr(a.name,a.value))}
 el.parentNode.replaceChild(n,el)}
 function settled(el){var t=el.tagName;return el.__ihOk||(t==='LINK'&&el.rel==='stylesheet'&&!!el.sheet)||(t==='IMG'&&el.complete&&el.naturalWidth>0)}
 function scan(root,force){if(!root.querySelectorAll)return;var q=root.querySelectorAll('script[src],link[href],img,source');for(var i=0;i<q.length;i++){if(force||!settled(q[i]))retry(q[i])}}
@@ -53,11 +68,12 @@ tm=setTimeout(function(){fin(false)},o.probeMs);
 function fin(ok){if(done)return;done=true;clearTimeout(tm);var l=probing;probing=null;for(var i=0;i<l.length;i++)l[i](ok)}
 img.onload=function(){fin(true)};img.onerror=function(){fin(false)};img.src=C+o.probe+'?cdn-probe='+Date.now()}
 function check(){if(!off)probe(function(ok){if(!ok)goOff()})}
-w.addEventListener('load',function(e){var el=e.target;if(el&&el.tagName)el.__ihOk=1},true);
-w.addEventListener('error',function(e){var el=e.target;if(!el||!el.tagName||!hasCdn(el))return;retry(el);check()},true);
+d.addEventListener('load',function(e){var el=e.target;if(el&&el.tagName)el.__ihOk=1},true);
+w.addEventListener('error',function(e){var el=e.target;if(!el||!el.tagName||!hasCdn(el))return;
+if(el.tagName==='SCRIPT'||el.tagName==='LINK')e.stopImmediatePropagation();retry(el);check()},true);
 if(off){scan(d,true);var mo=new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var a=ms[i].addedNodes;for(var j=0;j<a.length;j++){var n=a[j];if(n.nodeType!==1)continue;retry(n);scan(n,true)}}});
 mo.observe(d.documentElement,{childList:true,subtree:true});w.addEventListener('load',function(){mo.disconnect()})}
 else{d.addEventListener('DOMContentLoaded',function(){setTimeout(function(){if(!w.next)check()},o.bootMs)});
-w.addEventListener('load',function(){var l=d.querySelectorAll('link[rel=stylesheet]');for(var i=0;i<l.length;i++){if(isCdn(l[i].getAttribute('href'))&&!l[i].sheet){check();return}}if(!w.next)check()})}
+w.addEventListener('load',function(){var l=d.querySelectorAll('link[rel=stylesheet]');for(var i=0;i<l.length;i++){if(isCdn(attr(l[i],'href'))&&!l[i].sheet){check();return}}if(!w.next)check()})}
 })(${config});`
 }

@@ -49,6 +49,7 @@ describe('cdnImageLoader', () => {
 
 describe('buildCdnFallbackScript', () => {
   const originalSetAttribute = Element.prototype.setAttribute
+  const originalGetAttribute = Element.prototype.getAttribute
   const descriptors = [
     [HTMLScriptElement.prototype, 'src'],
     [HTMLLinkElement.prototype, 'href'],
@@ -68,6 +69,7 @@ describe('buildCdnFallbackScript', () => {
   afterEach(() => {
     vi.useRealTimers()
     Element.prototype.setAttribute = originalSetAttribute
+    Element.prototype.getAttribute = originalGetAttribute
     descriptors.forEach(([proto, prop], i) => Object.defineProperty(proto, prop, saved[i]))
   })
 
@@ -93,7 +95,8 @@ describe('buildCdnFallbackScript', () => {
 
     const chunk = document.createElement('script')
     chunk.src = `${CDN}/_next/static/chunks/x.js`
-    expect(chunk.getAttribute('src')).toBe('/_next/static/chunks/x.js')
+    document.head.appendChild(chunk)
+    expect(document.head.querySelector('script[src="/_next/static/chunks/x.js"]')).toBe(chunk)
   })
 
   it('replaces a failed CDN script with an origin copy', () => {
@@ -101,14 +104,50 @@ describe('buildCdnFallbackScript', () => {
     const script = document.createElement('script')
     script.setAttribute('src', `${CDN}/_next/static/chunks/a.js`)
     script.setAttribute('async', '')
+    const onerror = vi.fn()
+    script.addEventListener('error', onerror)
     document.head.appendChild(script)
 
     script.dispatchEvent(new Event('error'))
 
-    const scripts = document.head.querySelectorAll('script[src]')
+    // Turbopack не должен увидеть ошибку CDN-скрипта, иначе чанк реджектится до ретрая с origin.
+    expect(onerror).not.toHaveBeenCalled()
+
+    const scripts = document.head.querySelectorAll('script[src="/_next/static/chunks/a.js"]')
     expect(scripts).toHaveLength(1)
-    expect(scripts[0].getAttribute('src')).toBe('/_next/static/chunks/a.js')
+    // Turbopack читает getAttribute('src') у currentScript — должен видеть исходный CDN-URL.
+    expect(scripts[0].getAttribute('src')).toBe(`${CDN}/_next/static/chunks/a.js`)
     expect(scripts[0].hasAttribute('async')).toBe(true)
+    // Turbopack опознаёт чанк по script.src с префиксом CDN — геттер должен вернуть исходный URL.
+    expect((scripts[0] as HTMLScriptElement).src).toBe(`${CDN}/_next/static/chunks/a.js`)
+  })
+
+  it('keeps the CDN URL visible via script.src for dynamically created chunks when CDN is off', () => {
+    localStorage.setItem('ih_cdn_off', String(Date.now()))
+    run()
+    const chunk = document.createElement('script')
+    chunk.src = `${CDN}/_next/static/chunks/b.js`
+    document.head.appendChild(chunk)
+    expect(document.head.querySelector('script[src="/_next/static/chunks/b.js"]')).toBe(chunk)
+    expect(chunk.getAttribute('src')).toBe(`${CDN}/_next/static/chunks/b.js`)
+    expect(chunk.src).toBe(`${CDN}/_next/static/chunks/b.js`)
+  })
+
+  it('fixes a failed CDN stylesheet in place, keeping its onload handler', () => {
+    run()
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.setAttribute('href', `${CDN}/_next/static/chunks/a.css`)
+    const onload = vi.fn()
+    link.onload = onload
+    document.head.appendChild(link)
+
+    link.dispatchEvent(new Event('error'))
+
+    expect(document.head.querySelector('link')).toBe(link)
+    expect(link.getAttribute('href')).toBe('/_next/static/chunks/a.css')
+    link.dispatchEvent(new Event('load'))
+    expect(onload).toHaveBeenCalled()
   })
 
   it('rewrites existing CDN tags on start when CDN was disabled recently', () => {
