@@ -25,10 +25,10 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    /** Оптимизатор /_next/image (ресайз + webp) через CDN, если задан NEXT_PUBLIC_CDN_URL; CDN кэширует по query (url, w, q). */
-    ...(process.env.NEXT_PUBLIC_CDN_URL?.trim()
-      ? { path: `${process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, '')}/_next/image` }
-      : {}),
+    /**
+     * Оптимизатор /_next/image (ресайз + webp) отдаётся с origin. Через CDN — только после того, как в
+     * Inner-CDN реально применён учёт query string: иначе CDN отдаёт одну картинку на все url/w (2026-09-24).
+     */
   },
   experimental: {
     staleTimes: {
