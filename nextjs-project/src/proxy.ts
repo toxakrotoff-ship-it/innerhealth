@@ -102,17 +102,21 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
     'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://yastatic.net'
   const yandexMapsConnectSrc =
     'https://api-maps.yandex.ru https://*.api-maps.yandex.ru https://*.maps.yandex.ru https://*.maps.yandex.net https://yastatic.net https://suggest-maps.yandex.ru https://geocode-maps.yandex.ru https://log.api-maps.yandex.ru https://search-maps.yandex.ru https://api.routing.yandex.net'
+  /** Яндекс.Метрика шлёт хиты и на .ru, и на .com (JSONP, fetch, вебвизор). */
+  const metrikaSrc = 'https://mc.yandex.ru https://mc.yandex.com'
   /** Timeweb CDN: чанки, CSS и шрифты (`assetPrefix`); картинки покрыты `img-src https:`. */
   const cdnSrc = CDN_URL ? ` ${CDN_URL}` : ''
   const csp = [
     "default-src 'self'",
-    `script-src 'self'${cdnSrc} 'unsafe-inline' 'unsafe-eval' ${yandexMapsScriptSrc} https://mc.yandex.ru`,
+    `script-src 'self'${cdnSrc} 'unsafe-inline' 'unsafe-eval' ${yandexMapsScriptSrc} ${metrikaSrc}`,
     // Yandex Maps v3 uses WebWorkers from blob:/data: (e.g. content_provider.worker.js).
     `worker-src 'self' blob: data: ${yandexMapsScriptSrc}`,
     `style-src 'self'${cdnSrc} 'unsafe-inline' https://fonts.googleapis.com ${yandexMapsStyleSrc}`,
     "img-src 'self' data: https: blob:",
     `font-src 'self'${cdnSrc} data: https://fonts.gstatic.com`,
-    `connect-src 'self' ${yandexMapsConnectSrc} https://mc.yandex.ru`,
+    `connect-src 'self' ${yandexMapsConnectSrc} ${metrikaSrc} wss://mc.yandex.ru wss://mc.yandex.com`,
+    // Вебвизор Метрики открывает iframe/blob.
+    `frame-src 'self' blob: ${metrikaSrc}`,
     frameAncestors,
     "base-uri 'self'",
     "form-action 'self'",

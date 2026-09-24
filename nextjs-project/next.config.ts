@@ -28,7 +28,8 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   images: {
-    formats: ['image/avif', 'image/webp'],
+    /** Только webp: AVIF слишком дорог по CPU для app-контейнера (0.8 CPU). */
+    formats: ['image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     remotePatterns: [
@@ -38,9 +39,10 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    /** Без ресайза; loader только переносит /uploads/* на CDN (NEXT_PUBLIC_CDN_URL). */
-    loader: 'custom',
-    loaderFile: './src/lib/next-image-cdn-loader.ts',
+    /** Оптимизатор /_next/image (ресайз + webp) через CDN, если задан NEXT_PUBLIC_CDN_URL; CDN кэширует по query (url, w, q). */
+    ...(process.env.NEXT_PUBLIC_CDN_URL?.trim()
+      ? { path: `${process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, '')}/_next/image` }
+      : {}),
   },
   experimental: {
     /** Shorter client router cache so storefront updates appear sooner after admin edits. */

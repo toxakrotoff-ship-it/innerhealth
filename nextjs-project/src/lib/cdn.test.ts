@@ -7,9 +7,7 @@ const CDN = 'https://cdn.example.test'
 async function loadCdnModules(cdnUrl: string) {
   vi.resetModules()
   vi.stubEnv('NEXT_PUBLIC_CDN_URL', cdnUrl)
-  const cdn = await import('./cdn')
-  const loader = (await import('./next-image-cdn-loader')).default
-  return { ...cdn, loader }
+  return import('./cdn')
 }
 
 afterEach(() => {
@@ -33,17 +31,6 @@ describe('toCdnUrl', () => {
   it('is a no-op when NEXT_PUBLIC_CDN_URL is empty', async () => {
     const { toCdnUrl } = await loadCdnModules('')
     expect(toCdnUrl('/uploads/a.png')).toBe('/uploads/a.png')
-  })
-})
-
-describe('cdnImageLoader', () => {
-  it('moves uploads to the CDN and keeps width in the query', async () => {
-    const { loader } = await loadCdnModules(CDN)
-    expect(loader({ src: '/uploads/a.png', width: 640 })).toBe(`${CDN}/uploads/a.png?w=640`)
-    expect(loader({ src: '/images/b.png', width: 828 })).toBe('/images/b.png?w=828')
-    expect(loader({ src: 'https://static.tildacdn.com/c.png', width: 640 })).toBe(
-      'https://static.tildacdn.com/c.png'
-    )
   })
 })
 

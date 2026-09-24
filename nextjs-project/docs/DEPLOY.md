@@ -140,10 +140,10 @@ proxy_set_header X-Accel-Buffering no;
 - Ресурс **Inner-CDN** (ID 39715) в Timeweb → Сети → CDN: источник `innerhealth.ru:443`, домен раздачи **`cdn.innerhealth.ru`** (CNAME в reg.ru → `35xzvamvl2.cdn.twcstorage.ru`, сертификат Let's Encrypt во вкладке «SSL-сертификаты» ресурса).
 - **Не используйте техдомен `*.cdn.twcstorage.ru`**: в части сетей он режется по SNI (TLS reset), из-за чего 2026-09-24 у пользователей не стартовал JS. Свой поддомен идёт по тому же IP, но проходит.
 - Включение: в `.env` на VPS `NEXT_PUBLIC_CDN_URL="https://cdn.innerhealth.ru"` и **пересборка образа** (переменная build-time, передаётся build-arg в `docker-compose.yml`).
-- Через CDN идут `/_next/static/*` (`assetPrefix`) и картинки `/uploads/*` (loader next/image, `src/lib/cdn.ts`). HTML, API и админка — с origin. Sprint Power использует тот же билд и тот же CDN.
+- Через CDN идут `/_next/static/*` (`assetPrefix`) и картинки next/image через оптимизатор `/_next/image` (`images.path`: ресайз + webp, считается на origin один раз на размер, дальше кэш CDN — **в CDN обязательно включён учёт query string**, иначе разные картинки/ширины схлопнутся в один ключ). `<Image unoptimized>` и статьи отдают `/uploads/*` через CDN как есть (`toCdnUrl`, `src/lib/cdn.ts`). HTML, API и админка — с origin. Sprint Power использует тот же билд и тот же CDN.
 - CSP (`src/proxy.ts`) автоматически разрешает домен CDN в `script-src`/`style-src`/`font-src`.
 - **Фолбэк**: инлайн-скрипт в `<head>` (`src/lib/cdn-fallback.ts`) при ошибке загрузки с CDN перезапрашивает ресурс с origin; если проба CDN не проходит — выключает CDN у этого пользователя на 30 минут (`localStorage.ih_cdn_off`).
-- Настройки ресурса: CDN-кэш 3600 с, query string не учитывать, CORS `*` (нужно для шрифтов; nginx тоже отдаёт `Access-Control-Allow-Origin: *` для `/_next/static/`).
+- Настройки ресурса: CDN-кэш 3600 с, query string учитывать («Все»), CORS `*` (нужно для шрифтов; nginx тоже отдаёт `Access-Control-Allow-Origin: *` для `/_next/static/`).
 - Откат: убрать `NEXT_PUBLIC_CDN_URL` и пересобрать. Если на CDN закэшировалась ошибка — «Очистить кэш» в панели ресурса.
 
 ### Multi-brand domains (one app, multiple hosts)

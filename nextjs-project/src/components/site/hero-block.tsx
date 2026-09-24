@@ -5,6 +5,7 @@ import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { ScrollReveal } from '@/components/ui/scroll-reveal'
 import type { ContentBlockResolved } from '@/services/content-block.service'
 import { getInnerHealthHeroPortraitAlt } from '@/lib/image-alt-text'
+import { toCdnUrl } from '@/lib/cdn'
 
 interface HeroBlockProps {
   badge: ContentBlockResolved | null
@@ -239,9 +240,11 @@ export function HeroBlock({
             <div
               className="absolute inset-0 w-full h-full lg:[mask-image:linear-gradient(to_left,black_40%,transparent)] lg:[-webkit-mask-image:linear-gradient(to_left,black_40%,transparent)]"
             >
+              {/* Hero — оригинал без сжатия оптимизатором (качество важнее веса); /uploads/* — через CDN как есть. */}
               <Image
-                src={imageSrc}
+                src={toCdnUrl(imageSrc)}
                 alt={imageAlt}
+                unoptimized
                 width={1008}
                 height={1016}
                 className={`absolute inset-0 h-full w-full opacity-90 hero-portrait-image ${
