@@ -1,7 +1,7 @@
 import { Breadcrumbs } from '@/components/site/breadcrumbs'
 import { ContactLinks } from '@/components/site/contact-links'
 import { YandexMapDynamic } from '@/components/site/yandex-map-dynamic'
-import { MAP_CENTER } from '@/components/site/yandex-map'
+import { MAP_CENTER } from '@/lib/map-center'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { FluidGrid } from '@/components/ui/fluid-grid'
 import { ResponsiveText } from '@/components/ui/responsive-text'
