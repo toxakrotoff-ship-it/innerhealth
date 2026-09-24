@@ -835,6 +835,16 @@ export default function AdminContentPage() {
           </div>
         </div>
 
+        {page === 'faq' && (
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            Здесь редактируются только заголовок, подзаголовок, SEO и блок «Как заказать».
+            Сами вопросы и ответы правятся в разделе{' '}
+            <a href="faq" className="font-semibold underline">
+              FAQ
+            </a>
+            .
+          </div>
+        )}
         {error && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {error}
