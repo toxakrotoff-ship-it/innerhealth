@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_PUBLIC_CDN_URL?.trim() && {
     assetPrefix: process.env.NEXT_PUBLIC_CDN_URL.trim().replace(/\/+$/, ''),
   }),
+  /** Корень трассировки standalone = этот каталог (иначе Next может взять lockfile выше и сломать пути в Dockerfile). */
+  outputFileTracingRoot: __dirname,
   serverExternalPackages: ['geoip-lite'],
   outputFileTracingIncludes: {
     '/**': ['./node_modules/geoip-lite/data/**'],
