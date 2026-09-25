@@ -5,6 +5,7 @@ import * as reviewModerationMessageService from '@/bot/runtime/review-moderation
 import { getMaxBotConfig } from '@/bot/runtime/max-config';
 import type { BrandId } from '@/lib/brand/brand';
 import { telegramApiFetch } from '@/lib/telegram-api-fetch';
+import { maxNotificationSiteHeader } from '@/lib/max-notification-site';
 
 interface SyncInput {
   reviewId: string;
@@ -168,18 +169,15 @@ async function syncTelegramReviewModeration(input: SyncInput, review: ReviewSync
 }
 
 async function syncMaxReviewModeration(input: SyncInput, review: ReviewSyncContext): Promise<string[]> {
-  const config = await getMaxBotConfig({
-    brandId: resolveReviewBrandId(review.brand),
-  });
-  if (!config.token) return [];
-  const bot = new Bot(config.token);
   const rows = await reviewModerationMessageService.listReviewModerationMessages(input.reviewId);
-  const maxRows = rows.filter((r) => r.channel === 'MAX');
+  const maxRows = rows.filter((r) => r.channel === 'MAX' || r.channel === 'MAX_INNER');
   if (maxRows.length === 0) return [];
 
   const label = input.status === 'APPROVED' ? '✅ Отзыв размещён' : '❌ Отзыв отклонён';
   const textPreview = review.text.length > 300 ? review.text.slice(0, 297) + '…' : review.text;
   const messageText = [
+    maxNotificationSiteHeader(resolveReviewBrandId(review.brand)),
+    '',
     '📝 **Отзыв промодерирован**',
     `Статус: **${label}**`,
     `Автор: ${review.authorName}`,
@@ -190,9 +188,19 @@ async function syncMaxReviewModeration(input: SyncInput, review: ReviewSyncConte
   ].join('\n');
   const warnings: string[] = [];
 
+  const bots = new Map<BrandId, Bot>();
+
   await Promise.all(
     maxRows.map(async (row) => {
       try {
+        const brandId = row.channel === 'MAX_INNER' ? 'inner' : resolveReviewBrandId(review.brand);
+        let bot = bots.get(brandId);
+        if (!bot) {
+          const config = await getMaxBotConfig({ brandId });
+          if (!config.token) return;
+          bot = new Bot(config.token);
+          bots.set(brandId, bot);
+        }
         await withTimeout(
           bot.api.editMessage(row.messageId, {
             text: messageText,

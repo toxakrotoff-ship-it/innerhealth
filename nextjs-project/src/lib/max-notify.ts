@@ -4,20 +4,62 @@ import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
 import * as reviewModerationMessageService from '@/services/review-moderation-message.service';
 import type { BrandId } from '@/lib/brand/brand';
-import { normalizeBrandId } from '@/lib/brand/brand';
+import { normalizeBrandId, resolveBrandByHost } from '@/lib/brand/brand';
+import { getBrandSiteUrl } from '@/lib/brand/site-branding';
 import { formatOrderLabel } from '@/lib/order-label';
+import { maxNotificationSiteHeader } from '@/lib/max-notification-site';
 
 interface MaxAttachmentRequest {
   type: string;
   payload: unknown;
 }
 
+function deliveryBrands(sourceBrandId?: BrandId): BrandId[] {
+  return sourceBrandId === 'sprint-power' ? ['sprint-power', 'inner'] : ['inner'];
+}
+
+async function sendToAdmins(
+  sourceBrandId: BrandId | undefined,
+  text: string,
+  options?: { attachments?: MaxAttachmentRequest[]; reviewId?: string }
+): Promise<void> {
+  for (const brandId of deliveryBrands(sourceBrandId)) {
+    const adminUserIds = await userService.getAdminMaxUserIds(brandId);
+    await sendToUsers(adminUserIds, text, {
+      brandId,
+      sourceBrandId: sourceBrandId ?? 'inner',
+      ...options,
+      reviewChannel: options?.reviewId && brandId === 'inner' && sourceBrandId === 'sprint-power'
+        ? 'MAX_INNER'
+        : 'MAX',
+    });
+  }
+}
+
+async function sendToLinkedUser(
+  userId: string,
+  sourceBrandId: BrandId | undefined,
+  text: string
+): Promise<void> {
+  for (const brandId of deliveryBrands(sourceBrandId)) {
+    const link = await maxService.findMaxWhitelistByUserId(userId, { brandId });
+    if (!link?.maxUserId) continue;
+    const adminUserIds = await userService.getAdminMaxUserIds(brandId);
+    if (adminUserIds.includes(link.maxUserId)) continue;
+    await sendToUsers([link.maxUserId], text, { brandId, sourceBrandId: sourceBrandId ?? 'inner' });
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function siteUrl(brandId?: BrandId): string {
+  return getBrandSiteUrl(brandId ?? 'inner').replace(/\/$/, '');
+}
+
 async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | null> {
-  const settings = await settingsService.getMaxBotSettings(options);
+  const settings = await settingsService.getMaxBotSettings({ brandId: options?.brandId });
   if (!settings.token) return null;
   return new Bot(settings.token);
 }
@@ -25,7 +67,14 @@ async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | 
 async function sendToUsers(
   userIds: string[],
   text: string,
-  options?: { brandId?: BrandId | null; attachments?: MaxAttachmentRequest[]; reviewId?: string }
+  options?: {
+    brandId?: BrandId | null;
+    sourceBrandId?: BrandId;
+    attachments?: MaxAttachmentRequest[];
+    reviewId?: string;
+    reviewChannel?: 'MAX' | 'MAX_INNER';
+    header?: string;
+  }
 ): Promise<number> {
   if (userIds.length === 0) {
     console.warn('[max-notify] no recipients', { brandId: options?.brandId ?? null });
@@ -46,7 +95,7 @@ async function sendToUsers(
       continue;
     }
     const message = await bot.api
-      .sendMessageToUser(id, text, {
+      .sendMessageToUser(id, `${options?.header ?? maxNotificationSiteHeader(options?.sourceBrandId ?? options?.brandId ?? 'inner')}\n\n${text}`, {
         format: 'markdown',
         attachments: options?.attachments as unknown as never,
       })
@@ -70,7 +119,7 @@ async function sendToUsers(
           await reviewModerationMessageService
             .upsertReviewModerationMessage({
               reviewId: options.reviewId,
-              channel: 'MAX',
+              channel: options.reviewChannel ?? 'MAX',
               recipientId: userId,
               messageId: mid,
             })
@@ -116,8 +165,6 @@ export interface MaxOrderNotifyPayload {
 }
 
 export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
   const orderLabel = escapeHtml(formatOrderLabel(payload));
   const isCdek =
     payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
@@ -161,11 +208,7 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     `Адрес: ${escapeHtml(payload.shipping.address)}`,
     `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
   ];
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const adminOrdersUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/orders` : '/admin/orders';
+  const adminOrdersUrl = `${siteUrl(payload.brandId)}/admin/orders`;
   const needsCdekButton = isCdek && !payload.cdekOrderUuid;
   const attachments = needsCdekButton
     ? [
@@ -180,37 +223,40 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
         ]),
       ]
     : undefined;
-  await sendToUsers(adminUserIds, lines.filter(Boolean).join('\n'), {
-    ...scope,
-    ...(attachments ? { attachments } : {}),
-  });
+  await sendToAdmins(payload.brandId, lines.filter(Boolean).join('\n'), { attachments });
 
   if (payload.promoCodeId) {
-    const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(payload.promoCodeId, scope);
-    if (partnerMaxUserId && !adminUserIds.includes(partnerMaxUserId)) {
-      const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
-      const discountLine =
-        payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
-          ? `\nСкидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
-          : '';
-      const partnerText =
-        `💰 **Заказ по вашему промокоду**\n\n` +
-        `Промокод: ${promoLabel}\n` +
-        `Заказ: ${orderLabel}\n` +
-        `Сумма: **${payload.total.toFixed(0)} ₽**${discountLine}`;
-      await sendToUsers([partnerMaxUserId], partnerText, scope);
+    const promoLabel = payload.promoCode ? escapeHtml(payload.promoCode) : 'промокод';
+    const discountLine =
+      payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
+        ? `\nСкидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
+        : '';
+    const partnerText =
+      `💰 **Заказ по вашему промокоду**\n\n` +
+      `Промокод: ${promoLabel}\n` +
+      `Заказ: ${orderLabel}\n` +
+      `Сумма: **${payload.total.toFixed(0)} ₽**${discountLine}`;
+    for (const brandId of deliveryBrands(payload.brandId)) {
+      const partnerMaxUserId = await maxService.getPartnerMaxUserIdByPromoCodeId(
+        payload.promoCodeId,
+        { brandId }
+      );
+      if (!partnerMaxUserId) continue;
+      const adminUserIds = await userService.getAdminMaxUserIds(brandId);
+      if (adminUserIds.includes(partnerMaxUserId)) continue;
+      await sendToUsers([partnerMaxUserId], partnerText, {
+        brandId,
+        sourceBrandId: payload.brandId ?? 'inner',
+      });
     }
   }
 
   if (payload.customerUserId) {
-    const customerLink = await maxService.findMaxWhitelistByUserId(payload.customerUserId, scope);
-    if (customerLink && !adminUserIds.includes(customerLink.maxUserId)) {
-      const customerText =
-        `✅ **Заказ оплачен**\n\n` +
-        `Номер: ${orderLabel}\n` +
-        `Сумма: **${payload.total.toFixed(0)} ₽**`;
-      await sendToUsers([customerLink.maxUserId], customerText, scope);
-    }
+    const customerText =
+      `✅ **Заказ оплачен**\n\n` +
+      `Номер: ${orderLabel}\n` +
+      `Сумма: **${payload.total.toFixed(0)} ₽**`;
+    await sendToLinkedUser(payload.customerUserId, payload.brandId, customerText);
   }
 }
 
@@ -221,24 +267,14 @@ export async function notifyMaxOrderStatusForUser(payload: {
   status: 'paid' | 'canceled';
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
-  if (!link?.maxUserId) return;
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
-  if (adminUserIds.includes(link.maxUserId)) return;
-
   const statusLine = payload.status === 'paid' ? '✅ **Заказ оплачен**' : '❌ **Платёж отменён**';
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const orderUrl = `${siteUrl(payload.brandId)}/account/orders/${encodeURIComponent(payload.orderId)}`;
   const lines = [
     statusLine,
     `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
   ].filter(Boolean);
-  await sendToUsers([link.maxUserId], lines.join('\n'), scope);
+  await sendToLinkedUser(payload.userId, payload.brandId, lines.join('\n'));
 }
 
 export async function notifyMaxPaidOrderForAdmins(payload: {
@@ -249,17 +285,9 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
   cdekOrderError?: string | null;
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
-  if (adminUserIds.length === 0) return;
-
   const isCdek =
     payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const adminOrdersUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/orders` : '/admin/orders';
+  const adminOrdersUrl = `${siteUrl(payload.brandId)}/admin/orders`;
   const lines = [
     '✅ **Заказ оплачен**',
     `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
@@ -285,11 +313,7 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
       ]
     : undefined
 
-  await sendToUsers(
-    adminUserIds,
-    lines.join('\n'),
-    { ...scope, ...(attachments ? { attachments } : {}) }
-  )
+  await sendToAdmins(payload.brandId, lines.join('\n'), { attachments });
 }
 
 export async function notifyMaxCdekTrackForUser(payload: {
@@ -299,20 +323,10 @@ export async function notifyMaxCdekTrackForUser(payload: {
   trackNumber: string;
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const link = await maxService.findMaxWhitelistByUserId(payload.userId, scope);
-  if (!link?.maxUserId) return;
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
-  if (adminUserIds.includes(link.maxUserId)) return;
-
   const track = payload.trackNumber.trim();
   if (!track) return;
   const trackUrl = `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(track)}`;
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const orderUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/account/orders/${encodeURIComponent(payload.orderId)}` : '';
+  const orderUrl = `${siteUrl(payload.brandId)}/account/orders/${encodeURIComponent(payload.orderId)}`;
   const lines = [
     '📦 **CDEK: трек-номер сформирован**',
     `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
@@ -320,7 +334,7 @@ export async function notifyMaxCdekTrackForUser(payload: {
     `Отследить: ${escapeHtml(trackUrl)}`,
     orderUrl ? `Открыть заказ: ${escapeHtml(orderUrl)}` : '',
   ].filter(Boolean);
-  await sendToUsers([link.maxUserId], lines.join('\n'), scope);
+  await sendToLinkedUser(payload.userId, payload.brandId, lines.join('\n'));
 }
 
 export async function notifyMaxForm(payload: {
@@ -328,8 +342,6 @@ export async function notifyMaxForm(payload: {
   fields: Record<string, string>;
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
   const lines: string[] = [
     '**Новая заявка с сайта**',
     `Форма: ${escapeHtml(payload.formName)}`,
@@ -338,7 +350,7 @@ export async function notifyMaxForm(payload: {
       ([key, value]) => `${escapeHtml(key)}: ${escapeHtml(value || '—')}`
     ),
   ];
-  await sendToUsers(adminUserIds, lines.join('\n'), scope);
+  await sendToAdmins(payload.brandId, lines.join('\n'));
 }
 
 export async function notifyMaxConnection(payload: {
@@ -346,8 +358,6 @@ export async function notifyMaxConnection(payload: {
   maxUserId: string;
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
   const user = await userService.findUserProfile(payload.userId);
   const label = user
     ? [user.name, user.lastName].filter(Boolean).join(' ') || user.email
@@ -355,7 +365,7 @@ export async function notifyMaxConnection(payload: {
   const text =
     '🔗 **Подключение MAX**\n\n' +
     `Пользователь ${escapeHtml(label)} привязал уведомления (MAX user ID: \`${escapeHtml(payload.maxUserId)}\`).`;
-  await sendToUsers(adminUserIds, text, scope);
+  await sendToAdmins(payload.brandId, text);
 }
 
 export async function notifyMaxInfraAlert(payload: {
@@ -373,7 +383,9 @@ export async function notifyMaxInfraAlert(payload: {
     escapeHtml(payload.message),
   ];
   const recipients = await userService.getInfraAlertMaxUserIds();
-  await sendToUsers(recipients, lines.join('\n'));
+  await sendToUsers(recipients, lines.join('\n'), {
+    header: '**Система: Inner Health и Sprint Power**',
+  });
 }
 
 export async function notifyMaxPaymentError(payload: {
@@ -383,7 +395,6 @@ export async function notifyMaxPaymentError(payload: {
   context: 'create' | 'webhook' | 'cron-poll';
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
   const contextLabel =
     payload.context === 'create'
       ? 'создание платежа'
@@ -398,8 +409,7 @@ export async function notifyMaxPaymentError(payload: {
     '',
     `Заказ: ${escapeHtml(payload.orderId)}. ${totalLine}Ошибка: ${escapeHtml(payload.errorMessage.slice(0, 300))}`,
   ].join('\n');
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
-  await sendToUsers(adminUserIds, text, scope);
+  await sendToAdmins(payload.brandId, text);
 }
 
 export async function notifyMaxNewReview(payload: {
@@ -408,9 +418,6 @@ export async function notifyMaxNewReview(payload: {
   text: string;
   brandId?: BrandId;
 }): Promise<void> {
-  const scope = payload.brandId ? { brandId: payload.brandId } : {};
-  const adminUserIds = await userService.getAdminMaxUserIds(payload.brandId);
-  if (adminUserIds.length === 0) return;
   const textPreview = payload.text.length > 300 ? `${payload.text.slice(0, 297)}...` : payload.text;
   const callbackPrefix = 'review_';
   const approvePayload = `${callbackPrefix}approve_${payload.reviewId}`.slice(0, 256);
@@ -424,11 +431,7 @@ export async function notifyMaxNewReview(payload: {
     `ID: \`${escapeHtml(payload.reviewId)}\``,
     'Модерация: кнопками ниже или в админке.',
   ].join('\n');
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const adminUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/admin/reviews` : '/admin/reviews';
+  const adminUrl = `${siteUrl(payload.brandId)}/admin/reviews`;
   const keyboard = Keyboard.inlineKeyboard([
     [
       Keyboard.button.callback('✅ Разместить', approvePayload),
@@ -436,11 +439,10 @@ export async function notifyMaxNewReview(payload: {
     ],
     [Keyboard.button.link('🔎 Открыть в админке', adminUrl)],
   ]);
-  await sendToUsers(
-    adminUserIds,
-    messageText,
-    { ...scope, attachments: [keyboard], reviewId: payload.reviewId }
-  );
+  await sendToAdmins(payload.brandId, messageText, {
+    attachments: [keyboard],
+    reviewId: payload.reviewId,
+  });
 }
 
 /**
@@ -456,25 +458,31 @@ export async function notifyMaxPasswordResetForUser(payload: {
   if (links.length === 0) return false
 
   let delivered = false
-  const seenUserIds = new Set<string>()
+  const seenRecipients = new Set<string>()
+  let sourceBrandId: BrandId = 'inner'
+  try {
+    sourceBrandId = resolveBrandByHost(new URL(payload.resetLink).host)
+  } catch {
+    // Keep the default brand for legacy relative reset links.
+  }
 
   for (const link of links) {
     const maxUserId = link.maxUserId.trim()
-    if (!maxUserId || seenUserIds.has(maxUserId)) continue
-    seenUserIds.add(maxUserId)
-
     const brandId = normalizeBrandId(link.brand) ?? 'inner'
+    const recipientKey = `${brandId}:${maxUserId}`
+    if (!maxUserId || seenRecipients.has(recipientKey)) continue
+    seenRecipients.add(recipientKey)
     const text = [
       '🔑 **Сброс пароля**',
       '',
-      'Вы запросили сброс пароля на сайте Inner Health.',
+      `Вы запросили сброс пароля на сайте ${sourceBrandId === 'sprint-power' ? 'Sprint Power' : 'Inner Health'}.`,
       `Ссылка действует ${payload.expiresInMinutes} минут:`,
       escapeHtml(payload.resetLink),
       '',
       'Если вы не запрашивали сброс — просто проигнорируйте это сообщение.',
     ].join('\n')
 
-    const count = await sendToUsers([maxUserId], text, { brandId })
+    const count = await sendToUsers([maxUserId], text, { brandId, sourceBrandId })
     if (count > 0) delivered = true
   }
 

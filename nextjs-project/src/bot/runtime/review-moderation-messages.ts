@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 
-export type ReviewModerationChannel = 'TELEGRAM' | 'MAX';
+export type ReviewModerationChannel = 'TELEGRAM' | 'MAX' | 'MAX_INNER';
 
 export interface UpsertReviewModerationMessageInput {
   reviewId: string;
