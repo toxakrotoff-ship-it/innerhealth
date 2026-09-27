@@ -13,6 +13,7 @@ import {
 } from '@/components/site/delivery-section'
 import { CdekWidget } from '@/components/site/cdek-widget'
 import { CdekManualDelivery } from '@/components/site/cdek-manual-delivery'
+import { savePendingPaymentRedirect } from '@/lib/payment-redirect-recovery'
 import { warmupCdekWidget } from '@/lib/cdek-widget-preload'
 import { buildCdekWidgetItemsSignature } from '@/lib/cdek-widget-items'
 import { SavedAddressSelector } from '@/components/site/saved-address-selector'
@@ -890,6 +891,9 @@ export function CartPageContent({
         },
       })
       if (data.confirmationUrl) {
+        if (brandId === 'inner') {
+          savePendingPaymentRedirect(data.id, brandId, data.confirmationUrl)
+        }
         try {
           const nonGiftItems = items
             .filter((i) => i.isGift !== true)

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { CartPageContent } from '@/components/site/cart-page-content'
 import { CheckoutTrustStrip } from '@/components/site/checkout-trust-strip'
 import { CartReturnMessage } from '@/components/site/cart-return-message'
+import { PaymentRedirectRecovery } from '@/components/site/payment-redirect-recovery'
 import { RecentlyViewedProducts } from '@/components/site/recently-viewed-products'
 import { AdaptiveContainer } from '@/components/ui/adaptive-container'
 import { Heading1 } from '@/components/ui/responsive-text'
@@ -48,6 +49,7 @@ export default async function CartPage({ searchParams }: CartPageProps) {
       <CheckoutTrustStrip isSprintTheme={isSprintTheme} />
       {brandId === 'inner' ? <MetrikaPurchaseTracker payment={payment} /> : null}
       <CartReturnMessage payment={payment} paymentSuccessMessage={paymentSuccessMessageBlock?.richJson ?? null} />
+      {brandId === 'inner' ? <PaymentRedirectRecovery payment={payment} brandId={brandId} /> : null}
       <ScalableSpacing size="lg" />
       <CartPageContent
         isSprintTheme={isSprintTheme}

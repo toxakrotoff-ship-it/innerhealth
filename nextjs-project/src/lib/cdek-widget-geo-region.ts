@@ -181,8 +181,8 @@ export async function resolveCdekCityCodeByName(params: {
   })
   if (!response.ok) return null
 
-  const cities = (await response.json()) as Array<{ code?: number }>
-  const code = cities[0]?.code
+  const payload = (await response.json()) as { cities?: Array<{ code?: number }> } | null
+  const code = payload?.cities?.[0]?.code
   return typeof code === 'number' && Number.isFinite(code) && code > 0 ? Math.trunc(code) : null
 }
 

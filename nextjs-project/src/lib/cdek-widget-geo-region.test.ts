@@ -260,7 +260,7 @@ describe('cdek-widget-geo-region', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([{ code: 88, city: 'Вологда' }]), {
+        new Response(JSON.stringify({ cities: [{ code: 88, city: 'Вологда' }] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })
@@ -314,7 +314,7 @@ describe('cdek-widget-geo-region', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([{ code: 170, city: 'Ярославль' }]), {
+        new Response(JSON.stringify({ cities: [{ code: 170, city: 'Ярославль' }] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })

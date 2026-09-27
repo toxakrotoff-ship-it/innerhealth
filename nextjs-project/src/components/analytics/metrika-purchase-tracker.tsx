@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { pushMetrikaEcommerceEvent } from '@/lib/analytics/metrika-ecommerce'
 import { reachMetrikaGoal } from '@/lib/analytics/metrika'
+import { clearPendingPaymentRedirect } from '@/lib/payment-redirect-recovery'
 
 interface PendingPaymentSnapshot {
   orderId: string
@@ -78,10 +79,10 @@ export function MetrikaPurchaseTracker({ payment }: MetrikaPurchaseTrackerProps)
         } catch {
           // ignore
         }
+        clearPendingPaymentRedirect(order.id)
       })
       .catch(() => {})
   }, [payment])
 
   return null
 }
-
