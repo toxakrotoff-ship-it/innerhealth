@@ -32,6 +32,7 @@ interface CdekManualDeliveryProps {
   selectedPvz: CdekPvzOption | null
   onCitySelect: (city: CdekCityOption | null) => void
   onPvzChosen: (payload: { city: CdekCityOption; pvz: CdekPvzOption; tariff: CdekTariffSummary }) => void
+  onPvzClear: () => void
   onDoorReady: (payload: { city: CdekCityOption; tariff: CdekTariffSummary }) => void
   onStreetChosen: (payload: { street: string; house: string | null; text: string }) => void
   isSprintTheme?: boolean
@@ -112,6 +113,7 @@ export function CdekManualDelivery({
   selectedPvz,
   onCitySelect,
   onPvzChosen,
+  onPvzClear,
   onDoorReady,
   onStreetChosen,
   isSprintTheme = false,
@@ -414,17 +416,35 @@ export function CdekManualDelivery({
               type="text"
               autoComplete="off"
               disabled={!selectedCity}
-              value={pvzQuery}
+              readOnly={Boolean(selectedPvz)}
+              value={selectedPvz ? getPvzDisplayAddress(selectedPvz) : pvzQuery}
               onChange={(e) => setPvzQuery(e.target.value)}
               placeholder={selectedCity ? 'Начните вводить улицу или название пункта' : 'Сначала выберите город'}
               className={inputClass}
             />
+            {selectedPvz ? (
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <p role="status" className={cn('text-sm font-medium', isSprintTheme ? 'text-emerald-300' : 'text-emerald-700')}>
+                  ✓ Пункт выдачи выбран{selectedPvz.code ? `: ${selectedPvz.code}` : ''}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPvzQuery('')
+                    onPvzClear()
+                  }}
+                  className="shrink-0 text-sm font-medium text-action-blue underline"
+                >
+                  Изменить
+                </button>
+              </div>
+            ) : null}
           </div>
-          {selectedCity && pointsLoading ? (
+          {selectedCity && !selectedPvz && pointsLoading ? (
             <p className={cn('text-sm', mutedClass)}>Загружаем пункты выдачи… ({points.length})</p>
           ) : null}
-          {pointsError ? <p className="text-sm text-red-600">{pointsError}</p> : null}
-          {selectedCity && !pointsLoading && !pointsError && points.length === 0 ? (
+          {!selectedPvz && pointsError ? <p className="text-sm text-red-600">{pointsError}</p> : null}
+          {selectedCity && !selectedPvz && !pointsLoading && !pointsError && points.length === 0 ? (
             <p className={cn('text-sm', mutedClass)}>В этом городе пункты выдачи не найдены.</p>
           ) : null}
           {tariffError ? (
@@ -439,7 +459,7 @@ export function CdekManualDelivery({
               </button>
             </div>
           ) : null}
-          {points.length > 0 ? (
+          {!selectedPvz && points.length > 0 ? (
             <div
               role="list"
               aria-label="Пункты выдачи СДЭК"
@@ -448,22 +468,17 @@ export function CdekManualDelivery({
                 isSprintTheme ? 'border-slate-600' : 'border-gray-200 bg-gray-50/50'
               )}
             >
-              {filteredPoints.slice(0, 100).map((pvz) => {
-                const active = selectedPvz?.code === pvz.code
-                return (
+              {filteredPoints.slice(0, 100).map((pvz) => (
+                <div key={pvz.code ?? pvz.name} role="listitem">
                   <button
-                    key={pvz.code ?? pvz.name}
                     type="button"
-                    role="listitem"
                     disabled={!pendingTariff}
                     onClick={() => choosePvz(pvz)}
                     className={cn(
                       'w-full rounded-lg border p-3 text-left text-sm disabled:opacity-60',
-                      active
-                        ? 'border-action-blue bg-action-blue/5'
-                        : isSprintTheme
-                          ? 'border-slate-600 hover:bg-slate-800'
-                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      isSprintTheme
+                        ? 'border-slate-600 hover:bg-slate-800'
+                        : 'border-gray-200 bg-white hover:bg-gray-50'
                     )}
                   >
                     <span className="font-medium">{getPvzDisplayAddress(pvz)}</span>
@@ -472,8 +487,8 @@ export function CdekManualDelivery({
                     ) : null}
                     {pvz.work_time ? <p className={cn('mt-1 text-xs', mutedClass)}>{pvz.work_time}</p> : null}
                   </button>
-                )
-              })}
+                </div>
+              ))}
               {filteredPoints.length === 0 ? (
                 <p className={cn('p-3 text-sm', mutedClass)}>По запросу ничего не найдено — измените поиск.</p>
               ) : null}

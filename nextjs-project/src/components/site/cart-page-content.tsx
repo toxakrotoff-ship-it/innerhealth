@@ -1289,6 +1289,13 @@ export function CartPageContent({
                   data: { pvzCode: pvz.code ?? null, tariffCode: tariff.tariffCode },
                 })
               }}
+              onPvzClear={() => {
+                setSelectedPvz(null)
+                setFormData((prev) => ({
+                  ...prev,
+                  address: prev.address.startsWith('СДЭК ПВЗ ') ? '' : prev.address,
+                }))
+              }}
               onDoorReady={({ city, tariff }) => {
                 setHasWidgetTariffSelection(true)
                 setDeliveryMethod('cdek_door')
