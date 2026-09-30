@@ -1,5 +1,7 @@
 'use client'
 
+import { trackCartActivity } from '@/lib/cart-activity-client'
+
 type CartDebugLevel = 'debug' | 'info' | 'warn' | 'error'
 
 export type CartDebugScope = 'cart' | 'cdek-widget' | 'cdek-api'
@@ -141,6 +143,8 @@ async function flushQueue(): Promise<void> {
 
 export function logCartDebug(payload: CartDebugPayload): void {
   const level = payload.level ?? 'info'
+
+  trackCartActivity({ scope: payload.scope, action: payload.event, data: payload.data })
 
   if (shouldLogToConsole(level)) {
     writeToConsole(payload, level)

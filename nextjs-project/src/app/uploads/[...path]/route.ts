@@ -39,7 +39,7 @@ async function handleRequest(pathSegments: string[] | undefined) {
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ path: string[] }> | { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
   const params = await context.params
   return handleRequest(params.path)
@@ -47,7 +47,7 @@ export async function GET(
 
 export async function HEAD(
   _request: Request,
-  context: { params: Promise<{ path: string[] }> | { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
   const params = await context.params
   const response = await handleRequest(params.path)

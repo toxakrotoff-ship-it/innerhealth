@@ -1,0 +1,1 @@
+ALTER TYPE "CheckoutEventType" ADD VALUE 'CART_INTERACTION';

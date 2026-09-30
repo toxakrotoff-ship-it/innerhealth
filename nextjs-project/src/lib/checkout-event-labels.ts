@@ -24,6 +24,7 @@ export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
 
 export const CHECKOUT_EVENT_TYPE_LABELS: Record<CheckoutEventType, string> = {
   CHECKOUT_STARTED: 'Checkout начат',
+  CART_INTERACTION: 'Действие в корзине',
   CONTACT_ENTERED: 'Введены контакты',
   DELIVERY_SELECTED: 'Выбрана доставка',
   PROMO_APPLIED: 'Применён промокод',

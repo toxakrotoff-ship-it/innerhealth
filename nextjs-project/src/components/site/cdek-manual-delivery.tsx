@@ -238,11 +238,13 @@ export function CdekManualDelivery({
     if (deliveryMethod !== 'cdek_pvz' || cityCode == null) return
     const controller = new AbortController()
     setPointsLoading(true)
+    let lastStatus: number | null = null
 
     async function fetchPoints(params: string) {
       const res = await fetch(`/api/cdek/deliverypoints?cityCode=${cityCode}${params}${brandQuery(brandId)}`, {
         signal: controller.signal,
       })
+      lastStatus = res.status
       const data = (await res.json().catch(() => null)) as
         | { deliveryPoints?: CdekPvzOption[]; source?: string; error?: string }
         | null
@@ -256,11 +258,15 @@ export function CdekManualDelivery({
         const cached = await fetchPoints(`&all=1&size=${PVZ_PAGE_SIZE}&page=0`)
         if (cached.source === 'cache') {
           setPoints(cached.list)
+          logCartDebug({ scope: 'cart', event: 'manual_points_loaded', data: { cityCode, pointsCount: cached.list.length } })
           return
         }
         all.push(...cached.list)
         setPoints([...all])
-        if (cached.list.length < PVZ_PAGE_SIZE) return
+        if (cached.list.length < PVZ_PAGE_SIZE) {
+          logCartDebug({ scope: 'cart', event: 'manual_points_loaded', data: { cityCode, pointsCount: all.length } })
+          return
+        }
         // Живой режим: страницы строго по одной — параллельные всплески СДЭК режет антибот-защитой (403).
         for (let page = 1; page < PVZ_LIVE_MAX_PAGES; page += 1) {
           const { list } = await fetchPoints(`&size=${PVZ_PAGE_SIZE}&page=${page}`)
@@ -268,8 +274,10 @@ export function CdekManualDelivery({
           setPoints([...all])
           if (list.length < PVZ_PAGE_SIZE) break
         }
+        logCartDebug({ scope: 'cart', event: 'manual_points_loaded', data: { cityCode, pointsCount: all.length } })
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return
+        logCartDebug({ scope: 'cart', event: 'manual_points_failed', level: 'warn', data: { cityCode, status: lastStatus } })
         // Уже загруженные пункты остаются доступными; ошибку показываем только если нет ничего.
         if (all.length === 0) {
           setPointsError(e instanceof Error ? e.message : 'Не удалось загрузить пункты выдачи')
@@ -295,6 +303,7 @@ export function CdekManualDelivery({
     if (cityCode == null || itemsPayload.length === 0) return
     const controller = new AbortController()
     setTariffLoading(true)
+    let lastStatus: number | null = null
     void (async () => {
       try {
         const res = await fetch(`/api/cdek/calculator${brandQuery(brandId, '?')}`, {
@@ -307,6 +316,7 @@ export function CdekManualDelivery({
           }),
           signal: controller.signal,
         })
+        lastStatus = res.status
         const json = (await res.json().catch(() => null)) as
           | { tariffs?: CdekTariffSummary[]; error?: string }
           | null
@@ -320,11 +330,13 @@ export function CdekManualDelivery({
           )
         }
         setPendingTariff(match)
+        logCartDebug({ scope: 'cart', event: 'manual_tariff_ready', data: { cityCode, deliveryMethod, tariffCode: match.tariffCode, deliverySum: match.deliverySum } })
         if (deliveryMethod === 'cdek_door' && selectedCity) {
           onDoorReady({ city: selectedCity, tariff: match })
         }
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') return
+        logCartDebug({ scope: 'cart', event: 'manual_tariff_failed', level: 'warn', data: { cityCode, deliveryMethod, status: lastStatus } })
         setTariffError(e instanceof Error ? e.message : 'Ошибка расчёта доставки СДЭК')
       } finally {
         if (!controller.signal.aborted) setTariffLoading(false)
@@ -452,7 +464,10 @@ export function CdekManualDelivery({
               <p className="text-sm text-red-600">{tariffError}</p>
               <button
                 type="button"
-                onClick={() => setTariffAttempt((n) => n + 1)}
+                onClick={() => {
+                  logCartDebug({ scope: 'cart', event: 'manual_tariff_retry', data: { cityCode, deliveryMethod } })
+                  setTariffAttempt((n) => n + 1)
+                }}
                 className="text-sm text-action-blue hover:underline"
               >
                 Повторить расчёт

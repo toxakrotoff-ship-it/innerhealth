@@ -175,6 +175,25 @@ export async function createEvent(
   })
 }
 
+export async function createCartActivityEvents(
+  sessionId: string,
+  events: Array<{ id: string; createdAt: Date; metadata: Prisma.InputJsonValue }>
+): Promise<void> {
+  const existing = await prisma.checkoutEvent.count({ where: { checkoutSessionId: sessionId, eventType: 'CART_INTERACTION' } })
+  const remaining = Math.max(0, 500 - existing)
+  if (remaining === 0) return
+  await prisma.checkoutEvent.createMany({
+    data: events.slice(0, remaining).map((event) => ({
+      id: event.id,
+      checkoutSessionId: sessionId,
+      eventType: 'CART_INTERACTION',
+      createdAt: event.createdAt,
+      metadata: event.metadata,
+    })),
+    skipDuplicates: true,
+  })
+}
+
 export async function findSessionForAdmin(id: string, brand: BrandId) {
   return prisma.checkoutSession.findFirst({
     where: { id, brand },
@@ -221,8 +240,11 @@ export async function listSessionsForAdmin(filters: ListCheckoutSessionsFilters)
     }
   }
 
-  where.status = {
-    in: filters.statuses && filters.statuses.length > 0 ? filters.statuses : DEFAULT_LIST_STATUSES,
+  const term = filters.search?.trim()
+  if (filters.statuses && filters.statuses.length > 0) {
+    where.status = { in: filters.statuses }
+  } else if (!term) {
+    where.status = { in: DEFAULT_LIST_STATUSES }
   }
 
   if (filters.steps && filters.steps.length > 0) {
@@ -233,9 +255,8 @@ export async function listSessionsForAdmin(filters: ListCheckoutSessionsFilters)
   if (filters.hasOrder) where.orderId = { not: null }
   if (filters.hasPayment) where.paymentId = { not: null }
 
-  const term = filters.search?.trim()
   if (term) {
-    const orderNumber = Number(term)
+    const orderNumber = Number(term.replace(/^#/, ''))
     where.OR = [
       { phone: { contains: term } },
       { email: { contains: term, mode: 'insensitive' } },

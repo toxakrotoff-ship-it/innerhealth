@@ -1,6 +1,20 @@
 import "@testing-library/jest-dom/vitest";
 import { vi } from "vitest";
 
+// Node's experimental localStorage can exist without the Storage methods used by tests.
+if (typeof globalThis.localStorage?.clear !== 'function') {
+  const items = new Map<string, string>();
+  const storage: Storage = {
+    get length() { return items.size; },
+    clear() { items.clear(); },
+    getItem(key) { return items.get(key) ?? null; },
+    key(index) { return Array.from(items.keys())[index] ?? null; },
+    removeItem(key) { items.delete(key); },
+    setItem(key, value) { items.set(key, String(value)); },
+  };
+  vi.stubGlobal('localStorage', storage);
+}
+
 // Avoid Prisma/DB init errors when testing API routes that pull in server deps
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgres://fake:fake@localhost:5432/fake";

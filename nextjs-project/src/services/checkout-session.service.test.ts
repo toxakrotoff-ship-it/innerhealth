@@ -7,6 +7,8 @@ const checkoutSessionUpdateMock = vi.fn()
 const checkoutSessionUpdateManyMock = vi.fn()
 const checkoutSessionFindManyMock = vi.fn()
 const checkoutSessionCountMock = vi.fn()
+const checkoutEventCountMock = vi.fn()
+const checkoutEventCreateManyMock = vi.fn()
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -17,6 +19,10 @@ vi.mock('@/lib/prisma', () => ({
       findMany: (...args: unknown[]) => checkoutSessionFindManyMock(...args),
       count: (...args: unknown[]) => checkoutSessionCountMock(...args),
     },
+    checkoutEvent: {
+      count: (...args: unknown[]) => checkoutEventCountMock(...args),
+      createMany: (...args: unknown[]) => checkoutEventCreateManyMock(...args),
+    },
   },
 }))
 
@@ -26,6 +32,26 @@ beforeEach(() => {
   checkoutSessionFindUniqueMock.mockReset()
   checkoutSessionUpdateMock.mockReset()
   checkoutSessionUpdateManyMock.mockReset()
+  checkoutEventCountMock.mockReset().mockResolvedValue(0)
+  checkoutEventCreateManyMock.mockReset()
+})
+
+describe('createCartActivityEvents', () => {
+  it('caps storage per session and skips duplicate client event ids on retries', async () => {
+    checkoutEventCountMock.mockResolvedValue(499)
+    const service = await import('@/services/checkout-session.service')
+    const events = [1, 2].map((n) => ({
+      id: `activity-${n}`, createdAt: new Date(), metadata: { action: 'page_mounted' },
+    }))
+    await service.createCartActivityEvents('sess-1', events)
+    expect(checkoutEventCreateManyMock).toHaveBeenCalledWith({
+      data: [{
+        id: 'activity-1', checkoutSessionId: 'sess-1', eventType: 'CART_INTERACTION',
+        createdAt: events[0].createdAt, metadata: events[0].metadata,
+      }],
+      skipDuplicates: true,
+    })
+  })
 })
 
 describe('updateSessionStep', () => {
@@ -150,5 +176,13 @@ describe('listSessionsForAdmin', () => {
 
     const call = checkoutSessionFindManyMock.mock.calls[0][0]
     expect(call.where.status.in).toEqual(['COMPLETED'])
+  })
+
+  it('searches completed orders by number without requiring a separate status filter', async () => {
+    const service = await import('@/services/checkout-session.service')
+    await service.listSessionsForAdmin({ brand: 'inner', search: '271' })
+    const call = checkoutSessionFindManyMock.mock.calls[0][0]
+    expect(call.where.status).toBeUndefined()
+    expect(call.where.OR).toContainEqual({ order: { orderNumber: 271 } })
   })
 })

@@ -107,6 +107,24 @@ describe('CheckoutSessionDetailPage', () => {
     expect(screen.getByText('Выбрана доставка')).toBeTruthy()
   })
 
+  it('shows a readable cart action in the checkout timeline', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...BASE_SESSION,
+        events: [...BASE_SESSION.events, {
+          id: 'ev-3', eventType: 'CART_INTERACTION', step: null,
+          metadata: { action: 'cdek_widget_choose', scope: 'cart', data: { deliveryMethod: 'cdek_pvz', pvzCode: 'MSK123' } },
+          createdAt: '2026-08-20T10:04:02.000Z',
+        }],
+      }),
+    } as Response)
+    render(<CheckoutSessionDetailPage />)
+    await waitFor(() => expect(screen.getByText(/Выбрал доставку в виджете СДЭК/)).toBeTruthy())
+    expect(screen.getByText(/ПВЗ MSK123/)).toBeTruthy()
+  })
+
   it('renders a 404 state without crashing when the session is not found', async () => {
     vi.mocked(global.fetch).mockResolvedValue({ ok: false, status: 404, json: async () => ({}) } as Response)
 

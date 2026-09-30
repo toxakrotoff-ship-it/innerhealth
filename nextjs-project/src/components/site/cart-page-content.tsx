@@ -27,6 +27,7 @@ import { applyPhoneMask, validatePhoneRu } from '@/lib/phone-mask'
 import { validateEmail } from '@/lib/validations/contact'
 import { logAnalyticsEvent } from '@/lib/analytics/analytics-client'
 import { logCartDebug } from '@/lib/cart-debug-log'
+import { bindCartActivitySession, flushCartActivity } from '@/lib/cart-activity-client'
 import { cn } from '@/lib/utils'
 import type { BrandId } from '@/lib/brand/brand'
 import { usePromoStore } from '@/store/promo-store'
@@ -157,11 +158,15 @@ export function CartPageContent({
   // обработчиков и не должен вызывать перерендер.
   const checkoutSessionIdRef = useRef<string | null>(null)
   const checkoutSessionStartedRef = useRef(false)
+  const pageMountedTrackedRef = useRef(false)
   const checkoutContactSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const checkoutCartSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     warmupCdekWidget({ brandId, items })
+    if (pageMountedTrackedRef.current) return
+    pageMountedTrackedRef.current = true
+    bindCartActivitySession(null, brandId)
     logCartDebug({
       scope: 'cart',
       event: 'page_mounted',
@@ -169,6 +174,10 @@ export function CartPageContent({
         brandId: brandId ?? null,
         itemsCount: items.length,
         canUseSavedAddresses,
+        deliveryMethod: 'pickup',
+        viewportWidth: window.innerWidth,
+        isMobile: window.innerWidth < 768,
+        online: navigator.onLine,
       },
     })
   }, [brandId, canUseSavedAddresses, itemsSignature, items.length])
@@ -180,6 +189,7 @@ export function CartPageContent({
     checkoutSessionStartedRef.current = true
     void startCheckoutSession(brandId).then((sessionId) => {
       checkoutSessionIdRef.current = sessionId
+      bindCartActivitySession(sessionId, brandId)
     })
   }, [brandId, items.length])
 
@@ -470,6 +480,7 @@ export function CartPageContent({
   }
 
   function handleCdekWidgetStatus(status: 'loading' | 'ready' | 'error') {
+    logCartDebug({ scope: 'cart', event: 'cdek_widget_status', data: { widgetStatus: status } })
     setCdekWidgetStatus(status)
     if (status === 'error') {
       setCdekInputModeState('manual')
@@ -483,7 +494,10 @@ export function CartPageContent({
       setCdekWidgetSlow(false)
       return
     }
-    const timer = setTimeout(() => setCdekWidgetSlow(true), CDEK_MAP_SLOW_MS)
+    const timer = setTimeout(() => {
+      logCartDebug({ scope: 'cart', event: 'cdek_map_slow' })
+      setCdekWidgetSlow(true)
+    }, CDEK_MAP_SLOW_MS)
     return () => clearTimeout(timer)
   }, [cdekInputMode, cdekWidgetStatus, isCdekDeliverySelected])
 
@@ -647,6 +661,7 @@ export function CartPageContent({
   const handleApplyPromo = async () => {
     const code = promoCode.trim()
     if (!code) return
+    logCartDebug({ scope: 'cart', event: 'promo_apply_started' })
     setPromoLoading(true)
     setPromoResult(null)
     try {
@@ -657,11 +672,13 @@ export function CartPageContent({
       })
       const data = await res.json()
       setPromoResult(data)
+      logCartDebug({ scope: 'cart', event: 'promo_apply_result', data: { success: Boolean(data?.valid) } })
       setHasPromoCode(Boolean(data?.valid))
       if (data?.valid && checkoutSessionIdRef.current) {
         patchCheckoutPromo(checkoutSessionIdRef.current, brandId, code)
       }
     } catch {
+      logCartDebug({ scope: 'cart', event: 'promo_apply_result', data: { success: false } })
       setPromoResult({ valid: false, error: 'Ошибка запроса' })
       setHasPromoCode(false)
     } finally {
@@ -688,7 +705,11 @@ export function CartPageContent({
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (submitting || !isPrivacyAccepted) return
+    if (submitting) return
+    if (!isPrivacyAccepted) {
+      logCartDebug({ scope: 'cart', event: 'checkout_validation_failed', data: { reason: 'privacy_not_accepted' } })
+      return
+    }
     const fullName = formData.fullName.trim()
     const phoneCheck = validatePhoneRu(formData.phone)
     const emailCheck = validateEmail(formData.email)
@@ -698,7 +719,13 @@ export function CartPageContent({
     setEmailError(
       emailCheck.valid ? null : ('message' in emailCheck ? emailCheck.message : null)
     )
-    if (!fullName || !phoneCheck.valid || !emailCheck.valid) return
+    if (!fullName || !phoneCheck.valid || !emailCheck.valid) {
+      logCartDebug({
+        scope: 'cart', event: 'checkout_validation_failed',
+        data: { reason: !fullName ? 'missing_contact' : !phoneCheck.valid ? 'invalid_phone' : 'invalid_email' },
+      })
+      return
+    }
     let effectiveCityCode = cityCode
     if (effectiveCityCode == null && (deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door')) {
       effectiveCityCode = await resolveCdekCityCodeByName(selectedCity?.city ?? formData.city)
@@ -781,6 +808,7 @@ export function CartPageContent({
         itemsCount: items.length,
       },
     })
+    void flushCartActivity()
     const city = deliveryMethod === 'pickup'
       ? formData.city.trim() || resolvePickupCity(pickupAddress)
       : selectedCity?.city ?? formData.city
@@ -1041,10 +1069,12 @@ export function CartPageContent({
               isSprintTheme={isSprintTheme}
               onRemove={() => {
                 if (isGift) return
+                logCartDebug({ scope: 'cart', event: 'cart_item_removed', data: { productId: line.productId, quantity: line.quantity } })
                 removeItem(line.productId)
               }}
               onQuantityChange={(q) => {
                 if (isGift) return
+                logCartDebug({ scope: 'cart', event: 'cart_quantity_changed', data: { productId: line.productId, previousQuantity: line.quantity, quantity: q } })
                 updateQuantity(line.productId, q)
               }}
             />
@@ -1100,15 +1130,20 @@ export function CartPageContent({
             usingSavedAddress={usingSavedAddress}
             isSprintTheme={isSprintTheme}
             onSelectAddress={(addressId) => {
+              logCartDebug({ scope: 'cart', event: 'saved_address_selected' })
               setSelectedSavedAddressId(addressId)
               if (usingSavedAddress) applySavedAddress(addressId)
             }}
             onUseSavedAddress={() => {
               if (!selectedSavedAddressId) return
+              logCartDebug({ scope: 'cart', event: 'saved_address_used' })
               applySavedAddress(selectedSavedAddressId)
               setUsingSavedAddress(true)
             }}
-            onUseAnotherAddress={() => setUsingSavedAddress(false)}
+            onUseAnotherAddress={() => {
+              logCartDebug({ scope: 'cart', event: 'saved_address_cleared' })
+              setUsingSavedAddress(false)
+            }}
           />
         ) : null}
 
@@ -1243,7 +1278,10 @@ export function CartPageContent({
                   key={method}
                   type="button"
                   aria-pressed={deliveryMethod === method}
-                  onClick={() => setDeliveryMethod(method)}
+                  onClick={() => {
+                    logCartDebug({ scope: 'cart', event: 'delivery_mode_changed', data: { deliveryMethod: method, previous: deliveryMethod } })
+                    setDeliveryMethod(method)
+                  }}
                   className={cn(
                     'min-h-[44px] flex-1 rounded-lg border px-3 text-sm font-medium',
                     deliveryMethod === method
@@ -1290,6 +1328,7 @@ export function CartPageContent({
                 })
               }}
               onPvzClear={() => {
+                logCartDebug({ scope: 'cart', event: 'manual_pvz_cleared', data: { pvzCode: selectedPvz?.code ?? null } })
                 setSelectedPvz(null)
                 setFormData((prev) => ({
                   ...prev,
@@ -1592,7 +1631,10 @@ export function CartPageContent({
                   onChange={(e) => {
                     setFormData((prev) => ({ ...prev, fullName: e.target.value }))
                   }}
-                  onBlur={scheduleContactSync}
+                  onBlur={() => {
+                    logCartDebug({ scope: 'cart', event: 'contact_field_completed', data: { field: 'fullName', valid: Boolean(formData.fullName.trim()) } })
+                    scheduleContactSync()
+                  }}
                   className={cn(
                     'form-input min-h-[44px] w-full rounded-lg text-base',
                     isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400'
@@ -1614,6 +1656,7 @@ export function CartPageContent({
                   }}
                   onBlur={() => {
                     const result = validatePhoneRu(formData.phone)
+                    logCartDebug({ scope: 'cart', event: 'contact_field_completed', data: { field: 'phone', valid: result.valid } })
                     setPhoneError(
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
@@ -1648,6 +1691,7 @@ export function CartPageContent({
                   }}
                   onBlur={() => {
                     const result = validateEmail(formData.email)
+                    logCartDebug({ scope: 'cart', event: 'contact_field_completed', data: { field: 'email', valid: result.valid } })
                     setEmailError(
                       result.valid ? null : ('message' in result ? result.message : null)
                     )
@@ -1741,7 +1785,10 @@ export function CartPageContent({
           <input
             type="checkbox"
             checked={isPrivacyAccepted}
-            onChange={(e) => setIsPrivacyAccepted(e.target.checked)}
+            onChange={(e) => {
+              logCartDebug({ scope: 'cart', event: 'privacy_changed', data: { accepted: e.target.checked } })
+              setIsPrivacyAccepted(e.target.checked)
+            }}
             required
             className={cn('h-4 w-4 shrink-0 rounded', isSprintTheme ? 'border-slate-500 bg-slate-800' : 'border-gray-300')}
           />

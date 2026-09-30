@@ -65,6 +65,13 @@ function formatDate(dateString: string | null): string {
   })
 }
 
+function formatEventDate(dateString: string): string {
+  return new Date(dateString).toLocaleString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+}
+
 function formatMoney(value: number | null): string {
   if (value == null) return '—'
   return `${value.toLocaleString('ru-RU')} ₽`
@@ -81,6 +88,88 @@ function eventMetadataText(metadata: unknown): string | null {
     return parts.join(' — ') || null
   }
   return null
+}
+
+const CART_ACTION_LABELS: Record<string, string> = {
+  page_mounted: 'Открыл корзину',
+  cart_quantity_changed: 'Изменил количество товара',
+  cart_item_removed: 'Удалил товар из корзины',
+  promo_apply_started: 'Попробовал применить промокод',
+  promo_apply_result: 'Результат применения промокода',
+  saved_address_selected: 'Выбрал сохранённый адрес',
+  saved_address_used: 'Применил сохранённый адрес',
+  saved_address_cleared: 'Перешёл к ручному вводу адреса',
+  contact_field_completed: 'Заполнил контактное поле',
+  privacy_changed: 'Изменил согласие на обработку данных',
+  delivery_mode_changed: 'Переключил способ получения',
+  cdek_input_mode_changed: 'Переключил способ выбора СДЭК',
+  manual_mode_auto_fallback: 'Карта не загрузилась, открыт ручной выбор',
+  manual_city_selected: 'Выбрал город СДЭК вручную',
+  manual_pvz_chosen: 'Подтвердил ПВЗ СДЭК вручную',
+  manual_pvz_cleared: 'Снял выбор ПВЗ СДЭК',
+  manual_points_loaded: 'Загрузились ПВЗ СДЭК',
+  manual_points_failed: 'Ошибка загрузки ПВЗ СДЭК',
+  manual_tariff_ready: 'Рассчитан тариф СДЭК',
+  manual_tariff_failed: 'Ошибка расчёта тарифа СДЭК',
+  manual_tariff_retry: 'Повторил расчёт тарифа СДЭК',
+  cdek_map_slow: 'Карта СДЭК загружалась дольше 12 секунд',
+  cdek_widget_mode_change: 'Переключил режим карты СДЭК',
+  cdek_widget_choose: 'Выбрал доставку в виджете СДЭК',
+  cdek_widget_calculate: 'Виджет рассчитал тарифы СДЭК',
+  cdek_widget_status: 'Изменился статус карты СДЭК',
+  checkout_validation_failed: 'Проверка оформления не прошла',
+  checkout_submit_start: 'Нажал «Оформить заказ»',
+  checkout_submit_failed: 'Сервер отклонил оформление',
+  checkout_submit_error: 'Ошибка при оформлении',
+  checkout_submit_success: 'Заказ создан в браузере',
+  resolve_city_failed: 'Не удалось определить город СДЭК',
+  resolve_city_empty: 'Город СДЭК не найден',
+  resolve_city_error: 'Ошибка поиска города СДЭК',
+  resolve_city_success: 'Город СДЭК определён',
+  config_failed: 'Ошибка конфигурации виджета СДЭК',
+  init_failed: 'Ошибка запуска виджета СДЭК',
+  init_timeout: 'Таймаут запуска виджета СДЭК',
+  missing_yandex_maps_key: 'Нет ключа Яндекс Карт',
+  parcels_sync_failed: 'Ошибка передачи корзины в виджет СДЭК',
+  init_start: 'Запуск карты СДЭК',
+  config_loaded: 'Конфигурация карты СДЭК загружена',
+  ready: 'Карта СДЭК готова',
+  retry: 'Повторил загрузку карты СДЭК',
+  expand_offices_background_failed: 'Ошибка фоновой загрузки ПВЗ СДЭК',
+}
+
+function cartActivityText(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const record = metadata as Record<string, unknown>
+  const action = typeof record.action === 'string' ? record.action : ''
+  const label = CART_ACTION_LABELS[action]
+  if (!label) return null
+  const data = record.data && typeof record.data === 'object'
+    ? record.data as Record<string, unknown>
+    : {}
+  const deliveryLabels: Record<string, string> = {
+    pickup: 'самовывоз из офиса', cdek_pvz: 'СДЭК ПВЗ', cdek_door: 'СДЭК до двери',
+  }
+  const reasonLabels: Record<string, string> = {
+    missing_contact: 'нет имени', invalid_phone: 'некорректный телефон',
+    invalid_email: 'некорректный email', missing_city_code: 'не выбран город',
+    missing_pvz_or_tariff: 'нет ПВЗ или тарифа', missing_door_tariff: 'нет тарифа до двери',
+    missing_door_address: 'не заполнен адрес', privacy_not_accepted: 'нет согласия',
+  }
+  const parts = [
+    typeof data.deliveryMethod === 'string' ? deliveryLabels[data.deliveryMethod] ?? null : null,
+    typeof data.mode === 'string' ? (data.mode === 'map' ? 'карта' : 'ручной ввод') : null,
+    typeof data.widgetStatus === 'string' ? data.widgetStatus : null,
+    typeof data.reason === 'string' ? reasonLabels[data.reason] ?? null : null,
+    typeof data.pvzCode === 'string' ? `ПВЗ ${data.pvzCode}` : null,
+    typeof data.tariffCode === 'number' ? `тариф ${data.tariffCode}` : null,
+    typeof data.deliverySum === 'number' ? `${data.deliverySum} ₽` : null,
+    typeof data.pointsCount === 'number' ? `${data.pointsCount} ПВЗ` : null,
+    typeof data.field === 'string' ? `поле ${data.field}` : null,
+    typeof data.status === 'number' ? `HTTP ${data.status}` : null,
+    typeof data.valid === 'boolean' ? (data.valid ? 'корректно' : 'ошибка') : null,
+  ].filter(Boolean)
+  return parts.length ? `${label} · ${parts.join(', ')}` : label
 }
 
 export default function CheckoutSessionDetailPage() {
@@ -331,10 +420,12 @@ export default function CheckoutSessionDetailPage() {
               <li key={event.id} className="border-b border-gray-100 pb-2 last:border-0 dark:border-gray-800">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <span className="whitespace-nowrap text-gray-500 dark:text-gray-400">
-                    {formatDate(event.createdAt)}
+                    {formatEventDate(event.createdAt)}
                   </span>
                   <span className="text-gray-800 dark:text-gray-100">
-                    {CHECKOUT_EVENT_TYPE_LABELS[event.eventType]}
+                    {event.eventType === 'CART_INTERACTION'
+                      ? cartActivityText(event.metadata) ?? CHECKOUT_EVENT_TYPE_LABELS[event.eventType]
+                      : CHECKOUT_EVENT_TYPE_LABELS[event.eventType]}
                   </span>
                 </div>
                 {errorText ? <p className="mt-1 text-red-600 dark:text-red-400">{errorText}</p> : null}

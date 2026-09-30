@@ -12,6 +12,7 @@ const findSessionByIdMock = vi.fn()
 const updateSessionContactMock = vi.fn()
 const updateSessionStepMock = vi.fn()
 const updateSessionCartMock = vi.fn()
+const createCartActivityEventsMock = vi.fn()
 
 vi.mock('@/services/checkout-session.service', () => ({
   findActiveSessionByGuestToken: (...args: unknown[]) => findActiveSessionByGuestTokenMock(...args),
@@ -24,6 +25,7 @@ vi.mock('@/services/checkout-session.service', () => ({
   updateSessionContact: (...args: unknown[]) => updateSessionContactMock(...args),
   updateSessionStep: (...args: unknown[]) => updateSessionStepMock(...args),
   updateSessionCart: (...args: unknown[]) => updateSessionCartMock(...args),
+  createCartActivityEvents: (...args: unknown[]) => createCartActivityEventsMock(...args),
 }))
 
 beforeEach(() => {
@@ -37,6 +39,36 @@ beforeEach(() => {
   updateSessionContactMock.mockReset()
   updateSessionStepMock.mockReset()
   updateSessionCartMock.mockReset()
+  createCartActivityEventsMock.mockReset()
+})
+
+describe('trackCheckoutCartActivity', () => {
+  const event = {
+    id: 'event-12345',
+    action: 'cdek_widget_choose' as const,
+    scope: 'cart' as const,
+    occurredAt: new Date().toISOString(),
+    data: { deliveryMethod: 'cdek_pvz', pvzCode: 'MSK123', email: 'secret@example.com' },
+  }
+
+  it('stores only safe fields for the owning session', async () => {
+    findSessionByIdMock.mockResolvedValue({ id: 'sess-1', brand: 'inner', userId: null, guestToken: 'tok-1' })
+    const { trackCheckoutCartActivity } = await import('@/lib/checkout-tracking')
+    await trackCheckoutCartActivity('sess-1', { guestToken: 'tok-1', userId: null }, 'inner', [event])
+    expect(createCartActivityEventsMock).toHaveBeenCalledWith('sess-1', [expect.objectContaining({
+      metadata: { action: 'cdek_widget_choose', scope: 'cart', data: { deliveryMethod: 'cdek_pvz', pvzCode: 'MSK123' } },
+    })])
+  })
+
+  it('rejects a different guest or brand', async () => {
+    findSessionByIdMock.mockResolvedValue({ id: 'sess-1', brand: 'inner', userId: null, guestToken: 'tok-1' })
+    const { trackCheckoutCartActivity, CheckoutSessionNotFoundError } = await import('@/lib/checkout-tracking')
+    await expect(trackCheckoutCartActivity('sess-1', { guestToken: 'other', userId: null }, 'inner', [event]))
+      .rejects.toBeInstanceOf(CheckoutSessionNotFoundError)
+    await expect(trackCheckoutCartActivity('sess-1', { guestToken: 'tok-1', userId: null }, 'sprint-power', [event]))
+      .rejects.toBeInstanceOf(CheckoutSessionNotFoundError)
+    expect(createCartActivityEventsMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('startCheckout', () => {

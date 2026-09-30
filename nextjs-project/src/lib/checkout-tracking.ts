@@ -4,6 +4,7 @@ import type { CheckoutEventType, CheckoutSession, CheckoutStep, Prisma } from '@
 import type { BrandId } from '@/lib/brand/brand'
 import * as checkoutSessionService from '@/services/checkout-session.service'
 import type { PaymentProviderError } from '@/lib/checkout-event-metadata'
+import { cartActivityTimestamp, sanitizeCartActivityData, type CartActivityEvent } from '@/lib/cart-activity'
 
 export const CHECKOUT_GUEST_COOKIE_NAME = 'ih_checkout_token'
 /** TTL гостевой cookie — совпадает с дефолтным retention-сроком сессии (см. этап 8). */
@@ -162,6 +163,26 @@ export async function trackCheckoutSessionEvent(
   await resolveOwnedSession(sessionId, owner)
   await touchActivityAndTrackReactivation(sessionId)
   await checkoutSessionService.createEvent(sessionId, eventType, null, metadata)
+}
+
+export async function trackCheckoutCartActivity(
+  sessionId: string,
+  owner: CheckoutOwnerContext,
+  brand: BrandId,
+  events: CartActivityEvent[]
+): Promise<void> {
+  const session = await resolveOwnedSession(sessionId, owner)
+  if (session.brand !== brand) throw new CheckoutSessionNotFoundError()
+  await checkoutSessionService.createCartActivityEvents(sessionId, events.map((event) => ({
+    id: event.id,
+    createdAt: cartActivityTimestamp(event.occurredAt),
+    metadata: {
+      action: event.action,
+      scope: event.scope,
+      data: sanitizeCartActivityData(event.data),
+    },
+  })))
+  await checkoutSessionService.touchActivity(sessionId)
 }
 
 /**

@@ -146,7 +146,7 @@ export default function CheckoutSessionsPage() {
           >
             {STATUS_FILTER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {option.value === 'ALL' && search.trim() ? 'Все статусы' : option.label}
               </option>
             ))}
           </select>
