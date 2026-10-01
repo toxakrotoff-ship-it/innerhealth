@@ -21,6 +21,7 @@ import type { BrandId } from '@/lib/brand/brand'
  * - Масштабирование типографики
  */
 export async function SiteHeader({ brandId }: { brandId: BrandId }) {
+  const adminHref = `/${process.env.ADMIN_SECRET_PATH || 'admin'}/${brandId}`
   const siteConfig = getBrandSiteConfig(brandId)
   const isSprintTheme = brandId === 'sprint-power'
   const { contact } = siteConfig
@@ -84,6 +85,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
             variant={isSprintTheme ? 'dark' : 'light'}
             isAuthenticated={isAuthenticated}
             role={session?.user?.role}
+            adminHref={adminHref}
             logoText={siteConfig.logoText}
             logoImageSrc={isSprintTheme ? '/images/sprint-power/sprint-power-hero-logo.png' : undefined}
             navLinks={siteConfig.mobileNavLinks}
@@ -151,6 +153,7 @@ export async function SiteHeader({ brandId }: { brandId: BrandId }) {
                 variant={isSprintTheme ? 'dark' : 'light'}
                 isAuthenticated={isAuthenticated}
                 role={session?.user?.role}
+                adminHref={adminHref}
               />
             </div>
           ) : null}

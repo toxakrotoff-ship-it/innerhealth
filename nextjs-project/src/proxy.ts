@@ -1,7 +1,7 @@
 import { withAuth } from 'next-auth/middleware'
 import { NextResponse } from 'next/server'
 import { ADMIN_BRAND_COOKIE_NAME } from '@/lib/brand/brand-context'
-import type { BrandId } from '@/lib/brand/brand'
+import { normalizeBrandId, type BrandId } from '@/lib/brand/brand'
 import { CDN_URL } from '@/lib/cdn'
 
 const SERVICE_HEADER = 'x-service-key'
@@ -171,7 +171,11 @@ async function proxyHandler(request: Request) {
       const canonicalAdminPath = pathAfterBrand ? `/admin/${pathAfterBrand}` : '/admin'
       url.pathname = canonicalAdminPath
 
-      const res = NextResponse.rewrite(url)
+      // Response headers are invisible to headers() in the rewritten render.
+      // Override the incoming host/proxy brand before rendering the admin page.
+      const requestHeaders = new Headers(request.headers)
+      requestHeaders.set('x-brand', brandSegment)
+      const res = NextResponse.rewrite(url, { request: { headers: requestHeaders } })
       res.cookies.set(ADMIN_BRAND_COOKIE_NAME, brandSegment, {
         path: '/',
         sameSite: 'lax',
@@ -184,15 +188,30 @@ async function proxyHandler(request: Request) {
     }
   }
 
+  const requestHeaders = new Headers(request.headers)
+  const isAdminChild = pathname === `/${adminSecretPath}` || pathname.startsWith(`/${adminSecretPath}/`)
+  const isAdminApi = pathname.startsWith('/api/admin/')
+  // Admin navigation and APIs keep the selected brand across host-pinned proxy headers.
+  if (isAdminChild || isAdminApi) {
+    const adminCookie = request.headers.get('cookie')?.split(';')
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(`${ADMIN_BRAND_COOKIE_NAME}=`))
+      ?.slice(ADMIN_BRAND_COOKIE_NAME.length + 1)
+    const selectedBrand = normalizeBrandId(adminCookie)
+    if (selectedBrand) requestHeaders.set('x-brand', selectedBrand)
+  }
+
   if (pathname.startsWith(`/${adminSecretPath}`) && adminSecretPath !== 'admin') {
     const rest = pathname.slice(1 + adminSecretPath.length) || ''
     const rewritePath = `/admin${rest}`
     const url = new URL(request.url)
     url.pathname = rewritePath
-    const res = NextResponse.rewrite(url)
+    const res = NextResponse.rewrite(url, { request: { headers: requestHeaders } })
     return addSecurityHeaders(request, res)
   }
-  const res = NextResponse.next()
+  const res = isAdminChild || isAdminApi
+    ? NextResponse.next({ request: { headers: requestHeaders } })
+    : NextResponse.next()
   return addSecurityHeaders(request, res)
 }
 

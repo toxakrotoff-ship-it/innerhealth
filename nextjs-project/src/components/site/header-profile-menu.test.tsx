@@ -19,12 +19,18 @@ vi.mock('next-auth/react', () => ({
 }))
 
 describe('HeaderProfileMenu', () => {
-  it('uses a relative admin link for authenticated admin users', () => {
+  it('uses a brand-scoped admin link for authenticated admin users', () => {
     render(<HeaderProfileMenu isAuthenticated role="ADMIN" />)
 
     fireEvent.click(screen.getByTitle('Управление сайтом'))
     const adminLink = screen.getByText('Управление сайтом').closest('a')
 
-    expect(adminLink).toHaveAttribute('href', '/admin')
+    expect(adminLink).toHaveAttribute('href', '/admin/inner')
+  })
+
+  it('uses the server-provided brand and custom admin path', () => {
+    render(<HeaderProfileMenu isAuthenticated role="ADMIN" adminHref="/manage/sprint-power" />)
+    fireEvent.click(screen.getByTitle('Управление сайтом'))
+    expect(screen.getByText('Управление сайтом').closest('a')).toHaveAttribute('href', '/manage/sprint-power')
   })
 })

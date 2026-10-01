@@ -8,6 +8,7 @@ interface HeaderProfileMenuProps {
   variant?: 'light' | 'dark'
   isAuthenticated: boolean
   role?: string
+  adminHref?: string
 }
 
 const loginLinkClass = {
@@ -20,7 +21,7 @@ const profileButtonClass = {
   dark: 'text-gray-300 hover:text-white transition-colors min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] 2xl:min-h-[52px] 2xl:min-w-[52px] 3xl:min-h-[58px] 3xl:min-w-[58px] flex items-center justify-center shrink-0',
 } as const
 
-export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role }: HeaderProfileMenuProps) {
+export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role, adminHref = '/admin/inner' }: HeaderProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const isAdminUser = role === 'ADMIN' || role === 'WRITER'
@@ -81,7 +82,7 @@ export function HeaderProfileMenu({ variant = 'light', isAuthenticated, role }: 
           {isAdminUser ? (
             <>
               <Link
-                href="/admin"
+                href={adminHref}
                 className="mt-1 block rounded-xl px-3 py-2 2xl:px-4 2xl:py-2.5 text-sm 2xl:text-base text-gray-800 hover:bg-gray-100"
                 role="menuitem"
                 onClick={() => setIsOpen(false)}

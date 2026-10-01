@@ -66,3 +66,47 @@ describe('applyRedirectIfMatched', () => {
     expect(response?.headers.get('location')).toBe('https://innerhealth.ru/catalog/collagen')
   })
 })
+
+describe('admin brand propagation', () => {
+  beforeEach(() => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('ADMIN_SECRET_PATH', 'manage')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it.each(['inner', 'sprint-power'])('renders the URL brand %s despite conflicting proxy headers and cookies', async (brand) => {
+    const otherBrand = brand === 'inner' ? 'sprint-power' : 'inner'
+    const { default: proxy } = await import('./proxy')
+    const response = await proxy(new Request(`https://sprintpower.ru/manage/${brand}/catalog?tab=products`, {
+      headers: { 'x-brand': otherBrand, cookie: `ih_admin_brand=${otherBrand}`, 'x-request-id': 'preserved' },
+    }) as never)
+
+    expect(response?.headers.get('x-middleware-rewrite')).toBe('https://sprintpower.ru/admin/catalog?tab=products')
+    expect(response?.headers.get('x-middleware-request-x-brand')).toBe(brand)
+    expect(response?.headers.get('x-middleware-request-x-request-id')).toBe('preserved')
+    expect(response?.cookies.get('ih_admin_brand')?.value).toBe(brand)
+  })
+
+  it.each(['/manage', '/manage/catalog', '/api/admin/products'])('retains switched brand on unscoped navigation/API at %s', async (path) => {
+    const { default: proxy } = await import('./proxy')
+    const response = await proxy(new Request(`https://sprintpower.ru${path}`, {
+      headers: { 'x-brand': 'sprint-power', cookie: 'ih_admin_brand=inner' },
+    }) as never)
+
+    expect(response?.headers.get('x-middleware-request-x-brand')).toBe('inner')
+  })
+
+  it('does not apply the admin cookie to storefront requests', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const { default: proxy } = await import('./proxy')
+    const response = await proxy(new Request('https://sprintpower.ru/catalog', {
+      headers: { 'x-brand': 'sprint-power', cookie: 'ih_admin_brand=inner' },
+    }) as never)
+
+    expect(response?.headers.get('x-middleware-request-x-brand')).toBeNull()
+  })
+})

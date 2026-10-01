@@ -12,6 +12,7 @@ interface HeaderNavMobileProps {
   variant?: 'light' | 'dark'
   isAuthenticated?: boolean
   role?: string
+  adminHref?: string
   logoText: string
   /** When set, drawer header shows raster logo (e.g. Sprint) instead of text. */
   logoImageSrc?: string
@@ -23,6 +24,7 @@ export function HeaderNavMobile({
   variant = 'light',
   isAuthenticated = false,
   role,
+  adminHref = '/admin/inner',
   logoText,
   logoImageSrc,
   navLinks,
@@ -122,7 +124,7 @@ export function HeaderNavMobile({
               {isAuthenticated ? (
                 <>
                   <Link
-                    href={role === 'ADMIN' || role === 'WRITER' ? '/admin' : '/account'}
+                    href={role === 'ADMIN' || role === 'WRITER' ? adminHref : '/account'}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition-colors ${variant === 'dark' ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                     onClick={() => setOpen(false)}
                   >
