@@ -1657,17 +1657,12 @@ export async function createCdekOrder(
       if (!doorAddress) {
         return { error: 'Не указан адрес доставки' }
       }
+      // СДЭК сопоставляет адрес получателя по коду из справочника городов.
+      // Даже корректный city_uuid без code может дать recipient_location_not_recognized.
       toLocation = {
-        ...(sh.cdekCityUuid?.trim()
-          ? {
-              city_uuid: sh.cdekCityUuid.trim(),
-              address: doorAddress,
-            }
-          : {
-              code: sh.cdekCityCode,
-              country_code: 'RU' as const,
-              address: doorAddress,
-            }),
+        code: sh.cdekCityCode,
+        country_code: 'RU',
+        address: doorAddress,
       }
     }
 

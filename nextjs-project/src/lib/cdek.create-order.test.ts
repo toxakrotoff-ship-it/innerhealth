@@ -279,7 +279,10 @@ describe('createCdekOrder', () => {
     expect(JSON.stringify(payload)).not.toContain('internal-id-2')
   })
 
-  it('sends shipment_point and to_location for warehouse-to-door order registration', async () => {
+  it.each([
+    'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
+    null,
+  ])('uses numeric city code for warehouse-to-door registration with city UUID %s', async (cityUuid) => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -323,7 +326,7 @@ describe('createCdekOrder', () => {
       shippingInfo: {
         deliveryMethod: 'cdek_door',
         cdekCityCode: 44,
-        cdekCityUuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
+        cdekCityUuid: cityUuid,
         cdekTariffCode: 137,
         address: 'Москва, улица Пушкина, дом 10',
         street: 'улица Пушкина',
@@ -384,9 +387,11 @@ describe('createCdekOrder', () => {
     expect(payload.shipment_point).toBe('MSK123')
     expect(payload).not.toHaveProperty('delivery_point')
     expect(payload.to_location).toEqual({
-      city_uuid: 'b308dcad-dbf0-4b22-bf2b-efca9f72ae38',
+      code: 44,
+      country_code: 'RU',
       address: 'улица Пушкина, 10, 12, 3, 4, 45',
     })
+    expect(payload.to_location).not.toHaveProperty('city_uuid')
     expect(payload).not.toHaveProperty('from_location')
     expect(payload.packages[0]).toMatchObject({
       weight: 100,

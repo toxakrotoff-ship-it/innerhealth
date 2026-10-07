@@ -662,7 +662,7 @@ model ShippingInfo {
   deliveryMethod String?
   /// Код города СДЭК получателя
   cdekCityCode   Int?
-  /// UUID города СДЭК получателя (предпочтителен для door-тарифов)
+  /// UUID города СДЭК получателя; при создании отгрузки используется cdekCityCode
   cdekCityUuid   String?
   /// Код ПВЗ (для cdek_pvz)
   cdekPvzCode    String?
