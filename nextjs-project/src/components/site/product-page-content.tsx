@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 import { groupProductsForListing } from '@/lib/product-grouping'
 import { normalizeInnerProductContent, parseProductTabsJson } from '@/lib/product-tabs'
 import { isLegacyDocumentSectionTitle } from '@/lib/product-documents'
-import { shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
+import { hasVisibleProductText, shouldHideInnerProductDescription } from '@/lib/product-description-dedupe'
 import {
   DEFAULT_PRODUCT_DOCUMENTS_PLACEMENT,
   type ProductDocumentsPlacement,
@@ -226,7 +226,7 @@ export function ProductPageContent({
   const shouldRenderShortDescription =
     !!shortDescription && !shouldHideInnerProductDescription(shortDescription, product.text)
   const shouldRenderLongText =
-    !!product.text?.trim() &&
+    hasVisibleProductText(product.text) &&
     Array.isArray(explicitTabs) &&
     explicitTabs.length > 0
   const hasStructuredDocuments = structuredDocuments.length > 0
@@ -300,7 +300,9 @@ export function ProductPageContent({
   return (
     <AdaptiveContainer
       maxWidth="default"
-      className={`py-6 sm:py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
+      adaptivePadding={false}
+      style={{ maxWidth: '1360px' }}
+      className={`px-5 py-6 sm:px-8 sm:py-10 ${isSprintTheme ? 'text-slate-100' : ''}`}
     >
       <Breadcrumbs
         items={crumbs}
@@ -308,20 +310,7 @@ export function ProductPageContent({
         hideCurrentPageOnMobile
       />
       <RecentlyViewedTracker productId={product.id} />
-      <FluidGrid
-        cols={1}
-        colsTablet={1}
-        colsDesktop={2}
-        colsXl={2}
-        cols2xl={2}
-        cols3xl={2}
-        cols4xl={2}
-        cols5xl={2}
-        cols6xl={2}
-        gap={10}
-        adaptiveGap={false}
-        className="gap-10"
-      >
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12">
         <div
           className={cn(
             isSprintTheme && 'lg:self-start'
@@ -337,7 +326,7 @@ export function ProductPageContent({
         >
           <Heading1
             className={cn(
-              'min-w-0 max-w-full break-words leading-[0.98] max-sm:text-[1.72rem] max-sm:font-semibold max-sm:tracking-tight',
+              'min-w-0 max-w-full break-words leading-[1.08] max-sm:text-[1.72rem] max-sm:font-semibold max-sm:tracking-tight sm:text-[clamp(30px,2.2vw,42px)]',
               isSprintTheme && 'text-slate-100'
             )}
           >
@@ -409,36 +398,32 @@ export function ProductPageContent({
             <a
               href="#product-documents"
               className={cn(
-                'mt-3 inline-flex min-h-11 items-center rounded-lg border px-4 py-2 text-sm font-medium underline underline-offset-4',
+                'mt-3 inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium no-underline transition-colors hover:no-underline',
                 isSprintTheme
                   ? 'border-slate-700 text-[#9AB8FF] hover:bg-slate-800'
-                  : 'border-gray-200 text-gray-900 hover:bg-gray-50'
+                  : 'border-gray-300 text-gray-700 hover:border-action-blue hover:bg-gray-50'
               )}
             >
               Документы на этот товар
             </a>
           )}
         </div>
-      </FluidGrid>
+      </div>
 
       {shouldRenderLongText && product.text && (
-        <ScalableSpacing size="lg">
-          <section className={isSprintTheme ? 'border-t border-slate-700 pt-8' : 'border-t border-gray-200 pt-8 dark:border-gray-700'}>
-            <ProductLongTextBlock text={product.text} isSprintTheme={isSprintTheme} />
-          </section>
-        </ScalableSpacing>
+        <section className="mt-8 sm:mt-10">
+          <ProductLongTextBlock text={product.text} isSprintTheme={isSprintTheme} />
+        </section>
       )}
 
       {showDocumentsBeforeTabs ? documentsSection : null}
 
       {productTabItems.length > 0 && (
-        <ScalableSpacing size="lg">
-          <ProductTabs
-            key={product.id}
-            tabs={productTabItems}
-            isSprintTheme={isSprintTheme}
-          />
-        </ScalableSpacing>
+        <ProductTabs
+          key={product.id}
+          tabs={productTabItems}
+          isSprintTheme={isSprintTheme}
+        />
       )}
 
       {showDocumentsAfterTabs ? documentsSection : null}

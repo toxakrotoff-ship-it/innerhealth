@@ -197,8 +197,7 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
   return (
     <section
       className={cn(
-        'mt-8 border-t pt-6 sm:mt-12 sm:pt-8',
-        isSprintTheme ? 'border-slate-700' : 'border-gray-200 dark:border-gray-700',
+        'mt-6 sm:mt-8',
         className
       )}
     >

@@ -54,7 +54,7 @@ export function ProductMediaGallery({ title, photos, isSprintTheme = false }: Pr
     return (
       <div
         className={cn(
-          'relative aspect-3/4 max-w-md mx-auto lg:mx-0 rounded-2xl flex items-center justify-center overflow-hidden',
+          'relative aspect-3/4 w-full max-w-[560px] mx-auto lg:mx-0 rounded-2xl flex items-center justify-center overflow-hidden',
           mainSurface
         )}
       >
@@ -74,7 +74,7 @@ export function ProductMediaGallery({ title, photos, isSprintTheme = false }: Pr
         <button
           type="button"
           className={cn(
-            'relative block aspect-3/4 w-full max-w-md mx-auto lg:mx-0 rounded-2xl overflow-hidden',
+            'relative block aspect-3/4 w-full max-w-[560px] mx-auto lg:mx-0 rounded-2xl overflow-hidden',
             mainSurface
           )}
           onClick={() => setIsLightboxOpen(true)}
@@ -93,7 +93,7 @@ export function ProductMediaGallery({ title, photos, isSprintTheme = false }: Pr
                   }
                 : undefined
             }
-            sizes="(max-width: 1024px) 92vw, 44vw"
+            sizes="(max-width: 640px) calc(100vw - 40px), (max-width: 1024px) 560px, (max-width: 1360px) 42vw, 560px"
             priority
             placeholder={active.blurDataURL ? 'blur' : undefined}
             blurDataURL={active.blurDataURL}
