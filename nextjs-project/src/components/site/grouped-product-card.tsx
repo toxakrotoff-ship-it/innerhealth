@@ -123,17 +123,6 @@ export function GroupedProductCard({
             >
               {group.baseTitle}
             </h3>
-
-            <div className="mt-1 flex shrink-0 items-baseline gap-2">
-              <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
-                {activeVariant.price.toLocaleString('ru-RU')} ₽
-              </span>
-              {activeVariant.priceOld != null && activeVariant.priceOld > activeVariant.price && (
-                <span className={cn('desktop-microtext-scale line-through', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
-                  {activeVariant.priceOld.toLocaleString('ru-RU')} ₽
-                </span>
-              )}
-            </div>
           </div>
 
           {showSku && activeVariant.sku?.trim() && (
@@ -177,6 +166,16 @@ export function GroupedProductCard({
           </div>
 
           <div className="relative z-10 mt-auto flex min-w-0 flex-col gap-1.5 pt-2.5 max-sm:pt-0 3xl:pt-3 3xl:gap-2">
+            <div className="mb-1 flex shrink-0 items-baseline gap-2">
+              <span className={cn('text-base font-semibold 2xl:text-lg 3xl:text-xl', isSprintTheme ? 'text-slate-100' : 'text-text')}>
+                {activeVariant.price.toLocaleString('ru-RU')} ₽
+              </span>
+              {activeVariant.priceOld != null && activeVariant.priceOld > activeVariant.price && (
+                <span className={cn('desktop-microtext-scale line-through', isSprintTheme ? 'text-slate-400' : 'text-gray-500')}>
+                  {activeVariant.priceOld.toLocaleString('ru-RU')} ₽
+                </span>
+              )}
+            </div>
             <AddToCartButton
               productId={activeVariant.id}
               title={activeVariant.title}
