@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
@@ -151,6 +151,7 @@ function TabContent({ text, isSprintTheme }: { text: string; isSprintTheme: bool
 export interface ProductTabItem {
   title: string
   content: string
+  anchorId?: string
   /** When set, renders this node instead of interpreting `content` as text/HTML. */
   node?: ReactNode
 }
@@ -167,8 +168,30 @@ const tabActiveRing = (isSprintTheme: boolean) =>
     : 'data-[state=active]:border-action-blue data-[state=active]:bg-transparent data-[state=active]:text-action-blue'
 
 export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductTabsProps) {
+  const [activeTab, setActiveTab] = useState('tab-0')
+
+  useEffect(() => {
+    let frame: number | undefined
+    const openLinkedTab = () => {
+      const index = tabs.findIndex((tab) => tab.anchorId && `#${tab.anchorId}` === window.location.hash)
+      if (index < 0) return
+      setActiveTab(`tab-${index}`)
+      // Wait for the selected panel to become visible before scrolling/focusing.
+      frame = window.requestAnimationFrame(() => {
+        const panel = document.getElementById(tabs[index].anchorId!)
+        panel?.scrollIntoView({ block: 'start' })
+        panel?.focus({ preventScroll: true })
+      })
+    }
+    openLinkedTab()
+    window.addEventListener('hashchange', openLinkedTab)
+    return () => {
+      window.removeEventListener('hashchange', openLinkedTab)
+      if (frame !== undefined) window.cancelAnimationFrame(frame)
+    }
+  }, [tabs])
+
   if (tabs.length === 0) return null
-  const shouldShowSwipeHint = tabs.length > 2
   const activeTabAccent = tabActiveRing(isSprintTheme)
 
   return (
@@ -179,12 +202,23 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
         className
       )}
     >
-      <Tabs defaultValue="tab-0" className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          setActiveTab(value)
+          // Allow the documents link to work again after selecting another tab.
+          const linkedIndex = tabs.findIndex((tab) => tab.anchorId && `#${tab.anchorId}` === window.location.hash)
+          if (linkedIndex >= 0 && value !== `tab-${linkedIndex}`) {
+            window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+          }
+        }}
+        className="w-full"
+      >
         <div className="relative">
           <TabsList
+            aria-label="Информация о товаре"
             className={cn(
-              'h-auto w-full justify-start gap-x-1 overflow-x-auto rounded-none border-b border-transparent bg-transparent p-0 whitespace-nowrap',
-              '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',
+              'h-auto w-full flex-wrap justify-start gap-x-1 gap-y-1 rounded-none border-b border-transparent bg-transparent p-0',
               '[&>button]:rounded-none [&>button]:border-b-2 [&>button]:border-transparent [&>button]:bg-transparent [&>button]:shadow-none',
               activeTabAccent
             )}
@@ -193,8 +227,9 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
               <TabsTrigger
                 key={tab.title}
                 value={`tab-${index}`}
+                {...(tab.anchorId ? { id: `${tab.anchorId}-trigger`, 'aria-controls': tab.anchorId } : {})}
                 className={cn(
-                  '-mb-px shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-sm font-medium sm:px-4',
+                  '-mb-px min-h-11 max-w-full rounded-none border-b-2 border-transparent px-3 py-3 text-sm font-medium whitespace-normal break-words sm:px-4',
                   `${activeTabAccent} data-[state=active]:shadow-none`,
                   isSprintTheme
                     ? 'text-slate-400 hover:text-slate-200'
@@ -206,21 +241,14 @@ export function ProductTabs({ tabs, className, isSprintTheme = false }: ProductT
             ))}
           </TabsList>
         </div>
-        {shouldShowSwipeHint && (
-          <p
-            className={cn(
-              'mt-1 text-xs sm:hidden',
-              isSprintTheme ? 'text-slate-500' : 'text-gray-500'
-            )}
-          >
-            Свайпните вкладки влево/вправо
-          </p>
-        )}
         {tabs.map((tab, index) => (
           <TabsContent
             key={tab.title}
             value={`tab-${index}`}
-            className="mt-4 focus-visible:outline-none"
+            {...(tab.anchorId ? { id: tab.anchorId, 'aria-labelledby': `${tab.anchorId}-trigger` } : {})}
+            forceMount
+            hidden={activeTab !== `tab-${index}`}
+            className="mt-4 scroll-mt-28 data-[state=inactive]:hidden"
           >
             {tab.node ? (
               tab.node

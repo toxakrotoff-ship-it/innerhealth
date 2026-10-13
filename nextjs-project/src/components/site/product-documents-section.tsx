@@ -16,6 +16,7 @@ export interface ProductDocumentSectionItem {
 
 interface ProductDocumentsSectionProps {
   documents: ProductDocumentSectionItem[]
+  productTitle?: string
   isSprintTheme?: boolean
   className?: string
   /** Hide the section border/heading, e.g. when already shown under its own tab title. */
@@ -24,6 +25,7 @@ interface ProductDocumentsSectionProps {
 
 export function ProductDocumentsSection({
   documents,
+  productTitle,
   isSprintTheme = false,
   className,
   hideHeading = false,
@@ -44,8 +46,13 @@ export function ProductDocumentsSection({
             isSprintTheme ? 'text-slate-100' : 'text-gray-900'
           )}
         >
-          Документы
+          Документы на товар
         </h2>
+      )}
+      {productTitle && (
+        <p className={cn('mb-4 text-sm', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+          Документы на продукцию «{productTitle}»: названия, номера и файлы для ознакомления.
+        </p>
       )}
       <div className="space-y-2.5">
         {documents.map((document) => {
@@ -55,6 +62,7 @@ export function ProductDocumentsSection({
           ].filter(Boolean)
           const issuedAt = formatDocumentDate(document.issuedAt)
           const expiresAt = formatDocumentDate(document.expiresAt)
+          const openLabel = document.mimeType === 'application/pdf' ? 'Открыть PDF' : 'Открыть документ'
 
           return (
             <article
@@ -92,7 +100,7 @@ export function ProductDocumentsSection({
                 href={document.fileUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`Открыть документ: ${document.title}`}
+                aria-label={`${openLabel}: ${document.title}`}
                 className={cn(
                   'mt-3 inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm',
                   isSprintTheme
@@ -100,7 +108,7 @@ export function ProductDocumentsSection({
                     : 'bg-gray-900 text-white hover:bg-gray-700'
                 )}
               >
-                Открыть файл
+                {openLabel}
               </a>
             </article>
           )

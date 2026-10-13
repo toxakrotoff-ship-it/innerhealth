@@ -35,13 +35,13 @@ export function buildHomeMetadata({
   return {
     title: 'Главная',
     description:
-      'Inner Health: нутриенты, коллаген, грибные комплексы и здоровое питание. Акции, доставка по России, сертифицированная продукция.',
+      'Inner Health: бульоны, коллаген и грибные комплексы. Документы на продукцию доступны в карточках товаров. Доставка по России.',
     alternates: { canonical: `${normalizedSiteUrl}/` },
     openGraph: {
       type: 'website',
       title: `${siteConfig.title} — нутриенты и здоровое питание`,
       description:
-        'Интернет-магазин нутриентов и продуктов для здоровья: каталог, новости и выгодные предложения.',
+        'Бульоны, коллаген и грибные комплексы Inner Health. Документы на продукцию — в карточках товаров. Доставка по России.',
       url: `${normalizedSiteUrl}/`,
       images: [`${normalizedSiteUrl}/hero-portrait.png`],
     },

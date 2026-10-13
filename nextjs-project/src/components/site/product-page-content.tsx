@@ -267,7 +267,9 @@ export function ProductPageContent({
 
   const documentsSection = showDocumentsBeforeTabs || showDocumentsAfterTabs ? (
     <ScalableSpacing size="md">
-      <ProductDocumentsSection documents={structuredDocuments} isSprintTheme={isSprintTheme} />
+      <div id="product-documents" tabIndex={-1} className="scroll-mt-28">
+        <ProductDocumentsSection documents={structuredDocuments} productTitle={product.title} isSprintTheme={isSprintTheme} />
+      </div>
     </ScalableSpacing>
   ) : null
 
@@ -275,17 +277,19 @@ export function ProductPageContent({
     ...visibleContentSections.map((section) => ({
       title: section.title,
       content: section.content,
+      anchorId: isLegacyDocumentSectionTitle(section.title) ? 'product-documents' : undefined,
     })),
     ...(showDocumentsAsTab
       ? [
           {
             title: 'Документы',
             content: '',
+            anchorId: 'product-documents',
             node: (
               <ProductDocumentsSection
                 documents={structuredDocuments}
+                productTitle={product.title}
                 isSprintTheme={isSprintTheme}
-                hideHeading
               />
             ),
           },
@@ -401,6 +405,19 @@ export function ProductPageContent({
             <CompareToggleButton productId={product.id} isSprintTheme={isSprintTheme} />
           </div>
           <PurchaseTrustStrip isSprintTheme={isSprintTheme} />
+          {(hasStructuredDocuments || visibleContentSections.some((section) => isLegacyDocumentSectionTitle(section.title))) && (
+            <a
+              href="#product-documents"
+              className={cn(
+                'mt-3 inline-flex min-h-11 items-center rounded-lg border px-4 py-2 text-sm font-medium underline underline-offset-4',
+                isSprintTheme
+                  ? 'border-slate-700 text-[#9AB8FF] hover:bg-slate-800'
+                  : 'border-gray-200 text-gray-900 hover:bg-gray-50'
+              )}
+            >
+              Документы на этот товар
+            </a>
+          )}
         </div>
       </FluidGrid>
 
@@ -417,6 +434,7 @@ export function ProductPageContent({
       {productTabItems.length > 0 && (
         <ScalableSpacing size="lg">
           <ProductTabs
+            key={product.id}
             tabs={productTabItems}
             isSprintTheme={isSprintTheme}
           />
