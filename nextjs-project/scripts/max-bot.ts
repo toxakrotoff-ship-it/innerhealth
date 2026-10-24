@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Bot } from '@maxhub/max-bot-api';
+import { createMaxBot } from '@/lib/max/max-api-client';
 import {
   getMaxBotUserCapabilities,
   type BotUserCapabilities,
@@ -165,7 +165,7 @@ async function bootstrap(): Promise<void> {
     return;
   }
 
-  const bot = new Bot(config.token);
+  const bot = createMaxBot(config.token);
 
   console.log(`[max-bot] long polling старт (brand=${MAX_BOT_BRAND_ID})`);
 

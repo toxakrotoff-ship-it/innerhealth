@@ -1,4 +1,5 @@
-import { Bot, Keyboard } from '@maxhub/max-bot-api';
+import { Keyboard, type Bot } from '@maxhub/max-bot-api';
+import { createMaxBot } from '@/lib/max/max-api-client';
 import * as maxService from '@/services/max.service';
 import * as settingsService from '@/services/settings.service';
 import * as userService from '@/services/user.service';
@@ -61,7 +62,7 @@ function siteUrl(brandId?: BrandId): string {
 async function getMaxBot(options?: { brandId?: BrandId | null }): Promise<Bot | null> {
   const settings = await settingsService.getMaxBotSettings({ brandId: options?.brandId });
   if (!settings.token) return null;
-  return new Bot(settings.token);
+  return createMaxBot(settings.token);
 }
 
 async function sendToUsers(

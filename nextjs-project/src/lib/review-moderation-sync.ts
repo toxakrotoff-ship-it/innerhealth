@@ -1,4 +1,5 @@
-import { Bot } from '@maxhub/max-bot-api';
+import type { Bot } from '@maxhub/max-bot-api';
+import { createMaxBot } from '@/lib/max/max-api-client';
 import { getTelegramBotToken } from '@/bot/runtime/settings';
 import * as reviewService from '@/services/review.service';
 import * as reviewModerationMessageService from '@/bot/runtime/review-moderation-messages';
@@ -198,7 +199,7 @@ async function syncMaxReviewModeration(input: SyncInput, review: ReviewSyncConte
         if (!bot) {
           const config = await getMaxBotConfig({ brandId });
           if (!config.token) return;
-          bot = new Bot(config.token);
+          bot = createMaxBot(config.token);
           bots.set(brandId, bot);
         }
         await withTimeout(

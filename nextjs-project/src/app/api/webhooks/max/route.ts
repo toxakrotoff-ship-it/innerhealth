@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Bot } from '@maxhub/max-bot-api';
+import { createMaxBot } from '@/lib/max/max-api-client';
+import type { Bot } from '@maxhub/max-bot-api';
 import {
   getMaxBotUserCapabilities,
   type BotUserCapabilities,
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
       const result = await confirmMaxLinkAndReturnUserId(safeCode, maxUserId);
       if (result) {
         void notifyMaxConnection({ userId: result.userId, maxUserId, brandId: result.brandId });
-        const bot = config.token ? new Bot(config.token) : null;
+        const bot = config.token ? createMaxBot(config.token) : null;
         if (bot) {
           const capabilities = await getMaxBotUserCapabilities(maxUserId, { brandId: result.brandId });
           await bot.api
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
             .catch(() => {});
         }
       } else if (config.token && maxUserId) {
-        const bot = new Bot(config.token);
+        const bot = createMaxBot(config.token);
         await bot.api
           .sendMessageToUser(
             Number.parseInt(maxUserId, 10),
@@ -219,7 +220,7 @@ export async function POST(request: Request) {
     const maxUserId = parsed.data.user?.user_id !== undefined ? String(parsed.data.user.user_id) : '';
     if (!maxUserId) return NextResponse.json({ ok: true });
 
-    const bot = config.token ? new Bot(config.token) : null;
+    const bot = config.token ? createMaxBot(config.token) : null;
     if (!bot) return NextResponse.json({ ok: true });
 
     if (isSlashHelp(text)) {
@@ -294,7 +295,7 @@ export async function POST(request: Request) {
     const callbackId = parsed.data.callback.callback_id;
     const payloadValue = (parsed.data.callback.payload ?? '').trim();
     const maxUserId = String(parsed.data.callback.user.user_id);
-    const bot = config.token ? new Bot(config.token) : null;
+    const bot = config.token ? createMaxBot(config.token) : null;
 
     const makeNotification = async (text: string) => {
       if (!bot) return;

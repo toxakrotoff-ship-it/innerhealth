@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { Bot } from '@maxhub/max-bot-api';
+import { createMaxBot } from '@/lib/max/max-api-client';
 import { Prisma } from '@prisma/client';
 import { requireAdminSession } from '@/lib/require-admin';
 import * as maxService from '@/services/max.service';
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     await maxService.createMaxLinkCode({ code, userId: session.user.id, expiresAt, brandId });
     let botName = '';
     try {
-      const bot = new Bot(settings.token);
+      const bot = createMaxBot(settings.token);
       const me = await bot.api.getMyInfo();
       botName = String((me as { username?: string }).username || '').trim();
     } catch (error) {
