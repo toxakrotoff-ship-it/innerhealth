@@ -159,6 +159,8 @@ services:
 
   max-bot:
     image: nextjs-project-bot:latest
+    # Avoid intermittent upstream DNS failures while polling the MAX API.
+    dns: [1.1.1.1, 8.8.8.8]
     build:
       context: .
       dockerfile: Dockerfile
@@ -184,6 +186,7 @@ services:
 
   max-bot-sprint:
     image: nextjs-project-bot:latest
+    dns: [1.1.1.1, 8.8.8.8]
     build:
       context: .
       dockerfile: Dockerfile
