@@ -123,13 +123,13 @@ describe('resolveInnerHomeDirectionsContent', () => {
 describe('resolveInnerHomeSectionOrder', () => {
   it('deduplicates configured section ids and appends missing defaults', () => {
     const result = resolveInnerHomeSectionOrder([
-      shortBlock('home.sections.order', 'reviews,directions,reviews,news'),
+      shortBlock('home.sections.order', 'reviews,directions,reviews,hits'),
     ])
 
     expect(result).toEqual([
       'reviews',
       'directions',
-      'news',
+      'hits',
       'newArrivals',
       'howToOrder',
       'articles',
@@ -138,12 +138,12 @@ describe('resolveInnerHomeSectionOrder', () => {
 
   it('ignores unknown ids and blank chunks while preserving valid order', () => {
     const result = resolveInnerHomeSectionOrder([
-      shortBlock('home.sections.order', ' ,unknown,reviews,,news,directions , bad '),
+      shortBlock('home.sections.order', ' ,unknown,reviews,,hits,directions , bad '),
     ])
 
     expect(result).toEqual([
       'reviews',
-      'news',
+      'hits',
       'directions',
       'newArrivals',
       'howToOrder',

@@ -90,7 +90,7 @@ export function PageViewTracker() {
       brand: activeBrand,
       type: 'PAGE_VIEW',
       path: fullPath,
-      pageTitle: document.title,
+      pageTitle: document.title.trim() || undefined,
       anonId: anonId || undefined,
       meta: {
         deviceType,

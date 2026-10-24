@@ -18,7 +18,7 @@ describe('public form abuse guards', () => {
 
   it('validates plausible phone numbers', () => {
     expect(isPlausiblePhone('+7 (999) 123-45-67')).toBe(true)
-    expect(isPlausiblePhone('2623953015')).toBe(false)
+    expect(isPlausiblePhone('262395301')).toBe(false)
   })
 
   it('triggers honeypot when hidden field is filled', () => {

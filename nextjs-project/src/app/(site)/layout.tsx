@@ -1,6 +1,6 @@
 import nextDynamic from 'next/dynamic'
 import { headers } from 'next/headers'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { BackToTopButton } from '@/components/site/back-to-top-button'
@@ -52,12 +52,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     icons,
-    ...(activeBrand === 'sprint-power'
-      ? {
-          themeColor: '#060A14',
-        }
-      : {}),
   }
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  const headerStore = await headers()
+  const activeBrand = resolveSiteBrand({
+    forwardedBrand: headerStore.get('x-brand'),
+    host: headerStore.get('x-forwarded-host') || headerStore.get('host'),
+  })
+  return activeBrand === 'sprint-power' ? { themeColor: '#060A14' } : {}
 }
 
 /**

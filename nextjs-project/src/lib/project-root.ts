@@ -3,7 +3,7 @@ import path from 'path'
 function resolveStandaloneBundleRoot(): string | null {
   const entry = process.argv[1]
   if (!entry || typeof entry !== 'string') return null
-  const absoluteScript = path.isAbsolute(entry) ? entry : path.resolve(process.cwd(), entry)
+  const absoluteScript = path.isAbsolute(entry) ? entry : path.resolve(/* turbopackIgnore: true */ process.cwd(), entry)
   const scriptDir = path.dirname(absoluteScript).replace(/\\/g, '/')
   if (scriptDir.endsWith('/.next/standalone')) {
     return path.resolve(scriptDir, '..', '..')

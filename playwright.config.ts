@@ -101,17 +101,17 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /adaptive\.spec\.ts/,
+      testIgnore: /adaptive\.spec\.ts|\/smoke\//,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /adaptive\.spec\.ts/,
+      testIgnore: /adaptive\.spec\.ts|\/smoke\//,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-      testIgnore: /adaptive\.spec\.ts/,
+      testIgnore: /adaptive\.spec\.ts|\/smoke\//,
     },
 
     // ============================================

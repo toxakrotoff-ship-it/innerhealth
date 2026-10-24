@@ -6,16 +6,23 @@
     "dev": "npm --prefix nextjs-project run dev",
     "build": "npm --prefix nextjs-project run build",
     "start": "npm --prefix nextjs-project run start",
-    "lint": "npm --prefix nextjs-project run lint"
+    "lint": "npm --prefix nextjs-project run lint",
+    "test": "npm --prefix nextjs-project test",
+    "typecheck": "npm --prefix nextjs-project run typecheck",
+    "check": "npm --prefix nextjs-project run check",
+    "test:playwright": "playwright test",
+    "test:smoke": "playwright test --config=playwright.smoke.config.ts"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8",
-    "typescript": "^5"
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   }
 }

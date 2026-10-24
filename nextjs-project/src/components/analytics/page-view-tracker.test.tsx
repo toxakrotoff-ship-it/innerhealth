@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PageViewTracker } from './page-view-tracker'
+import { analyticsEventInputSchema } from '@/lib/analytics/analytics-event-schema'
 
 const logAnalyticsEventMock = vi.fn()
 const usePathnameMock = vi.fn()
@@ -48,8 +49,24 @@ describe('PageViewTracker', () => {
       expect.objectContaining({
         type: 'PAGE_VIEW',
         path: '/catalog?q=protein',
+        pageTitle: 'Catalog',
       })
     )
+  })
+
+  it.each(['', '   '])('keeps page views valid before streamed metadata provides the title (%j)', (title) => {
+    document.title = title
+    render(<PageViewTracker />)
+
+    expect(logAnalyticsEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'PAGE_VIEW',
+        path: '/catalog?q=protein',
+        pageTitle: undefined,
+      })
+    )
+    const [event] = logAnalyticsEventMock.mock.calls[0]
+    expect(analyticsEventInputSchema.safeParse({ ...event, occurredAt: new Date() }).success).toBe(true)
   })
 
   it('logs generic click for interactive elements', async () => {

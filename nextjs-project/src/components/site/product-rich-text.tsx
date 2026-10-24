@@ -13,6 +13,7 @@ const EXTENSIONS = [
     heading: { levels: [1, 2, 3] },
     bulletList: false,
     orderedList: false,
+    underline: false,
   }),
   CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
   CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),

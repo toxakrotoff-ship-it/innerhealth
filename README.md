@@ -47,7 +47,7 @@ innerhealth/
 
 ### Требования
 
-- Node.js 22 (LTS)
+- Node.js 22.18+ (ветка 22) или 24.11+ (ветка 24); Docker использует Node.js 22
 - PostgreSQL
 - (Опционально) Docker и Docker Compose — для деплоя
 
@@ -75,6 +75,9 @@ npm run dev
 |--------|----------|
 | `npm run dev` | Режим разработки |
 | `npm run build` | Сборка для production |
+| `npm run check` | Lint, TypeScript 7 и 6, тесты, production-сборка и сборка ботов |
+| `npm test` | Модульные, компонентные и API-тесты Vitest |
+| `npm run test:smoke` | Chromium desktop/mobile с временной PostgreSQL-базой и production-сборкой |
 | `npm run start` | Запуск production-сервера |
 | `npm run db:migrate` | Применить миграции Prisma к БД |
 | `npm run db:push` | Синхронизировать схему с БД без миграций |
@@ -86,6 +89,8 @@ npm run dev
 | `npm run tilda:download-images` | Скачивание изображений с Tilda CDN в локальный `public` |
 
 Полный список — в [nextjs-project/package.json](nextjs-project/package.json).
+
+Проверки обновлений и требования к браузерным тестам: [docs/framework-upgrade.md](docs/framework-upgrade.md).
 
 ---
 

@@ -3,6 +3,12 @@ import { Prisma } from '@prisma/client'
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('next-auth', () => ({
+  getServerSession: vi.fn(async () => ({
+    user: { id: 'admin-1', email: 'admin@example.test', role: 'ADMIN' },
+  })),
+}))
+
 const categoryFindUniqueMock = vi.fn()
 const categoryUpdateMock = vi.fn()
 const productCategoryFindFirstMock = vi.fn()

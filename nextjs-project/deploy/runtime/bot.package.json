@@ -2,14 +2,17 @@
   "name": "innerhealth-bot-runtime",
   "private": true,
   "dependencies": {
-    "@maxhub/max-bot-api": "0.2.2",
-    "@prisma/adapter-pg": "7.4.0",
-    "@prisma/client": "7.4.0",
-    "dotenv": "17.3.1",
+    "@maxhub/max-bot-api": "0.2.5",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "dotenv": "17.4.2",
     "fetch-socks": "1.3.3",
-    "pg": "8.18.0",
-    "prisma": "7.4.0",
-    "undici": "7.22.0",
-    "zod": "4.3.6"
+    "pg": "8.23.1",
+    "prisma": "7.10.1",
+    "undici": "7.30.1",
+    "zod": "4.6.7"
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   }
 }

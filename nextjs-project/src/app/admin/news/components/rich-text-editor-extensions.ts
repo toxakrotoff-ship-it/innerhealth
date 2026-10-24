@@ -22,6 +22,8 @@ export function buildRichTextEditorExtensions(placeholder: string): Extensions {
       heading: { levels: [1, 2, 3] },
       bulletList: false,
       orderedList: false,
+      link: false,
+      underline: false,
     }),
     CustomBulletList.configure({ keepMarks: true, keepAttributes: true }),
     CustomOrderedList.configure({ keepMarks: true, keepAttributes: true }),
