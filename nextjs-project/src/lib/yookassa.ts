@@ -10,6 +10,28 @@
 
 const YOOKASSA_API = 'https://api.yookassa.ru/v3'
 
+/** Retry temporary DNS failures only; HTTP/API errors keep their existing handling. */
+async function fetchYookassa(path: string, init: RequestInit): Promise<Response> {
+  const maxAttempts = 3
+  const signal = AbortSignal.timeout(35_000)
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(`${YOOKASSA_API}${path}`, { ...init, signal })
+    } catch (error) {
+      const cause = error instanceof Error ? error.cause : undefined
+      const isTemporaryDnsError =
+        cause != null && typeof cause === 'object' && 'code' in cause && cause.code === 'EAI_AGAIN'
+      if (!isTemporaryDnsError) throw error
+      if (attempt === maxAttempts || signal.aborted) {
+        // Keep alerts useful without including request bodies, headers or credentials.
+        throw new Error(`YooKassa DNS error (EAI_AGAIN) after ${attempt} attempts`, { cause: error })
+      }
+      // Reuse the exact body and Idempotence-Key: a retry must remain the same operation.
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt))
+    }
+  }
+}
+
 export interface YookassaCredentials {
   shopId: string
   secretKey: string
@@ -161,7 +183,7 @@ export async function createYookassaPayment(
     },
   }
 
-  const res = await fetch(`${YOOKASSA_API}/payments`, {
+  const res = await fetchYookassa('/payments', {
     method: 'POST',
     headers: {
       Authorization: auth,
@@ -213,7 +235,7 @@ export async function getYookassaPayment(
     return null
   }
   const auth = buildAuthHeader(creds)
-  const res = await fetch(`${YOOKASSA_API}/payments/${paymentId}`, {
+  const res = await fetchYookassa(`/payments/${paymentId}`, {
     method: 'GET',
     headers: { Authorization: auth },
   })
@@ -300,7 +322,7 @@ export async function checkYookassaConnection(
       }
     }
     const auth = buildAuthHeader(creds)
-    const res = await fetch(`${YOOKASSA_API}/payments?limit=1`, {
+    const res = await fetchYookassa('/payments?limit=1', {
       method: 'GET',
       headers: { Authorization: auth, 'Content-Type': 'application/json' },
     })

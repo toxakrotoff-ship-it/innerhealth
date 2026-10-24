@@ -16,6 +16,8 @@ services:
 
   app:
     image: nextjs-project-app:latest
+    # Avoid transient upstream DNS failures when connecting to YooKassa and other APIs.
+    dns: [1.1.1.1, 8.8.8.8]
     build:
       context: .
       dockerfile: Dockerfile
