@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatOrderLabel } from '@/lib/order-label';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
+import { OzonShipmentPanel } from '@/components/admin/ozon-shipment-panel';
 import type { PromoOrderTotalsResult } from '@/lib/promo-order-totals';
 import {
   OrderFinancialBreakdownPanel,
@@ -421,6 +422,7 @@ export default function AdminOrdersPage() {
               : 'Адрес доставки не указан'}
           </p>
         )}
+        {order.shippingInfo?.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={order.id} paid={order.status === 'paid'} /> : null}
         {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' || order.shippingInfo?.deliveryMethod === 'cdek_door') && (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">СДЭК</h3>
@@ -831,6 +833,7 @@ export default function AdminOrdersPage() {
                     <p>{popupOrder.shippingInfo.phoneMasked}</p>
                     <p>{popupOrder.shippingInfo.city}</p>
                     <p>{popupOrder.shippingInfo.addressShort}</p>
+                    {popupOrder.shippingInfo.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={popupOrder.id} paid={popupOrder.status === 'paid'} /> : null}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500">

@@ -11,6 +11,7 @@ import {
   type CdekPvzOption,
   type DeliveryMethod,
 } from '@/components/site/delivery-section'
+import { OzonDelivery, type OzonDeliverySelection } from '@/components/site/ozon-delivery'
 import { CdekWidget } from '@/components/site/cdek-widget'
 import { CdekManualDelivery } from '@/components/site/cdek-manual-delivery'
 import { savePendingPaymentRedirect } from '@/lib/payment-redirect-recovery'
@@ -40,6 +41,8 @@ import {
   patchCheckoutDelivery,
   patchCheckoutPromo,
 } from '@/lib/checkout-tracking-client'
+
+type CheckoutDeliveryMethod = DeliveryMethod | 'ozon_pvz'
 
 const CHECKOUT_CONTACT_SYNC_DEBOUNCE_MS = 800
 const CHECKOUT_CART_SYNC_DEBOUNCE_MS = 800
@@ -250,7 +253,17 @@ export function CartPageContent({
   const [selectedCity, setSelectedCity] = useState<CdekCityOption | null>(null)
   const [pvzTariff, setPvzTariff] = useState<CdekTariffSummary | null>(null)
   const [doorTariff, setDoorTariff] = useState<CdekTariffSummary | null>(null)
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('pickup')
+  const [deliveryMethod, setDeliveryMethod] = useState<CheckoutDeliveryMethod>('pickup')
+  const [ozonEnabled, setOzonEnabled] = useState(false)
+  const [ozonQuote, setOzonQuote] = useState<{ context: string; selection: OzonDeliverySelection } | null>(null)
+  const ozonQuoteContext = JSON.stringify([brandId, formData.phone, itemsSignature, promoResult?.valid ? promoResult.id : null])
+  const ozonSelection = ozonQuote?.context === ozonQuoteContext && Date.parse(ozonQuote.selection.expiresAt) > Date.now()
+    ? ozonQuote.selection
+    : null
+  const handleOzonChange = useCallback((selection: OzonDeliverySelection | null) => {
+    setOzonQuote(selection ? { context: ozonQuoteContext, selection } : null)
+    setDeliveryError(null)
+  }, [ozonQuoteContext])
   const [hasWidgetTariffSelection, setHasWidgetTariffSelection] = useState(false)
   const [cdekInputMode, setCdekInputModeState] = useState<'map' | 'manual'>('map')
   const [cdekMapAutoFallback, setCdekMapAutoFallback] = useState(false)
@@ -274,6 +287,17 @@ export function CartPageContent({
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null)
   const [usingSavedAddress, setUsingSavedAddress] = useState(false)
   const selectedSavedAddressIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setOzonEnabled(false)
+    const brandQuery = brandId ? `?brand=${encodeURIComponent(brandId)}` : ''
+    fetch(`/api/ozon-delivery/status${brandQuery}`, { cache: 'no-store', signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((payload) => { if (!controller.signal.aborted) setOzonEnabled(payload?.enabled === true) })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [brandId])
 
   const selectedSavedAddress = selectedSavedAddressId
     ? savedAddresses.find((address) => address.id === selectedSavedAddressId) ?? null
@@ -386,7 +410,9 @@ export function CartPageContent({
       ? pvzTariff?.deliverySum ?? 0
       : deliveryMethod === 'cdek_door'
         ? doorTariff?.deliverySum ?? 0
-        : 0
+        : deliveryMethod === 'ozon_pvz'
+          ? ozonSelection?.deliverySum ?? 0
+          : 0
   // Итого к оплате = (сумма товаров со скидкой) + доставка; доставка всегда без скидки
   const totalWithDelivery = total + deliverySum
 
@@ -503,7 +529,7 @@ export function CartPageContent({
 
   function handleCdekModeSelect() {
     setDeliveryMethod((prev) => {
-      const next = prev === 'pickup' ? 'cdek_pvz' : prev
+      const next = prev === 'pickup' || prev === 'ozon_pvz' ? 'cdek_pvz' : prev
       logCartDebug({
         scope: 'cart',
         event: 'delivery_mode_changed',
@@ -792,6 +818,10 @@ export function CartPageContent({
       setDeliveryError('Укажите улицу и дом для доставки СДЭК')
       return
     }
+    if (deliveryMethod === 'ozon_pvz' && (!ozonEnabled || !ozonSelection || Date.parse(ozonSelection.expiresAt) <= Date.now())) {
+      setDeliveryError('Выберите пункт выдачи Ozon и рассчитайте стоимость доставки')
+      return
+    }
     setDeliveryError(null)
     logCartDebug({
       scope: 'cart',
@@ -811,9 +841,13 @@ export function CartPageContent({
     void flushCartActivity()
     const city = deliveryMethod === 'pickup'
       ? formData.city.trim() || resolvePickupCity(pickupAddress)
-      : selectedCity?.city ?? formData.city
+      : deliveryMethod === 'ozon_pvz'
+        ? 'Россия'
+        : selectedCity?.city ?? formData.city
     let address: string
-    if (deliveryMethod === 'cdek_pvz' && selectedPvz) {
+    if (deliveryMethod === 'ozon_pvz' && ozonSelection) {
+      address = ozonSelection.point.address
+    } else if (deliveryMethod === 'cdek_pvz' && selectedPvz) {
       address = selectedPvz.full_address || selectedPvz.address || selectedPvz.name || 'ПВЗ СДЭК'
       if (selectedPvz.code) address = `СДЭК ПВЗ ${selectedPvz.code}: ${address}`
     } else if (deliveryMethod === 'cdek_door') {
@@ -868,6 +902,9 @@ export function CartPageContent({
             city: city || formData.city,
             address: address || formData.address,
             deliveryMethod,
+            ...(deliveryMethod === 'ozon_pvz' && ozonSelection
+              ? { ozonDeliveryPointId: ozonSelection.point.id, ozonQuoteToken: ozonSelection.quoteToken }
+              : {}),
             ...(deliveryMethod === 'cdek_pvz' || deliveryMethod === 'cdek_door'
               ? {
                   cdekCityCode: effectiveCityCode ?? undefined,
@@ -1200,8 +1237,27 @@ export function CartPageContent({
                   Доставка (СДЭК)
                 </span>
               </label>
+              {ozonEnabled ? (
+                <label className={cn('flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border p-3', isSprintTheme ? 'border-slate-600 hover:bg-slate-800/60' : 'border-gray-200 hover:bg-gray-50')}>
+                  <input type="radio" name="checkout-delivery-kind" checked={deliveryMethod === 'ozon_pvz'} className="h-4 w-4"
+                    onChange={() => {
+                      setDeliveryMethod('ozon_pvz')
+                      setOzonQuote(null)
+                      setDeliveryError(null)
+                      if (checkoutSessionIdRef.current) patchCheckoutDelivery(checkoutSessionIdRef.current, brandId, { deliveryMethod: 'ozon_pvz' })
+                    }} />
+                  <span className={cn('text-sm font-medium', isSprintTheme ? 'text-slate-100' : 'text-gray-900')}>Доставка Ozon в пункт выдачи</span>
+                </label>
+              ) : null}
             </div>
           </div>
+        ) : null}
+
+        {!usingSavedAddress && ozonEnabled && deliveryMethod === 'ozon_pvz' ? (
+          <OzonDelivery phone={formData.phone}
+            items={items.filter((item) => item.isGift !== true).map(({ productId, quantity }) => ({ productId, quantity }))}
+            brandId={brandId} promoCodeId={promoResult?.valid ? promoResult.id : undefined}
+            isSprintTheme={isSprintTheme} onChange={handleOzonChange} />
         ) : null}
 
         {!usingSavedAddress && isCdekDeliverySelected ? (
@@ -1762,6 +1818,12 @@ export function CartPageContent({
                   )}
                 </>
               )}
+              {deliveryMethod === 'ozon_pvz' ? (
+                <div className={cn('flex justify-between', isSprintTheme ? 'text-slate-300' : 'text-gray-600')}>
+                  <span>Доставка Ozon до ПВЗ</span>
+                  <span>{ozonSelection ? `${deliverySum.toLocaleString('ru-RU')} ₽` : 'Требуется расчёт'}</span>
+                </div>
+              ) : null}
               <div className={cn('flex justify-between border-t pt-2 text-lg font-semibold', isSprintTheme ? 'border-slate-700' : 'border-gray-200')}>
                 <span>К оплате</span>
                 <span>{totalWithDelivery.toLocaleString('ru-RU')} ₽</span>
@@ -1802,7 +1864,7 @@ export function CartPageContent({
         </label>
         <button
           type="submit"
-          disabled={submitting || !isPrivacyAccepted}
+          disabled={submitting || !isPrivacyAccepted || (deliveryMethod === 'ozon_pvz' && (!ozonEnabled || !ozonSelection))}
           className={cn(
             'min-h-[44px] w-full rounded-full py-3 font-medium disabled:opacity-50',
             isSprintTheme ? 'bg-[#7AA2FF] text-slate-950 hover:bg-[#9AB8FF]' : 'bg-action-blue text-gray-800 hover:bg-action-blue/90'

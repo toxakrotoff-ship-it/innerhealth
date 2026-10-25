@@ -33,7 +33,9 @@ export const shippingSchema = z.object({
   city: z.string().min(1, 'Укажите город').max(100).trim(),
   zipCode: z.string().max(20).trim(),
   country: z.string().max(100).trim().optional(),
-  deliveryMethod: z.enum(['pickup', 'cdek_pvz', 'cdek_door']).nullable().optional(),
+  deliveryMethod: z.enum(['pickup', 'cdek_pvz', 'cdek_door', 'ozon_pvz']).nullable().optional(),
+  ozonDeliveryPointId: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  ozonQuoteToken: z.string().uuid().optional(),
   cdekCityCode: z.number().int().positive().nullable().optional(),
   cdekCityUuid: z.string().uuid().nullable().optional(),
   cdekPvzCode: z.string().max(50).nullable().optional(),
@@ -41,6 +43,9 @@ export const shippingSchema = z.object({
   doorAddress: doorAddressSchema,
 })
   .superRefine(async (shipping, ctx) => {
+    if (shipping.deliveryMethod === 'ozon_pvz' && (!shipping.ozonDeliveryPointId || !shipping.ozonQuoteToken)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['ozonQuoteToken'], message: 'Выберите ПВЗ и рассчитайте доставку Ozon' })
+    }
     // Телефон: проверяем не только маску/длину, но и реальную корректность для РФ.
     const phoneRes = validatePhoneRu(shipping.phone)
     if (phoneRes.valid === false) {

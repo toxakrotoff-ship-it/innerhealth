@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Button from '@/components/ui/button';
 import { ModalLayer } from '@/components/ui/modal-layer';
+import { OzonSettingsPanel } from '@/components/admin/ozon-settings-panel';
 import {
   CDEK_TARIFF_CODE_TO_DESCRIPTION,
   CDEK_TARIFF_CODES_ADDRESS,
@@ -479,9 +480,9 @@ export default function AdminSettingsPage() {
           </span>
           {settingsScope !== 'global' ? (
             <p className="w-full text-xs text-gray-600">
-              Для этой витрины блоки <strong>ЮKassa</strong> и <strong>СДЭК</strong> сохраняются отдельно. Пустое поле у бренда — берётся значение из вкладки <strong>Global</strong>.
+              Для этой витрины блоки <strong>ЮKassa</strong>, <strong>СДЭК</strong> и <strong>Ozon</strong> сохраняются отдельно. Общие значения из <strong>Global</strong> используются, пока для витрины не заданы свои настройки.
             </p>
-          ) : null}
+          ) : <p className="w-full text-xs text-gray-600">Global задаёт общие настройки для обеих витрин. Отдельные настройки Inner Health и Sprint Power имеют приоритет. В блоке Ozon можно также применить настройки сразу к обеим витринам.</p>}
         </div>
 
         {error && (
@@ -494,6 +495,8 @@ export default function AdminSettingsPage() {
             Настройки сохранены.
           </div>
         )}
+
+        <OzonSettingsPanel scope={settingsScope} />
 
         <form id="admin-settings-form" onSubmit={handleSubmit} className="space-y-8">
           {GROUPS.map((group) => (

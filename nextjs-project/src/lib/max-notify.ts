@@ -294,7 +294,7 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
     `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
     isCdek
       ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
-      : 'Доставка: не СДЭК',
+      : payload.deliveryMethod === 'ozon_pvz' ? 'Доставка: Ozon (ПВЗ)' : payload.deliveryMethod === 'pickup' ? 'Доставка: самовывоз' : 'Доставка: другой способ',
     payload.cdekOrderUuid
       ? `СДЭК UUID: \`${escapeHtml(payload.cdekOrderUuid)}\``
       : payload.cdekOrderError

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ozonCartFingerprint } from '@/lib/ozon-delivery/parcel'
+import type { OzonCreateOrderRequest } from '@/lib/ozon-delivery/types'
 
 vi.mock('server-only', () => ({}))
 
@@ -13,6 +15,7 @@ const txOrderFindUniqueMock = vi.fn()
 const txOrderUpdateMock = vi.fn()
 const txShippingInfoCreateMock = vi.fn()
 const txPromoCodeUpdateMock = vi.fn()
+const txOzonQuoteFindFirstMock = vi.fn()
 const orderFindManyMock = vi.fn()
 const rootOrderUpdateManyMock = vi.fn()
 const rootOrderUpdateMock = vi.fn()
@@ -44,6 +47,7 @@ describe('order.service stock reservation', () => {
     txOrderUpdateMock.mockReset()
     txShippingInfoCreateMock.mockReset()
     txPromoCodeUpdateMock.mockReset()
+    txOzonQuoteFindFirstMock.mockReset()
 
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
@@ -59,6 +63,9 @@ describe('order.service stock reservation', () => {
         },
         shippingInfo: {
           create: (...args: unknown[]) => txShippingInfoCreateMock(...args),
+        },
+        ozonDeliveryQuote: {
+          findFirst: (...args: unknown[]) => txOzonQuoteFindFirstMock(...args),
         },
         promoCode: {
           update: (...args: unknown[]) => txPromoCodeUpdateMock(...args),
@@ -193,6 +200,159 @@ describe('order.service stock reservation', () => {
       changed: true,
       previousStatus: 'pending',
       status: 'canceled',
+    })
+  })
+  describe('Ozon quote validation in the order transaction', () => {
+    const product = {
+      id: 'p-1', title: 'Коллаген', quantity: 5, isPreorderEnabled: false,
+      price: 1000, weight: 200, length: 100, width: 80, height: 120,
+    }
+    const giftProduct = {
+      id: 'gift-1', title: 'Подарок', quantity: 10, isPreorderEnabled: false,
+      price: 200, weight: 50, length: 40, width: 30, height: 20,
+    }
+    // The quote contains parcel fields only; the transaction also loads stock/title columns.
+    const quotedProductLine = {
+      id: 'p-1', quantity: 1, price: 1000, weight: 200, length: 100, width: 80, height: 120,
+    }
+    const quotedGiftLine = {
+      id: 'gift:gift-1:promotion-1', quantity: 1, price: 200, weight: 50, length: 40, width: 30, height: 20,
+    }
+    const gift = { giftProductId: 'gift-1', giftPromotionId: 'promotion-1', quantity: 1 }
+    const request: OzonCreateOrderRequest = {
+      order_external_id: 'external-order-1',
+      recipient: { phone_number: '+79990000000', full_name: 'Иван' },
+      delivery: { delivery_point: { delivery_point_id: 123 } },
+      postings: [{
+        request_id: 1, shipment_method_id: 10, cutoff_at: '2026-10-26T12:00:00Z',
+        declared_value: { amount: '1000.00', currency_code: 'RUB' },
+        dimensions: { weight_g: 200, length_mm: 100, width_mm: 80, height_mm: 120 },
+        posting_external_id: 'external-posting-1', description: 'Заказ с сайта',
+      }],
+    }
+    const params = {
+      total: 1250, deliverySum: 250, promoCodeId: null, userId: null,
+      brandId: 'inner' as const,
+      items: [{ productId: 'p-1', quantity: 1, price: 1000 }],
+      shipping: {
+        fullName: 'Иван', phone: '+79990000000', email: 'ivan@example.com',
+        address: 'Москва, Тверская, 10', city: 'Москва', zipCode: '', country: 'Россия',
+        deliveryMethod: 'ozon_pvz', ozonDeliveryPointId: '123',
+      },
+      ozon: { quoteId: '123e4567-e89b-42d3-a456-426614174000', request },
+    }
+
+    beforeEach(() => {
+      calculateGiftsForOrderMock.mockResolvedValue([])
+      txProductFindManyMock.mockResolvedValue([product])
+      txProductUpdateManyMock.mockResolvedValue({ count: 1 })
+      txOrderCreateMock.mockResolvedValue({ id: 'order-1', items: [] })
+      txShippingInfoCreateMock.mockResolvedValue({ id: 'shipping-1' })
+      txOzonQuoteFindFirstMock.mockResolvedValue({
+        id: params.ozon.quoteId,
+        cartFingerprint: ozonCartFingerprint([quotedProductLine]),
+      })
+    })
+
+    it('rejects an unavailable quote and restricts lookup to unexpired, unused quotes of the same brand', async () => {
+      txOzonQuoteFindFirstMock.mockResolvedValue(null)
+      const service = await import('@/services/order.service')
+      const startedAt = Date.now()
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toThrow('Расчёт доставки Ozon устарел')
+      expect(txOzonQuoteFindFirstMock).toHaveBeenCalledWith({
+        where: { id: params.ozon.quoteId, brand: 'inner', expiresAt: { gt: expect.any(Date) }, shipment: null },
+      })
+      const lookup = txOzonQuoteFindFirstMock.mock.calls[0][0]
+      expect(lookup.where.expiresAt.gt.getTime()).toBeGreaterThanOrEqual(startedAt)
+      expect(calculateGiftsForOrderMock).not.toHaveBeenCalled()
+      expect(txProductUpdateManyMock).not.toHaveBeenCalled()
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+      expect(txShippingInfoCreateMock).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['price', { price: 1100 }],
+      ['weight', { weight: 250 }],
+      ['dimensions', { height: 150 }],
+    ] as const)('requires a new quote when current product %s changes', async (_name, changed) => {
+      txProductFindManyMock.mockResolvedValue([{ ...product, ...changed }])
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toThrow('Корзина изменилась')
+      expect(txProductUpdateManyMock).not.toHaveBeenCalled()
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+    })
+
+    it('requires a new quote when the purchased quantity changes', async () => {
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping({
+        ...params, items: [{ ...params.items[0], quantity: 2 }],
+      })).rejects.toThrow('Корзина изменилась')
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+    })
+
+    it('rejects a gift added after the quote was calculated', async () => {
+      calculateGiftsForOrderMock.mockResolvedValue([gift])
+      txProductFindManyMock.mockResolvedValue([product, giftProduct])
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toThrow('Корзина изменилась')
+      expect(txProductUpdateManyMock).not.toHaveBeenCalled()
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+    })
+
+    it.each(['quantity', 'promotion', 'weight'] as const)('rejects a changed gift %s after the quote was calculated', async (changed) => {
+      txOzonQuoteFindFirstMock.mockResolvedValue({
+        id: params.ozon.quoteId,
+        cartFingerprint: ozonCartFingerprint([
+          quotedProductLine,
+          quotedGiftLine,
+        ]),
+      })
+      calculateGiftsForOrderMock.mockResolvedValue([{
+        ...gift, quantity: changed === 'quantity' ? 2 : 1,
+        giftPromotionId: changed === 'promotion' ? 'promotion-2' : gift.giftPromotionId,
+      }])
+      txProductFindManyMock.mockResolvedValue([product, {
+        ...giftProduct, weight: changed === 'weight' ? 100 : giftProduct.weight,
+      }])
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toThrow('Корзина изменилась')
+      expect(txProductUpdateManyMock).not.toHaveBeenCalled()
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+    })
+
+    it('uses authoritative product and gift data to match the quote, then persists the snapshot and Ozon shipping reference', async () => {
+      calculateGiftsForOrderMock.mockResolvedValue([gift])
+      txProductFindManyMock.mockResolvedValue([product, giftProduct])
+      txOzonQuoteFindFirstMock.mockResolvedValue({
+        id: params.ozon.quoteId,
+        cartFingerprint: ozonCartFingerprint([
+          quotedProductLine,
+          quotedGiftLine,
+        ]),
+      })
+      const service = await import('@/services/order.service')
+      const result = await service.createOrderWithItemsAndShipping({
+        ...params, items: [{ ...params.items[0], price: 1 }],
+      })
+      expect(result.id).toBe('order-1')
+      expect(txProductUpdateManyMock).toHaveBeenCalledTimes(2)
+      expect(txOrderCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          deliverySum: 250,
+          ozonShipment: { create: { quoteId: params.ozon.quoteId, request } },
+          items: { create: expect.arrayContaining([
+            expect.objectContaining({ productId: 'p-1', quantity: 1, isGift: false }),
+            expect.objectContaining({ productId: 'gift-1', quantity: 1, price: 0, isGift: true, giftPromotionId: 'promotion-1' }),
+          ]) },
+        }),
+      }))
+      const persistedRequest = txOrderCreateMock.mock.calls[0][0].data.ozonShipment.create.request
+      expect(persistedRequest).toEqual(request)
+      expect(persistedRequest).not.toBe(request)
+      expect(txShippingInfoCreateMock).toHaveBeenCalledWith({ data: expect.objectContaining({
+        orderId: 'order-1', deliveryMethod: 'ozon_pvz', ozonDeliveryPointId: '123',
+        address: params.shipping.address,
+      }) })
     })
   })
 })

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CartPageContent } from './cart-page-content'
 
@@ -159,6 +159,53 @@ describe('CartPageContent delivery type switch', () => {
     expect(cdekRadio.checked).toBe(true)
     expect(pickupRadio.checked).toBe(false)
     expect(screen.getByTestId('mock-cdek-widget')).toBeVisible()
+  })
+
+  it('hides Ozon when the server reports it unavailable', async () => {
+    render(<CartPageContent />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/ozon-delivery/status', expect.any(Object)))
+    expect(screen.queryByText('Доставка Ozon в пункт выдачи')).not.toBeInTheDocument()
+  })
+
+  it('requires a fresh Ozon quote, adds its price, and sends the verified point reference', async () => {
+    const point = { id: 123, name: 'Пункт Ozon', address: 'Москва, Тверская, 10' }
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const payload = url.includes('/ozon-delivery/status') ? { enabled: true }
+        : url.includes('/ozon-delivery/points') ? { points: [point] }
+          : url.includes('/ozon-delivery/quote') ? {
+              point, quoteToken: 'quote-123', deliverySum: 250, estimatedDeliveryDays: 3,
+              expiresAt: new Date(Date.now() + 60_000).toISOString(),
+            }
+            : url.includes('/api/orders') ? { confirmationUrl: null } : []
+      return { ok: true, json: async () => payload }
+    })
+    render(<CartPageContent brandId="inner" />)
+    fireEvent.click(await screen.findByText('Доставка Ozon в пункт выдачи'))
+    fireEvent.change(screen.getByLabelText('Имя'), { target: { value: 'Иван' } })
+    fireEvent.change(screen.getByLabelText('Телефон'), { target: { value: '+7 (999) 123-45-67' } })
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ivan@example.com' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    expect(screen.getByText('Оформить заказ')).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Город или адрес пункта выдачи'), { target: { value: 'Москва' } })
+    fireEvent.click(screen.getByText('Найти пункты'))
+    fireEvent.click(await screen.findByText('Пункт Ozon'))
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(screen.getByText('Оформить заказ')).toBeEnabled())
+    expect(screen.getByText('1 450 ₽')).toBeVisible()
+    fireEvent.change(screen.getByLabelText('Телефон'), { target: { value: '+7 (999) 765-43-21' } })
+    expect(screen.getByText('Оформить заказ')).toBeDisabled()
+    expect(screen.getByText('Требуется расчёт')).toBeVisible()
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(screen.getByText('Оформить заказ')).toBeEnabled())
+    fireEvent.click(screen.getByText('Оформить заказ'))
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/api/orders'))).toBe(true))
+    const request = fetchMock.mock.calls.find(([url]) => String(url).includes('/api/orders'))!
+    const payload = JSON.parse(String(request[1].body))
+    expect(payload.total).toBe(1450)
+    expect(payload.deliverySum).toBe(250)
+    expect(payload.shipping).toMatchObject({ deliveryMethod: 'ozon_pvz', ozonDeliveryPointId: 123, ozonQuoteToken: 'quote-123', address: point.address })
+    expect(payload.shipping).not.toHaveProperty('cdekCityCode')
   })
 
   it('renders required name field and keeps it empty by default', () => {

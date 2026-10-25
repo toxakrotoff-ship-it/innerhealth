@@ -307,6 +307,7 @@ model Order {
   items               OrderItem[]
   shippingInfo        ShippingInfo?
   checkoutSession     CheckoutSession?
+  ozonShipment        OzonShipment?
 
   @@index([status])
   @@index([userId, createdAt])
@@ -658,7 +659,7 @@ model ShippingInfo {
   country        String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  /// 'cdek_pvz' | 'cdek_door' | null
+  /// 'pickup' | 'cdek_pvz' | 'cdek_door' | 'ozon_pvz' | null
   deliveryMethod String?
   /// Код города СДЭК получателя
   cdekCityCode   Int?
@@ -668,6 +669,8 @@ model ShippingInfo {
   cdekPvzCode    String?
   /// Код тарифа СДЭК (136, 139, 234 и т.д.)
   cdekTariffCode Int?
+  /// Идентификатор ПВЗ Ozon Delivery (int64 хранится строкой без потери точности).
+  ozonDeliveryPointId String?
   /// Адрес до двери (структурированный)
   street         String?
   house          String?
@@ -676,6 +679,57 @@ model ShippingInfo {
   floor          String?
   intercom       String?
   order          Order    @relation(fields: [orderId], references: [id])
+}
+
+/// Проверенный на сервере расчёт Ozon. Один расчёт используется только одним заказом.
+model OzonDeliveryQuote {
+  id                    String   @id @default(uuid())
+  brand                 String
+  phoneHash             String
+  cartFingerprint       String
+  pointId               String
+  pointName             String
+  pointAddress          String
+  deliverySum           Float
+  estimatedDeliveryDays Int
+  posting               Json
+  expiresAt             DateTime
+  createdAt             DateTime @default(now())
+  shipment              OzonShipment?
+
+  @@index([expiresAt])
+}
+
+/// Снимок запроса и постоянный ключ идемпотентности переживают сбои и повтор webhook.
+model OzonShipment {
+  id             String   @id @default(cuid())
+  orderId        String   @unique
+  quoteId        String   @unique
+  idempotencyKey String   @unique @default(uuid())
+  request        Json
+  orderNumber    String?
+  postingNumber  String?  @unique
+  status         String   @default("pending")
+  error          String?
+  lockedUntil    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quote          OzonDeliveryQuote @relation(fields: [quoteId], references: [id])
+
+  @@index([status, updatedAt])
+}
+
+/// Только активные ПВЗ, доступные настроенному методу доставки данной витрины.
+model OzonDeliveryPointCache {
+  brand       String
+  pointId     String
+  name        String
+  address     String
+  syncedAt    DateTime @default(now())
+
+  @@id([brand, pointId])
+  @@index([brand, syncedAt])
 }
 
 model Post {

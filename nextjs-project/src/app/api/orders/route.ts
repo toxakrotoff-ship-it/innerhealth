@@ -10,6 +10,11 @@ import {
 import { notifyTelegramPaymentError } from '@/lib/telegram-notify'
 import { notifyMaxPaymentError } from '@/lib/max-notify'
 import { randomUUID } from 'crypto'
+import { validateOzonQuote, normalizeOzonPhone } from '@/lib/ozon-delivery/checkout'
+import { OzonCheckoutError } from '@/lib/ozon-delivery/parcel'
+import { ozonErrorResponse } from '@/lib/ozon-delivery/http'
+import type { OzonCheckoutPosting } from '@/lib/ozon-delivery/types'
+import { Prisma } from '@prisma/client'
 import * as productService from '@/services/product.service'
 import * as promoService from '@/services/promo.service'
 import * as orderService from '@/services/order.service'
@@ -158,7 +163,12 @@ export async function POST(request: Request) {
         }
       )
     }
-    const { items, promoCodeId, deliverySum = 0, shipping, checkoutSessionId } = parsed.data
+    const { items, promoCodeId, shipping, checkoutSessionId } = parsed.data
+    let deliverySum = parsed.data.deliverySum ?? 0
+    const ozonQuote = shipping.deliveryMethod === 'ozon_pvz'
+      ? await validateOzonQuote(shipping.ozonQuoteToken!, { items, phone: shipping.phone, deliveryPointId: shipping.ozonDeliveryPointId!, promoCodeId }, brandId)
+      : null
+    if (ozonQuote) deliverySum = ozonQuote.deliverySum
 
     const productIds = Array.from(new Set(items.map((i) => i.productId)))
     const products = await productService.getProductsForOrder(productIds, brandId)
@@ -229,6 +239,12 @@ export async function POST(request: Request) {
       promoDiscountAmount: promoDiscountAmount > 0 ? promoDiscountAmount : null,
       userId,
       brandId,
+      ...(ozonQuote ? { ozon: { quoteId: ozonQuote.id, request: {
+        order_external_id: ozonQuote.id,
+        recipient: { phone_number: normalizeOzonPhone(shipping.phone), full_name: shipping.fullName.trim() },
+        delivery: { delivery_point: { delivery_point_id: Number(ozonQuote.pointId) } },
+        postings: [{ ...(ozonQuote.posting as unknown as OzonCheckoutPosting), posting_external_id: ozonQuote.id, description: 'Заказ интернет-магазина' }],
+      } } } : {}),
       items: items.map((i) => {
         const product = productMap.get(i.productId)!
         return {
@@ -241,16 +257,17 @@ export async function POST(request: Request) {
         fullName: shipping.fullName.trim(),
         phone: shipping.phone.trim(),
         email: shipping.email.trim(),
-        address: shipping.address.trim(),
-        city: shipping.city.trim(),
+        address: ozonQuote ? ozonQuote.pointAddress : shipping.address.trim(),
+        city: ozonQuote ? ozonQuote.pointAddress.split(',')[0] : shipping.city.trim(),
         zipCode: (shipping.zipCode ?? '').toString().trim(),
-        country: (shipping.country ?? 'Россия').trim(),
+        country: ozonQuote ? 'Россия' : (shipping.country ?? 'Россия').trim(),
         deliveryMethod: shipping.deliveryMethod ?? undefined,
         cdekCityCode: shipping.cdekCityCode ?? undefined,
         cdekCityUuid: shipping.cdekCityUuid?.trim() || undefined,
         cdekPvzCode: shipping.cdekPvzCode ?? undefined,
         cdekTariffCode: shipping.cdekTariffCode ?? undefined,
-        doorAddress: shipping.doorAddress,
+        doorAddress: ozonQuote ? undefined : shipping.doorAddress,
+        ozonDeliveryPointId: ozonQuote?.pointId,
       },
     })
 
@@ -349,6 +366,10 @@ export async function POST(request: Request) {
       }
     )
   } catch (e) {
+    if (e instanceof OzonCheckoutError) return ozonErrorResponse(e)
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return NextResponse.json({ error: 'Заказ с этим расчётом уже создан. Рассчитайте доставку заново.' }, { status: 409 })
+    }
     console.error('Order create error:', e)
     if (e instanceof OrderStockConflictError) {
       return NextResponse.json(

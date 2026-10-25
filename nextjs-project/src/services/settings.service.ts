@@ -61,6 +61,8 @@ export type SettingKey = (typeof SETTING_KEYS)[number]
 
 interface SettingsScopeOptions {
   brandId?: BrandId | null
+  /** For switches/credentials that must reflect changes across app instances immediately. */
+  fresh?: boolean
 }
 
 type SettingsCacheEntry = {
@@ -117,6 +119,7 @@ export async function getSettingsMap(
     storageKeyCandidatesByLogicalKey.entries()
   )) {
     const cachedStorageKey = storageKeyCandidates.find((storageKey) => {
+      if (options.fresh) return false
       const cached = settingsCacheByKey.get(storageKey)
       if (!cached || cached.expiresAt <= now) return false
       map[logicalKey] = cached.value

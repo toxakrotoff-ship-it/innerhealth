@@ -21,6 +21,8 @@ export const SENSITIVE_SETTING_KEYS = [
   'yookassa_secret_key',
   'cdek_api_key',
   'cdek_client_secret',
+  'ozon_client_id',
+  'ozon_client_secret',
   'telegram_bot_token',
   'max_bot_token',
   'max_bot_webhook_secret',

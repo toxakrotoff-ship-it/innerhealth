@@ -1,5 +1,7 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
+import type { OzonCreateOrderRequest } from '@/lib/ozon-delivery/types';
+import { OzonCheckoutError, ozonCartFingerprint } from '@/lib/ozon-delivery/parcel';
 import { prisma } from '@/lib/prisma';
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service';
 import { maskPhone, shortAddress } from '@/lib/pii-masking';
@@ -668,6 +670,7 @@ export interface CreateOrderShippingParams {
   cdekCityUuid?: string;
   cdekPvzCode?: string;
   cdekTariffCode?: number;
+  ozonDeliveryPointId?: string;
   doorAddress?: {
     street?: string;
     house?: string;
@@ -690,8 +693,13 @@ export async function createOrderWithItemsAndShipping(params: {
   brandId?: BrandId | null;
   items: Array<{ productId: string; quantity: number; price: number }>;
   shipping: CreateOrderShippingParams;
+  ozon?: { quoteId: string; request: OzonCreateOrderRequest };
 }) {
   return prisma.$transaction(async (tx) => {
+    const ozonQuote = params.ozon ? await tx.ozonDeliveryQuote.findFirst({
+      where: { id: params.ozon.quoteId, brand: resolveDbBrand(params.brandId), expiresAt: { gt: new Date() }, shipment: null },
+    }) : null;
+    if (params.ozon && !ozonQuote) throw new OzonCheckoutError('Расчёт доставки Ozon устарел. Рассчитайте доставку ещё раз.');
     const hasPromoCode = params.promoCodeId != null;
     const gifts = await calculateGiftsForOrder({
       items: params.items.map((i) => ({
@@ -718,9 +726,26 @@ export async function createOrderWithItemsAndShipping(params: {
         title: true,
         quantity: true,
         isPreorderEnabled: true,
+        price: true,
+        weight: true,
+        length: true,
+        width: true,
+        height: true,
       },
     });
     const reservableProductMap = new Map(reservableProducts.map((product) => [product.id, product]));
+    if (ozonQuote) {
+      const quantities = new Map<string, number>();
+      for (const item of params.items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+      const parcelLines = [
+        ...[...quantities].map(([id, quantity]) => ({ ...reservableProductMap.get(id)!, id, quantity })),
+        ...gifts.map(gift => ({ ...reservableProductMap.get(gift.giftProductId)!, id: `gift:${gift.giftProductId}:${gift.giftPromotionId}`, quantity: gift.quantity })),
+      ];
+      // Recheck within the stock/order transaction, including gifts that changed since the quote.
+      if (ozonCartFingerprint(parcelLines, params.promoCodeId) !== ozonQuote.cartFingerprint) {
+        throw new OzonCheckoutError('Корзина изменилась. Рассчитайте доставку Ozon ещё раз.');
+      }
+    }
 
     await reserveStockForOrderItems(tx, [
       ...params.items.map((item) => {
@@ -763,6 +788,7 @@ export async function createOrderWithItemsAndShipping(params: {
         promoCodeId: params.promoCodeId || undefined,
         promoDiscountAmount: params.promoDiscountAmount ?? undefined,
         userId: params.userId ?? undefined,
+        ...(params.ozon ? { ozonShipment: { create: { quoteId: params.ozon.quoteId, request: JSON.parse(JSON.stringify(params.ozon.request)) as Prisma.InputJsonValue } } } : {}),
         items: {
           create: [
             ...params.items.map((i) => ({
@@ -808,6 +834,7 @@ export async function createOrderWithItemsAndShipping(params: {
         cdekCityUuid: params.shipping.cdekCityUuid?.trim() || undefined,
         cdekPvzCode: params.shipping.cdekPvzCode ?? undefined,
         cdekTariffCode: params.shipping.cdekTariffCode ?? undefined,
+        ozonDeliveryPointId: params.shipping.ozonDeliveryPointId,
         street: door?.street?.trim(),
         house: door?.house?.trim(),
         apartment: door?.apartment?.trim(),

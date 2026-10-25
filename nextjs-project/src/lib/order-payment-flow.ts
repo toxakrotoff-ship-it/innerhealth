@@ -2,6 +2,7 @@ import 'server-only'
 import { after } from 'next/server'
 import type { BrandId } from '@/lib/brand/brand'
 import { createCdekOrder } from '@/lib/cdek'
+import { createOzonShipmentAfterPayment } from '@/lib/ozon-delivery/shipment'
 import { sendCdekTrackEmailsForOrder } from '@/lib/cdek-track-email'
 import {
   notifyTelegramOrderStatusForUser,
@@ -79,6 +80,7 @@ export async function transitionOrderToPaid(
   })
 
   scheduleNotifyAllChannelsAfterOrderPaid(orderId)
+  after(() => createOzonShipmentAfterPayment(orderId))
 
   after(() => {
     void recordOrderCreatedAnalyticsEvent(orderId, orderBrandId).catch((err) =>

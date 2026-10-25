@@ -33,6 +33,14 @@ export const CDEK_BRAND_SCOPED_SETTING_KEYS = [
   'yandex_maps_api_key',
 ] as const;
 
+export const OZON_BRAND_SCOPED_SETTING_KEYS = [
+  'ozon_enabled',
+  'ozon_client_id',
+  'ozon_client_secret',
+  'ozon_shipment_method_id',
+  'ozon_handling_hours',
+] as const;
+
 export const BRAND_SCOPED_SETTING_KEYS = [
   'site_name',
   'site_contact_email',
@@ -53,6 +61,7 @@ export const BRAND_SCOPED_SETTING_KEYS = [
   'schema_org_social_links',
   ...YOOKASSA_BRAND_SCOPED_SETTING_KEYS,
   ...CDEK_BRAND_SCOPED_SETTING_KEYS,
+  ...OZON_BRAND_SCOPED_SETTING_KEYS,
 ] as const;
 
 const brandScopedSettingKeySet = new Set<string>(BRAND_SCOPED_SETTING_KEYS);

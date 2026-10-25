@@ -245,7 +245,7 @@ export async function notifyTelegramPaidOrderForAdmins(payload: {
     `Заказ: <code>${escapeHtml(formatOrderLabel(payload))}</code>`,
     isCdek
       ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
-      : 'Доставка: не СДЭК',
+      : payload.deliveryMethod === 'ozon_pvz' ? 'Доставка: Ozon (ПВЗ)' : payload.deliveryMethod === 'pickup' ? 'Доставка: самовывоз' : 'Доставка: другой способ',
     payload.cdekOrderUuid
       ? `СДЭК UUID: <code>${escapeHtml(payload.cdekOrderUuid)}</code>`
       : payload.cdekOrderError

@@ -1,0 +1,49 @@
+import 'server-only'
+import { prisma } from '@/lib/prisma'
+import type { BrandId } from '@/lib/brand/brand'
+import { getOzonDeliveryClient } from './client'
+import { getOzonDeliveryConfig } from './config'
+
+/** Complete traversal before pruning. Failed/partial sync leaves the previous cache usable. */
+export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeDisabled?: boolean } = {}) {
+  const config = await getOzonDeliveryConfig(brand, options)
+  const client = await getOzonDeliveryClient(brand, options)
+  if (!config || !client) return { brand, skipped: true, points: 0 }
+  const started = new Date()
+  const seen = new Set<string>()
+  let cursor: string | undefined
+  let points = 0
+  for (let page = 0; page < 5000; page++) {
+    const result = await client.listDeliveryPoints(cursor)
+    const ids = result.delivery_points.filter(point => {
+      const methods = Array.isArray(point.shipment_method_ids) ? point.shipment_method_ids : [point.shipment_method_ids]
+      return methods.includes(config.shipmentMethodId)
+    }).map(point => point.delivery_point_id)
+    if (ids.length) {
+      const info = await client.getDeliveryPoints(ids)
+      if (ids.some(id => !info.delivery_points.some(p => p.delivery_point_id === id))) throw new Error('Ozon returned an incomplete point page')
+      const available = info.delivery_points.filter(p => p.is_active && p.type === 'pvz')
+      if (available.length) {
+        for (let offset = 0; offset < available.length; offset += 100) {
+          await prisma.$transaction(available.slice(offset, offset + 100).map(p => prisma.ozonDeliveryPointCache.upsert({
+          where: { brand_pointId: { brand, pointId: String(p.delivery_point_id) } },
+          create: { brand, pointId: String(p.delivery_point_id), name: p.name, address: p.full_address },
+          update: { name: p.name, address: p.full_address, syncedAt: new Date() },
+          })))
+        }
+        points += available.length
+      }
+    }
+    const next = result.next_cursor
+    if (!next) {
+      await prisma.ozonDeliveryPointCache.deleteMany({ where: { brand, syncedAt: { lt: started } } })
+      // Keep quotes referenced by orders; unused quotes contain no contact details.
+      await prisma.ozonDeliveryQuote.deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 86400000) }, shipment: null } })
+      return { brand, skipped: false, points }
+    }
+    if (seen.has(next)) throw new Error('Ozon repeated a pagination cursor')
+    seen.add(next)
+    cursor = next
+  }
+  throw new Error('Ozon point pagination limit exceeded')
+}
