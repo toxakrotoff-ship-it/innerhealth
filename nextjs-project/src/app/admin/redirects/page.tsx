@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
 import { ModalLayer } from '@/components/ui/modal-layer';
 
@@ -63,7 +63,6 @@ export default function AdminRedirectsPage() {
 
   async function fetchList() {
     try {
-      setLoading(true);
       const res = await fetch('/api/admin/redirects');
       if (!res.ok) throw new Error('Не удалось загрузить список');
       const data = await res.json();
@@ -87,6 +86,7 @@ export default function AdminRedirectsPage() {
   }
 
   function openEdit(row: RedirectRow) {
+    if (showForm && editing?.id === row.id) return;
     setEditing(row);
     setForm({
       sourcePath: row.sourcePath,
@@ -241,67 +241,9 @@ export default function AdminRedirectsPage() {
     return () => window.clearTimeout(timer);
   }, [suggestQuery, showSuggestModal]);
 
-  return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold text-text">Редиректы</h1>
-        <Button onClick={openCreate} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
-          Добавить редирект
-        </Button>
-      </div>
-
-      <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
-        <h2 className="text-lg font-semibold mb-2">Импорт из CSV</h2>
-        <p className="text-sm text-gray-600 mb-4 wrap-break-word">
-          Формат: <code className="bg-gray-200 px-1 rounded break-all">sourcePath,destination,statusCode,statusOnNew,note</code>. Первая строка может быть заголовком. Кодировка UTF-8.
-        </p>
-        <form onSubmit={handleImportCsv} className="flex flex-wrap items-end gap-4">
-          <label className="flex w-full flex-col gap-1 sm:w-auto">
-            <span className="text-sm font-medium text-gray-700">Файл CSV</span>
-            <input
-              type="file"
-              accept=".csv,text/csv,text/plain"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              onChange={(e) => {
-                setImportFile(e.target.files?.[0] ?? null);
-                setImportResult(null);
-              }}
-            />
-          </label>
-          <Button type="submit" disabled={importing || !importFile} className="w-full sm:w-auto min-h-[44px]">
-            {importing ? 'Импорт…' : 'Импортировать'}
-          </Button>
-        </form>
-        {importResult && (
-          <div className="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
-            Создано: {importResult.created}, пропущено (дубли): {importResult.skipped}
-            {importResult.errors.length > 0 && (
-              <ul className="mt-2 list-disc list-inside text-amber-700">
-                {importResult.errors.slice(0, 10).map((err, i) => (
-                  <li key={i}>{err}</li>
-                ))}
-                {importResult.errors.length > 10 && (
-                  <li>… и ещё {importResult.errors.length - 10} ошибок</li>
-                )}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
-
-      <p className="text-gray-600 mb-6">
-        Настройка редиректов со старых URL (Тильда и др.) на текущий сайт. По умолчанию используется код <strong>301</strong> (постоянный) — удобно для рекламы и SEO.
-      </p>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-800 text-sm">
-          {error}
-        </div>
-      )}
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
-          <h2 className="text-lg font-semibold mb-4">{editing ? 'Редактировать' : 'Новый редирект'}</h2>
+  const renderEditor = (location: string) => (
+        <form id={`redirect-editor-${location}`} role="region" aria-labelledby={`redirect-editor-${location}-heading`} onSubmit={handleSubmit} className="my-4 text-left whitespace-normal p-6 bg-gray-50 rounded-xl border border-gray-200">
+          <h2 id={`redirect-editor-${location}-heading`} className="text-lg font-semibold mb-4">{editing ? 'Редактировать' : 'Новый редирект'}</h2>
           <div className="grid gap-4 max-w-2xl">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Путь-источник (старый URL без домена)</label>
@@ -364,7 +306,67 @@ export default function AdminRedirectsPage() {
             </div>
           </div>
         </form>
+  );
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold text-text">Редиректы</h1>
+        <Button onClick={openCreate} disabled={saving} className="w-full sm:w-auto min-h-[44px]">
+          Добавить редирект
+        </Button>
+      </div>
+
+      <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
+        <h2 className="text-lg font-semibold mb-2">Импорт из CSV</h2>
+        <p className="text-sm text-gray-600 mb-4 wrap-break-word">
+          Формат: <code className="bg-gray-200 px-1 rounded break-all">sourcePath,destination,statusCode,statusOnNew,note</code>. Первая строка может быть заголовком. Кодировка UTF-8.
+        </p>
+        <form onSubmit={handleImportCsv} className="flex flex-wrap items-end gap-4">
+          <label className="flex w-full flex-col gap-1 sm:w-auto">
+            <span className="text-sm font-medium text-gray-700">Файл CSV</span>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              onChange={(e) => {
+                setImportFile(e.target.files?.[0] ?? null);
+                setImportResult(null);
+              }}
+            />
+          </label>
+          <Button type="submit" disabled={importing || !importFile} className="w-full sm:w-auto min-h-[44px]">
+            {importing ? 'Импорт…' : 'Импортировать'}
+          </Button>
+        </form>
+        {importResult && (
+          <div className="mt-4 p-3 rounded-lg bg-green-50 text-green-800 text-sm">
+            Создано: {importResult.created}, пропущено (дубли): {importResult.skipped}
+            {importResult.errors.length > 0 && (
+              <ul className="mt-2 list-disc list-inside text-amber-700">
+                {importResult.errors.slice(0, 10).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+                {importResult.errors.length > 10 && (
+                  <li>… и ещё {importResult.errors.length - 10} ошибок</li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      <p className="text-gray-600 mb-6">
+        Настройка редиректов со старых URL (Тильда и др.) на текущий сайт. По умолчанию используется код <strong>301</strong> (постоянный) — удобно для рекламы и SEO.
+      </p>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-800 text-sm">
+          {error}
+        </div>
       )}
+
+        {showForm && !editing && renderEditor('create')}
 
       <ModalLayer
         open={showSuggestModal}
@@ -491,6 +493,7 @@ export default function AdminRedirectsPage() {
                     Удалить
                   </Button>
                 </div>
+                {showForm && editing?.id === row.id && renderEditor('mobile')}
               </div>
             ))}
           </div>
@@ -509,22 +512,31 @@ export default function AdminRedirectsPage() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {list.map((row) => (
-                <tr key={row.id}>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-800">{row.sourcePath}</td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-800">{row.destination}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{row.statusCode}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{row.note ?? '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
-                      <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
-                        Изменить
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => handleDelete(row.id)} disabled={saving}>
-                        Удалить
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
+                <Fragment key={row.id}>
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-800">{row.sourcePath}</td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-800">{row.destination}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{row.statusCode}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{row.note ?? '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end">
+                        <Button variant="secondary" size="sm" onClick={() => openEdit(row)}>
+                          Изменить
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => handleDelete(row.id)} disabled={saving}>
+                          Удалить
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                  {showForm && editing?.id === row.id && (
+                    <tr>
+                      <td colSpan={5} className="p-4 bg-gray-50">
+                        {renderEditor('desktop')}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
             </table>

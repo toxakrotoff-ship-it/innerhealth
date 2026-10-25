@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Button from '@/components/ui/button'
 import { ProductRichTextEditor } from '@/app/admin/products/components/ProductRichTextEditor'
 import { CoverImageDropzone } from '@/app/admin/news/components/CoverImageDropzone'
@@ -108,7 +108,6 @@ export default function GiftPromotionsPage() {
 
   async function fetchItems() {
     try {
-      setLoading(true)
       const res = await fetch(`/api/admin/gift-promotions?${brandQuery}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('Не удалось загрузить акции-подарки')
       const data = (await res.json()) as GiftPromotion[]
@@ -161,6 +160,7 @@ export default function GiftPromotionsPage() {
   }
 
   function openEdit(p: GiftPromotion) {
+    if (showForm && editing?.id === p.id) return
     setEditing(p)
     setForm({
       title: p.title,
@@ -261,44 +261,9 @@ export default function GiftPromotionsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="admin-container">
-        <div className="admin-content">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded w-1/3" />
-            <div className="h-10 bg-gray-200 rounded w-40" />
-            <div className="h-64 bg-gray-200 rounded" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="admin-container">
-      <div className="admin-content">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Подарочные акции</h1>
-            <p className="text-gray-600 mt-1">
-              Настройка правил «товар в подарок» и описаний для раздела «Акции»
-            </p>
-          </div>
-          <Button variant="primary" onClick={openCreate}>
-            Создать акцию-подарок
-          </Button>
-        </div>
-
-        {error && (
-          <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {showForm && (
-          <div className="card mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+  const renderEditor = (location: string) => (
+          <div id={`gift-promotion-editor-${location}`} role="region" aria-labelledby={`gift-promotion-editor-${location}-heading`} className="card my-4 text-left whitespace-normal">
+            <h2 id={`gift-promotion-editor-${location}-heading`} className="text-xl font-semibold text-gray-900 mb-6">
               {editing ? 'Редактирование акции-подарка' : 'Создание акции-подарка'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -736,7 +701,44 @@ export default function GiftPromotionsPage() {
               </div>
             </form>
           </div>
+  )
+
+  if (loading) {
+    return (
+      <div className="admin-container">
+        <div className="admin-content">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3" />
+            <div className="h-10 bg-gray-200 rounded w-40" />
+            <div className="h-64 bg-gray-200 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="admin-container">
+      <div className="admin-content">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Подарочные акции</h1>
+            <p className="text-gray-600 mt-1">
+              Настройка правил «товар в подарок» и описаний для раздела «Акции»
+            </p>
+          </div>
+          <Button variant="primary" onClick={openCreate}>
+            Создать акцию-подарок
+          </Button>
+        </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg text-sm text-red-700">
+            {error}
+          </div>
         )}
+
+        {showForm && !editing && renderEditor('create')}
 
         {items.length === 0 ? (
           <div className="card">
@@ -750,7 +752,33 @@ export default function GiftPromotionsPage() {
             </div>
           </div>
         ) : (
-          <div className="card overflow-hidden">
+          <>
+          <div className="md:hidden space-y-4">
+            {items.map((p) => (
+              <div key={p.id} className="card p-4">
+                <h2 className="font-medium text-gray-900">{p.title}</h2>
+                <p className="text-sm text-gray-600 mt-1">Подарок: {p.giftProductId}</p>
+                <p className="text-sm text-gray-600">
+                  {p.status === 'enabled' ? 'Включена' : 'Выключена'} · {p.showOnSite ? 'На сайте' : 'Скрыта с сайта'}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {p.triggerType === 'PRODUCT'
+                    ? `Товар ${p.triggerProductId ?? ''} × ${p.triggerProductMinQty ?? 1}`
+                    : `Сумма ≥ ${p.minCartTotal ?? 0} ₽`}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Button variant="secondary" size="sm" aria-expanded={showForm && editing?.id === p.id} onClick={() => openEdit(p)}>
+                    Редактировать
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(p.id)}>
+                    Удалить
+                  </Button>
+                </div>
+                {showForm && editing?.id === p.id && renderEditor('mobile')}
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block card overflow-hidden">
             <div className="table-responsive overflow-x-auto">
               <table className="table table-horizontal min-w-[900px]">
                 <thead>
@@ -777,74 +805,84 @@ export default function GiftPromotionsPage() {
                 </thead>
                 <tbody>
                   {items.map((p) => (
-                    <tr key={p.id} className="group hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{p.title}</span>
-                          <span className="text-xs text-gray-500">
-                            Подарок: {p.giftProductId}
-                          </span>
-                          {p.exclusionGroup && (
+                    <Fragment key={p.id}>
+                      <tr className="group hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{p.title}</span>
                             <span className="text-xs text-gray-500">
-                              Группа: {p.exclusionGroup} · Приоритет: {p.priority}
+                              Подарок: {p.giftProductId}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                            p.status === 'enabled'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-200 text-gray-700'
-                          }`}
-                        >
-                          {p.status === 'enabled' ? 'Включена' : 'Выключена'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-center">
-                        {p.triggerType === 'PRODUCT'
-                          ? `Товар ${p.triggerProductId ?? ''} × ${
-                              p.triggerProductMinQty ?? 1
-                            }`
-                          : `Сумма ≥ ${p.minCartTotal ?? 0} ₽`}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-center">
-                        {p.giftQuantityMode === 'ONE_PER_ORDER'
-                          ? '1 подарок на заказ'
-                          : 'По количеству срабатываний'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                            p.showOnSite
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {p.showOnSite ? 'Показывается' : 'Скрыта'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200">
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          <Button variant="secondary" size="sm" onClick={() => openEdit(p)}>
-                            Редактировать
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(p.id)}
+                            {p.exclusionGroup && (
+                              <span className="text-xs text-gray-500">
+                                Группа: {p.exclusionGroup} · Приоритет: {p.priority}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                              p.status === 'enabled'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-200 text-gray-700'
+                            }`}
                           >
-                            Удалить
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                            {p.status === 'enabled' ? 'Включена' : 'Выключена'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 text-center">
+                          {p.triggerType === 'PRODUCT'
+                            ? `Товар ${p.triggerProductId ?? ''} × ${
+                                p.triggerProductMinQty ?? 1
+                              }`
+                            : `Сумма ≥ ${p.minCartTotal ?? 0} ₽`}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 text-center">
+                          {p.giftQuantityMode === 'ONE_PER_ORDER'
+                            ? '1 подарок на заказ'
+                            : 'По количеству срабатываний'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                              p.showOnSite
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-500'
+                            }`}
+                          >
+                            {p.showOnSite ? 'Показывается' : 'Скрыта'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200">
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            <Button variant="secondary" size="sm" onClick={() => openEdit(p)}>
+                              Редактировать
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(p.id)}
+                            >
+                              Удалить
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                      {showForm && editing?.id === p.id && (
+                        <tr>
+                          <td colSpan={6} className="p-4 bg-gray-50">
+                            {renderEditor('desktop')}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+          </>
         )}
       </div>
     </div>

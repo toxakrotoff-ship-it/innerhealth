@@ -44,7 +44,6 @@ export default function AdminFaqPage() {
   }, [])
 
   async function loadItems() {
-    setIsLoading(true)
     setError(null)
     try {
       const data = await getFaqItems()
@@ -88,6 +87,7 @@ export default function AdminFaqPage() {
   }
 
   function startEdit(item: FaqItem) {
+    if (editingId === item.id) return
     setIsCreating(false)
     setEditingId(item.id)
     setForm({
@@ -108,36 +108,9 @@ export default function AdminFaqPage() {
     }
   }
 
-  return (
-    <div className="admin-container">
-      <div className="admin-page-header">
-        <h1>FAQ</h1>
-        <p>Управление вопросами и ответами для страницы FAQ</p>
-      </div>
-
-      <div className="admin-content">
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <div className="mb-6 flex justify-end">
-          <Button
-            variant="primary"
-            onClick={() => {
-              setIsCreating(true)
-              setEditingId(null)
-              setForm(initialForm)
-            }}
-          >
-            Добавить вопрос
-          </Button>
-        </div>
-
-        {(isCreating || editingId) && (
-          <form onSubmit={handleSubmit} className="card mb-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+  const renderEditor = (location: string) => (
+          <form id={`faq-editor-${location}`} role="region" aria-labelledby={`faq-editor-${location}-heading`} onSubmit={handleSubmit} className="card my-4 space-y-4 text-left">
+            <h2 id={`faq-editor-${location}-heading`} className="text-lg font-semibold text-gray-900">
               {editingId ? 'Редактирование FAQ' : 'Новый FAQ'}
             </h2>
             <div>
@@ -193,7 +166,36 @@ export default function AdminFaqPage() {
               </Button>
             </div>
           </form>
+  )
+
+  return (
+    <div className="admin-container">
+      <div className="admin-page-header">
+        <h1>FAQ</h1>
+        <p>Управление вопросами и ответами для страницы FAQ</p>
+      </div>
+
+      <div className="admin-content">
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
         )}
+
+        <div className="mb-6 flex justify-end">
+          <Button
+            variant="primary"
+            onClick={() => {
+              setIsCreating(true)
+              setEditingId(null)
+              setForm(initialForm)
+            }}
+          >
+            Добавить вопрос
+          </Button>
+        </div>
+
+        {isCreating && !editingId && renderEditor('create')}
 
         <div className="card">
           {isLoading ? (
@@ -230,6 +232,7 @@ export default function AdminFaqPage() {
                       </Button>
                     </div>
                   </div>
+                  {editingId === item.id && renderEditor('item')}
                 </li>
               ))}
             </ul>

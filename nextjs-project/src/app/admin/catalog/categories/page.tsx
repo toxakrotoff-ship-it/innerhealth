@@ -89,6 +89,7 @@ interface CategoryRowProps {
   onDelete: (id: string) => void;
   onToggleVisibility: (category: Category) => void;
   isVisibilityPending: boolean;
+  editor?: React.ReactNode;
 }
 
 function CategoryRow({
@@ -98,6 +99,7 @@ function CategoryRow({
   onDelete,
   onToggleVisibility,
   isVisibilityPending,
+  editor,
 }: CategoryRowProps) {
   const {
     attributes,
@@ -175,6 +177,7 @@ function CategoryRow({
           </Button>
         </div>
       </div>
+      {editor}
     </li>
   );
 }
@@ -427,8 +430,10 @@ export default function AdminCategoriesPage() {
   };
 
   const handleEditCategory = (category: Category) => {
+    if (editingCategory?.id === category.id) return;
     setActionError(null);
     setEditingCategory(category);
+    setIsCreating(false);
     const rawLine = category.linePageBodyRichJson;
     let lineDoc: JSONContent = EMPTY_LINE_DOC;
     if (rawLine && typeof rawLine === 'object' && !Array.isArray(rawLine)) {
@@ -530,92 +535,9 @@ export default function AdminCategoriesPage() {
     return `${'— '.repeat(node.depth)}${node.title}`;
   };
 
-  if (isLoading) {
-    return (
-      <div className="admin-container">
-        <div className="admin-page-header">
-          <h1>Категории товаров</h1>
-          <p>Управление категориями каталога</p>
-        </div>
-
-        <div className="admin-content">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
-            <div className="h-10 bg-gray-200 rounded w-40 mb-8"></div>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="admin-container">
-        <div className="admin-page-header">
-          <h1>Категории товаров</h1>
-          <p>Управление категориями каталога</p>
-        </div>
-
-        <div className="admin-content">
-          <div className="alert error">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <p className="font-medium">Не удалось загрузить категории</p>
-              <p className="text-sm">{loadError}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="admin-container">
-      <div className="admin-page-header">
-        <h1>Категории товаров</h1>
-        <p>Управление категориями каталога</p>
-      </div>
-
-      <div className="admin-content">
-        {actionError ? (
-          <div className="alert error mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <p className="text-sm">{actionError}</p>
-            <button
-              type="button"
-              className="shrink-0 text-sm font-medium text-red-800 underline hover:no-underline"
-              onClick={() => setActionError(null)}
-            >
-              Закрыть
-            </button>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div></div>
-          <Button variant="primary"
-            onClick={() => {
-              setActionError(null);
-              setIsCreating(true);
-            }}
-          >
-            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Добавить категорию
-          </Button>
-        </div>
-
-        {/* Форма создания/редактирования */}
-        {(isCreating || editingCategory) && (
-          <div className="card mb-6">
-            <h2 className="text-xl font-semibold mb-4">
+  const renderEditor = (location: string) => (
+          <div id={`category-editor-${location}`} role="region" aria-labelledby={`category-editor-${location}-heading`} className="card my-4 text-left whitespace-normal">
+            <h2 id={`category-editor-${location}-heading`} className="text-xl font-semibold mb-4">
               {editingCategory ? 'Редактировать категорию' : 'Создать категорию'}
             </h2>
             <form onSubmit={editingCategory ? handleUpdateCategory : handleCreateCategory} className="space-y-4">
@@ -941,7 +863,92 @@ export default function AdminCategoriesPage() {
               </div>
             </form>
           </div>
-        )}
+  );
+
+  if (isLoading) {
+    return (
+      <div className="admin-container">
+        <div className="admin-page-header">
+          <h1>Категории товаров</h1>
+          <p>Управление категориями каталога</p>
+        </div>
+
+        <div className="admin-content">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="h-10 bg-gray-200 rounded w-40 mb-8"></div>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="admin-container">
+        <div className="admin-page-header">
+          <h1>Категории товаров</h1>
+          <p>Управление категориями каталога</p>
+        </div>
+
+        <div className="admin-content">
+          <div className="alert error">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-medium">Не удалось загрузить категории</p>
+              <p className="text-sm">{loadError}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-container">
+      <div className="admin-page-header">
+        <h1>Категории товаров</h1>
+        <p>Управление категориями каталога</p>
+      </div>
+
+      <div className="admin-content">
+        {actionError ? (
+          <div className="alert error mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <p className="text-sm">{actionError}</p>
+            <button
+              type="button"
+              className="shrink-0 text-sm font-medium text-red-800 underline hover:no-underline"
+              onClick={() => setActionError(null)}
+            >
+              Закрыть
+            </button>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div></div>
+          <Button variant="primary"
+            onClick={() => {
+              handleCancelEdit();
+              setIsCreating(true);
+            }}
+          >
+            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Добавить категорию
+          </Button>
+        </div>
+
+        {/* Форма создания/редактирования */}
+        {isCreating && !editingCategory && renderEditor('create')}
 
         {/* Дерево категорий */}
         <div className="card min-w-0">
@@ -967,6 +974,7 @@ export default function AdminCategoriesPage() {
                       key={category.id}
                       category={category}
                       categoryNode={categoryNode}
+                      editor={editingCategory?.id === category.id ? renderEditor('item') : null}
                       onEdit={handleEditCategory}
                       onDelete={handleDeleteCategory}
                       onToggleVisibility={handleToggleCategoryVisibility}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import Button from '@/components/ui/button';
 
 // Простой тип для промокода
@@ -38,7 +38,6 @@ export default function PromoCodesPage() {
 
   const fetchPromoCodes = async () => {
     try {
-      setLoading(true);
       const response = await fetch('/api/admin/promo-codes');
       if (!response.ok) {
         throw new Error('Failed to fetch promo codes');
@@ -110,6 +109,7 @@ export default function PromoCodesPage() {
       
       // Обновляем список
       await fetchPromoCodes();
+      setShowForm(false);
       setEditingCode(null);
       resetForm();
     } catch (err) {
@@ -143,14 +143,16 @@ export default function PromoCodesPage() {
   };
 
   const handleEdit = (code: PromoCode) => {
+    if (showForm && editingCode?.id === code.id) return;
+    setError(null);
     setEditingCode(code);
     setFormData({
       code: code.code,
       discountType: code.discountType,
       discountValue: code.discountValue,
       usageLimit: code.usageLimit?.toString() || '',
-      validFrom: code.validFrom || '',
-      validTo: code.validTo || '',
+      validFrom: code.validFrom?.slice(0, 10) || '',
+      validTo: code.validTo?.slice(0, 10) || '',
     });
     setShowForm(true);
   };
@@ -188,6 +190,103 @@ export default function PromoCodesPage() {
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
+
+  const renderEditor = (location: string) => (
+        <div id={`promo-code-editor-${location}`} role="region" aria-labelledby={`promo-code-editor-${location}-heading`} className="card my-4 text-left whitespace-normal">
+          <h2 id={`promo-code-editor-${location}-heading`} className="text-xl font-semibold text-gray-900 mb-6">
+            {editingCode ? 'Редактирование промокода' : 'Создание нового промокода'}
+          </h2>
+          <form onSubmit={editingCode ? handleUpdate : handleCreate}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label htmlFor={`promo-code-${location}`} className="block text-sm font-medium text-gray-700 mb-2">Код</label>
+                <input
+                  id={`promo-code-${location}`}
+                  type="text"
+                  required
+                  className="form-input"
+                  value={formData.code}
+                  onChange={(e) => setFormData({...formData, code: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Тип скидки</label>
+                <select
+                  className="form-input"
+                  value={formData.discountType}
+                  onChange={(e) => setFormData({...formData, discountType: e.target.value as 'percentage' | 'fixed'})}
+                >
+                  <option value="percentage">Процент</option>
+                  <option value="fixed">Фиксированная сумма</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Значение скидки</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  className="form-input"
+                  value={formData.discountValue}
+                  onChange={(e) => setFormData({...formData, discountValue: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Лимит использования (необязательно)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-input"
+                  value={formData.usageLimit}
+                  onChange={(e) => setFormData({...formData, usageLimit: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label htmlFor={`promo-valid-from-${location}`} className="block text-sm font-medium text-gray-700 mb-2">Дата начала действия</label>
+                <input
+                  id={`promo-valid-from-${location}`}
+                  type="date"
+                  className="form-input"
+                  value={formData.validFrom}
+                  onChange={(e) => setFormData({...formData, validFrom: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label htmlFor={`promo-valid-to-${location}`} className="block text-sm font-medium text-gray-700 mb-2">Дата окончания действия</label>
+                <input
+                  id={`promo-valid-to-${location}`}
+                  type="date"
+                  className="form-input"
+                  value={formData.validTo}
+                  onChange={(e) => setFormData({...formData, validTo: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" type="submit">
+                {editingCode ? 'Обновить' : 'Создать'}
+              </Button>
+              <Button variant="secondary"
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingCode(null);
+                  resetForm();
+                }}
+              >
+                Отмена
+              </Button>
+            </div>
+          </form>
+        </div>
+  );
 
   if (loading) {
     return (
@@ -253,99 +352,7 @@ export default function PromoCodesPage() {
           </Button>
         </div>
 
-        {showForm && (
-        <div className="card mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            {editingCode ? 'Редактирование промокода' : 'Создание нового промокода'}
-          </h2>
-          <form onSubmit={editingCode ? handleUpdate : handleCreate}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Код</label>
-                <input
-                  type="text"
-                  required
-                  className="form-input"
-                  value={formData.code}
-                  onChange={(e) => setFormData({...formData, code: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Тип скидки</label>
-                <select
-                  className="form-input"
-                  value={formData.discountType}
-                  onChange={(e) => setFormData({...formData, discountType: e.target.value as 'percentage' | 'fixed'})}
-                >
-                  <option value="percentage">Процент</option>
-                  <option value="fixed">Фиксированная сумма</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Значение скидки</label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  className="form-input"
-                  value={formData.discountValue}
-                  onChange={(e) => setFormData({...formData, discountValue: parseFloat(e.target.value) || 0})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Лимит использования (необязательно)</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-input"
-                  value={formData.usageLimit}
-                  onChange={(e) => setFormData({...formData, usageLimit: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Дата начала действия</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={formData.validFrom}
-                  onChange={(e) => setFormData({...formData, validFrom: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Дата окончания действия</label>
-                <input
-                  type="date"
-                  className="form-input"
-                  value={formData.validTo}
-                  onChange={(e) => setFormData({...formData, validTo: e.target.value})}
-                />
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              <Button variant="primary" type="submit">
-                {editingCode ? 'Обновить' : 'Создать'}
-              </Button>
-              <Button variant="secondary"
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingCode(null);
-                  resetForm();
-                }}
-              >
-                Отмена
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
+        {showForm && !editingCode && renderEditor('create')}
 
       {promoCodes.length === 0 ? (
         <div className="card">
@@ -385,13 +392,14 @@ export default function PromoCodesPage() {
                     {code.isActive ? 'Активен' : 'Неактивен'}
                   </span>
                   <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-gray-100">
-                    <Button variant="secondary" size="sm" onClick={() => handleEdit(code)}>Редактировать</Button>
+                    <Button variant="secondary" size="sm" aria-expanded={showForm && editingCode?.id === code.id} aria-controls={showForm && editingCode?.id === code.id ? 'promo-code-editor-mobile' : undefined} onClick={() => handleEdit(code)}>Редактировать</Button>
                     <Button variant="outline" size="sm" onClick={() => toggleActive(code.id, !code.isActive)}>
                       {code.isActive ? 'Отключить' : 'Включить'}
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id)}>Удалить</Button>
                   </div>
                 </div>
+                {showForm && editingCode?.id === code.id && renderEditor('mobile')}
               </div>
             ))}
           </div>
@@ -413,28 +421,37 @@ export default function PromoCodesPage() {
                 </thead>
                 <tbody>
                   {promoCodes.map((code) => (
-                    <tr key={code.id} className="group hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium text-gray-900 text-center">{code.code}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? 'Процент' : 'Фиксированная'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? `${code.discountValue}%` : `${code.discountValue} ₽`}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.usedCount}{code.usageLimit ? ` / ${code.usageLimit}` : ''}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{code.isActive ? 'Активен' : 'Неактивен'}</span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
-                        <div className="flex flex-col items-center">
-                          <span>{code.validFrom ? new Date(code.validFrom).toLocaleDateString('ru-RU') : '—'}</span>
-                          <span className="text-gray-400 text-xs">{code.validTo ? new Date(code.validTo).toLocaleDateString('ru-RU') : '—'}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium align-top text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] transition-colors">
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          <Button variant="secondary" size="sm" onClick={() => handleEdit(code)}>Редактировать</Button>
-                          <Button variant="outline" size="sm" onClick={() => toggleActive(code.id, !code.isActive)}>{code.isActive ? 'Отключить' : 'Включить'}</Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id)}>Удалить</Button>
-                        </div>
-                      </td>
-                    </tr>
+                    <Fragment key={code.id}>
+                      <tr className="group hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-mono font-medium text-gray-900 text-center">{code.code}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? 'Процент' : 'Фиксированная'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.discountType === 'percentage' ? `${code.discountValue}%` : `${code.discountValue} ₽`}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">{code.usedCount}{code.usageLimit ? ` / ${code.usageLimit}` : ''}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-center">
+                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${code.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{code.isActive ? 'Активен' : 'Неактивен'}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 text-center">
+                          <div className="flex flex-col items-center">
+                            <span>{code.validFrom ? new Date(code.validFrom).toLocaleDateString('ru-RU') : '—'}</span>
+                            <span className="text-gray-400 text-xs">{code.validTo ? new Date(code.validTo).toLocaleDateString('ru-RU') : '—'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium align-top text-center sticky right-0 bg-white group-hover:bg-gray-50 border-l border-gray-200 shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.06)] transition-colors">
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            <Button variant="secondary" size="sm" aria-expanded={showForm && editingCode?.id === code.id} aria-controls={showForm && editingCode?.id === code.id ? 'promo-code-editor-desktop' : undefined} onClick={() => handleEdit(code)}>Редактировать</Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(code.id, !code.isActive)}>{code.isActive ? 'Отключить' : 'Включить'}</Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(code.id)}>Удалить</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      {showForm && editingCode?.id === code.id && (
+                        <tr>
+                          <td colSpan={7} className="p-4 bg-gray-50">
+                            {renderEditor('desktop')}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
