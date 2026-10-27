@@ -25,13 +25,15 @@ export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeD
       if (batch.some(id => !info.delivery_points.some(p => p.delivery_point_id === id))) throw new Error('Ozon returned an incomplete point page')
       const available = info.delivery_points.filter(p => p.is_active && p.type === 'pvz')
       if (available.length) {
-        for (let offset = 0; offset < available.length; offset += 100) {
-          await prisma.$transaction(available.slice(offset, offset + 100).map(p => prisma.ozonDeliveryPointCache.upsert({
-          where: { brand_pointId: { brand, pointId: String(p.delivery_point_id) } },
-          create: { brand, pointId: String(p.delivery_point_id), name: p.name, address: p.full_address },
-          update: { name: p.name, address: p.full_address, syncedAt: new Date() },
-          })))
-        }
+        // One parameterized upsert per info batch avoids thousands of Prisma query plans.
+        const records = JSON.stringify(available.map(p => ({ pointId: String(p.delivery_point_id), name: p.name, address: p.full_address })))
+        await prisma.$executeRaw`
+          INSERT INTO "OzonDeliveryPointCache" ("brand", "pointId", "name", "address", "syncedAt")
+          SELECT ${brand}, point."pointId", point.name, point.address, ${new Date()}
+          FROM jsonb_to_recordset(${records}::jsonb) AS point("pointId" text, name text, address text)
+          ON CONFLICT ("brand", "pointId") DO UPDATE SET
+            "name" = EXCLUDED."name", "address" = EXCLUDED."address", "syncedAt" = EXCLUDED."syncedAt"
+        `
         points += available.length
       }
     }

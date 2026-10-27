@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
-const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), transaction: vi.fn(), upsert: vi.fn(), prune: vi.fn(), cleanup: vi.fn() }))
+const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), write: vi.fn(), prune: vi.fn(), cleanup: vi.fn() }))
 vi.mock('./config', () => ({ getOzonDeliveryConfig: mocks.config }))
 vi.mock('./client', async importOriginal => ({ ...await importOriginal<typeof import('./client')>(), getOzonDeliveryClient: mocks.client }))
 vi.mock('@/lib/prisma', () => ({ prisma: {
-  $transaction: mocks.transaction, ozonDeliveryPointCache: { upsert: mocks.upsert, deleteMany: mocks.prune }, ozonDeliveryQuote: { deleteMany: mocks.cleanup },
+  $executeRaw: mocks.write, ozonDeliveryPointCache: { deleteMany: mocks.prune }, ozonDeliveryQuote: { deleteMany: mocks.cleanup },
 } }))
 import { syncOzonDeliveryPoints } from './points-sync'
 
@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   mocks.config.mockReturnValue({ shipmentMethodId: 1 })
   mocks.client.mockReturnValue({ listDeliveryPoints: mocks.list, getDeliveryPoints: mocks.info })
-  mocks.transaction.mockResolvedValue([])
+  mocks.write.mockResolvedValue(1)
 })
 describe('Ozon point synchronization', () => {
   it('skips disabled brands', async () => {
@@ -28,8 +28,10 @@ describe('Ozon point synchronization', () => {
     expect(await syncOzonDeliveryPoints('inner')).toEqual({ brand: 'inner', skipped: false, points: 1 })
     expect(mocks.list.mock.calls).toEqual([[undefined], ['next']])
     expect(mocks.info.mock.calls).toEqual([[[1]], [[3, 4]]])
-    expect(mocks.upsert).toHaveBeenCalledTimes(1)
-    expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { brand_pointId: { brand: 'inner', pointId: '1' } } }))
+    expect(mocks.write).toHaveBeenCalledTimes(1)
+    expect(mocks.write.mock.calls[0][1]).toBe('inner')
+    expect(mocks.write.mock.calls[0][2]).toBeInstanceOf(Date)
+    expect(JSON.parse(mocks.write.mock.calls[0][3])).toEqual([{ pointId: '1', name: 'Москва', address: 'Москва, улица' }])
     expect(mocks.prune).toHaveBeenCalledTimes(1)
   })
   it('keeps the previous cache on upstream failure and repeated cursors', async () => {
@@ -50,7 +52,8 @@ describe('Ozon point synchronization', () => {
     expect(await syncOzonDeliveryPoints('inner')).toEqual({ brand: 'inner', skipped: false, points: 205 })
     expect(mocks.info.mock.calls.map(([batch]) => batch.length)).toEqual([100, 100, 5])
     expect(mocks.info.mock.calls.flatMap(([batch]) => batch)).toEqual(ids)
-    expect(mocks.upsert).toHaveBeenCalledTimes(205)
+    expect(mocks.write).toHaveBeenCalledTimes(3)
+    expect(mocks.write.mock.calls.map(call => JSON.parse(call[3]).length)).toEqual([100, 100, 5])
     expect(mocks.prune).toHaveBeenCalledTimes(1)
   })
   it('does not prune the previous cache when a later detail batch fails or omits points', async () => {
@@ -71,5 +74,20 @@ describe('Ozon point synchronization', () => {
     mocks.info.mockResolvedValue({ delivery_points: [] })
     await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('incomplete')
     expect(mocks.prune).not.toHaveBeenCalled()
+  })
+  it('keeps point text in SQL parameters and does not prune on a failed cache write', async () => {
+    const name = "Point's name"
+    const address = 'Street \\ building "1"'
+    mocks.list.mockResolvedValue({ delivery_points: [{ delivery_point_id: 1, shipment_method_ids: 1 }] })
+    mocks.info.mockResolvedValue({ delivery_points: [{ delivery_point_id: 1, name, full_address: address, is_active: true, type: 'pvz' }] })
+    mocks.write.mockRejectedValue(new Error('database unavailable'))
+    await expect(syncOzonDeliveryPoints('sprint-power')).rejects.toThrow('database unavailable')
+    const [sql, brand, , records] = mocks.write.mock.calls[0]
+    expect(brand).toBe('sprint-power')
+    expect(JSON.parse(records)).toEqual([{ pointId: '1', name, address }])
+    expect(sql.join('')).not.toContain(name)
+    expect(sql.join('')).not.toContain(address)
+    expect(mocks.prune).not.toHaveBeenCalled()
+    expect(mocks.cleanup).not.toHaveBeenCalled()
   })
 })
