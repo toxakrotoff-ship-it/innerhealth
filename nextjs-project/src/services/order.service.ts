@@ -2,6 +2,7 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import type { OzonCreateOrderRequest } from '@/lib/ozon-delivery/types';
 import { OzonCheckoutError, ozonCartFingerprint } from '@/lib/ozon-delivery/parcel';
+import { resolveOzonParcelLines } from '@/lib/ozon-delivery/package-defaults';
 import { prisma } from '@/lib/prisma';
 import { calculateGiftsForOrder } from '@/services/gift-promotion.service';
 import { maskPhone, shortAddress } from '@/lib/pii-masking';
@@ -737,10 +738,10 @@ export async function createOrderWithItemsAndShipping(params: {
     if (ozonQuote) {
       const quantities = new Map<string, number>();
       for (const item of params.items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
-      const parcelLines = [
+      const parcelLines = await resolveOzonParcelLines([
         ...[...quantities].map(([id, quantity]) => ({ ...reservableProductMap.get(id)!, id, quantity })),
         ...gifts.map(gift => ({ ...reservableProductMap.get(gift.giftProductId)!, id: `gift:${gift.giftProductId}:${gift.giftPromotionId}`, quantity: gift.quantity })),
-      ];
+      ], resolveDbBrand(params.brandId), tx);
       // Recheck within the stock/order transaction, including gifts that changed since the quote.
       if (ozonCartFingerprint(parcelLines, params.promoCodeId) !== ozonQuote.cartFingerprint) {
         throw new OzonCheckoutError('Корзина изменилась. Рассчитайте доставку Ozon ещё раз.');

@@ -8,6 +8,7 @@ import { ozonErrorResponse, ozonRateLimit } from '@/lib/ozon-delivery/http'
 import { OzonCheckoutError } from '@/lib/ozon-delivery/parcel'
 import { ozonAddressSearchWords, ozonCityAddressPattern, ozonCitySearchName, ozonCitySuggestionPattern, ozonNonLocalityPattern } from '@/lib/ozon-delivery/search'
 import { getYandexMapsApiKey } from '@/services/settings.service'
+import { normalizeOzonPvzCity, ozonPvzAddressCities } from '@/lib/ozon-pvz-city'
 
 export async function GET(request: Request) {
   const limited = await ozonRateLimit(request)
@@ -20,9 +21,13 @@ export async function GET(request: Request) {
     }).optional(),
     query: z.string().trim().max(100).optional(),
     suggestCities: z.enum(['true']).optional(),
-  }).refine(value => Boolean(value.city) || (value.query?.length ?? 0) >= 2).safeParse({
+    view: z.enum(['map', 'list']).optional(),
+  }).refine(value => Boolean(value.city) || (value.query?.length ?? 0) >= 2)
+    .refine(value => value.view !== 'map' || Boolean(value.city && ozonPvzAddressCities(value.city).includes(normalizeOzonPvzCity(value.city))))
+    .safeParse({
     city: params.get('city') ?? undefined, query: params.get('query') ?? undefined,
     suggestCities: params.get('suggestCities') ?? undefined,
+    view: params.get('view') ?? undefined,
   })
   if (!parsed.success) return NextResponse.json({ error: 'Укажите город доставки (от 2 до 100 символов)' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
   try {
@@ -50,17 +55,18 @@ export async function GET(request: Request) {
       const escaped = word.replace(/[\\%_]/g, '\\$&')
       conditions.push(Prisma.sql`translate(lower(address), 'ё', 'е') ILIKE ${`%${escaped}%`}`)
     }
+    const mapView = parsed.data.view === 'map'
     const points = await prisma.$queryRaw<Array<{ pointId: string; name: string; address: string; latitude: number | null; longitude: number | null }>>(Prisma.sql`
       SELECT "pointId", name, address, latitude, longitude FROM "OzonDeliveryPointCache"
-      WHERE ${Prisma.join(conditions, ' AND ')} ORDER BY address, "pointId" LIMIT 31
+      WHERE ${Prisma.join(conditions, ' AND ')} ORDER BY address, "pointId" ${mapView ? Prisma.empty : Prisma.sql`LIMIT 31`}
     `)
     const mapApiKey = await getYandexMapsApiKey({ brandId: brand }).catch(() => undefined)
     return NextResponse.json({
-      points: points.slice(0, 30).map(p => ({
+      points: (mapView ? points : points.slice(0, 30)).map(p => ({
         id: Number(p.pointId), name: p.name, address: p.address,
         ...(p.latitude != null && p.longitude != null ? { coordinates: { latitude: p.latitude, longitude: p.longitude } } : {}),
       })),
-      hasMore: points.length > 30, mapApiKey, ...(cities ? { cities } : {}),
+      hasMore: !mapView && points.length > 30, mapApiKey, ...(cities ? { cities } : {}),
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) { return ozonErrorResponse(error) }
 }

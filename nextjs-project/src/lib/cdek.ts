@@ -12,6 +12,7 @@
  */
 
 import type { BrandId } from '@/lib/brand/brand'
+import { DEFAULT_DELIVERY_PACKAGE } from '@/lib/delivery-package-defaults'
 
 const CDEK_API_PRODUCTION = 'https://api.cdek.ru/v2'
 const CDEK_API_TEST = 'https://api.edu.cdek.ru/v2'
@@ -527,12 +528,7 @@ export interface CdekPackageDefaults {
   heightMm: number
 }
 
-const DEFAULT_PACKAGE_DEFAULTS: CdekPackageDefaults = {
-  weightG: 100,
-  lengthMm: 33,
-  widthMm: 25,
-  heightMm: 15,
-}
+const DEFAULT_PACKAGE_DEFAULTS: CdekPackageDefaults = DEFAULT_DELIVERY_PACKAGE
 
 const ORDER_REGISTRATION_FALLBACK_DIMENSION = 1
 

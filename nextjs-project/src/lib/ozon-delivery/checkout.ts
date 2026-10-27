@@ -8,6 +8,7 @@ import { getOzonDeliveryConfig } from './config'
 import { getOzonDeliveryClient } from './client'
 import { buildOzonParcel, ozonCartFingerprint, ozonMoneyToKopecks, ozonPhoneHash, OzonCheckoutError } from './parcel'
 import type { OzonCheckoutPosting } from './types'
+import { resolveOzonParcelLines } from './package-defaults'
 
 export interface OzonQuoteInput {
   items: Array<{ productId: string; quantity: number }>
@@ -41,10 +42,10 @@ async function getParcelLines(input: OzonQuoteInput, brandId: BrandId) {
     select: { id: true, price: true, weight: true, length: true, width: true, height: true },
   }) : []
   if (gifts.some(g => !giftProducts.some(p => p.id === g.giftProductId))) throw new OzonCheckoutError('Подарок недоступен для доставки')
-  return [
+  return resolveOzonParcelLines([
     ...products.map(p => ({ id: p.id, quantity: quantities.get(p.id)!, price: p.price, weight: p.weight, length: p.length, width: p.width, height: p.height })),
     ...gifts.map(g => ({ ...giftProducts.find(p => p.id === g.giftProductId)!, id: `gift:${g.giftProductId}:${g.giftPromotionId}`, quantity: g.quantity })),
-  ]
+  ], brandId)
 }
 
 export async function quoteOzonDelivery(input: OzonQuoteInput, brandId: BrandId) {

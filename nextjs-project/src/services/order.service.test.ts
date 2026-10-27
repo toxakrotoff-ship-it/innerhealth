@@ -16,6 +16,7 @@ const txOrderUpdateMock = vi.fn()
 const txShippingInfoCreateMock = vi.fn()
 const txPromoCodeUpdateMock = vi.fn()
 const txOzonQuoteFindFirstMock = vi.fn()
+const txPackageSettingsMock = vi.fn()
 const orderFindManyMock = vi.fn()
 const rootOrderUpdateManyMock = vi.fn()
 const rootOrderUpdateMock = vi.fn()
@@ -48,6 +49,7 @@ describe('order.service stock reservation', () => {
     txShippingInfoCreateMock.mockReset()
     txPromoCodeUpdateMock.mockReset()
     txOzonQuoteFindFirstMock.mockReset()
+    txPackageSettingsMock.mockReset().mockResolvedValue([])
 
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
@@ -67,6 +69,7 @@ describe('order.service stock reservation', () => {
         ozonDeliveryQuote: {
           findFirst: (...args: unknown[]) => txOzonQuoteFindFirstMock(...args),
         },
+        siteSetting: { findMany: (...args: unknown[]) => txPackageSettingsMock(...args) },
         promoCode: {
           update: (...args: unknown[]) => txPromoCodeUpdateMock(...args),
         },
@@ -287,6 +290,23 @@ describe('order.service stock reservation', () => {
       await expect(service.createOrderWithItemsAndShipping({
         ...params, items: [{ ...params.items[0], quantity: 2 }],
       })).rejects.toThrow('Корзина изменилась')
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+    })
+
+    it('resolves incomplete fields through the same transaction before matching a quote', async () => {
+      txProductFindManyMock.mockResolvedValue([{ ...product, height: null }])
+      txPackageSettingsMock.mockResolvedValue([{ key: 'inner:cdek_default_package_height_mm', value: '50' }])
+      txOzonQuoteFindFirstMock.mockResolvedValue({ id: params.ozon.quoteId, cartFingerprint: ozonCartFingerprint([{ ...quotedProductLine, height: 50 }]) })
+      const service = await import('@/services/order.service')
+      const withFallback = { ...params, ozon: { ...params.ozon, request: { ...request,
+        postings: request.postings.map(posting => ({ ...posting, dimensions: { ...posting.dimensions, height_mm: 50 } })),
+      } } }
+      await expect(service.createOrderWithItemsAndShipping(withFallback)).resolves.toMatchObject({ id: 'order-1' })
+      expect(txPackageSettingsMock).toHaveBeenCalledOnce()
+      expect(txPackageSettingsMock.mock.calls[0][0].where.key.in).toContain('inner:cdek_default_package_height_mm')
+      txOrderCreateMock.mockClear()
+      txPackageSettingsMock.mockResolvedValue([{ key: 'inner:cdek_default_package_height_mm', value: '60' }])
+      await expect(service.createOrderWithItemsAndShipping(withFallback)).rejects.toThrow('Корзина изменилась')
       expect(txOrderCreateMock).not.toHaveBeenCalled()
     })
 

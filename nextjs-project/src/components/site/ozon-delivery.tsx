@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { BrandId } from '@/lib/brand/brand'
 import { validatePhoneRu } from '@/lib/phone-mask'
 import { cn } from '@/lib/utils'
@@ -46,6 +46,15 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     } catch { /* Storage is optional. */ }
   }, [modeStorageKey])
   function setInputMode(mode: 'map' | 'manual') {
+    if (mode !== inputMode) {
+      searchController.current?.abort()
+      if (searchTimer.current) clearTimeout(searchTimer.current)
+      setSearching(false)
+      setPoints([])
+      setCitySuggestions([])
+      setHasMore(false)
+      setSearched(false)
+    }
     setInputModeState(mode)
     try { localStorage.setItem(modeStorageKey, mode) } catch { /* Storage is optional. */ }
   }
@@ -73,7 +82,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
   const context = JSON.stringify([brandId, cityValue, phone, promoCodeId, items.map(({ productId, quantity }) => [productId, quantity])])
   const contextRef = useRef(context)
   contextRef.current = context
-  const searchContext = JSON.stringify([brandId, cityValue.trim(), query.trim(), cityEdited])
+  const searchContext = JSON.stringify([brandId, cityValue.trim(), query.trim(), cityEdited, inputMode])
   const searchContextRef = useRef(searchContext)
   searchContextRef.current = searchContext
   const cityStorageKey = `ozon-delivery-city:${brandId ?? 'default'}`
@@ -184,7 +193,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     setHasMore(false)
     const requestedContext = searchContext
     try {
-      const payload = await searchOzonPoints({ city: requestedCity, query, brandId, suggestCities: cityEdited, signal: controller.signal })
+      const payload = await searchOzonPoints({ city: requestedCity, query, brandId, suggestCities: cityEdited, view: inputMode === 'map' ? 'map' : 'list', signal: controller.signal })
       if (controller.signal.aborted || searchContextRef.current !== requestedContext) return
       setPoints(Array.isArray(payload.points) ? payload.points : [])
       setCitySuggestions(payload.cities ?? [])
@@ -200,7 +209,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     } finally {
       if (!controller.signal.aborted && searchContextRef.current === requestedContext) setSearching(false)
     }
-  }, [brandId, cityValue, cityEdited, cityStorageKey, query, searchContext])
+  }, [brandId, cityValue, cityEdited, cityStorageKey, query, searchContext, inputMode])
 
   useEffect(() => {
     if (cityValue.trim().length < 2) return
@@ -243,6 +252,11 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
   }
 
   const phoneValid = validatePhoneRu(phone).valid
+  const mapPointCount = useMemo(() => points.filter(option => {
+    const coordinates = option.coordinates
+    return coordinates && Number.isFinite(coordinates.latitude) && Math.abs(coordinates.latitude) <= 90 &&
+      Number.isFinite(coordinates.longitude) && Math.abs(coordinates.longitude) <= 180
+  }).length, [points])
   const buttonClass = cn('min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50',
     isSprintTheme ? 'bg-[#7AA2FF] text-slate-950' : 'bg-action-blue text-gray-800')
   const mapPlaceholder = detectingCity ? 'Определяем город для карты…'
@@ -322,10 +336,11 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
       </div>
       {inputMode === 'manual' && searching ? <p role="status" className="text-sm">Загружаем пункты выдачи Ozon...</p> : null}
       {inputMode === 'manual' && searched && points.length === 0 ? <p role="status" className="text-sm">{citySuggestions.length > 0 ? 'Выберите город из подсказок, чтобы увидеть пункты выдачи.' : 'Пункты выдачи не найдены. Уточните город или адрес.'}</p> : null}
-      {searched && hasMore ? <p className="text-sm">Показаны первые 30 пунктов. Уточните улицу или адрес, чтобы найти нужный.</p> : null}
+      {inputMode === 'manual' && searched && hasMore ? <p className="text-sm">Показаны первые 30 пунктов. Уточните улицу или адрес, чтобы найти нужный.</p> : null}
       <div role="tabpanel" id={`${tabsId}-${inputMode}-panel`} aria-labelledby={`${tabsId}-${inputMode}-tab`} className="space-y-2">
           {inputMode === 'map' ? points.length > 0 ? (
             <>
+              <p className="text-sm">На карте ПВЗ: {mapPointCount.toLocaleString('ru-RU')}{mapPointCount < points.length ? ` из ${points.length.toLocaleString('ru-RU')} найденных` : ''}.</p>
               <p className="text-sm">На карте показаны найденные пункты, для которых доступны координаты.</p>
               <OzonPointsMap points={points} selectedId={point?.id} apiKey={mapApiKey}
                 onSelect={option => { clearQuote(); setPoint(option) }} />
@@ -346,7 +361,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
             </div>
           ) : points.length > 0 ? (
             <ul aria-label="Пункты выдачи Ozon" className="max-h-80 space-y-2 overflow-y-auto lg:max-h-[400px]">
-              {points.map((option) => (
+              {points.slice(0, 30).map((option) => (
                 <li key={option.id}>
                   <button type="button" aria-pressed={point?.id === option.id} onClick={() => { clearQuote(); setPoint(option) }}
                     className={cn('min-h-[44px] w-full rounded-lg border p-3 text-left text-sm',

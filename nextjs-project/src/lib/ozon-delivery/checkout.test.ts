@@ -4,13 +4,14 @@ import { ozonCartFingerprint, ozonPhoneHash } from './parcel';
 
 const mocks = vi.hoisted(() => ({
   productFindMany: vi.fn(), pointFindUnique: vi.fn(), quoteCreate: vi.fn(), quoteFindUnique: vi.fn(),
-  config: vi.fn(), getClient: vi.fn(), gifts: vi.fn(), checkClient: vi.fn(), checkout: vi.fn(),
+  config: vi.fn(), getClient: vi.fn(), gifts: vi.fn(), checkClient: vi.fn(), checkout: vi.fn(), packageSettings: vi.fn(),
 }));
 vi.mock('server-only', () => ({}));
 vi.mock('@/lib/prisma', () => ({ prisma: {
   product: { findMany: mocks.productFindMany },
   ozonDeliveryPointCache: { findUnique: mocks.pointFindUnique },
   ozonDeliveryQuote: { create: mocks.quoteCreate, findUnique: mocks.quoteFindUnique },
+  siteSetting: { findMany: mocks.packageSettings },
 } }));
 vi.mock('./config', () => ({ getOzonDeliveryConfig: mocks.config }));
 vi.mock('./client', () => ({ getOzonDeliveryClient: mocks.getClient }));
@@ -41,6 +42,7 @@ describe('Ozon checkout quotes', () => {
     mocks.config.mockReturnValue({ clientId: 'client', clientSecret: 'secret', shipmentMethodId: 7, handlingHours: 24 });
     mocks.getClient.mockReturnValue({ checkClient: mocks.checkClient, checkout: mocks.checkout });
     mocks.productFindMany.mockResolvedValue([product]);
+    mocks.packageSettings.mockResolvedValue([]);
     mocks.pointFindUnique.mockResolvedValue({ pointId: '123', name: 'Trusted point', address: 'Trusted address', syncedAt: now });
     mocks.gifts.mockResolvedValue([]);
     mocks.checkClient.mockResolvedValue({ can_be_delivered: true });
@@ -124,15 +126,29 @@ describe('Ozon checkout quotes', () => {
     expect(mocks.config).toHaveBeenCalledWith(brand);
   });
 
-  it('rejects unavailable products, gift dimensions and unserviceable phone numbers', async () => {
+  it('rejects unavailable products and unserviceable phone numbers', async () => {
     mocks.productFindMany.mockResolvedValueOnce([]);
     await expect(quoteOzonDelivery(input, 'inner')).rejects.toThrow('Товар недоступен');
-    mocks.gifts.mockResolvedValueOnce([{ giftProductId: 'gift-1', giftPromotionId: 'promotion-1', quantity: 1 }]);
-    mocks.productFindMany.mockResolvedValueOnce([product]).mockResolvedValueOnce([{ ...gift, weight: null }]);
-    await expect(quoteOzonDelivery(input, 'inner')).rejects.toThrow('вес или габариты');
     mocks.checkClient.mockResolvedValueOnce({ can_be_delivered: false });
     await expect(quoteOzonDelivery(input, 'inner')).rejects.toThrow('Ozon не может доставить заказ по указанному телефону');
     expect(mocks.quoteCreate).not.toHaveBeenCalled();
+  });
+
+  it('quotes incomplete catalogue and gift data with the configured CDEK fallbacks, then validates the same cart', async () => {
+    const incompleteProduct = { ...product, weight: 210, length: 0, width: null, height: null };
+    const incompleteGift = { ...gift, weight: null, length: null, width: 0, height: null };
+    mocks.productFindMany.mockResolvedValueOnce([incompleteProduct]).mockResolvedValueOnce([incompleteGift]);
+    mocks.gifts.mockResolvedValue([{ giftProductId: 'gift-1', giftPromotionId: 'promotion-1', quantity: 1 }]);
+    mocks.packageSettings.mockResolvedValue([{ key: 'inner:cdek_default_package_height_mm', value: '50' }]);
+    await quoteOzonDelivery(input, 'inner');
+    expect(mocks.checkout.mock.calls[0][0].postings[0].dimensions).toEqual({ weight_g: 520, length_mm: 33, width_mm: 25, height_mm: 150 });
+    const persisted = mocks.quoteCreate.mock.calls[0][0].data;
+    mocks.quoteFindUnique.mockResolvedValue(savedQuote({ cartFingerprint: persisted.cartFingerprint }));
+    mocks.productFindMany.mockResolvedValueOnce([incompleteProduct]).mockResolvedValueOnce([incompleteGift]);
+    await expect(validateOzonQuote('quote-1', input, 'inner')).resolves.toBeTruthy();
+    mocks.packageSettings.mockResolvedValue([{ key: 'inner:cdek_default_package_height_mm', value: '60' }]);
+    mocks.productFindMany.mockResolvedValueOnce([incompleteProduct]).mockResolvedValueOnce([incompleteGift]);
+    await expect(validateOzonQuote('quote-1', input, 'inner')).rejects.toThrow('Корзина изменилась');
   });
 
   it('rejects a disabled provider for quote and quote validation', async () => {

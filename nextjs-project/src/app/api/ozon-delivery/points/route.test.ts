@@ -66,6 +66,31 @@ describe('city-scoped Ozon point search', () => {
     const data = await response.json()
     expect(data.points).toHaveLength(30); expect(data.hasMore).toBe(true)
   })
+  it('returns the complete city for a map without removing brand, freshness or address filters', async () => {
+    mocks.query.mockResolvedValue(Array.from({ length: 250 }, (_, i) => ({ pointId: String(i + 1), name: 'Ozon', address: 'Москва', latitude: 55.75, longitude: 37.61 })))
+    const response = await GET(new Request('https://site/api/ozon-delivery/points?city=Москва&view=map&brand=sprint-power&query=Тверская'))
+    const data = await response.json()
+    expect(data.points).toHaveLength(250)
+    expect(data.points.at(-1)).toMatchObject({ id: 250, coordinates: { latitude: 55.75, longitude: 37.61 } })
+    expect(data.hasMore).toBe(false)
+    const sql = mocks.query.mock.calls[0][0]
+    expect(sql.text).not.toContain('LIMIT')
+    expect(sql.text).toContain('address ~*')
+    expect(sql.values).toContain('sprint-power')
+    expect(sql.values).toContain('%тверская%')
+    expect(sql.values.some((value: unknown) => value instanceof Date)).toBe(true)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+  })
+  it('keeps city suggestions available while loading all exact-city points for the map', async () => {
+    mocks.query.mockResolvedValueOnce([{ city: 'Санкт-Петербург' }]).mockResolvedValueOnce([])
+    const response = await GET(new Request('https://site/api/ozon-delivery/points?city=Санкт&view=map&suggestCities=true'))
+    expect(await response.json()).toMatchObject({ cities: ['Санкт-Петербург'], points: [], hasMore: false })
+    expect(mocks.query.mock.calls[1][0].text).not.toContain('LIMIT')
+  })
+  it.each(['?view=map&query=Тверская', '?view=map&city=Россия', '?view=map&city=Московская%20область', '?view=map&city=Москва,Казань', '?view=unknown&city=Москва'])('requires one locality for a full map and rejects invalid views (%s)', async query => {
+    expect((await GET(new Request(`https://site/api/ozon-delivery/points${query}`))).status).toBe(400)
+    expect(mocks.query).not.toHaveBeenCalled()
+  })
   it.each(['', '?city=А', '?city=г.', '?city=19&suggestCities=true', `?city=${'a'.repeat(101)}`, '?query=А'])('rejects invalid input before database work (%s)', async query => {
     expect((await GET(new Request(`https://site/api/ozon-delivery/points${query}`))).status).toBe(400)
     expect(mocks.query).not.toHaveBeenCalled()

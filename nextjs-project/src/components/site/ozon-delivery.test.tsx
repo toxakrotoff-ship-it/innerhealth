@@ -26,6 +26,18 @@ function mockApi(quoteResponse = quote) {
   return fetchMock
 }
 
+function mockObjectManager() {
+  const handlers = new Set<(event: { get: (name: string) => unknown }) => void>()
+  const manager = { add: vi.fn(), removeAll: vi.fn(), objects: {
+    events: {
+      add: (_event: string, handler: (event: { get: (name: string) => unknown }) => void) => handlers.add(handler),
+      remove: (_event: string, handler: (event: { get: (name: string) => unknown }) => void) => handlers.delete(handler),
+    },
+    setObjectOptions: vi.fn(),
+  } }
+  return { manager, ObjectManager: function () { return manager }, click: (id: number) => handlers.forEach(handler => handler({ get: () => id })) }
+}
+
 describe('Ozon pickup delivery', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -43,7 +55,7 @@ describe('Ozon pickup delivery', () => {
     await screen.findByText(/Для этих пунктов пока нет координат/)
     expect(screen.queryByLabelText('Пункты выдачи Ozon')).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('Заполнить вручную'))
-    expect(screen.getByLabelText('Пункты выдачи Ozon')).toBeVisible()
+    expect(await screen.findByLabelText('Пункты выдачи Ozon')).toBeVisible()
     expect(screen.queryByLabelText('Карта пунктов выдачи Ozon')).not.toBeInTheDocument()
     expect(localStorage.getItem('ozon-delivery-input-mode:inner')).toBe('manual')
     fireEvent.keyDown(screen.getByText('Заполнить вручную'), { key: 'ArrowLeft' })
@@ -66,9 +78,11 @@ describe('Ozon pickup delivery', () => {
   it('lets a blurred partial-city search choose its city from visible map actions and then loads the map', async () => {
     localStorage.removeItem('ozon-delivery-input-mode:inner')
     const createMap = vi.fn(() => ({ geoObjects: { add: vi.fn(), remove: vi.fn() }, setCenter: vi.fn(), setBounds: vi.fn(), destroy: vi.fn() }))
+    const objects = mockObjectManager()
     vi.stubGlobal('ymaps', {
       ready: (callback: () => void) => callback(),
       Map: function () { return createMap() },
+      ObjectManager: objects.ObjectManager,
       Placemark: function () { return { events: { add: vi.fn() } } },
     })
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
@@ -141,10 +155,11 @@ describe('Ozon pickup delivery', () => {
     expect(screen.getByText(`Выбран пункт выдачи: ${point.address}`)).toBeVisible()
     expect(screen.getByText(/Доставка: 250/)).toBeVisible()
     fireEvent.click(screen.getByText('Заполнить вручную'))
+    await screen.findByLabelText('Пункты выдачи Ozon')
     expect(screen.getByText(point.address).closest('button')).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('Город доставки Ozon')).toHaveValue('Москва')
     expect(onChange).toHaveBeenCalledTimes(changeCount)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('completes a partial city and loads its points after keyboard selection', async () => {
@@ -205,11 +220,11 @@ describe('Ozon pickup delivery', () => {
 
   it('uses marker selections for calculation and resets the price when another marker is selected', async () => {
     localStorage.removeItem('ozon-delivery-input-mode:inner')
-    const clicks: Array<() => void> = []
+    const objects = mockObjectManager()
     vi.stubGlobal('ymaps', {
       ready: (callback: () => void) => callback(),
       Map: function () { return { geoObjects: { add: vi.fn(), remove: vi.fn() }, setCenter: vi.fn(), setBounds: vi.fn(), destroy: vi.fn() } },
-      Placemark: function () { return { events: { add: (_event: string, callback: () => void) => clicks.push(callback) } } },
+      ObjectManager: objects.ObjectManager,
     })
     const other = { ...point, id: 124, address: 'Москва, Тверская, 20' }
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(
@@ -218,15 +233,82 @@ describe('Ozon pickup delivery', () => {
     vi.stubGlobal('fetch', fetchMock)
     const onChange = vi.fn()
     render(<OzonDelivery {...baseProps} onChange={onChange} />)
-    await waitFor(() => expect(clicks.length).toBe(2))
-    act(() => clicks[0]())
+    await waitFor(() => expect(objects.manager.add).toHaveBeenCalledTimes(1))
+    act(() => objects.click(point.id))
     expect(screen.getByText('Выбран пункт выдачи: Москва, Тверская, 10')).toBeVisible()
     fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
     await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(quote))
-    act(() => clicks.at(-1)!())
+    act(() => objects.click(other.id))
     expect(onChange).toHaveBeenLastCalledWith(null)
     expect(screen.getByText('Выбран пункт выдачи: Москва, Тверская, 20')).toBeVisible()
     expect(screen.queryByText(/Доставка: 250/)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('loads the whole city map, quotes a point beyond the first30 and keeps it selected across list switches', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    const objects = mockObjectManager()
+    vi.stubGlobal('ymaps', {
+      ready: (callback: () => void) => callback(), ObjectManager: objects.ObjectManager,
+      Map: function () { return { geoObjects: { add: vi.fn(), remove: vi.fn() }, setCenter: vi.fn(), setBounds: vi.fn(), destroy: vi.fn() } },
+    })
+    const points = Array.from({ length: 80 }, (_, index) => ({ ...point, id: index + 1,
+      name: `Пункт ${index + 1}`, address: `Москва, Адрес ${index + 1}`, coordinates: { latitude: 55.75, longitude: 37.61 } }))
+    const selectedQuote = { ...quote, point: points[79] }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'https://site')
+      return new Response(JSON.stringify(url.pathname.endsWith('/quote') ? selectedQuote : {
+        points: url.searchParams.get('view') === 'map' ? points : points.slice(0, 30),
+        hasMore: url.searchParams.get('view') !== 'map', mapApiKey: 'public-key',
+      }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const onChange = vi.fn()
+    render(<OzonDelivery {...baseProps} onChange={onChange} />)
+    await waitFor(() => expect(objects.manager.add).toHaveBeenCalledTimes(1))
+    expect(objects.manager.add.mock.calls[0][0].features).toHaveLength(80)
+    expect(screen.getByText('На карте ПВЗ: 80.')).toBeVisible()
+    expect(screen.queryByText(/Показаны первые 30 пунктов/)).not.toBeInTheDocument()
+    act(() => objects.click(80))
+    expect(screen.getByText(`Выбран пункт выдачи: ${points[79].address}`)).toBeVisible()
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(selectedQuote))
+    const confirmedCalls = onChange.mock.calls.length
+    fireEvent.click(screen.getByText('Заполнить вручную'))
+    const list = await screen.findByLabelText('Пункты выдачи Ozon')
+    expect(list.children).toHaveLength(30)
+    expect(screen.getByText(/Показаны первые 30 пунктов/)).toBeVisible()
+    expect(screen.getByText(`Выбран пункт выдачи: ${points[79].address}`)).toBeVisible()
+    expect(screen.getByText(/Доставка: 250/)).toBeVisible()
+    expect(onChange).toHaveBeenCalledTimes(confirmedCalls)
+    fireEvent.click(screen.getByText('Выбрать на карте'))
+    await waitFor(() => expect(objects.manager.add).toHaveBeenCalledTimes(2))
+    expect(objects.manager.add.mock.lastCall![0].features).toHaveLength(80)
+    expect(objects.manager.objects.setObjectOptions).toHaveBeenLastCalledWith(80, { preset: 'islands#redIcon' })
+    expect(onChange).toHaveBeenCalledTimes(confirmedCalls)
+    const views = fetchMock.mock.calls.filter(([url]) => String(url).includes('/points?'))
+      .map(([url]) => new URL(String(url), 'https://site').searchParams.get('view'))
+    expect(views).toEqual(['map', null, 'map'])
+  })
+
+  it('ignores a late full-map search after switching to the bounded list', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    let finishMap!: (response: Response) => void
+    const points = Array.from({ length: 80 }, (_, index) => ({ ...point, id: index + 1, name: `Пункт ${index + 1}` }))
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new URL(String(input), 'https://site').searchParams.get('view') === 'map'
+      ? new Promise<Response>(resolve => { finishMap = resolve })
+      : new Response(JSON.stringify({ points: points.slice(0, 30), hasMore: true })))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    await waitFor(() => expect(finishMap).toBeTypeOf('function'))
+    fireEvent.click(screen.getByText('Заполнить вручную'))
+    const list = await screen.findByLabelText('Пункты выдачи Ozon')
+    expect(list.children).toHaveLength(30)
+    await act(async () => finishMap(new Response(JSON.stringify({ points, hasMore: false }))))
+    expect(list.children).toHaveLength(30)
+    expect(screen.queryByText('Пункт 80')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Карта пунктов выдачи Ozon')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 

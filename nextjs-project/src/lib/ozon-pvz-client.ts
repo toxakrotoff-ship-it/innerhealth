@@ -14,6 +14,7 @@ interface SearchOptions {
   city: string
   query?: string
   suggestCities?: boolean
+  view?: 'map' | 'list'
   signal?: AbortSignal
 }
 
@@ -121,6 +122,7 @@ async function fetchJson(url: string, options: {
 function searchUrl(path: string, options: SearchOptions, includeQuery: boolean): string {
   const params = new URLSearchParams({ city: options.city.trim() })
   if (includeQuery && options.suggestCities) params.set('suggestCities', 'true')
+  if (includeQuery && options.view === 'map') params.set('view', 'map')
   if (includeQuery && options.query?.trim()) params.set('query', options.query.trim())
   if (options.brandId) params.set('brand', options.brandId)
   return `${path}?${params}`
@@ -137,8 +139,8 @@ async function originSearch(options: SearchOptions): Promise<OzonPointSearchResu
   }
   return {
     ...(Array.isArray(data.cities) ? { cities: data.cities.filter((city): city is string => typeof city === 'string' && city.length >= 2 && city.length <= 100) } : {}),
-    points: data.points.slice(0, 30).map(publicPoint),
-    hasMore: data.hasMore === true || data.points.length > 30,
+    points: (options.view === 'map' ? data.points : data.points.slice(0, 30)).map(publicPoint),
+    hasMore: options.view === 'map' ? false : data.hasMore === true || data.points.length > 30,
     ...(typeof data.mapApiKey === 'string' ? { mapApiKey: data.mapApiKey } : {}),
   }
 }
@@ -174,7 +176,7 @@ export async function searchOzonPoints(options: SearchOptions): Promise<OzonPoin
       const address = point.address.toLocaleLowerCase('ru-RU').replace(/ё/g, 'е')
       return words.every(word => address.includes(word))
     }) : points
-    return { points: matches.slice(0, 30), hasMore: matches.length > 30,
+    return { points: options.view === 'map' ? matches : matches.slice(0, 30), hasMore: options.view === 'map' ? false : matches.length > 30,
       ...(typeof manifest.mapApiKey === 'string' ? { mapApiKey: manifest.mapApiKey } : {}),
     }
   } catch {

@@ -15,7 +15,7 @@ export interface ParcelLine {
   height: number | null
 }
 
-/** Conservative single-box packing: stack units; no invented weights or dimensions. */
+/** Stack units in one box; callers resolve authorised package defaults before packing. */
 export function buildOzonParcel(lines: ParcelLine[]): OzonDimensions {
   if (!lines.length) throw new OzonCheckoutError('Корзина пуста')
   let weight = 0, length = 0, width = 0, height = 0

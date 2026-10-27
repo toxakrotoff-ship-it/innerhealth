@@ -92,6 +92,40 @@ describe('Ozon city snapshots client', () => {
     expect(options).toMatchObject({ cache: 'no-store', credentials: 'omit' })
   })
 
+  it('returns all matching city points for the map while keeping the same snapshot limited for the list', async () => {
+    const points = Array.from({ length: 80 }, (_, index) => ({ ...point, id: index + 1,
+      address: index < 40 ? `Москва, Арбат, ${index}` : `Москва, Тверская, ${index}` }))
+    const snapshot = release(points)
+    fetchMock.mockResolvedValueOnce(json(snapshot.manifest)).mockResolvedValueOnce(new Response(snapshot.text))
+      .mockResolvedValueOnce(json(snapshot.manifest))
+    await expect(searchOzonPoints({ city, brandId: 'inner', view: 'map', query: 'Арбат' })).resolves.toEqual({ points: points.slice(0, 40), hasMore: false })
+    await expect(searchOzonPoints({ city, brandId: 'inner', view: 'list', query: 'Арбат' })).resolves.toEqual({ points: points.slice(0, 30), hasMore: true })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it.each(['disabled', 'unavailable'] as const)('keeps the complete map result when CDN is %s and requests map view from origin', async state => {
+    const points = Array.from({ length: 45 }, (_, index) => ({ ...point, id: index + 1 }))
+    if (state === 'disabled') config.cdn = ''
+    else fetchMock.mockResolvedValueOnce(json({ entry: null }))
+    fetchMock.mockResolvedValueOnce(json({ points, hasMore: true }))
+    await expect(searchOzonPoints({ city, brandId: 'inner', view: 'map' })).resolves.toEqual({ points, hasMore: false })
+    const url = new URL(String(fetchMock.mock.lastCall![0]), 'https://example.com')
+    expect(url.pathname).toBe('/api/ozon-delivery/points')
+    expect(url.searchParams.get('view')).toBe('map')
+  })
+
+  it('preserves map view during city suggestions and keeps list results bounded', async () => {
+    const points = Array.from({ length: 45 }, (_, index) => ({ ...point, id: index + 1 }))
+    fetchMock.mockResolvedValueOnce(json({ points, cities: [city], hasMore: true }))
+      .mockResolvedValueOnce(json({ points, cities: [city], hasMore: true }))
+    await expect(searchOzonPoints({ city, brandId: 'inner', view: 'map', suggestCities: true })).resolves.toEqual({ points, cities: [city], hasMore: false })
+    const first = new URL(String(fetchMock.mock.calls[0][0]), 'https://example.com')
+    expect(first.searchParams.get('view')).toBe('map')
+    expect(first.searchParams.get('suggestCities')).toBe('true')
+    await expect(searchOzonPoints({ city, brandId: 'inner', suggestCities: true })).resolves.toEqual({ points: points.slice(0, 30), cities: [city], hasMore: true })
+    expect(new URL(String(fetchMock.mock.calls[1][0]), 'https://example.com').searchParams.has('view')).toBe(false)
+  })
+
   it('keeps valid public map coordinates and the current map key through CDN reads', async () => {
     const mapPoint = { ...point, coordinates: { latitude: 55.75, longitude: 37.61 } }
     const snapshot = release([mapPoint], { mapApiKey: 'public-map-key' })
