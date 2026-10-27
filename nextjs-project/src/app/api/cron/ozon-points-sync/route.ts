@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
   try {
     const results = []
-    for (const brand of BRAND_IDS) results.push(await syncOzonDeliveryPoints(brand))
+    for (const brand of BRAND_IDS) results.push(await syncOzonDeliveryPoints(brand, { includeDisabled: true }))
     return NextResponse.json({ ok: true, results }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     console.error('[ozon-delivery] Point synchronization failed')

@@ -65,7 +65,15 @@ vi.mock('@/store/cart-store', () => ({
 }))
 
 vi.mock('@/components/site/cdek-widget', () => ({
-  CdekWidget: () => <div data-testid="mock-cdek-widget">CDEK Widget</div>,
+  CdekWidget: ({ onChoose }: { onChoose: (payload: {
+    deliveryMethod: 'cdek_pvz'; cityCode: number; city: string; pvzCode: string; pvzAddress: string
+    tariff: { tariffCode: number; deliverySum: number; periodMin: number; periodMax: number }
+  }) => void }) => <div data-testid="mock-cdek-widget">CDEK Widget
+    <button type="button" onClick={() => onChoose({
+      deliveryMethod: 'cdek_pvz', cityCode: 424, city: 'Казань', pvzCode: 'KZN1', pvzAddress: 'Казань, Тестовая, 1',
+      tariff: { tariffCode: 136, deliverySum: 350, periodMin: 2, periodMax: 4 },
+    })}>Выбрать ПВЗ в Казани</button>
+  </div>,
 }))
 
 vi.mock('@/lib/cdek-widget-preload', () => ({
@@ -111,9 +119,13 @@ describe('CartPageContent delivery type switch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     vi.stubGlobal('alert', vi.fn())
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
+      if (url.includes('/api/ozon-delivery/city')) {
+        return { ok: true, json: async () => ({ city: null }) }
+      }
       if (url.includes('/api/orders')) {
         return {
           ok: true,
@@ -172,6 +184,7 @@ describe('CartPageContent delivery type switch', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input)
       const payload = url.includes('/ozon-delivery/status') ? { enabled: true }
+        : url.includes('/ozon-delivery/city') ? { city: null }
         : url.includes('/ozon-delivery/points') ? { points: [point] }
           : url.includes('/ozon-delivery/quote') ? {
               point, quoteToken: 'quote-123', deliverySum: 250, estimatedDeliveryDays: 3,
@@ -187,7 +200,7 @@ describe('CartPageContent delivery type switch', () => {
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ivan@example.com' } })
     fireEvent.click(screen.getByRole('checkbox'))
     expect(screen.getByText('Оформить заказ')).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('Город или адрес пункта выдачи'), { target: { value: 'Москва' } })
+    fireEvent.change(screen.getByLabelText('Город доставки Ozon'), { target: { value: 'Москва' } })
     fireEvent.click(screen.getByText('Найти пункты'))
     fireEvent.click(await screen.findByText('Пункт Ozon'))
     fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
@@ -206,6 +219,28 @@ describe('CartPageContent delivery type switch', () => {
     expect(payload.deliverySum).toBe(250)
     expect(payload.shipping).toMatchObject({ deliveryMethod: 'ozon_pvz', ozonDeliveryPointId: 123, ozonQuoteToken: 'quote-123', address: point.address })
     expect(payload.shipping).not.toHaveProperty('cdekCityCode')
+  })
+
+  it('keeps the customer city when switching from CDEK to Ozon and loads only that city', async () => {
+    const point = { id: 123, name: 'Пункт Ozon в Казани', address: 'Казань, Тестовая, 1' }
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const payload = url.includes('/ozon-delivery/status') ? { enabled: true }
+        : url.includes('/ozon-delivery/city') ? { city: null }
+          : url.includes('/ozon-delivery/points') ? { points: [point] } : []
+      return { ok: true, json: async () => payload }
+    })
+    render(<CartPageContent brandId="inner" />)
+    await screen.findByText('Доставка Ozon в пункт выдачи')
+    fireEvent.click(screen.getByLabelText('Доставка (СДЭК)'))
+    fireEvent.click(await screen.findByText('Выбрать ПВЗ в Казани'))
+    fireEvent.click(screen.getByText('Доставка Ozon в пункт выдачи'))
+    expect(screen.getByLabelText('Город доставки Ozon')).toHaveValue('Казань')
+    await screen.findByText('Пункт Ozon в Казани')
+    const pointRequests = fetchMock.mock.calls.filter(([url]) => String(url).includes('/ozon-delivery/points'))
+    expect(pointRequests).toHaveLength(1)
+    expect(new URL(String(pointRequests[0][0]), 'https://example.com').searchParams.get('city')).toBe('Казань')
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/ozon-delivery/city'))).toBe(false)
   })
 
   it('renders required name field and keeps it empty by default', () => {

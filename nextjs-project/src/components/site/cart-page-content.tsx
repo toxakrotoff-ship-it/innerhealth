@@ -1255,6 +1255,7 @@ export function CartPageContent({
 
         {!usingSavedAddress && ozonEnabled && deliveryMethod === 'ozon_pvz' ? (
           <OzonDelivery phone={formData.phone}
+            city={selectedCity?.city || formData.city || undefined}
             items={items.filter((item) => item.isGift !== true).map(({ productId, quantity }) => ({ productId, quantity }))}
             brandId={brandId} promoCodeId={promoResult?.valid ? promoResult.id : undefined}
             isSprintTheme={isSprintTheme} onChange={handleOzonChange} />

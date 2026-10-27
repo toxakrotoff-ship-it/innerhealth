@@ -10,6 +10,7 @@ set -euo pipefail
 # - INFRA_ALERT_TOKEN   — для /api/admin/infra-alert и vps-monitor.sh
 # - CHECKOUT_ABANDON_SCAN_TOKEN — для /api/cron/checkout-abandon-scan и checkout-abandon-scan.sh
 # - CDEK_CACHE_SYNC_TOKEN — для /api/cron/cdek-cache-sync и cdek-cache-sync.sh
+# - OZON_POINTS_SYNC_TOKEN — для ежедневного обновления ПВЗ Ozon
 #
 # Если переменная отсутствует/пуста — генерируется криптостойкий
 # случайный токен (`openssl rand -hex 32`) и дописывается в .env.
@@ -30,6 +31,7 @@ REQUIRED_SECRETS=(
   "INFRA_ALERT_TOKEN"
   "CHECKOUT_ABANDON_SCAN_TOKEN"
   "CDEK_CACHE_SYNC_TOKEN"
+  "OZON_POINTS_SYNC_TOKEN"
 )
 
 timestamp() {

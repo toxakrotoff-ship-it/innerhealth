@@ -1,0 +1,53 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), key: vi.fn(), reverse: vi.fn() }))
+vi.mock('server-only', () => ({}))
+vi.mock('geoip-lite', () => ({ default: { lookup: mocks.lookup } }))
+vi.mock('@/services/settings.service', () => ({ getYandexMapsApiKey: mocks.key }))
+vi.mock('@/lib/cdek-yandex-reverse-geocode', () => ({ reverseGeocodeYandexCoordinates: mocks.reverse }))
+
+beforeEach(() => {
+  vi.resetModules(); vi.resetAllMocks()
+  mocks.lookup.mockReturnValue({ country: 'RU', ll: [55.75, 37.61] })
+  mocks.key.mockResolvedValue('geocoder-key')
+  mocks.reverse.mockResolvedValue({ locality: 'Москва' })
+})
+
+describe('Ozon approximate customer city', () => {
+  it('uses the server proxy IP and caches by location without retaining client IPs', async () => {
+    const { detectOzonCity } = await import('./city')
+    const request = new Request('https://site/api/ozon-delivery/city', { headers: { 'x-real-ip': '::ffff:8.8.8.8', 'x-forwarded-for': '1.1.1.1' } })
+    expect(await detectOzonCity(request, 'inner')).toBe('Москва')
+    expect(mocks.lookup).toHaveBeenCalledWith('8.8.8.8')
+    expect(mocks.reverse).toHaveBeenCalledWith({ latitude: 55.75, longitude: 37.61, apiKey: 'geocoder-key', signal: expect.any(AbortSignal) })
+    expect(await detectOzonCity(request, 'inner')).toBe('Москва')
+    expect(mocks.reverse).toHaveBeenCalledTimes(1)
+    await detectOzonCity(request, 'sprint-power')
+    expect(mocks.key).toHaveBeenLastCalledWith({ brandId: 'sprint-power' })
+    expect(mocks.reverse).toHaveBeenCalledTimes(2)
+  })
+  it('returns a manual-selection fallback when no usable IP is available', async () => {
+    const { detectOzonCity } = await import('./city')
+    expect(await detectOzonCity(new Request('https://site'), 'inner')).toBeNull()
+    expect(await detectOzonCity(new Request('https://site', { headers: { 'x-real-ip': 'invalid' } }), 'inner')).toBeNull()
+    expect(mocks.lookup).not.toHaveBeenCalled()
+  })
+  it('falls back for foreign or unknown locations, missing keys and provider errors', async () => {
+    const { detectOzonCity } = await import('./city')
+    const request = new Request('https://site', { headers: { 'x-real-ip': '8.8.8.8' } })
+    mocks.lookup.mockReturnValueOnce({ country: 'DE', ll: [50, 10] }).mockReturnValueOnce(null)
+    expect(await detectOzonCity(request, 'inner')).toBeNull()
+    expect(await detectOzonCity(request, 'inner')).toBeNull()
+    expect(mocks.reverse).not.toHaveBeenCalled()
+    mocks.key.mockResolvedValueOnce(undefined)
+    expect(await detectOzonCity(request, 'inner')).toBeNull()
+    mocks.reverse.mockRejectedValueOnce(new Error('upstream private details'))
+    expect(await detectOzonCity(request, 'inner')).toBeNull()
+  })
+  it('builds a bounded locality regex and escapes customer input', async () => {
+    const { ozonCityAddressPattern } = await import('./city')
+    expect(ozonCityAddressPattern('г. Москва')).toContain('Москва')
+    expect(ozonCityAddressPattern('Королёв')).toContain('Корол[её]в')
+    expect(ozonCityAddressPattern('А[Б]+')).toContain('А\\[Б\\]\\+')
+    expect(ozonCityAddressPattern('Москва')).toMatch(/^\(\^\|,\)/)
+  })
+})

@@ -9,6 +9,7 @@ set -euo pipefail
 #   - /opt/innerhealth/ops/yookassa-poll.sh      (раз в минуту — фолбэк-поллер ЮKassa)
 #   - /opt/innerhealth/ops/checkout-abandon-scan.sh (раз в 5 минут — пометка ABANDONED checkout-сессий)
 #   - /opt/innerhealth/ops/cdek-cache-sync.sh     (раз в сутки ночью — прогрев кэша ПВЗ/тарифов СДЭК)
+#   - /opt/innerhealth/ops/ozon-points-sync.sh    (ежедневно в 04:15 — кэш ПВЗ Ozon)
 #
 # Идемпотентно: повторный запуск обновляет скрипты и cron-строки.
 #
@@ -149,6 +150,12 @@ CHECKOUT_ABANDON_SCAN_TOKEN="$(prompt_value 'Checkout abandon-scan token (== CHE
 CDEK_CACHE_SYNC_TOKEN="$(resolve_value CDEK_CACHE_SYNC_TOKEN || true)"
 CDEK_CACHE_SYNC_TOKEN="$(prompt_value 'CDEK cache-sync token (== CDEK_CACHE_SYNC_TOKEN in app .env)' "$CDEK_CACHE_SYNC_TOKEN")"
 
+OZON_POINTS_SYNC_TOKEN="$(read_env_value OZON_POINTS_SYNC_TOKEN || true)"
+if [ -z "$OZON_POINTS_SYNC_TOKEN" ]; then
+  log "ERROR: OZON_POINTS_SYNC_TOKEN is missing in app .env; run deploy/ops/setup-secrets.sh first"
+  exit 1
+fi
+
 log "Creating ${TARGET_SCRIPTS_DIR}..."
 mkdir -p "${TARGET_SCRIPTS_DIR}"
 
@@ -158,6 +165,7 @@ install -m 0755 "${OPS_SRC}/vps-monitor.sh"        "${TARGET_SCRIPTS_DIR}/vps-mo
 install -m 0755 "${OPS_SRC}/yookassa-poll.sh"      "${TARGET_SCRIPTS_DIR}/yookassa-poll.sh"
 install -m 0755 "${OPS_SRC}/checkout-abandon-scan.sh" "${TARGET_SCRIPTS_DIR}/checkout-abandon-scan.sh"
 install -m 0755 "${OPS_SRC}/cdek-cache-sync.sh"    "${TARGET_SCRIPTS_DIR}/cdek-cache-sync.sh"
+install -m 0755 "${OPS_SRC}/ozon-points-sync.sh"    "${TARGET_SCRIPTS_DIR}/ozon-points-sync.sh"
 
 log "Refreshing cron entries (replace lines tagged with '${CRON_MARKER}')..."
 CRON_TEMP="$(mktemp)"
@@ -173,12 +181,13 @@ cat >>"${CRON_TEMP}" <<EOF
 * * * * * SITE_URL="${SITE_URL}" YOOKASSA_POLL_TOKEN="${YOOKASSA_POLL_TOKEN}" ${TARGET_SCRIPTS_DIR}/yookassa-poll.sh ${CRON_MARKER}
 */5 * * * * SITE_URL="${SITE_URL}" CHECKOUT_ABANDON_SCAN_TOKEN="${CHECKOUT_ABANDON_SCAN_TOKEN}" ${TARGET_SCRIPTS_DIR}/checkout-abandon-scan.sh ${CRON_MARKER}
 30 2 * * * SITE_URL="${SITE_URL}" CDEK_CACHE_SYNC_TOKEN="${CDEK_CACHE_SYNC_TOKEN}" ${TARGET_SCRIPTS_DIR}/cdek-cache-sync.sh ${CRON_MARKER}
+15 4 * * * PROJECT_DIR="${PROJECT_ROOT}" ${TARGET_SCRIPTS_DIR}/ozon-points-sync.sh ${CRON_MARKER}
 EOF
 
 crontab "${CRON_TEMP}"
 
 log "Done. Scripts: ${TARGET_SCRIPTS_DIR}"
-log "Cron entries refreshed (5 lines tagged '${CRON_MARKER}'):"
+log "Cron entries refreshed (6 jobs tagged '${CRON_MARKER}'):"
 crontab -l | grep -F "${CRON_MARKER}" | sed -e 's/INFRA_ALERT_TOKEN="[^"]*"/INFRA_ALERT_TOKEN="***"/' \
                                               -e 's/YOOKASSA_POLL_TOKEN="[^"]*"/YOOKASSA_POLL_TOKEN="***"/' \
                                               -e 's/CHECKOUT_ABANDON_SCAN_TOKEN="[^"]*"/CHECKOUT_ABANDON_SCAN_TOKEN="***"/' \

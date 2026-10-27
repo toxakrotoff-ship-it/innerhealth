@@ -109,6 +109,8 @@ SKIP_VPS_SAFEGUARDS=1 ./deploy/deploy-quick.sh
 
 ### Если запускаешь руками (без deploy.sh)
 
+Для Ozon устанавливается ежедневная синхронизация ПВЗ в 04:15 по времени сервера (production — Europe/Moscow). `ozon-points-sync.sh` использует внутренний URL приложения и его `OZON_POINTS_SYNC_TOKEN`; секрет отсутствует в crontab. Обновляет обе витрины даже при выключенной доставке, блокирует повторный запуск через `flock`, возвращает ненулевой код при сбое. Логи: `journalctl -t innerhealth-ops`. Для ручной проверки: `sudo PROJECT_DIR=/opt/innerhealth/nextjs-project /opt/innerhealth/ops/ozon-points-sync.sh`.
+
 ```bash
 # Один раз сгенерировать секреты в .env (если ещё нет):
 ./deploy/ops/setup-secrets.sh

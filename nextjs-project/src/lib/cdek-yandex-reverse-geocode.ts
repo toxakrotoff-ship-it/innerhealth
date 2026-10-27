@@ -40,6 +40,7 @@ export async function reverseGeocodeYandexCoordinates(params: {
   latitude: number
   longitude: number
   apiKey: string
+  signal?: AbortSignal
 }): Promise<YandexReverseGeocodeResult | null> {
   const url = new URL('https://geocode-maps.yandex.ru/1.x/')
   url.searchParams.set('apikey', params.apiKey)
@@ -48,7 +49,7 @@ export async function reverseGeocodeYandexCoordinates(params: {
   url.searchParams.set('results', '1')
   url.searchParams.set('geocode', `${params.longitude},${params.latitude}`)
 
-  const response = await fetch(url.toString(), { cache: 'no-store' })
+  const response = await fetch(url.toString(), { cache: 'no-store', signal: params.signal })
   if (!response.ok) {
     const body = await response.text().catch(() => '')
     console.error('[cdek/geocoder] Yandex reverse geocode request failed', {
