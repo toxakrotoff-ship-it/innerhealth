@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { BRAND_IDS } from '@/lib/brand/brand'
 import { syncOzonDeliveryPoints } from '@/lib/ozon-delivery/points-sync'
+import { OzonDeliveryError } from '@/lib/ozon-delivery/client'
 
 export const maxDuration = 600
 
@@ -16,8 +17,9 @@ export async function POST(request: Request) {
     const results = []
     for (const brand of BRAND_IDS) results.push(await syncOzonDeliveryPoints(brand, { includeDisabled: true }))
     return NextResponse.json({ ok: true, results }, { headers: { 'Cache-Control': 'no-store' } })
-  } catch {
-    console.error('[ozon-delivery] Point synchronization failed')
+  } catch (error) {
+    console.error('[ozon-delivery] Point synchronization failed', error instanceof OzonDeliveryError
+      ? { status: error.status, failure: error.failure, phase: error.phase } : { failure: 'internal' })
     return NextResponse.json({ error: 'Ozon point synchronization failed' }, { status: 502 })
   }
 }

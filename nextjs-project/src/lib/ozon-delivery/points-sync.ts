@@ -1,9 +1,25 @@
 import 'server-only'
+import { setTimeout as delay } from 'node:timers/promises'
 import { prisma } from '@/lib/prisma'
 import type { BrandId } from '@/lib/brand/brand'
-import { getOzonDeliveryClient, OZON_DELIVERY_POINT_INFO_LIMIT } from './client'
+import { getOzonDeliveryClient, OzonDeliveryError, OZON_DELIVERY_POINT_INFO_LIMIT } from './client'
 import { getOzonDeliveryConfig } from './config'
 import { publishOzonPvzCities } from '@/lib/ozon-pvz-publication'
+
+/** Retry only directory reads; a temporary upstream response must not abort a 900-request refresh. */
+async function readPoints<T>(read: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try { return await read() }
+    catch (error) {
+      const retryable = error instanceof OzonDeliveryError && (
+        error.failure === 'network' || error.failure === 'timeout' ||
+        (error.failure === 'http' && ([404, 408, 429].includes(error.status) || error.status >= 500))
+      )
+      if (!retryable || attempt >= 2) throw error
+      await delay(500 * (attempt + 1))
+    }
+  }
+}
 
 /** Complete traversal before pruning. Failed/partial sync leaves the previous cache usable. */
 export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeDisabled?: boolean } = {}) {
@@ -15,14 +31,14 @@ export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeD
   let cursor: string | undefined
   let points = 0
   for (let page = 0; page < 5000; page++) {
-    const result = await client.listDeliveryPoints(cursor)
+    const result = await readPoints(() => client.listDeliveryPoints(cursor))
     const ids = result.delivery_points.filter(point => {
       const methods = Array.isArray(point.shipment_method_ids) ? point.shipment_method_ids : [point.shipment_method_ids]
       return methods.includes(config.shipmentMethodId)
     }).map(point => point.delivery_point_id)
     for (let offset = 0; offset < ids.length; offset += OZON_DELIVERY_POINT_INFO_LIMIT) {
       const batch = ids.slice(offset, offset + OZON_DELIVERY_POINT_INFO_LIMIT)
-      const info = await client.getDeliveryPoints(batch)
+      const info = await readPoints(() => client.getDeliveryPoints(batch))
       if (batch.some(id => !info.delivery_points.some(p => p.delivery_point_id === id))) throw new Error('Ozon returned an incomplete point page')
       const available = info.delivery_points.filter(p => p.is_active && p.type === 'pvz')
       if (available.length) {

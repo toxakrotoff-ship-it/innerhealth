@@ -98,6 +98,15 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     clearQuote()
   }, [clearQuote])
 
+  const selectCity = useCallback((name: string) => {
+    cityController.current?.abort()
+    setDetectingCity(false)
+    clearPoints()
+    setQuery('')
+    setCityValue(name)
+    setCityEdited(false)
+  }, [clearPoints])
+
   useEffect(() => {
     const controller = new AbortController()
     cityController.current = controller
@@ -236,6 +245,13 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
   const phoneValid = validatePhoneRu(phone).valid
   const buttonClass = cn('min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50',
     isSprintTheme ? 'bg-[#7AA2FF] text-slate-950' : 'bg-action-blue text-gray-800')
+  const mapPlaceholder = detectingCity ? 'Определяем город для карты…'
+    : searching ? 'Загружаем пункты на карту…'
+      : error ? 'Не удалось загрузить пункты на карту. Повторите поиск.'
+        : citySuggestions.length > 0 ? 'Выберите город, чтобы показать карту пунктов выдачи.'
+          : searched ? 'Пункты выдачи не найдены. Уточните город или адрес, чтобы показать карту.'
+            : cityValue.trim().length < 2 ? 'Укажите город, чтобы показать карту пунктов выдачи.'
+              : 'Карта появится после загрузки пунктов выбранного города.'
 
   return (
     <section aria-label="Доставка Ozon в пункт выдачи" className={cn('space-y-4 rounded-2xl border p-6',
@@ -268,12 +284,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
         <OzonSearchInput id="ozon-city" value={cityValue} placeholder="Например: Москва или Санкт"
           isSprintTheme={isSprintTheme} suggestions={citySuggestions.map(name => ({ id: name, label: name }))}
           onSearch={() => void searchPoints()}
-          onSelect={name => {
-            clearPoints()
-            setQuery('')
-            setCityValue(name)
-            setCityEdited(false)
-          }}
+          onSelect={selectCity}
           onChange={value => {
             cityController.current?.abort()
             setDetectingCity(false)
@@ -309,18 +320,31 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
           </button>
         </div>
       </div>
-      {searching ? <p role="status" className="text-sm">Загружаем пункты выдачи Ozon...</p> : null}
-      {searched && points.length === 0 ? <p role="status" className="text-sm">{citySuggestions.length > 0 ? 'Выберите город из подсказок, чтобы увидеть пункты выдачи.' : 'Пункты выдачи не найдены. Уточните город или адрес.'}</p> : null}
+      {inputMode === 'manual' && searching ? <p role="status" className="text-sm">Загружаем пункты выдачи Ozon...</p> : null}
+      {inputMode === 'manual' && searched && points.length === 0 ? <p role="status" className="text-sm">{citySuggestions.length > 0 ? 'Выберите город из подсказок, чтобы увидеть пункты выдачи.' : 'Пункты выдачи не найдены. Уточните город или адрес.'}</p> : null}
       {searched && hasMore ? <p className="text-sm">Показаны первые 30 пунктов. Уточните улицу или адрес, чтобы найти нужный.</p> : null}
-      {points.length > 0 ? (
-        <div role="tabpanel" id={`${tabsId}-${inputMode}-panel`} aria-labelledby={`${tabsId}-${inputMode}-tab`} className="space-y-2">
-          {inputMode === 'map' ? (
+      <div role="tabpanel" id={`${tabsId}-${inputMode}-panel`} aria-labelledby={`${tabsId}-${inputMode}-tab`} className="space-y-2">
+          {inputMode === 'map' ? points.length > 0 ? (
             <>
               <p className="text-sm">На карте показаны найденные пункты, для которых доступны координаты.</p>
               <OzonPointsMap points={points} selectedId={point?.id} apiKey={mapApiKey}
                 onSelect={option => { clearQuote(); setPoint(option) }} />
             </>
           ) : (
+            <div role="region" aria-label="Карта пунктов выдачи Ozon" aria-busy={detectingCity || searching}
+              className={cn('flex min-h-[320px] flex-col items-center justify-center gap-4 rounded-xl border p-6 text-center lg:min-h-[400px]',
+                isSprintTheme ? 'border-slate-700 bg-slate-800 text-slate-100' : 'border-gray-200 bg-gray-100 text-gray-700')}>
+              <p role="status" className="text-sm">{mapPlaceholder}</p>
+              {!detectingCity && !searching && !error && searched && citySuggestions.length > 0 ? (
+                <ul aria-label="Города для карты Ozon" className="flex flex-wrap justify-center gap-2">
+                  {citySuggestions.map(name => <li key={name}>
+                    <button type="button" className={buttonClass} onClick={() => selectCity(name)}>{name}</button>
+                  </li>)}
+                </ul>
+              ) : null}
+              {error && cityValue.trim().length >= 2 ? <button type="button" className={buttonClass} onClick={() => void searchPoints()}>Повторить поиск</button> : null}
+            </div>
+          ) : points.length > 0 ? (
             <ul aria-label="Пункты выдачи Ozon" className="max-h-80 space-y-2 overflow-y-auto lg:max-h-[400px]">
               {points.map((option) => (
                 <li key={option.id}>
@@ -333,9 +357,8 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      ) : null}
+          ) : null}
+      </div>
       {point ? (
         <div className="space-y-3">
           <p className="text-sm">Выбран пункт выдачи: {point.address}</p>

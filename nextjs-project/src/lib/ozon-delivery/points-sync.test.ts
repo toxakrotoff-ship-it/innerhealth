@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
+vi.mock('node:timers/promises', () => ({ setTimeout: vi.fn().mockResolvedValue(undefined) }))
 const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), write: vi.fn(), prune: vi.fn(), cleanup: vi.fn(), publish: vi.fn() }))
 vi.mock('./config', () => ({ getOzonDeliveryConfig: mocks.config }))
 vi.mock('@/lib/ozon-pvz-publication', () => ({ publishOzonPvzCities: mocks.publish }))
@@ -8,6 +9,7 @@ vi.mock('@/lib/prisma', () => ({ prisma: {
   $executeRaw: mocks.write, ozonDeliveryPointCache: { deleteMany: mocks.prune }, ozonDeliveryQuote: { deleteMany: mocks.cleanup },
 } }))
 import { syncOzonDeliveryPoints } from './points-sync'
+import { OzonDeliveryError } from './client'
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -99,5 +101,36 @@ describe('Ozon point synchronization', () => {
     mocks.list.mockResolvedValue({ delivery_points: [] })
     mocks.publish.mockRejectedValue(new Error('publication disk unavailable'))
     await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('publication disk unavailable')
+  })
+  it('retries a transient info 404 without duplicating cache writes or losing the requested batch', async () => {
+    mocks.list.mockResolvedValue({ delivery_points: [{ delivery_point_id: 1, shipment_method_ids: 1 }] })
+    mocks.info.mockRejectedValueOnce(new OzonDeliveryError(404))
+      .mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 1, name: 'Point', full_address: 'Москва, улица', is_active: true, type: 'pvz' }] })
+    expect(await syncOzonDeliveryPoints('inner')).toEqual({ brand: 'inner', skipped: false, points: 1 })
+    expect(mocks.info.mock.calls).toEqual([[[1]], [[1]]])
+    expect(mocks.write).toHaveBeenCalledTimes(1)
+    expect(mocks.publish).toHaveBeenCalledTimes(1)
+  })
+  it('retries a failed list page using the same cursor before advancing', async () => {
+    mocks.list.mockResolvedValueOnce({ delivery_points: [], next_cursor: 'next' })
+      .mockRejectedValueOnce(new OzonDeliveryError(503))
+      .mockResolvedValueOnce({ delivery_points: [], next_cursor: null })
+    await syncOzonDeliveryPoints('inner')
+    expect(mocks.list.mock.calls).toEqual([[undefined], ['next'], ['next']])
+    expect(mocks.publish).toHaveBeenCalledTimes(1)
+  })
+  it.each([
+    [new OzonDeliveryError(429), 3],
+    [new OzonDeliveryError(504, 'timeout'), 3],
+    [new OzonDeliveryError(502, 'network'), 3],
+    [new OzonDeliveryError(400), 1],
+    [new OzonDeliveryError(403), 1],
+    [new OzonDeliveryError(502, 'invalid_response'), 1],
+  ])('bounds failed reads and preserves the previous release (%#)', async (error, attempts) => {
+    mocks.list.mockRejectedValue(error)
+    await expect(syncOzonDeliveryPoints('inner')).rejects.toBe(error)
+    expect(mocks.list).toHaveBeenCalledTimes(attempts)
+    expect(mocks.prune).not.toHaveBeenCalled()
+    expect(mocks.publish).not.toHaveBeenCalled()
   })
 })

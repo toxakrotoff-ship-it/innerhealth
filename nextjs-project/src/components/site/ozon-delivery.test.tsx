@@ -40,6 +40,7 @@ describe('Ozon pickup delivery', () => {
     render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
     expect(screen.getByText('Выбрать на карте')).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByLabelText('Карта пунктов выдачи Ozon')).toBeInTheDocument()
+    await screen.findByText(/Для этих пунктов пока нет координат/)
     expect(screen.queryByLabelText('Пункты выдачи Ozon')).not.toBeInTheDocument()
     fireEvent.click(screen.getByText('Заполнить вручную'))
     expect(screen.getByLabelText('Пункты выдачи Ozon')).toBeVisible()
@@ -48,6 +49,84 @@ describe('Ozon pickup delivery', () => {
     fireEvent.keyDown(screen.getByText('Заполнить вручную'), { key: 'ArrowLeft' })
     expect(screen.getByText('Выбрать на карте')).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Выбрать на карте')).toHaveFocus()
+  })
+
+  it('keeps the map area visible before a city is selected', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    const fetchMock = mockApi()
+    render(<OzonDelivery {...baseProps} city={undefined} onChange={vi.fn()} />)
+    const mapArea = screen.getByLabelText('Карта пунктов выдачи Ozon')
+    expect(mapArea).toBeVisible()
+    expect(mapArea.className).toContain('min-h-[320px]')
+    await waitFor(() => expect(mapArea).toHaveTextContent('Укажите город, чтобы показать карту пунктов выдачи.'))
+    expect(mapArea).toHaveAttribute('aria-busy', 'false')
+    expect(fetchMock.mock.calls.every(([url]) => String(url).includes('/city'))).toBe(true)
+  })
+
+  it('lets a blurred partial-city search choose its city from visible map actions and then loads the map', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    const createMap = vi.fn(() => ({ geoObjects: { add: vi.fn(), remove: vi.fn() }, setCenter: vi.fn(), setBounds: vi.fn(), destroy: vi.fn() }))
+    vi.stubGlobal('ymaps', {
+      ready: (callback: () => void) => callback(),
+      Map: function () { return createMap() },
+      Placemark: function () { return { events: { add: vi.fn() } } },
+    })
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const request = new URL(String(input), 'https://site')
+      return new Response(JSON.stringify(request.searchParams.get('suggestCities') === 'true'
+        ? { cities: ['Санкт-Петербург', 'Санкт-Петербург г.'], points: [] }
+        : { mapApiKey: 'public-key', points: [{ ...point, coordinates: { latitude: 59.93, longitude: 30.31 } }] }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    const input = screen.getByLabelText('Город доставки Ozon')
+    fireEvent.change(input, { target: { value: 'Санкт' } })
+    fireEvent.blur(input)
+    fireEvent.click(screen.getByText('Найти пункты'))
+    const cities = await screen.findByLabelText('Города для карты Ozon')
+    expect(cities).toBeVisible()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(input).toHaveValue('Санкт')
+    expect(createMap).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('Карта пунктов выдачи Ozon')).toHaveTextContent('Выберите город, чтобы показать карту пунктов выдачи.')
+    const cityButton = screen.getByText('Санкт-Петербург', { selector: 'button' })
+    expect(cityButton).toHaveAttribute('type', 'button')
+    expect(screen.getByText('Санкт-Петербург г.', { selector: 'button' })).toBeVisible()
+    fireEvent.click(cityButton)
+    expect(input).toHaveValue('Санкт-Петербург')
+    await waitFor(() => expect(createMap).toHaveBeenCalledTimes(1))
+    expect(screen.queryByLabelText('Города для карты Ozon')).not.toBeInTheDocument()
+    expect(screen.getByText('На карте показаны найденные пункты, для которых доступны координаты.')).toBeVisible()
+    expect(new URL(String(fetchMock.mock.lastCall![0]), 'https://site').searchParams.get('city')).toBe('Санкт-Петербург')
+  })
+
+  it('shows loading and no-results states inside the map area without removing it', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    let finishSearch!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { finishSearch = resolve })))
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    const mapArea = screen.getByLabelText('Карта пунктов выдачи Ozon')
+    await waitFor(() => expect(mapArea).toHaveTextContent('Загружаем пункты на карту…'))
+    expect(mapArea).toHaveAttribute('aria-busy', 'true')
+    await act(async () => finishSearch(new Response(JSON.stringify({ points: [] }))))
+    expect(mapArea).toBeVisible()
+    expect(mapArea).toHaveTextContent('Пункты выдачи не найдены. Уточните город или адрес, чтобы показать карту.')
+    expect(mapArea).toHaveAttribute('aria-busy', 'false')
+  })
+
+  it('offers retry in the map area after a point search failure', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Поиск временно недоступен' }), { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ points: [point] })))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Поиск временно недоступен')
+    expect(screen.getByLabelText('Карта пунктов выдачи Ozon')).toHaveTextContent('Не удалось загрузить пункты на карту. Повторите поиск.')
+    fireEvent.click(screen.getByText('Повторить поиск'))
+    await screen.findByText(/Для этих пунктов пока нет координат/)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText('Повторить поиск')).not.toBeInTheDocument()
   })
 
   it('preserves the chosen point, search and confirmed quote when switching selection modes', async () => {
