@@ -16,9 +16,15 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
 const SCOPES = ['delivery-api.delivery', 'delivery-api.delivery-point', 'delivery-api.order', 'delivery-api.posting'];
 
+export type OzonDeliveryFailure = 'http' | 'network' | 'timeout' | 'invalid_response' | 'redirect' | 'antibot';
+
 /** Deliberately excludes upstream messages, response bodies and recipient data. */
 export class OzonDeliveryError extends Error {
-  constructor(public readonly status: number = 502) {
+  constructor(
+    public readonly status: number = 502,
+    public readonly failure: OzonDeliveryFailure = 'http',
+    public readonly phase: 'oauth' | 'api' = 'api',
+  ) {
     super('Ozon Delivery request failed');
     this.name = 'OzonDeliveryError';
   }
@@ -42,7 +48,7 @@ export class OzonDeliveryClient {
   }
 
   listDeliveryPoints(cursor?: string): Promise<OzonDeliveryPointsListResponse> {
-    return this.request('/v1/delivery-point/list', { pagination: { ...(cursor ? { cursor } : {}), limit: 1000 } }, ozonDeliveryPointsListSchema);
+    return this.request('/v1/delivery-point/list', { pagination: { cursor: cursor || null, limit: 1000 } }, ozonDeliveryPointsListSchema);
   }
 
   getDeliveryPoints(ids: number[]): Promise<{ delivery_points: OzonDeliveryPoint[] }> {
@@ -105,10 +111,10 @@ export class OzonDeliveryClient {
         if (schema === 'pdf') {
           if (response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/pdf') {
             await response.body?.cancel();
-            throw new OzonDeliveryError(502);
+            throw new OzonDeliveryError(502, 'invalid_response');
           }
           const bytes = new Uint8Array(await response.arrayBuffer());
-          if (new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') throw new OzonDeliveryError(502);
+          if (new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') throw new OzonDeliveryError(502, 'invalid_response');
           return bytes as T;
         }
         return this.parseResponse(response, schema);
@@ -130,26 +136,35 @@ export class OzonDeliveryClient {
         }, {}, signal);
         if (!response.ok) {
           await response.body?.cancel();
-          throw new OzonDeliveryError(response.status);
+          throw new OzonDeliveryError(response.status, 'http', 'oauth');
         }
-        const data = await this.parseResponse(response, ozonTokenSchema);
-        const lifetime = data.expires_in * 1000;
-        this.token = { value: data.access_token, expiresAt: Date.now() + lifetime - Math.min(30_000, lifetime / 10) };
+        const data = await this.parseResponse(response, ozonTokenSchema, 'oauth');
+        const now = Date.now();
+        // Ozon also returns an absolute Unix timestamp in expires_in.
+        // Retain support for relative lifetimes used by OAuth-compatible responses.
+        const expiresAt = data.expires_in >= 1_000_000_000 ? data.expires_in * 1000 : now + data.expires_in * 1000;
+        const lifetime = expiresAt - now;
+        if (lifetime <= 0) throw new OzonDeliveryError(502, 'invalid_response', 'oauth');
+        this.token = { value: data.access_token, expiresAt: expiresAt - Math.min(30_000, lifetime / 10) };
         return data.access_token;
       })().finally(() => { this.tokenRequest = undefined; });
     }
     return this.tokenRequest;
   }
 
-  private async parseResponse<T>(response: Response, schema: z.ZodType<T>): Promise<T> {
-    const parsed = schema.safeParse(await response.json());
-    if (!parsed.success) throw new OzonDeliveryError(502);
+  private async parseResponse<T>(response: Response, schema: z.ZodType<T>, phase: 'oauth' | 'api' = 'api'): Promise<T> {
+    let data: unknown;
+    try { data = await response.json(); }
+    catch { throw new OzonDeliveryError(502, 'invalid_response', phase); }
+    const parsed = schema.safeParse(data);
+    if (!parsed.success) throw new OzonDeliveryError(502, 'invalid_response', phase);
     return parsed.data;
   }
 
   /** Ozon's testcookie challenge uses 302: preserve POST and cookies explicitly. */
   private async post(url: string, body: unknown, headers: Record<string, string>, signal: AbortSignal): Promise<Response> {
     const origin = new URL(url).origin;
+    const phase = origin === new URL(TOKEN_URL).origin ? 'oauth' : 'api';
     const serializedBody = JSON.stringify(body);
     for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
       signal.throwIfAborted();
@@ -162,19 +177,25 @@ export class OzonDeliveryClient {
         redirect: 'manual',
         cache: 'no-store',
         signal,
-      });
+      }).catch(() => { throw new OzonDeliveryError(signal.aborted ? 504 : 502, signal.aborted ? 'timeout' : 'network', phase); });
       this.collectCookies(origin, response.headers);
-      if (![301, 302, 303, 307, 308].includes(response.status)) return response;
+      if (![301, 302, 303, 307, 308].includes(response.status)) {
+        if (response.headers.get('antibot') === '1') {
+          await response.body?.cancel();
+          throw new OzonDeliveryError(response.status, 'antibot', phase);
+        }
+        return response;
+      }
       const location = response.headers.get('location');
       await response.body?.cancel();
-      if (!location || redirects === MAX_REDIRECTS) throw new OzonDeliveryError(502);
+      if (!location || redirects === MAX_REDIRECTS) throw new OzonDeliveryError(502, 'redirect', phase);
       const target = new URL(location, url);
-      if (target.origin !== origin || target.username || target.password) throw new OzonDeliveryError(502);
+      if (target.origin !== origin || target.username || target.password) throw new OzonDeliveryError(502, 'redirect', phase);
       // 301/303 can change request semantics; only the documented challenge redirects are accepted.
-      if (response.status !== 302 && response.status !== 307 && response.status !== 308) throw new OzonDeliveryError(502);
+      if (response.status !== 302 && response.status !== 307 && response.status !== 308) throw new OzonDeliveryError(502, 'redirect', phase);
       url = target.href;
     }
-    throw new OzonDeliveryError(502);
+    throw new OzonDeliveryError(502, 'redirect', phase);
   }
 
   private collectCookies(origin: string, headers: Headers): void {
@@ -197,15 +218,15 @@ export class OzonDeliveryClient {
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         controller.abort();
-        reject(new OzonDeliveryError(504));
+        reject(new OzonDeliveryError(504, 'timeout'));
       }, this.timeoutMs);
     });
     try {
       return await Promise.race([operation(controller.signal), timeout]);
     } catch (error) {
-      if (controller.signal.aborted) throw new OzonDeliveryError(504);
+      if (controller.signal.aborted) throw new OzonDeliveryError(504, 'timeout');
       if (error instanceof OzonDeliveryError) throw error;
-      throw new OzonDeliveryError(502);
+      throw new OzonDeliveryError(502, 'network');
     } finally {
       clearTimeout(timer!);
     }

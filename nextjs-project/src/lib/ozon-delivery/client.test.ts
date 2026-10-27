@@ -42,7 +42,7 @@ describe('Ozon Delivery API client', () => {
 
   it.each([302, 307])('preserves OAuth POST body and testcookie on %s redirect', async (status) => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status, headers: {
-      location: '/oauth/token?testcookie=1', 'set-cookie': 'testcookie=ok; Path=/; Secure; HttpOnly',
+      location: '/oauth/token?testcookie=1', 'set-cookie': 'testcookie=ok; Path=/; Secure; HttpOnly', antibot: '1',
     } })).mockResolvedValueOnce(token()).mockResolvedValueOnce(available());
     await new OzonDeliveryClient(config).checkClient('+79990001122');
     expect(fetchMock.mock.calls[1][0]).toBe('https://xapi.ozon.ru/oauth/token?testcookie=1');
@@ -122,6 +122,15 @@ describe('Ozon Delivery API client', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('https://api-delivery.ozon.ru/v1/order/checkout');
   });
 
+  it.each([undefined, ''])('requests the first delivery-point page with a null cursor (%s)', async (cursor) => {
+    fetchMock.mockResolvedValueOnce(token()).mockImplementation(async (_url, init) => {
+      const body = JSON.parse(init!.body as string);
+      return body.pagination.cursor === null ? json({ delivery_points: [] }) : json({}, 400);
+    });
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints(cursor)).resolves.toEqual({ delivery_points: [] });
+    expect(JSON.parse(fetchMock.mock.calls[1][1]!.body as string)).toEqual({ pagination: { cursor: null, limit: 1000 } });
+  });
+
   it('sends paginated points, point details and posting info in documented shapes', async () => {
     fetchMock.mockResolvedValueOnce(token())
       .mockResolvedValueOnce(json({ delivery_points: [{ delivery_point_id: 1, shipment_method_ids: 7 }], next_cursor: 'next' }))
@@ -146,6 +155,47 @@ describe('Ozon Delivery API client', () => {
     await client.checkClient('+79990001122');
     expect(fetchMock.mock.calls[2][0]).toBe('https://xapi.ozon.ru/oauth/token');
     expect(fetchMock.mock.calls[3][1]!.headers).toMatchObject({ Authorization: 'Bearer oauth-token' });
+  });
+
+  it('refreshes tokens with an absolute Unix expiry before they expire', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-27T00:00:00Z'));
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'short-token', expires_in: Date.now() / 1000 + 60 }))
+      .mockResolvedValueOnce(available()).mockResolvedValueOnce(available())
+      .mockResolvedValueOnce(token()).mockResolvedValueOnce(available());
+    const client = new OzonDeliveryClient(config);
+    await client.checkClient('+79990001122');
+    await vi.advanceTimersByTimeAsync(50_000);
+    await client.checkClient('+79990001122');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await client.checkClient('+79990001122');
+    expect(fetchMock.mock.calls[3][0]).toBe('https://xapi.ozon.ru/oauth/token');
+    expect(fetchMock.mock.calls[4][1]!.headers).toMatchObject({ Authorization: 'Bearer oauth-token' });
+  });
+
+  it('rejects an already expired absolute OAuth token', async () => {
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'expired-token', expires_in: Math.floor(Date.now() / 1000) - 60 }));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ status: 502, failure: 'invalid_response', phase: 'oauth' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes OAuth rejection from a Delivery API rejection', async () => {
+    fetchMock.mockResolvedValueOnce(json({ error: 'private-secret' }, 400));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ status: 400, failure: 'http', phase: 'oauth' });
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(json({}, 403));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ status: 403, failure: 'http', phase: 'api' });
+  });
+
+  it('distinguishes network, malformed JSON and explicit antibot failures without exposing payloads', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('private network details'));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ failure: 'network', phase: 'oauth' });
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(new Response('<html>private details</html>'));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ failure: 'invalid_response', phase: 'api' });
+    fetchMock.mockResolvedValueOnce(new Response('private incident', { status: 403, headers: { antibot: '1' } }));
+    const error = await new OzonDeliveryClient(config).listDeliveryPoints().catch(value => value);
+    expect(error).toMatchObject({ status: 403, failure: 'antibot', phase: 'oauth' });
+    expect(JSON.stringify(error)).not.toContain('private');
   });
 
   it('accepts the create response and singular empty approval response', async () => {

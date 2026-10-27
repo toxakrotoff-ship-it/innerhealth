@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST as check } from './check/route'
 import { POST as sync } from './points-sync/route'
+import { OzonDeliveryError } from '@/lib/ozon-delivery/client'
 
 const mocks = vi.hoisted(() => ({ admin: vi.fn(), client: vi.fn(), list: vi.fn(), sync: vi.fn() }))
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/require-admin', () => ({ requireAdminSession: mocks.admin }))
-vi.mock('@/lib/ozon-delivery/client', () => ({ getOzonDeliveryClient: mocks.client }))
+vi.mock('@/lib/ozon-delivery/client', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/ozon-delivery/client')>(), getOzonDeliveryClient: mocks.client }))
 vi.mock('@/lib/ozon-delivery/points-sync', () => ({ syncOzonDeliveryPoints: mocks.sync }))
 vi.mock('@/lib/ozon-delivery/settings', () => ({ OzonSettingsError: class extends Error {} }))
 const request = (action: string, brand = '') => new Request(`http://localhost/api/admin/ozon-delivery/${action}${brand ? `?brand=${brand}` : ''}`, { method: 'POST' })
@@ -72,5 +73,31 @@ describe('Ozon admin connection check and point synchronization', () => {
     const response = await sync(request('points-sync', 'inner'))
     expect(response.status).toBe(502)
     expect(await response.text()).not.toContain('private-secret')
+  })
+
+  it.each([
+    [new OzonDeliveryError(401, 'http', 'oauth'), 'HTTP 401, получение токена'],
+    [new OzonDeliveryError(403), 'HTTP 403, вызов Delivery API'],
+    [new OzonDeliveryError(400), 'HTTP 400, вызов Delivery API'],
+    [new OzonDeliveryError(429), 'HTTP 429'],
+    [new OzonDeliveryError(503), 'HTTP 503'],
+    [new OzonDeliveryError(504, 'timeout'), 'не ответил за отведённое время'],
+    [new OzonDeliveryError(502, 'network', 'oauth'), 'Проверьте DNS'],
+    [new OzonDeliveryError(502, 'invalid_response'), 'неожиданный формат ответа'],
+    [new OzonDeliveryError(502, 'redirect'), 'перенаправление'],
+    [new OzonDeliveryError(403, 'antibot', 'oauth'), 'защитой от ботов'],
+  ] as const)('reports an actionable safe error for check and sync: %s', async (error, expected) => {
+    error.message = 'upstream private-secret +79990001122'
+    mocks.list.mockRejectedValue(error)
+    mocks.sync.mockRejectedValue(error)
+    for (const response of [await check(request('check')), await sync(request('points-sync'))]) {
+      expect(response.status).toBe(502)
+      expect(response.headers.get('cache-control')).toBe('no-store')
+      const body = await response.text()
+      expect(body).toContain(expected)
+      expect(body).not.toContain('private-secret')
+      expect(body).not.toContain('+79990001122')
+      expect(JSON.parse(body).ok).toBe(false)
+    }
   })
 })
