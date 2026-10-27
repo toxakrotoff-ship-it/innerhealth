@@ -100,7 +100,7 @@ describe('Ozon Delivery API client', () => {
   });
 
   it('rejects missing and malformed OAuth fields before any API request', async () => {
-    fetchMock.mockResolvedValueOnce(json({ access_token: '', expires_in: '3600' }));
+    fetchMock.mockResolvedValueOnce(json({ access_token: '', expires_in: 'invalid' }));
     await expect(new OzonDeliveryClient(config).checkClient('+79990001122')).rejects.toMatchObject({ status: 502 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -145,9 +145,9 @@ describe('Ozon Delivery API client', () => {
     expect(JSON.parse(fetchMock.mock.calls[3][1]!.body as string)).toEqual({ posting_numbers: ['1'] });
   });
 
-  it('refreshes expired tokens before the next API call', async () => {
+  it.each([1, '1'])('refreshes expired tokens before the next API call (expires_in=%s)', async (expiresIn) => {
     vi.useFakeTimers();
-    fetchMock.mockResolvedValueOnce(json({ access_token: 'short-token', expires_in: 1 }))
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'short-token', expires_in: expiresIn }))
       .mockResolvedValueOnce(available()).mockResolvedValueOnce(token()).mockResolvedValueOnce(available());
     const client = new OzonDeliveryClient(config);
     await client.checkClient('+79990001122');
@@ -157,10 +157,11 @@ describe('Ozon Delivery API client', () => {
     expect(fetchMock.mock.calls[3][1]!.headers).toMatchObject({ Authorization: 'Bearer oauth-token' });
   });
 
-  it('refreshes tokens with an absolute Unix expiry before they expire', async () => {
+  it.each(['number', 'string'])('refreshes tokens with an absolute Unix expiry before they expire (%s)', async (format) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-27T00:00:00Z'));
-    fetchMock.mockResolvedValueOnce(json({ access_token: 'short-token', expires_in: Date.now() / 1000 + 60 }))
+    const expiry = Date.now() / 1000 + 60;
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'short-token', expires_in: format === 'string' ? String(expiry) : expiry }))
       .mockResolvedValueOnce(available()).mockResolvedValueOnce(available())
       .mockResolvedValueOnce(token()).mockResolvedValueOnce(available());
     const client = new OzonDeliveryClient(config);
@@ -174,9 +175,36 @@ describe('Ozon Delivery API client', () => {
     expect(fetchMock.mock.calls[4][1]!.headers).toMatchObject({ Authorization: 'Bearer oauth-token' });
   });
 
-  it('rejects an already expired absolute OAuth token', async () => {
-    fetchMock.mockResolvedValueOnce(json({ access_token: 'expired-token', expires_in: Math.floor(Date.now() / 1000) - 60 }));
+  it.each(['number', 'string'])('rejects an already expired absolute OAuth token (%s)', async (format) => {
+    const expiry = Math.floor(Date.now() / 1000) - 60;
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'expired-token', expires_in: format === 'string' ? String(expiry) : expiry }));
     await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ status: 502, failure: 'invalid_response', phase: 'oauth' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, true, false, '', ' ', 'not-a-number', '1e3', '-3600', '0', 0, -1, '9'.repeat(400)])('rejects malformed OAuth expiry without contacting the API (%s)', async expiresIn => {
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'oauth-token', expires_in: expiresIn }));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).rejects.toMatchObject({ status: 502, failure: 'invalid_response', phase: 'oauth' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['delivery-api.all'],
+    ['delivery-api.delivery', 'delivery-api.delivery-point', 'delivery-api.order', 'delivery-api.posting'],
+    'delivery-api.delivery delivery-api.delivery-point delivery-api.order delivery-api.posting',
+  ])('accepts numeric-string expiry with granted Delivery scopes (%j)', async scope => {
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'oauth-token', expires_in: String(Math.floor(Date.now() / 1000) + 3600), scope }))
+      .mockResolvedValueOnce(json({ delivery_points: [] }));
+    await expect(new OzonDeliveryClient(config).listDeliveryPoints()).resolves.toEqual({ delivery_points: [] });
+    expect(fetchMock.mock.calls[1][1]!.headers).toMatchObject({ Authorization: 'Bearer oauth-token' });
+  });
+
+  it.each([['unrelated.permission'], ['delivery-api.delivery-point'], [], ''])('rejects tokens without required Delivery scopes before contacting the API (%j)', async scope => {
+    fetchMock.mockResolvedValueOnce(json({ access_token: 'private-token', expires_in: '3600', scope }));
+    const error = await new OzonDeliveryClient(config).listDeliveryPoints().catch(value => value);
+    expect(error).toMatchObject({ status: 403, failure: 'insufficient_scope', phase: 'oauth' });
+    expect(JSON.stringify(error)).not.toContain('private-token');
+    expect(JSON.stringify(error)).not.toContain('unrelated.permission');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

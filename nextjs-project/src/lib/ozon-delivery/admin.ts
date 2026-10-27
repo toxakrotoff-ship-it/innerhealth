@@ -16,7 +16,8 @@ export function ozonAdminErrorResponse(error: unknown) {
   if (error instanceof OzonSettingsError) message = error.message
   else if (error instanceof OzonDeliveryError) {
     const phase = error.phase === 'oauth' ? 'получение токена' : 'вызов Delivery API'
-    if (error.failure === 'antibot') message = `Ozon заблокировал запрос защитой от ботов (${phase}). Обратитесь в поддержку Ozon для проверки IP-адреса сервера.`
+    if (error.failure === 'insufficient_scope') message = 'Ozon выдал токен без необходимых прав Delivery API. Проверьте доступы приложения в кабинете Ozon Доставки и сохранённые Client ID и Client Secret этого приложения.'
+    else if (error.failure === 'antibot') message = `Ozon заблокировал запрос защитой от ботов (${phase}). Обратитесь в поддержку Ozon для проверки IP-адреса сервера.`
     else if (error.failure === 'timeout') message = 'Ozon не ответил за отведённое время. Повторите попытку позже.'
     else if (error.failure === 'network') message = `Не удалось соединиться с Ozon (${phase}). Проверьте DNS и доступ сервера к API Ozon.`
     else if (error.failure === 'invalid_response') message = `Ozon вернул неожиданный формат ответа (${phase}). Требуется проверка совместимости интеграции с API.`

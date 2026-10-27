@@ -89,7 +89,8 @@ const id = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 const moneySchema = z.object({ amount: z.string().regex(/^\d+(\.\d+)?$/), currency_code: z.literal('RUB') });
 export const ozonTokenSchema = z.object({
   access_token: z.string().min(1),
-  expires_in: z.number().positive().finite(),
+  expires_in: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]).pipe(z.number().positive().finite()),
+  scope: z.union([z.string(), z.array(z.string())]).optional(),
 });
 export const ozonCheckClientSchema = z.object({ can_be_delivered: z.boolean() });
 export const ozonDeliveryPointsListSchema = z.object({

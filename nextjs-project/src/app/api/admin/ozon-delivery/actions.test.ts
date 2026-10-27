@@ -86,6 +86,7 @@ describe('Ozon admin connection check and point synchronization', () => {
     [new OzonDeliveryError(502, 'invalid_response'), 'неожиданный формат ответа'],
     [new OzonDeliveryError(502, 'redirect'), 'перенаправление'],
     [new OzonDeliveryError(403, 'antibot', 'oauth'), 'защитой от ботов'],
+    [new OzonDeliveryError(403, 'insufficient_scope', 'oauth'), 'без необходимых прав Delivery API'],
   ] as const)('reports an actionable safe error for check and sync: %s', async (error, expected) => {
     error.message = 'upstream private-secret +79990001122'
     mocks.list.mockRejectedValue(error)

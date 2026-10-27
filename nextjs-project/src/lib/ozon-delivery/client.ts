@@ -16,7 +16,7 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
 const SCOPES = ['delivery-api.delivery', 'delivery-api.delivery-point', 'delivery-api.order', 'delivery-api.posting'];
 
-export type OzonDeliveryFailure = 'http' | 'network' | 'timeout' | 'invalid_response' | 'redirect' | 'antibot';
+export type OzonDeliveryFailure = 'http' | 'network' | 'timeout' | 'invalid_response' | 'redirect' | 'antibot' | 'insufficient_scope';
 
 /** Deliberately excludes upstream messages, response bodies and recipient data. */
 export class OzonDeliveryError extends Error {
@@ -139,6 +139,12 @@ export class OzonDeliveryClient {
           throw new OzonDeliveryError(response.status, 'http', 'oauth');
         }
         const data = await this.parseResponse(response, ozonTokenSchema, 'oauth');
+        if (data.scope !== undefined) {
+          const granted = new Set((Array.isArray(data.scope) ? data.scope : [data.scope]).flatMap(scope => scope.split(/\s+/)));
+          if (!granted.has('delivery-api.all') && SCOPES.some(scope => !granted.has(scope))) {
+            throw new OzonDeliveryError(403, 'insufficient_scope', 'oauth');
+          }
+        }
         const now = Date.now();
         // Ozon also returns an absolute Unix timestamp in expires_in.
         // Retain support for relative lifetimes used by OAuth-compatible responses.
