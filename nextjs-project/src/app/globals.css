@@ -874,32 +874,47 @@ html.preloader-skip .preloader-overlay {
     }
   }
 
-  /* Inner Health бегущая строка под первым экраном: тот же паттерн, что и у Sprint Power banner (см. выше). */
+  /* Keep the visual track measurable before hydration and in reduced-motion mode. */
   .animate-marquee-inner {
-    animation: marquee-inner 30s linear infinite;
+    position: absolute;
+    visibility: hidden;
+    display: flex;
+    align-items: center;
+    width: max-content;
+    min-height: 2.75rem;
+    white-space: nowrap;
+  }
+  .inner-health-marquee__strip .inner-health-marquee__item {
+    flex-shrink: 0;
+  }
+  .inner-health-marquee__static .inner-health-marquee__item {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .inner-health-marquee[data-ready="true"] .animate-marquee-inner {
+      position: static;
+      visibility: visible;
+      animation: marquee-inner 30s linear infinite;
+    }
+    /* One accessible copy; visual repetitions are hidden from assistive technology. */
+    .inner-health-marquee[data-ready="true"] .inner-health-marquee__static {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      min-height: 0;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
   @keyframes marquee-inner {
-    0% {
+    from {
       transform: translate3d(0, 0, 0);
     }
-    100% {
+    to {
       transform: translate3d(-50%, 0, 0);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .animate-marquee-inner {
-      animation: none;
-      transform: none !important;
-      width: 100%;
-      max-width: 100%;
-      flex-wrap: wrap;
-      justify-content: center;
-      row-gap: 0.75rem;
-      column-gap: 3rem;
-    }
-
-    .animate-marquee-inner > div:last-child {
-      display: none;
     }
   }
 
