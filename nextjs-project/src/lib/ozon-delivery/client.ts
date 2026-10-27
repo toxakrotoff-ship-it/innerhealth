@@ -15,6 +15,7 @@ const TOKEN_URL = 'https://xapi.ozon.ru/oauth/token';
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
 const SCOPES = ['delivery-api.delivery', 'delivery-api.delivery-point', 'delivery-api.order', 'delivery-api.posting'];
+export const OZON_DELIVERY_POINT_INFO_LIMIT = 100;
 
 export type OzonDeliveryFailure = 'http' | 'network' | 'timeout' | 'invalid_response' | 'redirect' | 'antibot' | 'insufficient_scope';
 
@@ -52,7 +53,7 @@ export class OzonDeliveryClient {
   }
 
   getDeliveryPoints(ids: number[]): Promise<{ delivery_points: OzonDeliveryPoint[] }> {
-    if (!ids.length || ids.length > 1000 || ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    if (!ids.length || ids.length > OZON_DELIVERY_POINT_INFO_LIMIT || ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
       return Promise.reject(new OzonDeliveryError(400));
     }
     return this.request('/v1/delivery-point/info', { delivery_point_ids: ids }, ozonDeliveryPointsSchema);

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
 const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), transaction: vi.fn(), upsert: vi.fn(), prune: vi.fn(), cleanup: vi.fn() }))
 vi.mock('./config', () => ({ getOzonDeliveryConfig: mocks.config }))
-vi.mock('./client', () => ({ getOzonDeliveryClient: mocks.client }))
+vi.mock('./client', async importOriginal => ({ ...await importOriginal<typeof import('./client')>(), getOzonDeliveryClient: mocks.client }))
 vi.mock('@/lib/prisma', () => ({ prisma: {
   $transaction: mocks.transaction, ozonDeliveryPointCache: { upsert: mocks.upsert, deleteMany: mocks.prune }, ozonDeliveryQuote: { deleteMany: mocks.cleanup },
 } }))
@@ -39,6 +39,32 @@ describe('Ozon point synchronization', () => {
     mocks.list.mockResolvedValue({ delivery_points: [], next_cursor: 'same' })
     await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('repeated')
     expect(mocks.prune).not.toHaveBeenCalled()
+  })
+  it('splits a large list page into info requests of at most 100 and includes the final partial batch', async () => {
+    const ids = Array.from({ length: 205 }, (_, index) => index + 1)
+    mocks.list.mockResolvedValue({ delivery_points: ids.map(id => ({ delivery_point_id: id, shipment_method_ids: [1] })) })
+    mocks.info.mockImplementation(async (batch: number[]) => {
+      if (batch.length > 100) throw new Error('Ozon info batch exceeds 100')
+      return { delivery_points: batch.map(id => ({ delivery_point_id: id, name: 'Point', full_address: 'Address', is_active: true, type: 'pvz' })) }
+    })
+    expect(await syncOzonDeliveryPoints('inner')).toEqual({ brand: 'inner', skipped: false, points: 205 })
+    expect(mocks.info.mock.calls.map(([batch]) => batch.length)).toEqual([100, 100, 5])
+    expect(mocks.info.mock.calls.flatMap(([batch]) => batch)).toEqual(ids)
+    expect(mocks.upsert).toHaveBeenCalledTimes(205)
+    expect(mocks.prune).toHaveBeenCalledTimes(1)
+  })
+  it('does not prune the previous cache when a later detail batch fails or omits points', async () => {
+    const ids = Array.from({ length: 101 }, (_, index) => index + 1)
+    mocks.list.mockResolvedValue({ delivery_points: ids.map(id => ({ delivery_point_id: id, shipment_method_ids: [1] })) })
+    const firstBatch = { delivery_points: ids.slice(0, 100).map(id => ({ delivery_point_id: id, is_active: true, type: 'pvz' })) }
+    mocks.info.mockResolvedValueOnce(firstBatch).mockRejectedValueOnce(new Error('upstream'))
+    await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('upstream')
+    expect(mocks.prune).not.toHaveBeenCalled()
+    expect(mocks.cleanup).not.toHaveBeenCalled()
+    mocks.info.mockResolvedValueOnce(firstBatch).mockResolvedValueOnce({ delivery_points: [] })
+    await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('incomplete')
+    expect(mocks.prune).not.toHaveBeenCalled()
+    expect(mocks.cleanup).not.toHaveBeenCalled()
   })
   it('does not prune when point info omits a requested point', async () => {
     mocks.list.mockResolvedValue({ delivery_points: [{ delivery_point_id: 1, shipment_method_ids: 1 }] })

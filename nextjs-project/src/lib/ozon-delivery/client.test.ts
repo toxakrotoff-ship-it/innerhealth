@@ -273,7 +273,7 @@ describe('Ozon Delivery API client', () => {
   it('rejects invalid idempotency keys and oversized batches before sending requests', async () => {
     const client = new OzonDeliveryClient(config);
     await expect(client.createOrder(order, 'bad-key')).rejects.toMatchObject({ status: 400 });
-    await expect(client.getDeliveryPoints(Array(1001).fill(1))).rejects.toMatchObject({ status: 400 });
+    await expect(client.getDeliveryPoints(Array(101).fill(1))).rejects.toMatchObject({ status: 400 });
     await expect(client.postingInfo(Array(101).fill('1'))).rejects.toMatchObject({ status: 400 });
     expect(fetchMock).not.toHaveBeenCalled();
   });

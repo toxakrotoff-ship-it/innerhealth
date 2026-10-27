@@ -1,7 +1,7 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
 import type { BrandId } from '@/lib/brand/brand'
-import { getOzonDeliveryClient } from './client'
+import { getOzonDeliveryClient, OZON_DELIVERY_POINT_INFO_LIMIT } from './client'
 import { getOzonDeliveryConfig } from './config'
 
 /** Complete traversal before pruning. Failed/partial sync leaves the previous cache usable. */
@@ -19,9 +19,10 @@ export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeD
       const methods = Array.isArray(point.shipment_method_ids) ? point.shipment_method_ids : [point.shipment_method_ids]
       return methods.includes(config.shipmentMethodId)
     }).map(point => point.delivery_point_id)
-    if (ids.length) {
-      const info = await client.getDeliveryPoints(ids)
-      if (ids.some(id => !info.delivery_points.some(p => p.delivery_point_id === id))) throw new Error('Ozon returned an incomplete point page')
+    for (let offset = 0; offset < ids.length; offset += OZON_DELIVERY_POINT_INFO_LIMIT) {
+      const batch = ids.slice(offset, offset + OZON_DELIVERY_POINT_INFO_LIMIT)
+      const info = await client.getDeliveryPoints(batch)
+      if (batch.some(id => !info.delivery_points.some(p => p.delivery_point_id === id))) throw new Error('Ozon returned an incomplete point page')
       const available = info.delivery_points.filter(p => p.is_active && p.type === 'pvz')
       if (available.length) {
         for (let offset = 0; offset < available.length; offset += 100) {
