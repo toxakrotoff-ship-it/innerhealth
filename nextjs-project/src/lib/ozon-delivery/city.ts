@@ -29,9 +29,4 @@ export async function detectOzonCity(request: Request, brand: BrandId): Promise<
   } catch { return null }
 }
 
-/** Match a complete comma-delimited locality, rather than a street in another city. */
-export function ozonCityAddressPattern(city: string): string {
-  const name = city.trim().replace(/^(?:город\s+|г\.\s*|г\s+)/i, '')
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/[её]/gi, '[её]')
-  return `(^|,)[[:space:]]*((г[.]?|город)[[:space:]]*)?${name}[[:space:]]*(,|$)`
-}
+export { ozonCityAddressPattern } from './search'

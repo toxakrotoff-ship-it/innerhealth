@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import type { BrandId } from '@/lib/brand/brand'
 import { getOzonDeliveryClient, OZON_DELIVERY_POINT_INFO_LIMIT } from './client'
 import { getOzonDeliveryConfig } from './config'
+import { publishOzonPvzCities } from '@/lib/ozon-pvz-publication'
 
 /** Complete traversal before pruning. Failed/partial sync leaves the previous cache usable. */
 export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeDisabled?: boolean } = {}) {
@@ -26,13 +27,17 @@ export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeD
       const available = info.delivery_points.filter(p => p.is_active && p.type === 'pvz')
       if (available.length) {
         // One parameterized upsert per info batch avoids thousands of Prisma query plans.
-        const records = JSON.stringify(available.map(p => ({ pointId: String(p.delivery_point_id), name: p.name, address: p.full_address })))
+        const records = JSON.stringify(available.map(p => ({
+          pointId: String(p.delivery_point_id), name: p.name, address: p.full_address,
+          latitude: p.coordinates?.latitude ?? null, longitude: p.coordinates?.longitude ?? null,
+        })))
         await prisma.$executeRaw`
-          INSERT INTO "OzonDeliveryPointCache" ("brand", "pointId", "name", "address", "syncedAt")
-          SELECT ${brand}, point."pointId", point.name, point.address, ${new Date()}
-          FROM jsonb_to_recordset(${records}::jsonb) AS point("pointId" text, name text, address text)
+          INSERT INTO "OzonDeliveryPointCache" ("brand", "pointId", "name", "address", "syncedAt", "latitude", "longitude")
+          SELECT ${brand}, point."pointId", point.name, point.address, ${new Date()}, point.latitude, point.longitude
+          FROM jsonb_to_recordset(${records}::jsonb) AS point("pointId" text, name text, address text, latitude double precision, longitude double precision)
           ON CONFLICT ("brand", "pointId") DO UPDATE SET
-            "name" = EXCLUDED."name", "address" = EXCLUDED."address", "syncedAt" = EXCLUDED."syncedAt"
+            "name" = EXCLUDED."name", "address" = EXCLUDED."address", "syncedAt" = EXCLUDED."syncedAt",
+            "latitude" = EXCLUDED."latitude", "longitude" = EXCLUDED."longitude"
         `
         points += available.length
       }
@@ -42,6 +47,7 @@ export async function syncOzonDeliveryPoints(brand: BrandId, options: { includeD
       await prisma.ozonDeliveryPointCache.deleteMany({ where: { brand, syncedAt: { lt: started } } })
       // Keep quotes referenced by orders; unused quotes contain no contact details.
       await prisma.ozonDeliveryQuote.deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 86400000) }, shipment: null } })
+      await publishOzonPvzCities(brand, { syncedSince: started, expectedCount: points })
       return { brand, skipped: false, points }
     }
     if (seen.has(next)) throw new Error('Ozon repeated a pagination cursor')

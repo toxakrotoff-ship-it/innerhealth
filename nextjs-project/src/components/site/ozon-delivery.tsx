@@ -1,15 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { BrandId } from '@/lib/brand/brand'
 import { validatePhoneRu } from '@/lib/phone-mask'
 import { cn } from '@/lib/utils'
+import { searchOzonPoints } from '@/lib/ozon-pvz-client'
+import { OzonPointsMap, type OzonMapPoint } from './ozon-points-map'
+import { OzonSearchInput } from './ozon-search-input'
 
-interface OzonDeliveryPoint {
-  id: number
-  name: string
-  address: string
-}
+type OzonDeliveryPoint = OzonMapPoint
 
 export interface OzonDeliverySelection {
   quoteToken: string
@@ -38,11 +37,26 @@ export function OzonDelivery(props: OzonDeliveryProps) {
 }
 
 function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprintTheme = false, onChange }: OzonDeliveryProps) {
+  const tabsId = useId()
+  const [inputMode, setInputModeState] = useState<'map' | 'manual'>('map')
+  const modeStorageKey = `ozon-delivery-input-mode:${brandId ?? 'default'}`
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(modeStorageKey) === 'manual') setInputModeState('manual')
+    } catch { /* Storage is optional. */ }
+  }, [modeStorageKey])
+  function setInputMode(mode: 'map' | 'manual') {
+    setInputModeState(mode)
+    try { localStorage.setItem(modeStorageKey, mode) } catch { /* Storage is optional. */ }
+  }
   const providedCity = city?.trim().slice(0, 100) ?? ''
   const [cityValue, setCityValue] = useState(providedCity)
+  const [cityEdited, setCityEdited] = useState(false)
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([])
   const [detectingCity, setDetectingCity] = useState(false)
   const [query, setQuery] = useState('')
   const [points, setPoints] = useState<OzonDeliveryPoint[]>([])
+  const [mapApiKey, setMapApiKey] = useState<string | undefined>()
   const [hasMore, setHasMore] = useState(false)
   const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -59,7 +73,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
   const context = JSON.stringify([brandId, cityValue, phone, promoCodeId, items.map(({ productId, quantity }) => [productId, quantity])])
   const contextRef = useRef(context)
   contextRef.current = context
-  const searchContext = JSON.stringify([brandId, cityValue.trim(), query.trim()])
+  const searchContext = JSON.stringify([brandId, cityValue.trim(), query.trim(), cityEdited])
   const searchContextRef = useRef(searchContext)
   searchContextRef.current = searchContext
   const cityStorageKey = `ozon-delivery-city:${brandId ?? 'default'}`
@@ -77,6 +91,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     if (searchTimer.current) clearTimeout(searchTimer.current)
     setSearching(false)
     setPoints([])
+    setCitySuggestions([])
     setHasMore(false)
     setSearched(false)
     setPoint(null)
@@ -91,6 +106,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
       clearPoints()
       setQuery('')
       setCityValue(value)
+      setCityEdited(false)
     }
     if (providedCity.length >= 2) {
       applyCity(providedCity)
@@ -158,18 +174,15 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     setPoints([])
     setHasMore(false)
     const requestedContext = searchContext
-    try { localStorage.setItem(cityStorageKey, requestedCity) } catch { /* Storage is optional. */ }
     try {
-      const params = new URLSearchParams({ city: requestedCity })
-      if (query.trim()) params.set('query', query.trim())
-      const response = await fetch(withBrand(`/api/ozon-delivery/points?${params}`, brandId), {
-        signal: controller.signal,
-        cache: 'no-store',
-      })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || 'Не удалось загрузить пункты выдачи Ozon')
+      const payload = await searchOzonPoints({ city: requestedCity, query, brandId, suggestCities: cityEdited, signal: controller.signal })
       if (controller.signal.aborted || searchContextRef.current !== requestedContext) return
       setPoints(Array.isArray(payload.points) ? payload.points : [])
+      setCitySuggestions(payload.cities ?? [])
+      if (payload.points.length > 0) {
+        try { localStorage.setItem(cityStorageKey, requestedCity) } catch { /* Storage is optional. */ }
+      }
+      setMapApiKey(typeof payload.mapApiKey === 'string' ? payload.mapApiKey : undefined)
       setHasMore(payload.hasMore === true)
       setSearched(true)
     } catch (cause) {
@@ -178,7 +191,7 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     } finally {
       if (!controller.signal.aborted && searchContextRef.current === requestedContext) setSearching(false)
     }
-  }, [brandId, cityValue, cityStorageKey, query, searchContext])
+  }, [brandId, cityValue, cityEdited, cityStorageKey, query, searchContext])
 
   useEffect(() => {
     if (cityValue.trim().length < 2) return
@@ -228,36 +241,68 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
     <section aria-label="Доставка Ozon в пункт выдачи" className={cn('space-y-4 rounded-2xl border p-6',
       isSprintTheme ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-gray-200 bg-white')}>
       <h2 className="text-lg font-semibold">Доставка Ozon в пункт выдачи</h2>
+      <div role="tablist" aria-label="Способ выбора доставки Ozon"
+        className={cn('flex gap-1 rounded-xl border p-1',
+          isSprintTheme ? 'border-slate-700 bg-slate-900' : 'border-gray-200 bg-gray-50')}>
+        {([['map', 'Выбрать на карте'], ['manual', 'Заполнить вручную']] as const).map(([mode, label]) => (
+          <button key={mode} id={`${tabsId}-${mode}-tab`} type="button" role="tab"
+            aria-selected={inputMode === mode} aria-controls={`${tabsId}-${mode}-panel`}
+            tabIndex={inputMode === mode ? 0 : -1} onClick={() => setInputMode(mode)}
+            onKeyDown={event => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+              event.preventDefault()
+              const next = event.key === 'Home' ? 'map' : event.key === 'End' ? 'manual' : mode === 'map' ? 'manual' : 'map'
+              setInputMode(next)
+              document.getElementById(`${tabsId}-${next}-tab`)?.focus()
+            }}
+            className={cn('min-h-[44px] flex-1 rounded-lg px-3 text-sm font-medium transition-colors',
+              inputMode === mode
+                ? isSprintTheme ? 'bg-slate-700 text-white' : 'bg-white text-gray-900 shadow-sm'
+                : isSprintTheme ? 'text-slate-300 hover:text-white' : 'text-gray-600 hover:text-gray-900')}>
+            {label}
+          </button>
+        ))}
+      </div>
       <div>
         <label htmlFor="ozon-city" className="mb-1 block text-sm font-medium">Город доставки Ozon</label>
-        <input id="ozon-city" value={cityValue} maxLength={100} placeholder="Например: Москва"
-          onChange={event => {
+        <OzonSearchInput id="ozon-city" value={cityValue} placeholder="Например: Москва или Санкт"
+          isSprintTheme={isSprintTheme} suggestions={citySuggestions.map(name => ({ id: name, label: name }))}
+          onSearch={() => void searchPoints()}
+          onSelect={name => {
+            clearPoints()
+            setQuery('')
+            setCityValue(name)
+            setCityEdited(false)
+          }}
+          onChange={value => {
             cityController.current?.abort()
             setDetectingCity(false)
             clearPoints()
             setQuery('')
-            setCityValue(event.target.value)
-            if (event.target.value.trim().length < 2) {
-              try { localStorage.removeItem(cityStorageKey) } catch { /* Storage is optional. */ }
-            }
-          }}
-          className={cn('form-input min-h-[44px] w-full rounded-lg text-base', isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100')} />
-        {detectingCity ? <p role="status" className="mt-1 text-sm">Определяем город…</p> : <p className="mt-1 text-sm">Показываем пункты выбранного города. Город можно изменить.</p>}
+            setCityValue(value)
+            setCityEdited(true)
+            try { localStorage.removeItem(cityStorageKey) } catch { /* Storage is optional. */ }
+          }} />
+        {detectingCity ? <p role="status" className="mt-1 text-sm">Определяем город…</p> : <p className="mt-1 text-sm">Начните вводить название и выберите город из подсказок.</p>}
       </div>
       <div>
         <label htmlFor="ozon-point-query" className="mb-1 block text-sm font-medium">Улица или адрес пункта выдачи</label>
         <div className="flex flex-wrap gap-2">
-          <input
+          <OzonSearchInput
             id="ozon-point-query"
             value={query}
-            maxLength={100}
             placeholder="Например: Тверская, 10"
-            onChange={(event) => {
-              clearPoints()
-              setQuery(event.target.value)
+            isSprintTheme={isSprintTheme}
+            suggestions={query.trim().length >= 2 && !searching ? points.slice(0, 6).map(option => ({ id: String(option.id), label: option.address })) : []}
+            onSearch={() => void searchPoints()}
+            onSelect={id => {
+              const option = points.find(candidate => String(candidate.id) === id)
+              if (option) { clearQuote(); setPoint(option) }
             }}
-            className={cn('form-input min-h-[44px] min-w-0 flex-1 rounded-lg text-base',
-              isSprintTheme && 'border-slate-600 bg-slate-800 text-slate-100')}
+            onChange={value => {
+              clearPoints()
+              setQuery(value)
+            }}
           />
           <button type="button" className={buttonClass} disabled={cityValue.trim().length < 2 || searching} onClick={() => void searchPoints()}>
             {searching ? 'Поиск...' : 'Найти пункты'}
@@ -265,21 +310,31 @@ function ScopedOzonDelivery({ phone, items, brandId, city, promoCodeId, isSprint
         </div>
       </div>
       {searching ? <p role="status" className="text-sm">Загружаем пункты выдачи Ozon...</p> : null}
-      {searched && points.length === 0 ? <p role="status" className="text-sm">Пункты выдачи не найдены. Уточните город или адрес.</p> : null}
+      {searched && points.length === 0 ? <p role="status" className="text-sm">{citySuggestions.length > 0 ? 'Выберите город из подсказок, чтобы увидеть пункты выдачи.' : 'Пункты выдачи не найдены. Уточните город или адрес.'}</p> : null}
       {searched && hasMore ? <p className="text-sm">Показаны первые 30 пунктов. Уточните улицу или адрес, чтобы найти нужный.</p> : null}
       {points.length > 0 ? (
-        <ul aria-label="Пункты выдачи Ozon" className="max-h-80 space-y-2 overflow-y-auto">
-          {points.map((option) => (
-            <li key={option.id}>
-              <button type="button" aria-pressed={point?.id === option.id} onClick={() => { clearQuote(); setPoint(option) }}
-                className={cn('min-h-[44px] w-full rounded-lg border p-3 text-left text-sm',
-                  point?.id === option.id ? 'border-action-blue bg-action-blue/10' : isSprintTheme ? 'border-slate-600' : 'border-gray-200')}>
-                <span className="block font-medium">{option.name}</span>
-                <span className="mt-1 block">{option.address}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div role="tabpanel" id={`${tabsId}-${inputMode}-panel`} aria-labelledby={`${tabsId}-${inputMode}-tab`} className="space-y-2">
+          {inputMode === 'map' ? (
+            <>
+              <p className="text-sm">На карте показаны найденные пункты, для которых доступны координаты.</p>
+              <OzonPointsMap points={points} selectedId={point?.id} apiKey={mapApiKey}
+                onSelect={option => { clearQuote(); setPoint(option) }} />
+            </>
+          ) : (
+            <ul aria-label="Пункты выдачи Ozon" className="max-h-80 space-y-2 overflow-y-auto lg:max-h-[400px]">
+              {points.map((option) => (
+                <li key={option.id}>
+                  <button type="button" aria-pressed={point?.id === option.id} onClick={() => { clearQuote(); setPoint(option) }}
+                    className={cn('min-h-[44px] w-full rounded-lg border p-3 text-left text-sm',
+                      point?.id === option.id ? 'border-action-blue bg-action-blue/10' : isSprintTheme ? 'border-slate-600' : 'border-gray-200')}>
+                    <span className="block font-medium">{option.name}</span>
+                    <span className="mt-1 block">{option.address}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : null}
       {point ? (
         <div className="space-y-3">

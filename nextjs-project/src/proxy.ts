@@ -114,7 +114,7 @@ function addSecurityHeaders(request: Request, response: NextResponse): NextRespo
     `style-src 'self'${cdnSrc} 'unsafe-inline' https://fonts.googleapis.com ${yandexMapsStyleSrc}`,
     "img-src 'self' data: https: blob:",
     `font-src 'self'${cdnSrc} data: https://fonts.gstatic.com`,
-    `connect-src 'self' ${yandexMapsConnectSrc} ${metrikaSrc} wss://mc.yandex.ru wss://mc.yandex.com`,
+    `connect-src 'self'${cdnSrc} ${yandexMapsConnectSrc} ${metrikaSrc} wss://mc.yandex.ru wss://mc.yandex.com`,
     // Вебвизор Метрики открывает iframe/blob.
     `frame-src 'self' blob: ${metrikaSrc}`,
     frameAncestors,

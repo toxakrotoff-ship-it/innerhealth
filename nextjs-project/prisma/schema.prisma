@@ -726,6 +726,8 @@ model OzonDeliveryPointCache {
   pointId     String
   name        String
   address     String
+  latitude    Float?
+  longitude   Float?
   syncedAt    DateTime @default(now())
 
   @@id([brand, pointId])

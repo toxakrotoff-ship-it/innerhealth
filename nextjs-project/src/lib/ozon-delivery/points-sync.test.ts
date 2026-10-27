@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('server-only', () => ({}))
-const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), write: vi.fn(), prune: vi.fn(), cleanup: vi.fn() }))
+const mocks = vi.hoisted(() => ({ config: vi.fn(), client: vi.fn(), list: vi.fn(), info: vi.fn(), write: vi.fn(), prune: vi.fn(), cleanup: vi.fn(), publish: vi.fn() }))
 vi.mock('./config', () => ({ getOzonDeliveryConfig: mocks.config }))
+vi.mock('@/lib/ozon-pvz-publication', () => ({ publishOzonPvzCities: mocks.publish }))
 vi.mock('./client', async importOriginal => ({ ...await importOriginal<typeof import('./client')>(), getOzonDeliveryClient: mocks.client }))
 vi.mock('@/lib/prisma', () => ({ prisma: {
   $executeRaw: mocks.write, ozonDeliveryPointCache: { deleteMany: mocks.prune }, ozonDeliveryQuote: { deleteMany: mocks.cleanup },
@@ -23,7 +24,7 @@ describe('Ozon point synchronization', () => {
   it('loads every page and only active PVZ reachable by the configured method', async () => {
     mocks.list.mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 1, shipment_method_ids: [1] }, { delivery_point_id: 2, shipment_method_ids: 2 }], next_cursor: 'next' })
       .mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 3, shipment_method_ids: 1 }, { delivery_point_id: 4, shipment_method_ids: 1 }], next_cursor: null })
-    mocks.info.mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 1, name: 'Москва', full_address: 'Москва, улица', is_active: true, type: 'pvz' }] })
+    mocks.info.mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 1, name: 'Москва', full_address: 'Москва, улица', coordinates: { latitude: 55.75, longitude: 37.61 }, is_active: true, type: 'pvz' }] })
       .mockResolvedValueOnce({ delivery_points: [{ delivery_point_id: 3, is_active: false, type: 'pvz' }, { delivery_point_id: 4, is_active: true, type: 'postamat' }] })
     expect(await syncOzonDeliveryPoints('inner')).toEqual({ brand: 'inner', skipped: false, points: 1 })
     expect(mocks.list.mock.calls).toEqual([[undefined], ['next']])
@@ -31,13 +32,16 @@ describe('Ozon point synchronization', () => {
     expect(mocks.write).toHaveBeenCalledTimes(1)
     expect(mocks.write.mock.calls[0][1]).toBe('inner')
     expect(mocks.write.mock.calls[0][2]).toBeInstanceOf(Date)
-    expect(JSON.parse(mocks.write.mock.calls[0][3])).toEqual([{ pointId: '1', name: 'Москва', address: 'Москва, улица' }])
+    expect(JSON.parse(mocks.write.mock.calls[0][3])).toEqual([{ pointId: '1', name: 'Москва', address: 'Москва, улица', latitude: 55.75, longitude: 37.61 }])
     expect(mocks.prune).toHaveBeenCalledTimes(1)
+    expect(mocks.publish).toHaveBeenCalledWith('inner', { syncedSince: expect.any(Date), expectedCount: 1 })
+    expect(mocks.publish.mock.invocationCallOrder[0]).toBeGreaterThan(mocks.prune.mock.invocationCallOrder[0])
   })
   it('keeps the previous cache on upstream failure and repeated cursors', async () => {
     mocks.list.mockRejectedValueOnce(new Error('upstream'))
     await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow()
     expect(mocks.prune).not.toHaveBeenCalled()
+    expect(mocks.publish).not.toHaveBeenCalled()
     mocks.list.mockResolvedValue({ delivery_points: [], next_cursor: 'same' })
     await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('repeated')
     expect(mocks.prune).not.toHaveBeenCalled()
@@ -84,10 +88,16 @@ describe('Ozon point synchronization', () => {
     await expect(syncOzonDeliveryPoints('sprint-power')).rejects.toThrow('database unavailable')
     const [sql, brand, , records] = mocks.write.mock.calls[0]
     expect(brand).toBe('sprint-power')
-    expect(JSON.parse(records)).toEqual([{ pointId: '1', name, address }])
+    expect(JSON.parse(records)).toEqual([{ pointId: '1', name, address, latitude: null, longitude: null }])
     expect(sql.join('')).not.toContain(name)
     expect(sql.join('')).not.toContain(address)
     expect(mocks.prune).not.toHaveBeenCalled()
     expect(mocks.cleanup).not.toHaveBeenCalled()
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+  it('reports a publication failure rather than claiming the nightly release is complete', async () => {
+    mocks.list.mockResolvedValue({ delivery_points: [] })
+    mocks.publish.mockRejectedValue(new Error('publication disk unavailable'))
+    await expect(syncOzonDeliveryPoints('inner')).rejects.toThrow('publication disk unavailable')
   })
 })

@@ -1,7 +1,11 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { OzonDelivery } from './ozon-delivery'
+import { createHash, webcrypto } from 'node:crypto'
+
+const cdnConfig = vi.hoisted(() => ({ url: '' }))
+vi.mock('@/lib/cdn', () => ({ get CDN_URL() { return cdnConfig.url } }))
 
 const point = { id: 123, name: 'Пункт Ozon', address: 'Москва, Тверская, 10' }
 const quote = {
@@ -23,8 +27,129 @@ function mockApi(quoteResponse = quote) {
 }
 
 describe('Ozon pickup delivery', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    cdnConfig.url = ''
+    localStorage.setItem('ozon-delivery-input-mode:inner', 'manual')
+  })
   afterEach(() => vi.unstubAllGlobals())
+
+  it('offers exclusive map and text selection like CDEK, with map as the default', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    mockApi()
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    expect(screen.getByText('Выбрать на карте')).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByLabelText('Карта пунктов выдачи Ozon')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Пункты выдачи Ozon')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Заполнить вручную'))
+    expect(screen.getByLabelText('Пункты выдачи Ozon')).toBeVisible()
+    expect(screen.queryByLabelText('Карта пунктов выдачи Ozon')).not.toBeInTheDocument()
+    expect(localStorage.getItem('ozon-delivery-input-mode:inner')).toBe('manual')
+    fireEvent.keyDown(screen.getByText('Заполнить вручную'), { key: 'ArrowLeft' })
+    expect(screen.getByText('Выбрать на карте')).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Выбрать на карте')).toHaveFocus()
+  })
+
+  it('preserves the chosen point, search and confirmed quote when switching selection modes', async () => {
+    const fetchMock = mockApi()
+    const onChange = vi.fn()
+    render(<OzonDelivery {...baseProps} onChange={onChange} />)
+    await choosePoint()
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(quote))
+    const changeCount = onChange.mock.calls.length
+    fireEvent.click(screen.getByText('Выбрать на карте'))
+    expect(screen.getByText(`Выбран пункт выдачи: ${point.address}`)).toBeVisible()
+    expect(screen.getByText(/Доставка: 250/)).toBeVisible()
+    fireEvent.click(screen.getByText('Заполнить вручную'))
+    expect(screen.getByText(point.address).closest('button')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Город доставки Ozon')).toHaveValue('Москва')
+    expect(onChange).toHaveBeenCalledTimes(changeCount)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('completes a partial city and loads its points after keyboard selection', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'https://site')
+      return new Response(JSON.stringify(url.searchParams.get('suggestCities') === 'true'
+        ? { cities: ['Санкт-Петербург'], points: [] }
+        : { points: [{ ...point, name: 'Пункт Петербург' }] }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    const input = screen.getByLabelText('Город доставки Ozon')
+    fireEvent.change(input, { target: { value: 'Санкт' } })
+    expect(await screen.findByRole('option')).toHaveTextContent('Санкт-Петербург')
+    expect(screen.queryByText(/Пункты выдачи не найдены/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('ozon-delivery-city:inner')).toBeNull()
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(input).toHaveValue('Санкт-Петербург')
+    await screen.findByText('Пункт Петербург')
+    expect(localStorage.getItem('ozon-delivery-city:inner')).toBe('Санкт-Петербург')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('selects an address suggestion without submitting checkout', async () => {
+    mockApi()
+    const submit = vi.fn(event => event.preventDefault())
+    render(<form onSubmit={submit}><OzonDelivery {...baseProps} onChange={vi.fn()} /></form>)
+    await choosePoint()
+    const input = screen.getByLabelText('Улица или адрес пункта выдачи')
+    fireEvent.change(input, { target: { value: 'Твер' } })
+    expect(await screen.findByRole('option')).toHaveTextContent(point.address)
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(screen.getByText(`Выбран пункт выдачи: ${point.address}`)).toBeVisible()
+    expect(submit).not.toHaveBeenCalled()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('does not show city suggestions from an earlier request', async () => {
+    let finishFirst!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const city = new URL(String(input), 'https://site').searchParams.get('city')
+      if (city === 'Санкт') return new Promise<Response>(resolve => { finishFirst = resolve })
+      return new Response(JSON.stringify({ points: [], cities: ['Самара'] }))
+    }))
+    render(<OzonDelivery {...baseProps} onChange={vi.fn()} />)
+    const input = screen.getByLabelText('Город доставки Ozon')
+    fireEvent.change(input, { target: { value: 'Санкт' } })
+    await waitFor(() => expect(finishFirst).toBeTypeOf('function'))
+    fireEvent.change(input, { target: { value: 'Сама' } })
+    expect(await screen.findByRole('option')).toHaveTextContent('Самара')
+    await act(async () => finishFirst(new Response(JSON.stringify({ points: [], cities: ['Санкт-Петербург'] }))))
+    expect(screen.queryByText('Санкт-Петербург')).not.toBeInTheDocument()
+    expect(screen.getByRole('option')).toHaveTextContent('Самара')
+  })
+
+  it('uses marker selections for calculation and resets the price when another marker is selected', async () => {
+    localStorage.removeItem('ozon-delivery-input-mode:inner')
+    const clicks: Array<() => void> = []
+    vi.stubGlobal('ymaps', {
+      ready: (callback: () => void) => callback(),
+      Map: function () { return { geoObjects: { add: vi.fn(), remove: vi.fn() }, setCenter: vi.fn(), setBounds: vi.fn(), destroy: vi.fn() } },
+      Placemark: function () { return { events: { add: (_event: string, callback: () => void) => clicks.push(callback) } } },
+    })
+    const other = { ...point, id: 124, address: 'Москва, Тверская, 20' }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => new Response(JSON.stringify(
+      String(input).includes('/points?') ? { mapApiKey: 'public-key', points: [point, other].map(p => ({ ...p, coordinates: { latitude: 55.75, longitude: 37.61 } })) } : quote,
+    )))
+    vi.stubGlobal('fetch', fetchMock)
+    const onChange = vi.fn()
+    render(<OzonDelivery {...baseProps} onChange={onChange} />)
+    await waitFor(() => expect(clicks.length).toBe(2))
+    act(() => clicks[0]())
+    expect(screen.getByText('Выбран пункт выдачи: Москва, Тверская, 10')).toBeVisible()
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(quote))
+    act(() => clicks.at(-1)!())
+    expect(onChange).toHaveBeenLastCalledWith(null)
+    expect(screen.getByText('Выбран пункт выдачи: Москва, Тверская, 20')).toBeVisible()
+    expect(screen.queryByText(/Доставка: 250/)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 
   it('searches without contact data and quotes only after the customer requests calculation', async () => {
     const fetchMock = mockApi()
@@ -41,6 +166,34 @@ describe('Ozon pickup delivery', () => {
     expect(request[0]).toBe('/api/ozon-delivery/quote?brand=inner')
     expect(JSON.parse(String(request[1].body))).toEqual({ phone: baseProps.phone, items: baseProps.items, deliveryPointId: point.id, promoCodeId: 'promo-1' })
     expect(screen.getByRole('status')).toHaveTextContent('250 ₽')
+  })
+
+  it('selects a verified CDN city point and calculates its quote through the origin', async () => {
+    cdnConfig.url = 'https://cdn.example'
+    vi.stubGlobal('crypto', webcrypto)
+    const snapshot = JSON.stringify([point])
+    const cityKey = createHash('sha256').update('москва').digest('hex')
+    const contentHash = createHash('sha256').update(snapshot).digest('hex')
+    const path = `/api/ozon-pvz/cities/inner/${contentHash}/${cityKey}.json`
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.startsWith('/api/ozon-pvz/manifest')) return new Response(JSON.stringify({
+        schemaVersion: 1, brand: 'inner', city: 'москва', cityKey, publishedAt: new Date().toISOString(),
+        entry: { path, totalCount: 1, updatedAt: new Date().toISOString() },
+      }))
+      if (url === `https://cdn.example${path}`) return new Response(snapshot)
+      if (url.startsWith('/api/ozon-delivery/quote')) return new Response(JSON.stringify(quote))
+      throw new Error('Unexpected point request')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const onChange = vi.fn()
+    render(<OzonDelivery {...baseProps} onChange={onChange} />)
+    await choosePoint()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith('/api/ozon-delivery/points'))).toBe(false)
+    fireEvent.click(screen.getByText('Рассчитать доставку Ozon'))
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(quote))
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/ozon-delivery/quote?brand=inner')
   })
 
   it('requires a valid phone before sending it for calculation', async () => {

@@ -4,6 +4,22 @@ vi.mock('next-auth/middleware', () => ({
   withAuth: (handler: typeof import('./proxy').default) => handler,
 }))
 
+describe('PVZ CDN CSP', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('allows browser fetches to the configured CDN origin', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('NEXT_PUBLIC_CDN_URL', 'https://cdn.example.test')
+    const { default: proxy } = await import('./proxy')
+    const response = await proxy(new Request('https://innerhealth.ru/cart') as never)
+    const connect = response?.headers.get('Content-Security-Policy')?.split('; ').find(value => value.startsWith('connect-src'))
+    expect(connect).toContain('https://cdn.example.test')
+  })
+})
+
 describe('applyRedirectIfMatched', () => {
   const originalNodeEnv = process.env.NODE_ENV
   const fetchMock = vi.fn()
