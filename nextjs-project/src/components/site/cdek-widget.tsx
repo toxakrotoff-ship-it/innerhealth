@@ -28,6 +28,7 @@ import {
   type WidgetOfficesBootstrapSource,
 } from '@/lib/cdek-widget-geo-region'
 import { expandCountryOfficesIntoWidget } from '@/lib/cdek-widget-country-offices'
+import { fetchCdekPvzManifest, fetchCdekPvzRegion } from '@/lib/cdek-pvz-client'
 import { runWhenIdle } from '@/lib/run-when-idle'
 import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
@@ -225,6 +226,7 @@ export function CdekWidget({
 
   useEffect(() => {
     let cancelled = false
+    const pvzController = new AbortController()
     let removeRootInteractionListeners: (() => void) | null = null
     let removeMobileLayoutSync: (() => void) | null = null
     let initTimeoutId: ReturnType<typeof setTimeout> | null = null
@@ -285,7 +287,9 @@ export function CdekWidget({
       let geoDenied = false
       let fallbackCityCode: number | null = null
       let geoCoords: GeolocationCoordinates | null = null
+      let initialOffices: unknown[] | null = null
       try {
+        const manifestPromise = fetchCdekPvzManifest(pvzController.signal)
         const configPromise = getCachedCdekWidgetConfig({ brandId, items: itemsRef.current })
         const bootstrapPromise = configPromise.then((config) =>
           resolveWidgetOfficesBootstrap({
@@ -311,6 +315,14 @@ export function CdekWidget({
         geoDenied = bootstrapResult.bootstrap.geoDenied
         fallbackCityCode = bootstrapResult.bootstrap.fallbackCityCode
         geoCoords = bootstrapResult.coords
+        const manifest = await manifestPromise
+        if (manifest && geoRegion?.regionCode) {
+          try {
+            initialOffices = await fetchCdekPvzRegion(manifest, geoRegion.regionCode, pvzController.signal)
+          } catch {
+            // Omit officesRaw so the widget uses its existing servicePath API.
+          }
+        }
 
         if (initStartedAt > 0) {
           pushDebugEvent('assets_ready', {
@@ -440,6 +452,7 @@ export function CdekWidget({
         // If we include our own query (?brand=...), it can break the final URL (double '?')
         // and the backend will not receive `action`.
         servicePath,
+        ...(initialOffices ? { officesRaw: initialOffices } : {}),
         canChoose: true,
         debug: isCdekWidgetDebugEnabled(),
         fixBounds: 'country',
@@ -515,6 +528,7 @@ export function CdekWidget({
 
               void expandCountryOfficesIntoWidget({
                 brandId,
+                priorityRegionCode: geoRegion?.regionCode,
                 applyEveryPages: pacing.applyEveryPages,
                 batchPauseMs: pacing.batchPauseMs,
                 applyOffices: async (offices) => {
@@ -756,6 +770,7 @@ export function CdekWidget({
 
     return () => {
       cancelled = true
+      pvzController.abort()
       pushDebugEvent('cleanup', { initGeneration, rootId })
       logCartDebug({
         scope: 'cdek-widget',

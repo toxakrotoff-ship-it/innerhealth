@@ -25,8 +25,8 @@ function expectAction(fetchMock: ReturnType<typeof mockApi>, action: string) {
 describe('OzonShipmentPanel', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('creates a pending shipment only after payment and an explicit action', async () => {
-    const fetchMock = mockApi(pending, created)
+  it('retries creation after payment and shows automatic readiness confirmation', async () => {
+    const fetchMock = mockApi(pending, { ...created, status: 'forming' })
     const { rerender } = render(<OzonShipmentPanel orderId="order-123" paid={false} />)
     expect(await screen.findByText('Ожидает создания')).toBeVisible()
     expect(screen.queryByText('Создать отправление Ozon')).not.toBeInTheDocument()
@@ -35,8 +35,10 @@ describe('OzonShipmentPanel', () => {
     fireEvent.click(screen.getByText('Создать отправление Ozon'))
     expectAction(fetchMock, 'create')
     expect(await screen.findByText('posting-123')).toBeVisible()
-    expect(screen.getByText('Создано, требуется подтверждение готовности')).toBeVisible()
+    expect(screen.getByText('Подтверждается')).toBeVisible()
     expect(screen.queryByText('Создать отправление Ozon')).not.toBeInTheDocument()
+    expect(screen.queryByText('Подтвердить готовность к отгрузке')).not.toBeInTheDocument()
+    expect(screen.getByText('Скачать этикетку')).toBeDisabled()
   })
 
   it('confirms readiness explicitly for a created posting', async () => {

@@ -110,3 +110,5 @@ docs/beach-inspector/
 nextjs-project/docs/superpowers/specs/2026-03-27-partner-cabinet-and-orders-polish-design.md
 nextjs-project/docs/superpowers/plans/2026-03-27-partner-cabinet-and-orders-polish.md
 nextjs-project/docs/sprint-power-email-2026-07-16.html
+# Shared advisory lock for deploy and daily Docker maintenance.
+.docker-ops.lock

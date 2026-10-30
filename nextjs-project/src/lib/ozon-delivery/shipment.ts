@@ -5,6 +5,10 @@ import { getOzonDeliveryClient } from './client'
 import { OzonCheckoutError } from './parcel'
 import type { OzonCreateOrderRequest } from './types'
 
+function needsReadinessConfirmation(status: string): boolean {
+  return status === 'created' || status === 'forming_failed'
+}
+
 export async function runOzonShipmentAction(orderId: string, action: 'create' | 'sync' | 'approve' = 'create') {
   let shipment = await prisma.ozonShipment.findUnique({
     where: { orderId }, include: { order: { select: { status: true, brand: true, deletedAt: true, shippingInfo: { select: { deliveryMethod: true } } } } },
@@ -14,7 +18,7 @@ export async function runOzonShipmentAction(orderId: string, action: 'create' | 
   const brand = normalizeBrandId(shipment.order.brand)
   const client = brand ? await getOzonDeliveryClient(brand, { includeDisabled: true }) : null
   if (!client) throw new OzonCheckoutError('Доставка Ozon пока не подключена', 503)
-  if (action === 'create' && shipment.postingNumber) return shipment
+  if (action === 'create' && shipment.postingNumber && !needsReadinessConfirmation(shipment.status)) return shipment
   if (action !== 'create' && !shipment.postingNumber) throw new OzonCheckoutError('Сначала создайте отправление Ozon')
   const shipmentId = shipment.id
   const lockedUntil = new Date(Date.now() + 60000)
@@ -28,15 +32,17 @@ export async function runOzonShipmentAction(orderId: string, action: 'create' | 
       where: { orderId }, include: { order: { select: { status: true, brand: true, deletedAt: true, shippingInfo: { select: { deliveryMethod: true } } } } },
     })
     if (!shipment || shipment.order.status !== 'paid' || shipment.order.deletedAt) throw new OzonCheckoutError('Заказ недоступен для отгрузки')
-    if (action === 'create' && shipment.postingNumber) return shipment
-    if (action === 'create') {
+    if (action === 'create' && shipment.postingNumber && !needsReadinessConfirmation(shipment.status)) return shipment
+    if (action === 'create' && !shipment.postingNumber) {
       const response = await client.createOrder(shipment.request as unknown as OzonCreateOrderRequest, shipment.idempotencyKey)
       const posting = response.postings.find(p => p.request_id === 1)
       if (!posting?.posting_number || response.postings.length !== 1) throw new OzonCheckoutError('Ozon вернул некорректное отправление', 502)
-      return await prisma.ozonShipment.update({ where: { id: shipment.id }, data: { orderNumber: response.order_number, postingNumber: posting.posting_number, status: 'created', error: null } })
+      // Save the posting before approval so a failed confirmation can resume without recreating it.
+      await prisma.ozonShipment.update({ where: { id: shipment.id }, data: { orderNumber: response.order_number, postingNumber: posting.posting_number, status: 'created', error: null } })
+      shipment = { ...shipment, orderNumber: response.order_number, postingNumber: posting.posting_number, status: 'created', error: null }
     }
-    if (action === 'approve') {
-      if (shipment.status !== 'created' && shipment.status !== 'forming_failed') throw new OzonCheckoutError('Отправление уже подтверждено или недоступно для подтверждения')
+    if (action === 'approve' || action === 'create') {
+      if (!needsReadinessConfirmation(shipment.status)) throw new OzonCheckoutError('Отправление уже подтверждено или недоступно для подтверждения')
       await client.approvePosting(shipment.postingNumber!)
       return await prisma.ozonShipment.update({ where: { id: shipment.id }, data: { status: 'forming', error: null } })
     }
@@ -52,12 +58,12 @@ export async function runOzonShipmentAction(orderId: string, action: 'create' | 
   }
 }
 
-/** Persisted shipment is the recovery queue; an admin can safely retry with the same key/body. */
+/** Create and confirm readiness after payment; the saved shipment lets an admin resume either step. */
 export async function createOzonShipmentAfterPayment(orderId: string): Promise<void> {
   try {
     if (!await prisma.ozonShipment.findUnique({ where: { orderId }, select: { id: true } })) return
     await runOzonShipmentAction(orderId)
   } catch {
-    console.error('[ozon-delivery] Shipment creation failed', { orderId })
+    console.error('[ozon-delivery] Shipment creation or readiness confirmation failed', { orderId })
   }
 }

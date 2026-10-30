@@ -6,6 +6,7 @@ interface CountryOfficesCachePayload {
   version: number
   storedAt: number
   offices: unknown[]
+  dataVersion?: string
 }
 
 function getSessionStorage(): Storage | null {
@@ -17,7 +18,7 @@ function getSessionStorage(): Storage | null {
   }
 }
 
-export function readCountryOfficesCache(): unknown[] | null {
+export function readCountryOfficesCache(dataVersion?: string): unknown[] | null {
   const storage = getSessionStorage()
   if (!storage) return null
 
@@ -33,6 +34,8 @@ export function readCountryOfficesCache(): unknown[] | null {
     ) {
       return null
     }
+    // An origin manifest release invalidates even a still-fresh session entry.
+    if (parsed.dataVersion !== dataVersion) return null
 
     if (Date.now() - parsed.storedAt > CACHE_TTL_MS) return null
 
@@ -42,7 +45,7 @@ export function readCountryOfficesCache(): unknown[] | null {
   }
 }
 
-export function writeCountryOfficesCache(offices: unknown[]): void {
+export function writeCountryOfficesCache(offices: unknown[], dataVersion?: string): void {
   const storage = getSessionStorage()
   if (!storage) return
 
@@ -51,6 +54,7 @@ export function writeCountryOfficesCache(offices: unknown[]): void {
       version: CACHE_VERSION,
       storedAt: Date.now(),
       offices,
+      dataVersion,
     }
     storage.setItem(CACHE_KEY, JSON.stringify(payload))
   } catch {

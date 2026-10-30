@@ -161,6 +161,7 @@ mkdir -p "${TARGET_SCRIPTS_DIR}"
 
 log "Copying scripts (overwrite)..."
 install -m 0755 "${OPS_SRC}/docker-maintenance.sh" "${TARGET_SCRIPTS_DIR}/docker-maintenance.sh"
+install -m 0755 "${OPS_SRC}/docker-retention.py" "${TARGET_SCRIPTS_DIR}/docker-retention.py"
 install -m 0755 "${OPS_SRC}/vps-monitor.sh"        "${TARGET_SCRIPTS_DIR}/vps-monitor.sh"
 install -m 0755 "${OPS_SRC}/yookassa-poll.sh"      "${TARGET_SCRIPTS_DIR}/yookassa-poll.sh"
 install -m 0755 "${OPS_SRC}/checkout-abandon-scan.sh" "${TARGET_SCRIPTS_DIR}/checkout-abandon-scan.sh"

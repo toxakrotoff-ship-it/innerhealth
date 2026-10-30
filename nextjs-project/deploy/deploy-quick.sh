@@ -14,6 +14,7 @@ docker_compose() {
 
 # shellcheck source=ops/disk-guard.sh
 source "$(dirname "$0")/ops/disk-guard.sh"
+acquire_docker_ops_lock
 
 # TARGET_FREE_MB — цель очистки (6 ГБ). ABSOLUTE_MIN_FREE_MB — жёсткий минимум для сборки.
 TARGET_FREE_MB="${TARGET_FREE_MB:-6144}"
@@ -89,6 +90,7 @@ ensure_app_secrets
 
 cleanup_docker_cache_if_needed "${TARGET_FREE_MB}"
 require_free_disk_mb "${ABSOLUTE_MIN_FREE_MB}" "${TARGET_FREE_MB}"
+save_docker_rollback_images
 
 BUILD_ARGS=()
 if [ "${NO_CACHE}" = "1" ]; then

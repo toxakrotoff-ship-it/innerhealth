@@ -1,8 +1,11 @@
 import type { BrandId } from '@/lib/brand/brand'
 import { OFFICES_PAGE_SIZE } from '@/lib/cdek-widget-offices'
 import { readCountryOfficesCache, writeCountryOfficesCache } from '@/lib/cdek-widget-offices-client-cache'
+import { CDN_URL } from '@/lib/cdn'
+import { fetchCdekPvzManifest, fetchCdekPvzRegion } from '@/lib/cdek-pvz-client'
+import type { CdekPvzManifest } from '@/lib/cdek-pvz-types'
 
-/** Pages fetched between widget map updates (~1500 PVZ at 500/page). */
+/** Batches between map updates: regional CDN files or API pages (500 PVZ/page). */
 export const COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES = 3
 export const COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS = 500
 
@@ -103,6 +106,8 @@ export async function fetchCountryOfficesStaged(params: {
   signal?: AbortSignal
   applyEveryPages?: number
   batchPauseMs?: number
+  manifest?: CdekPvzManifest | null
+  priorityRegionCode?: number | null
   onBatch?: (payload: {
     batch: unknown[]
     accumulated: unknown[]
@@ -112,6 +117,32 @@ export async function fetchCountryOfficesStaged(params: {
   const serviceUrl = buildCdekWidgetServiceUrl(params.brandId)
   const applyEveryPages = Math.max(1, params.applyEveryPages ?? 1)
   const batchPauseMs = params.batchPauseMs ?? COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS
+  const manifest = params.manifest === undefined ? await fetchCdekPvzManifest(params.signal) : params.manifest
+  if (params.signal?.aborted) throw new DOMException('The operation was aborted', 'AbortError')
+  if (manifest) {
+    try {
+      const priorityRegion = String(params.priorityRegionCode)
+      const regions = Object.keys(manifest.regions).filter(region => region !== priorityRegion)
+      if (manifest.regions[priorityRegion]) regions.unshift(priorityRegion)
+      const accumulated: unknown[] = []
+      for (let page = 0; page < regions.length; page += 1) {
+        const batch = await fetchCdekPvzRegion(manifest, Number(regions[page]), params.signal)
+        accumulated.push(...batch)
+        const isComplete = page === regions.length - 1
+        if (params.onBatch && shouldApplyAfterPage(page, regions.length, applyEveryPages)) {
+          await params.onBatch({ batch, accumulated, meta: {
+            page, pageCount: regions.length, batchSize: batch.length,
+            totalLoaded: accumulated.length, isComplete, shouldApply: true,
+          } })
+          if (!isComplete) await pause(batchPauseMs, params.signal)
+        }
+      }
+      return accumulated
+    } catch (error) {
+      if (params.signal?.aborted) throw error
+      // Restart from the existing country API on CDN errors, replacing partial batches.
+    }
+  }
   const totalElements = await probeCountryOfficesTotal({
     serviceUrl,
     signal: params.signal,
@@ -160,6 +191,8 @@ async function runCountryOfficesExpansion(params: {
   brandId?: BrandId
   applyEveryPages?: number
   batchPauseMs?: number
+  manifest: CdekPvzManifest | null
+  priorityRegionCode?: number | null
   applyOffices: (offices: unknown[]) => Promise<void>
 }): Promise<unknown[]> {
   let totalLoaded = 0
@@ -167,6 +200,8 @@ async function runCountryOfficesExpansion(params: {
 
   await fetchCountryOfficesStaged({
     brandId: params.brandId,
+    manifest: params.manifest,
+    priorityRegionCode: params.priorityRegionCode,
     applyEveryPages: params.applyEveryPages ?? COUNTRY_OFFICES_EXPAND_APPLY_EVERY_PAGES,
     batchPauseMs: params.batchPauseMs ?? COUNTRY_OFFICES_EXPAND_BATCH_PAUSE_MS,
     onBatch: async ({ accumulated, meta }) => {
@@ -177,7 +212,7 @@ async function runCountryOfficesExpansion(params: {
     },
   })
 
-  if (totalLoaded > 0) writeCountryOfficesCache(accumulatedOffices)
+  if (totalLoaded > 0) writeCountryOfficesCache(accumulatedOffices, params.manifest?.publishedAt)
 
   return accumulatedOffices
 }
@@ -187,15 +222,19 @@ export async function expandCountryOfficesIntoWidget(params: {
   signal?: AbortSignal
   applyEveryPages?: number
   batchPauseMs?: number
+  priorityRegionCode?: number | null
   applyOffices: (offices: unknown[]) => Promise<void>
 }): Promise<number> {
-  const cached = readCountryOfficesCache()
+  const manifest = await fetchCdekPvzManifest(params.signal)
+  if (params.signal?.aborted) throw new DOMException('The operation was aborted', 'AbortError')
+  // When the origin pointer is unavailable, use API rather than an unverified CDN-era cache.
+  const cached = manifest || !CDN_URL ? readCountryOfficesCache(manifest?.publishedAt) : null
   if (cached) {
     await params.applyOffices(cached)
     return cached.length
   }
 
-  const key = params.brandId ?? 'default'
+  const key = `${params.brandId ?? 'default'}|${manifest?.publishedAt ?? 'api'}`
   const existing = inFlightCountryOfficesExpansions.get(key)
   if (existing) {
     const offices = await existing
@@ -203,7 +242,7 @@ export async function expandCountryOfficesIntoWidget(params: {
     return offices.length
   }
 
-  const task = runCountryOfficesExpansion(params)
+  const task = runCountryOfficesExpansion({ ...params, manifest })
   inFlightCountryOfficesExpansions.set(key, task)
   try {
     const offices = await task

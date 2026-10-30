@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getCdekCities, getCdekToken, calculateCdekTariffList, resolveCdekSenderSettings } from '@/lib/cdek'
 import * as settingsService from '@/services/settings.service'
 import { OFFICES_PAGE_SIZE, OFFICES_MAX_PAGES } from '@/lib/cdek-widget-offices'
+import { publishCdekPvzRegions } from '@/lib/cdek-pvz-publication'
 
 /**
  * Ночной прогрев кэша СДЭК (ПВЗ по регионам + тарифы по городам назначения).
@@ -132,12 +133,14 @@ async function fetchAllRussianRegions(params: {
 }): Promise<CdekRegionEntry[]> {
   const regions: CdekRegionEntry[] = []
   const pageSize = 200
+  let complete = false
   for (let page = 0; page < 20; page += 1) {
     const url = `${params.baseUrl}/location/regions?country_codes=RU&size=${pageSize}&page=${page}`
     const data = await withRetry(`location/regions page=${page}`, () =>
       fetchCdekJson({ url, token: params.token })
     )
-    const list = Array.isArray(data) ? data : []
+    if (!Array.isArray(data)) throw new Error('CDEK regions response must be an array')
+    const list = data
     for (const raw of list) {
       if (!raw || typeof raw !== 'object') continue
       const entry = raw as Record<string, unknown>
@@ -145,8 +148,12 @@ async function fetchAllRussianRegions(params: {
       if (!Number.isFinite(regionCode) || regionCode <= 0) continue
       regions.push({ regionCode, regionName: String(entry.region ?? '') })
     }
-    if (list.length < pageSize) break
+    if (list.length < pageSize) {
+      complete = true
+      break
+    }
   }
+  if (!complete) throw new Error('CDEK regions pagination exceeded 20 pages')
   // На случай дублей между страницами (не должно быть, но не доверяем API вслепую).
   const seen = new Map<number, CdekRegionEntry>()
   for (const region of regions) seen.set(region.regionCode, region)
@@ -167,15 +174,16 @@ async function fetchOfficesForRegion(params: {
     const data = await withRetry(`deliverypoints region=${params.regionCode} page=${page}`, () =>
       fetchCdekJson({ url, token: params.token })
     )
-    const pageItems = Array.isArray(data) ? data : []
+    if (!Array.isArray(data)) throw new Error('CDEK regional PVZ response must be an array')
+    const pageItems = data
     items.push(...pageItems)
-    if (pageItems.length < OFFICES_PAGE_SIZE) break
+    if (pageItems.length < OFFICES_PAGE_SIZE) return items
   }
-  return items
+  throw new Error(`Regional PVZ pagination exceeded ${OFFICES_MAX_PAGES} pages`)
 }
 
 export interface CdekCacheSyncItemError {
-  scope: 'region' | 'tariff-city'
+  scope: 'region' | 'tariff-city' | 'pvz-publication'
   key: string
   message: string
 }
@@ -185,6 +193,7 @@ export interface CdekCacheSyncSummary {
   regionsTotal: number
   regionsOk: number
   regionsFailed: number
+  pvzPublishedAt: string | null
   tariffCitiesTotal: number
   tariffCitiesOk: number
   tariffCitiesFailed: number
@@ -394,6 +403,19 @@ export async function runCdekCacheSync(): Promise<CdekCacheSyncSummary> {
     else regionsFailed += 1
   })
 
+  // Publish before tariff warmup, which can take much longer than the office sync.
+  // Failed regions retain their last good payload (marked stale). A missing region
+  // prevents switching the manifest so the country-wide dataset stays complete.
+  let pvzPublishedAt: string | null = null
+  try {
+    const publication = await publishCdekPvzRegions(regions.map((region) => region.regionCode))
+    pvzPublishedAt = publication.publishedAt
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('[cdek/cache-sync][pvz-publication][failed]', { message })
+    errors.push({ scope: 'pvz-publication', key: 'manifest', message })
+  }
+
   // 2) Тарифы до популярных/реально используемых городов.
   const warmCityCodes = await resolveWarmCityCodes()
 
@@ -406,10 +428,11 @@ export async function runCdekCacheSync(): Promise<CdekCacheSyncSummary> {
   })
 
   const summary: CdekCacheSyncSummary = {
-    ok: regionsFailed === 0 && tariffCitiesFailed === 0,
+    ok: regionsFailed === 0 && tariffCitiesFailed === 0 && pvzPublishedAt !== null,
     regionsTotal: regions.length,
     regionsOk,
     regionsFailed,
+    pvzPublishedAt,
     tariffCitiesTotal: warmCityCodes.length,
     tariffCitiesOk,
     tariffCitiesFailed,

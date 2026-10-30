@@ -2,6 +2,24 @@
 # Shared disk checks for deploy scripts.
 # shellcheck shell=bash
 
+DOCKER_OPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+acquire_docker_ops_lock() {
+  local lock_file="${DOCKER_OPS_LOCK_FILE:-$(cd "${DOCKER_OPS_DIR}/../../.." && pwd)/.docker-ops.lock}"
+  if [ ! -e "$lock_file" ]; then
+    (umask 022; touch "$lock_file")
+  fi
+  exec 9< "$lock_file"
+  if ! flock -n 9; then
+    log "ERROR: another deploy or daily maintenance is running; retry after it finishes."
+    exit 1
+  fi
+}
+
+save_docker_rollback_images() {
+  python3 "${DOCKER_OPS_DIR}/docker-retention.py" snapshot
+}
+
 docker_disk_free_mb() {
   df -Pm / | awk 'NR==2 { print $4 }'
 }
@@ -11,16 +29,14 @@ docker_disk_used_percent() {
 }
 
 run_safe_docker_cleanup() {
-  docker image prune -f || true
-  docker container prune -f || true
-  docker network prune -f || true
+  python3 "${DOCKER_OPS_DIR}/docker-retention.py" images || log "WARN: image retention failed; keeping remaining images."
+  docker image prune -f --filter until=24h || true
   docker builder prune -af --filter "until=${DOCKER_CACHE_MAX_AGE:-168h}" || true
 }
 
 run_aggressive_docker_cleanup() {
-  docker image prune -af || true
-  docker container prune -f || true
-  docker network prune -f || true
+  python3 "${DOCKER_OPS_DIR}/docker-retention.py" images || log "WARN: image retention failed; keeping remaining images."
+  docker image prune -f --filter until=24h || true
   docker builder prune -af || true
   if docker buildx version >/dev/null 2>&1; then
     docker buildx prune -af || true
