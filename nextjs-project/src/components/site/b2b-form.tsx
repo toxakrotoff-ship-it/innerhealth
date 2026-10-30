@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { isPlausibleHumanName, isPlausiblePhone } from '@/lib/security/public-form-abuse'
+import { validateEmail } from '@/lib/validations/contact'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 
@@ -30,6 +32,16 @@ export function B2bForm({ isSprintTheme = false, successMessage }: B2bFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const emailCheck = validateEmail(email)
+    let validationError = ''
+    if (!isPlausibleHumanName(name)) validationError = 'Укажите корректное имя.'
+    else if (emailCheck.valid === false) validationError = emailCheck.message
+    else if (!isPlausiblePhone(phone)) validationError = 'Укажите корректный номер телефона.'
+    if (validationError) {
+      setErrorMessage(validationError)
+      setStatus('error')
+      return
+    }
     setStatus('loading')
     setErrorMessage('')
     try {

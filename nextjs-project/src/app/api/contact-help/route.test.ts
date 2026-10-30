@@ -74,6 +74,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: 'user@tempmail.com',
           phone: '+79991234567',
@@ -92,6 +93,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: 'user@nonexistent.invalid',
           phone: '+79991234567',
@@ -110,6 +112,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: 'user@example.com',
           phone: '+79991234567',
@@ -128,6 +131,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: '',
           phone: '',
@@ -147,6 +151,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: 'user@example.com',
           phone: '',
@@ -171,6 +176,7 @@ describe('POST /api/contact-help', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website: '', formStartedAt: Date.now() - 5000,
           name: 'John Doe',
           email: '',
           phone: '+79',
@@ -185,3 +191,69 @@ describe('POST /api/contact-help', () => {
     })
   })
 })
+
+
+describe.each(['innerhealth.ru', 'sprintpower.ru'])('public form protection on %s', host => {
+  const valid = () => ({ name: 'Анна Иванова', email: 'user@gmail.com', phone: '+79991234567',
+    message: 'Хочу узнать об условиях сотрудничества', socialLinks: '@anna',
+    website: '', formStartedAt: Date.now() - 5000 })
+  const submit = (patch: Record<string, unknown>) => POST(new Request(`https://${host}/api/contact-help`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', host },
+    body: JSON.stringify({ ...valid(), ...patch }),
+  }))
+  beforeEach(() => vi.clearAllMocks())
+  it.each([
+    { name: 'wGLawnPlfyghyXWiNKXN' }, { phone: '5513734243' },
+    { phone: '+79991234567 garbage' }, { phone: '+799912345670' }, { phone: 'garbage' }, { phone: '1' },
+    { message: 'PiCaIKQUXcnnpGNFYKQWOlZ' }, { message: '<script>alert(1)</script>' },
+    { message: 'x'.repeat(2001) }, { name: 'Анна'.repeat(40) }, { message: 123 },
+  ])('rejects malformed field %# before saving or notifying', async patch => {
+    expect((await submit(patch)).status).toBe(400)
+    const service = await import('@/services/contact-help.service')
+    expect(service.createContactHelpLead).not.toHaveBeenCalled()
+    const { notifyTelegramForm } = await import('@/lib/telegram-notify')
+    expect(notifyTelegramForm).not.toHaveBeenCalled()
+  })
+  it.each([{ website: 'spam' }, { formStartedAt: undefined }])('silently discards bot trap %#', async patch => {
+    expect((await submit(patch)).status).toBe(200)
+    const service = await import('@/services/contact-help.service')
+    expect(service.createContactHelpLead).not.toHaveBeenCalled()
+  })
+  it('accepts valid leads with correct brand', async () => {
+    expect((await submit({})).status).toBe(200)
+    const service = await import('@/services/contact-help.service')
+    expect(service.createContactHelpLead).toHaveBeenCalledWith(expect.objectContaining({name: 'Анна Иванова'}), host === 'sprintpower.ru' ? 'sprint-power' : 'inner')
+  })
+})
+
+
+describe('request and repeat limits', () => {
+  it.each(['null', '[]', '{broken'])('rejects malformed body %s', async body => {
+    const res = await POST(new Request('http://x/api/contact-help', {method: 'POST', body}))
+    expect(res.status).toBe(400)
+  })
+  it('does not save or notify when the repeat limit is exceeded', async () => {
+    vi.clearAllMocks()
+    const { checkRateLimit } = await import('@/lib/rate-limit')
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({success: true, remaining: 4, resetIn: 60})
+      .mockResolvedValueOnce({success: false, remaining: 0, resetIn: 3600})
+    const res = await POST(new Request('http://x/api/contact-help', {method: 'POST', body: JSON.stringify({
+      name: 'Анна Иванова', email: 'user@gmail.com', phone: '+79991234567',
+      message: 'Нужна помощь с заказом', website: '', formStartedAt: Date.now() - 5000,
+    })}))
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('3600')
+    const service = await import('@/services/contact-help.service')
+    expect(service.createContactHelpLead).not.toHaveBeenCalled()
+    const { notifyTelegramForm } = await import('@/lib/telegram-notify')
+    expect(notifyTelegramForm).not.toHaveBeenCalled()
+  })
+})
+
+ it('returns a visible error for a valid visitor submitting too quickly', async () => {
+    const response = await POST(new Request('http://x/api/contact-help', {method: 'POST', body: JSON.stringify({
+      name: 'Анна', email: 'user@gmail.com', phone: '+79991234567', message: 'Нужна помощь с заказом',
+      website: '', formStartedAt: Date.now(),
+    })}))
+    expect(response.status).toBe(400)
+ })

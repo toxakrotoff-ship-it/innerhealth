@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { isPlausibleHumanName, isPlausiblePhone, isPlausibleMessage } from '@/lib/security/public-form-abuse'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,6 +16,8 @@ interface ContactHelpFormProps {
 const MESSAGE_MIN = 5
 
 export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHelpFormProps) {
+  const [website, setWebsite] = useState('')
+  const [formStartedAt] = useState(Date.now)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -35,6 +38,10 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
 
   function validateForm(): boolean {
     let isValid = true
+    if (!isPlausibleHumanName(name)) {
+      setErrorMessage('Укажите корректное имя.')
+      isValid = false
+    }
     setPhoneError('')
     setEmailError('')
     setMessageError('')
@@ -66,6 +73,14 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
       isValid = false
     }
 
+    if (!isPlausibleMessage(message)) {
+      setMessageError('Введите обычный текст вопроса без HTML и случайных наборов символов.')
+      isValid = false
+    }
+    if (hasPhone && !isPlausiblePhone(phone)) {
+      setPhoneError('Укажите корректный номер телефона.')
+      isValid = false
+    }
     return isValid
   }
 
@@ -84,6 +99,8 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website,
+          formStartedAt,
           name: name.trim(),
           email: hasEmail ? trimmedEmail : '',
           phone: hasPhone ? phone.trim() : '',
@@ -135,6 +152,11 @@ export function ContactHelpForm({ isSprintTheme = false, onSuccess }: ContactHel
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3" noValidate>
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label htmlFor="contact-help-website">Website</label>
+        <input id="contact-help-website" name="website" type="text" tabIndex={-1} autoComplete="off"
+          value={website} onChange={(e) => setWebsite(e.target.value)} />
+      </div>
       <div>
         <label htmlFor="contact-help-name" className={`mb-1 block text-sm font-medium ${labelClassName}`}>
           Имя <span className="text-red-500">*</span>
