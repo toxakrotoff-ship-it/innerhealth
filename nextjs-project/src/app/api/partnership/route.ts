@@ -1,21 +1,18 @@
 import { after, NextResponse } from 'next/server'
+import { isBotTrapTriggered, isPlausibleHumanName, isPlausiblePhone, isPlausibleMessage, isValidSocialLinks } from '@/lib/security/public-form-abuse'
 import { notifyTelegramForm } from '@/lib/telegram-notify'
 import { notifyMaxForm } from '@/lib/max-notify'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
-import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
+import { sanitizeHumanName } from '@/lib/security/input-sanitizers'
 import * as partnershipService from '@/services/partnership.service'
 import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 
 const PARTNERSHIP_RATE_LIMIT = 5
 
-const nameMin = 2
-const nameMax = 120
-const emailMax = 320
-const phoneMax = 30
+const emailMax = 254
 const roleMax = 120
 const socialLinksMax = 2000
-const messageMax = 2000
 
 export async function POST(request: Request) {
   const brandId = resolveBrandOrDefaultFromRequest(request)
@@ -35,23 +32,49 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json()
+    let body: Record<string, unknown>
+    try {
+      const parsed = await request.json()
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return NextResponse.json({ error: 'Некорректные данные формы.' }, { status: 400 })
+      }
+      body = parsed
+    } catch {
+      return NextResponse.json({ error: 'Некорректные данные формы.' }, { status: 400 })
+    }
+    if (isBotTrapTriggered(body)) {
+      // Actual visitors should never see success for a rejected timing signal.
+      if (!body.website && typeof body.formStartedAt === 'number' && Number.isFinite(body.formStartedAt)) {
+        return NextResponse.json({ error: 'Подождите несколько секунд и повторите отправку. Если ошибка повторяется, проверьте часы устройства и обновите страницу.' }, { status: 400 })
+      }
+      return NextResponse.json({ success: true })
+    }
+
+    if (
+      (body.name != null && (typeof body.name !== 'string' || body.name.length > 120)) ||
+      (body.email != null && (typeof body.email !== 'string' || body.email.length > 254)) ||
+      (body.phone != null && (typeof body.phone !== 'string' || body.phone.length > 30)) ||
+      (body.role != null && (typeof body.role !== 'string' || body.role.length > 120)) ||
+      (body.socialLinks != null && (typeof body.socialLinks !== 'string' || body.socialLinks.length > 2000)) ||
+      (body.message != null && (typeof body.message !== 'string' || body.message.length > 2000))
+    ) return NextResponse.json({ error: 'Проверьте тип и длину полей формы.' }, { status: 400 })
+
     const name =
-      typeof body.name === 'string' ? sanitizeHumanName(body.name.trim()).slice(0, nameMax) : ''
+      typeof body.name === 'string' ? sanitizeHumanName(body.name.trim()) : ''
     const email = typeof body.email === 'string' ? body.email.trim() : ''
     const phone =
-      typeof body.phone === 'string' ? sanitizePhone(body.phone.trim()).slice(0, phoneMax) : ''
+      typeof body.phone === 'string' ? body.phone.trim() : ''
     const role = typeof body.role === 'string' ? body.role.trim().slice(0, roleMax) : null
     const socialLinks =
       typeof body.socialLinks === 'string'
         ? body.socialLinks.trim().slice(0, socialLinksMax)
         : null
     const message =
-      typeof body.message === 'string' ? body.message.trim().slice(0, messageMax) : null
+      typeof body.message === 'string' ? body.message.trim() : null
 
-    if (name.length < nameMin || name.length > nameMax) {
+    if (!isPlausibleHumanName(name)) {
       return NextResponse.json(
-        { error: `Имя: от ${nameMin} до ${nameMax} символов.` },
+        { error: 'Укажите корректное имя.' },
         { status: 400 }
       )
     }
@@ -68,11 +91,29 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    if (!phone || phone.length > phoneMax) {
+    if (!isPlausiblePhone(phone)) {
       return NextResponse.json(
-        { error: 'Укажите номер телефона.' },
+        { error: 'Укажите корректный номер телефона.' },
         { status: 400 }
       )
+    }
+
+    if (!isValidSocialLinks(socialLinks ?? '')) {
+      return NextResponse.json({ error: 'Укажите @username или HTTP(S)-ссылку на каждой строке.' }, { status: 400 })
+    }
+    if (!isPlausibleMessage(message ?? '')) {
+      return NextResponse.json({ error: 'Введите обычный текст сообщения без HTML и случайных наборов символов.' }, { status: 400 })
+    }
+    if (role && !['doctor', 'nutritionist', 'health_coach', 'helping_profession', 'fitness_trainer', 'cosmetologist', 'other'].includes(role)) {
+      return NextResponse.json({ error: 'Выберите направление деятельности из списка.' }, { status: 400 })
+    }
+
+    const repeatKey = email ? email.toLowerCase() : phone.replace(/\D/g, '')
+    const repeatRate = await checkRateLimit(repeatKey, 'partnership-form-contact', 2, 60 * 60 * 1000)
+    if (!repeatRate.success) {
+      return NextResponse.json({ error: 'Заявка уже отправлялась. Попробуйте позже.' }, {
+        status: 429, headers: { 'Retry-After': String(repeatRate.resetIn), 'Cache-Control': 'no-store' },
+      })
     }
 
     await partnershipService.createPartnershipLead({

@@ -4,7 +4,7 @@ import { notifyMaxForm } from '@/lib/max-notify'
 import { sendB2bLeadNotification } from '@/lib/email'
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit'
 import { validatePublicEmailDomain } from '@/lib/security/public-email-domain'
-import { sanitizeHumanName, sanitizePhone } from '@/lib/security/input-sanitizers'
+import { sanitizeHumanName } from '@/lib/security/input-sanitizers'
 import {
   isBotTrapTriggered,
   isPlausibleHumanName,
@@ -17,9 +17,7 @@ import { resolveBrandOrDefaultFromRequest } from '@/lib/brand/brand-request'
 const B2B_RATE_LIMIT = 3
 const B2B_RATE_WINDOW_MS = 10 * 60 * 1000
 
-const nameMax = 120
-const emailMax = 320
-const phoneMax = 30
+const emailMax = 254
 const cityMax = 120
 
 const B2B_FORMAT_OPTIONS = [
@@ -48,17 +46,38 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json()
+    let body: Record<string, unknown>
+    try {
+      const parsed = await request.json()
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return NextResponse.json({ error: 'Некорректные данные формы.' }, { status: 400 })
+      }
+      body = parsed
+    } catch {
+      return NextResponse.json({ error: 'Некорректные данные формы.' }, { status: 400 })
+    }
 
     if (isBotTrapTriggered(body)) {
+      // Actual visitors should never see success for a rejected timing signal.
+      if (!body.website && typeof body.formStartedAt === 'number' && Number.isFinite(body.formStartedAt)) {
+        return NextResponse.json({ error: 'Подождите несколько секунд и повторите отправку. Если ошибка повторяется, проверьте часы устройства и обновите страницу.' }, { status: 400 })
+      }
       return NextResponse.json({ success: true })
     }
 
+    if (
+      (body.name != null && (typeof body.name !== 'string' || body.name.length > 120)) ||
+      (body.email != null && (typeof body.email !== 'string' || body.email.length > 254)) ||
+      (body.phone != null && (typeof body.phone !== 'string' || body.phone.length > 30)) ||
+      (body.city != null && (typeof body.city !== 'string' || body.city.length > 120)) ||
+      (body.format != null && (typeof body.format !== 'string' || body.format.length > 120))
+    ) return NextResponse.json({ error: 'Проверьте тип и длину полей формы.' }, { status: 400 })
+
     const name =
-      typeof body.name === 'string' ? sanitizeHumanName(body.name.trim()).slice(0, nameMax) : ''
+      typeof body.name === 'string' ? sanitizeHumanName(body.name.trim()) : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const phone =
-      typeof body.phone === 'string' ? sanitizePhone(body.phone.trim()).slice(0, phoneMax) : ''
+      typeof body.phone === 'string' ? body.phone.trim() : ''
     const city =
       typeof body.city === 'string' ? sanitizeHumanName(body.city.trim()).slice(0, cityMax) : ''
     const format =

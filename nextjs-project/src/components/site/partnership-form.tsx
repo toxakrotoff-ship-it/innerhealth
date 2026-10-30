@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { isPlausibleHumanName, isPlausiblePhone, isPlausibleMessage, isValidSocialLinks } from '@/lib/security/public-form-abuse'
+import { validateEmail } from '@/lib/validations/contact'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,6 +23,8 @@ interface PartnershipFormProps {
 }
 
 export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps) {
+  const [website, setWebsite] = useState('')
+  const [formStartedAt] = useState(Date.now)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -32,6 +36,18 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const emailCheck = validateEmail(email)
+    let validationError = ''
+    if (!isPlausibleHumanName(name)) validationError = 'Укажите корректное имя.'
+    else if (emailCheck.valid === false) validationError = emailCheck.message
+    else if (!isPlausiblePhone(phone)) validationError = 'Укажите корректный номер телефона.'
+    else if (!isValidSocialLinks(socialLinks)) validationError = 'Укажите @username или HTTP(S)-ссылку на каждой строке.'
+    else if (!isPlausibleMessage(message)) validationError = 'Введите обычный текст сообщения без HTML и случайных наборов символов.'
+    if (validationError) {
+      setErrorMessage(validationError)
+      setStatus('error')
+      return
+    }
     setStatus('loading')
     setErrorMessage('')
     try {
@@ -39,6 +55,8 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          website,
+          formStartedAt,
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
@@ -93,6 +111,11 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 lg:space-y-6 2xl:space-y-7 3xl:space-y-8">
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label htmlFor="partnership-website">Website</label>
+        <input id="partnership-website" name="website" type="text" tabIndex={-1} autoComplete="off"
+          value={website} onChange={(e) => setWebsite(e.target.value)} />
+      </div>
       <div>
         <label htmlFor="partnership-name" className={`mb-1.5 block text-sm font-medium ${labelClassName}`}>
           Имя <span className="text-red-500">*</span>
@@ -115,6 +138,8 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
         </label>
         <Input
           id="partnership-email"
+          maxLength={254}
+          autoComplete="email"
           type="email"
           required
           placeholder="example@mail.ru"
@@ -130,6 +155,8 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
         </label>
         <Input
           id="partnership-phone"
+          maxLength={30}
+          autoComplete="tel"
           type="tel"
           required
           placeholder="+7 (999) 123-45-67"
@@ -163,7 +190,7 @@ export function PartnershipForm({ isSprintTheme = false }: PartnershipFormProps)
         </label>
         <Textarea
           id="partnership-social"
-          placeholder="Например: Instagram, Telegram, ВКонтакте — чтобы мы могли проанализировать ваш профиль"
+          placeholder="@username или https://t.me/username — каждый профиль с новой строки"
           value={socialLinks}
           onChange={(e) => setSocialLinks(e.target.value)}
           disabled={status === 'loading'}
