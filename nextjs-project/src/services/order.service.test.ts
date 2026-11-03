@@ -16,6 +16,7 @@ const txOrderUpdateMock = vi.fn()
 const txShippingInfoCreateMock = vi.fn()
 const txPromoCodeUpdateMock = vi.fn()
 const txOzonQuoteFindFirstMock = vi.fn()
+const txOzonShipmentCreateMock = vi.fn()
 const txPackageSettingsMock = vi.fn()
 const orderFindManyMock = vi.fn()
 const rootOrderUpdateManyMock = vi.fn()
@@ -49,6 +50,7 @@ describe('order.service stock reservation', () => {
     txShippingInfoCreateMock.mockReset()
     txPromoCodeUpdateMock.mockReset()
     txOzonQuoteFindFirstMock.mockReset()
+    txOzonShipmentCreateMock.mockReset()
     txPackageSettingsMock.mockReset().mockResolvedValue([])
 
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
@@ -68,6 +70,9 @@ describe('order.service stock reservation', () => {
         },
         ozonDeliveryQuote: {
           findFirst: (...args: unknown[]) => txOzonQuoteFindFirstMock(...args),
+        },
+        ozonShipment: {
+          create: (...args: unknown[]) => txOzonShipmentCreateMock(...args),
         },
         siteSetting: { findMany: (...args: unknown[]) => txPackageSettingsMock(...args) },
         promoCode: {
@@ -249,7 +254,7 @@ describe('order.service stock reservation', () => {
       calculateGiftsForOrderMock.mockResolvedValue([])
       txProductFindManyMock.mockResolvedValue([product])
       txProductUpdateManyMock.mockResolvedValue({ count: 1 })
-      txOrderCreateMock.mockResolvedValue({ id: 'order-1', items: [] })
+      txOrderCreateMock.mockImplementation(async ({ data }) => ({ id: 'order-1', orderNumber: 352, total: data.total, items: [] }))
       txShippingInfoCreateMock.mockResolvedValue({ id: 'shipping-1' })
       txOzonQuoteFindFirstMock.mockResolvedValue({
         id: params.ozon.quoteId,
@@ -271,6 +276,7 @@ describe('order.service stock reservation', () => {
       expect(txProductUpdateManyMock).not.toHaveBeenCalled()
       expect(txOrderCreateMock).not.toHaveBeenCalled()
       expect(txShippingInfoCreateMock).not.toHaveBeenCalled()
+      expect(txOzonShipmentCreateMock).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -359,20 +365,74 @@ describe('order.service stock reservation', () => {
       expect(txOrderCreateMock).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
           deliverySum: 250,
-          ozonShipment: { create: { quoteId: params.ozon.quoteId, request } },
           items: { create: expect.arrayContaining([
             expect.objectContaining({ productId: 'p-1', quantity: 1, isGift: false }),
             expect.objectContaining({ productId: 'gift-1', quantity: 1, price: 0, isGift: true, giftPromotionId: 'promotion-1' }),
           ]) },
         }),
       }))
-      const persistedRequest = txOrderCreateMock.mock.calls[0][0].data.ozonShipment.create.request
-      expect(persistedRequest).toEqual(request)
+      expect(txOzonShipmentCreateMock).toHaveBeenCalledWith({ data: {
+        orderId: 'order-1', quoteId: params.ozon.quoteId,
+        request: {
+          ...request, order_external_id: '352',
+          postings: [{ ...request.postings[0], posting_external_id: '352', description: 'Заказ интернет-магазина №352',
+            declared_value: { amount: '1250.00', currency_code: 'RUB' },
+          }],
+        },
+      } })
+      expect(txOrderCreateMock.mock.invocationCallOrder[0]).toBeLessThan(txOzonShipmentCreateMock.mock.invocationCallOrder[0])
+      const persistedRequest = txOzonShipmentCreateMock.mock.calls[0][0].data.request
       expect(persistedRequest).not.toBe(request)
+      expect(request.order_external_id).toBe('external-order-1')
+      expect(request.postings[0].posting_external_id).toBe('external-posting-1')
+      expect(request.postings[0].declared_value.amount).toBe('1000.00')
       expect(txShippingInfoCreateMock).toHaveBeenCalledWith({ data: expect.objectContaining({
         orderId: 'order-1', deliveryMethod: 'ozon_pvz', ozonDeliveryPointId: '123',
         address: params.shipping.address,
       }) })
+    })
+
+    it('declares the final discounted order total including delivery instead of the catalogue quote value', async () => {
+      txProductFindManyMock.mockResolvedValue([{ ...product, price: 4000 }])
+      txOzonQuoteFindFirstMock.mockResolvedValue({
+        id: params.ozon.quoteId,
+        cartFingerprint: ozonCartFingerprint([{ ...quotedProductLine, price: 4000 }], 'promo-1'),
+      })
+      const service = await import('@/services/order.service')
+      await service.createOrderWithItemsAndShipping({
+        ...params, total: 3340, deliverySum: 140, promoCodeId: 'promo-1', promoDiscountAmount: 800,
+        items: [{ ...params.items[0], price: 4000 }],
+        ozon: { ...params.ozon, request: { ...request,
+          postings: [{ ...request.postings[0], declared_value: { amount: '4000.00', currency_code: 'RUB' } }],
+        } },
+      })
+      expect(txOzonShipmentCreateMock).toHaveBeenCalledWith({ data: {
+        orderId: 'order-1', quoteId: params.ozon.quoteId,
+        request: expect.objectContaining({
+          order_external_id: '352', postings: [expect.objectContaining({
+            posting_external_id: '352', declared_value: { amount: '3340.00', currency_code: 'RUB' },
+            dimensions: request.postings[0].dimensions, cutoff_at: request.postings[0].cutoff_at,
+          })],
+        }),
+      } })
+      expect(txOrderCreateMock.mock.calls[0][0].data).not.toHaveProperty('ozonShipment')
+    })
+
+    it('does not persist a shipment when stock cannot be reserved', async () => {
+      txProductUpdateManyMock.mockResolvedValue({ count: 0 })
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toMatchObject({ name: 'OrderStockConflictError' })
+      expect(txOrderCreateMock).not.toHaveBeenCalled()
+      expect(txOzonShipmentCreateMock).not.toHaveBeenCalled()
+    })
+
+    it('rejects the order transaction if its Ozon snapshot cannot be saved', async () => {
+      const failure = new Error('quote already used')
+      txOzonShipmentCreateMock.mockRejectedValue(failure)
+      const service = await import('@/services/order.service')
+      await expect(service.createOrderWithItemsAndShipping(params)).rejects.toBe(failure)
+      expect(transactionMock).toHaveBeenCalledOnce()
+      expect(txShippingInfoCreateMock).not.toHaveBeenCalled()
     })
   })
 })

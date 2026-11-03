@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Prisma } from '@prisma/client';
-import type { OzonCreateOrderRequest } from '@/lib/ozon-delivery/types';
+import type { OzonCheckoutPosting, OzonCreateOrderRequest } from '@/lib/ozon-delivery/types';
 import { OzonCheckoutError, ozonCartFingerprint } from '@/lib/ozon-delivery/parcel';
 import { resolveOzonParcelLines } from '@/lib/ozon-delivery/package-defaults';
 import { prisma } from '@/lib/prisma';
@@ -694,7 +694,10 @@ export async function createOrderWithItemsAndShipping(params: {
   brandId?: BrandId | null;
   items: Array<{ productId: string; quantity: number; price: number }>;
   shipping: CreateOrderShippingParams;
-  ozon?: { quoteId: string; request: OzonCreateOrderRequest };
+  ozon?: {
+    quoteId: string;
+    request: Omit<OzonCreateOrderRequest, 'order_external_id' | 'postings'> & { postings: OzonCheckoutPosting[] };
+  };
 }) {
   return prisma.$transaction(async (tx) => {
     const ozonQuote = params.ozon ? await tx.ozonDeliveryQuote.findFirst({
@@ -789,7 +792,6 @@ export async function createOrderWithItemsAndShipping(params: {
         promoCodeId: params.promoCodeId || undefined,
         promoDiscountAmount: params.promoDiscountAmount ?? undefined,
         userId: params.userId ?? undefined,
-        ...(params.ozon ? { ozonShipment: { create: { quoteId: params.ozon.quoteId, request: JSON.parse(JSON.stringify(params.ozon.request)) as Prisma.InputJsonValue } } } : {}),
         items: {
           create: [
             ...params.items.map((i) => ({
@@ -811,6 +813,26 @@ export async function createOrderWithItemsAndShipping(params: {
       },
       include: { items: { include: { product: { select: { title: true } } } } },
     });
+
+    if (params.ozon) {
+      // The public number is assigned by the database; persist the final request once for retries.
+      const externalId = String(created.orderNumber);
+      const request: OzonCreateOrderRequest = {
+        ...params.ozon.request,
+        order_external_id: externalId,
+        postings: params.ozon.request.postings.map(posting => ({
+          ...posting,
+          posting_external_id: externalId,
+          description: `Заказ интернет-магазина №${externalId}`,
+          declared_value: { amount: created.total.toFixed(2), currency_code: 'RUB' },
+        })),
+      };
+      await tx.ozonShipment.create({ data: {
+        orderId: created.id,
+        quoteId: params.ozon.quoteId,
+        request: JSON.parse(JSON.stringify(request)) as Prisma.InputJsonValue,
+      } });
+    }
 
     const door = params.shipping.doorAddress;
     const addressForDb =

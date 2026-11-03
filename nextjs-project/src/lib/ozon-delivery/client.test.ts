@@ -235,6 +235,118 @@ describe('Ozon Delivery API client', () => {
     expect(fetchMock.mock.calls[2]).toMatchObject(['https://api-delivery.ozon.ru/v1/posting/approve', { body: JSON.stringify({ posting_number: 'posting-1' }) }]);
   });
 
+  it('retries an approval 404 after a delay with the same posting and without recreating it', async () => {
+    vi.useFakeTimers();
+    const notFound = json({}, 404);
+    const cancel = vi.spyOn(notFound.body!, 'cancel');
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(notFound).mockResolvedValueOnce(new Response(null));
+    const call = new OzonDeliveryClient(config).approvePosting('posting-1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(call).resolves.toBeUndefined();
+    const approvals = fetchMock.mock.calls.slice(1);
+    expect(approvals).toHaveLength(2);
+    expect(approvals.every(([url]) => url === 'https://api-delivery.ozon.ru/v1/posting/approve')).toBe(true);
+    expect(approvals[1][1]!.body).toBe(approvals[0][1]!.body);
+    expect(JSON.parse(approvals[1][1]!.body as string)).toEqual({ posting_number: 'posting-1' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('bounds persistent approval 404s to four attempts with 1, 2 and 4 second pauses', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(token()).mockImplementation(async () => json({}, 404));
+    const rejected = expect(new OzonDeliveryClient(config).approvePosting('posting-1')).rejects.toMatchObject({ status: 404, failure: 'http', phase: 'api' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const [delay, callCount] of [[1000, 3], [2000, 4], [4000, 5]]) {
+      await vi.advanceTimersByTimeAsync(delay - 1);
+      expect(fetchMock).toHaveBeenCalledTimes(callCount - 1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(callCount);
+    }
+    await rejected;
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it.each(['createOrder', 'postingInfo', 'postingLabel', 'checkClient'] as const)('does not retry a 404 from %s', async method => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(json({}, 404));
+    const client = new OzonDeliveryClient(config);
+    const call = method === 'createOrder' ? client.createOrder(order, uuid)
+      : method === 'postingInfo' ? client.postingInfo(['posting-1'])
+        : method === 'postingLabel' ? client.postingLabel('posting-1') : client.checkClient('+79990001122');
+    await expect(call).rejects.toMatchObject({ status: 404 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not retry approval when OAuth returns 404', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(json({}, 404));
+    await expect(new OzonDeliveryClient(config).approvePosting('posting-1')).rejects.toMatchObject({ status: 404, phase: 'oauth' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([400, 403, 409, 429, 500, 502])('does not retry approval HTTP %s', async status => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(json({}, status));
+    await expect(new OzonDeliveryClient(config).approvePosting('posting-1')).rejects.toMatchObject({ status });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not retry an approval network failure or an explicit antibot 404', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(token()).mockRejectedValueOnce(new Error('private network details'));
+    await expect(new OzonDeliveryClient(config).approvePosting('posting-1')).rejects.toMatchObject({ failure: 'network' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(new Response(null, { status: 404, headers: { antibot: '1' } }));
+    await expect(new OzonDeliveryClient(config).approvePosting('posting-1')).rejects.toMatchObject({ status: 404, failure: 'antibot' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('shares the total deadline across OAuth, approval attempts and abortable retry pauses', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(async url => String(url).includes('/oauth/token')
+      ? new Promise<Response>(resolve => setTimeout(() => resolve(token()), 500)) : json({}, 404));
+    const rejected = expect(new OzonDeliveryClient(config, { timeoutMs: 2500 }).approvePosting('posting-1')).rejects.toMatchObject({ status: 504, failure: 'timeout' });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1000);
+    await rejected;
+    expect(fetchMock.mock.calls[2][1]!.signal!.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('refreshes authentication once independently of approval 404 retries', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockResolvedValueOnce(token()).mockResolvedValueOnce(json({}, 404)).mockResolvedValueOnce(json({}, 401))
+      .mockResolvedValueOnce(json({ access_token: 'new-token', expires_in: 3600 })).mockResolvedValueOnce(json({}, 404))
+      .mockResolvedValueOnce(new Response(null));
+    const call = new OzonDeliveryClient(config).approvePosting('posting-1');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    await vi.advanceTimersByTimeAsync(2000);
+    await expect(call).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock.mock.calls[4][1]!.headers).toMatchObject({ Authorization: 'Bearer new-token' });
+    expect(fetchMock.mock.calls[5][1]!.body).toBe(fetchMock.mock.calls[1][1]!.body);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('downloads PDF labels through the same authenticated cookie redirect transport', async () => {
     const pdf = new TextEncoder().encode('%PDF-1.7\nlabel');
     fetchMock.mockResolvedValueOnce(token())

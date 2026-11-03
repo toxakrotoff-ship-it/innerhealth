@@ -14,8 +14,24 @@ const API_ORIGIN = 'https://api-delivery.ozon.ru';
 const TOKEN_URL = 'https://xapi.ozon.ru/oauth/token';
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
+const APPROVAL_NOT_FOUND_RETRY_DELAYS_MS = [1000, 2000, 4000] as const;
 const SCOPES = ['delivery-api.delivery', 'delivery-api.delivery-point', 'delivery-api.order', 'delivery-api.posting'];
 export const OZON_DELIVERY_POINT_INFO_LIMIT = 100;
+
+function waitForRetry(delayMs: number, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, delayMs);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
 export type OzonDeliveryFailure = 'http' | 'network' | 'timeout' | 'invalid_response' | 'redirect' | 'antibot' | 'insufficient_scope';
 
@@ -90,15 +106,24 @@ export class OzonDeliveryClient {
   private async request<T = void>(path: string, body: unknown, schema?: z.ZodType<T> | 'pdf', extraHeaders: Record<string, string> = {}): Promise<T> {
     return this.withTimeout(async (signal) => {
       let token = await this.getToken(signal);
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      let refreshedToken = false;
+      let notFoundRetries = 0;
+      for (;;) {
         const response = await this.post(`${API_ORIGIN}${path}`, body, {
           Authorization: `Bearer ${token}`, ...extraHeaders,
         }, signal);
-        // Authentication rejection is the only retry; ambiguous mutation failures are never retried.
-        if (response.status === 401 && attempt === 0) {
+        if (response.status === 401 && !refreshedToken) {
           await response.body?.cancel();
+          refreshedToken = true;
           if (this.token?.value === token) this.token = undefined;
           token = await this.getToken(signal);
+          continue;
+        }
+        // Newly created postings can briefly be invisible to approval; never recreate them.
+        if (path === '/v1/posting/approve' && response.status === 404
+          && notFoundRetries < APPROVAL_NOT_FOUND_RETRY_DELAYS_MS.length) {
+          await response.body?.cancel();
+          await waitForRetry(APPROVAL_NOT_FOUND_RETRY_DELAYS_MS[notFoundRetries++], signal);
           continue;
         }
         if (!response.ok) {
@@ -120,7 +145,6 @@ export class OzonDeliveryClient {
         }
         return this.parseResponse(response, schema);
       }
-      throw new OzonDeliveryError(401);
     });
   }
 

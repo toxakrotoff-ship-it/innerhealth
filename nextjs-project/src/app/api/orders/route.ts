@@ -240,10 +240,9 @@ export async function POST(request: Request) {
       userId,
       brandId,
       ...(ozonQuote ? { ozon: { quoteId: ozonQuote.id, request: {
-        order_external_id: ozonQuote.id,
         recipient: { phone_number: normalizeOzonPhone(shipping.phone), full_name: shipping.fullName.trim() },
         delivery: { delivery_point: { delivery_point_id: Number(ozonQuote.pointId) } },
-        postings: [{ ...(ozonQuote.posting as unknown as OzonCheckoutPosting), posting_external_id: ozonQuote.id, description: 'Заказ интернет-магазина' }],
+        postings: [ozonQuote.posting as unknown as OzonCheckoutPosting],
       } } } : {}),
       items: items.map((i) => {
         const product = productMap.get(i.productId)!
