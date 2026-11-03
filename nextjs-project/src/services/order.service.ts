@@ -1,4 +1,5 @@
 import 'server-only';
+import type { AdminOzonShipmentSummary } from '@/lib/admin-order-navigation';
 import type { Prisma } from '@prisma/client';
 import type { OzonCheckoutPosting, OzonCreateOrderRequest } from '@/lib/ozon-delivery/types';
 import { OzonCheckoutError, ozonCartFingerprint } from '@/lib/ozon-delivery/parcel';
@@ -29,6 +30,7 @@ const orderAdminInclude = {
   items: { include: { product: true } },
   promoCode: true,
   shippingInfo: true,
+  ozonShipment: { select: { orderNumber: true, postingNumber: true, status: true, error: true } },
 } as const;
 
 interface ReservedOrderItem {
@@ -157,6 +159,7 @@ export async function findOrderForPaidEmail(orderId: string) {
       cdekOrderUuid: true,
       cdekOrderError: true,
       promoCode: { select: { code: true } },
+      ozonShipment: { select: { orderNumber: true, postingNumber: true, status: true, error: true } },
       items: {
         select: {
           quantity: true,
@@ -197,6 +200,7 @@ export async function findOrderForCdekShipment(orderId: string) {
 }
 
 export interface AdminOrderDto {
+  ozonShipment: AdminOzonShipmentSummary | null;
   id: string;
   orderNumber: number | null;
   total: number;
@@ -262,6 +266,10 @@ function mapOrderToAdminDto(
 
   return {
     id: order.id,
+    ozonShipment: order.ozonShipment ? {
+      orderNumber: order.ozonShipment.orderNumber, postingNumber: order.ozonShipment.postingNumber,
+      status: order.ozonShipment.status, error: order.ozonShipment.error,
+    } : null,
     orderNumber: order.orderNumber ?? null,
     total: order.total,
     status: order.status,

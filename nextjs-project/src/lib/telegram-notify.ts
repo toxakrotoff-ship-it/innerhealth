@@ -5,6 +5,7 @@ import * as reviewModerationMessageService from '@/services/review-moderation-me
 import type { BrandId } from '@/lib/brand/brand';
 import { normalizeBrandId } from '@/lib/brand/brand';
 import { formatOrderLabel } from '@/lib/order-label';
+import { getOrderDeliveryTitle, getOrderDeliveryDetails, adminOrderNotificationUrl, type OrderDeliveryNotifyPayload } from '@/lib/order-delivery-notification';
 import { telegramApiFetch } from '@/lib/telegram-api-fetch';
 
 const TELEGRAM_API = 'https://api.telegram.org';
@@ -56,7 +57,7 @@ function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export interface OrderNotifyPayload {
+export interface OrderNotifyPayload extends OrderDeliveryNotifyPayload {
   orderId: string;
   orderNumber?: number | null;
   total: number;
@@ -104,22 +105,10 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
         : null;
     const isCdek =
       payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
-    const cdekLines: string[] = [];
-    if (isCdek) {
-      cdekLines.push(
-        '',
-        '<b>СДЭК:</b>',
-        `Способ: ${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'}`
-      );
-      if (payload.cdekOrderUuid) {
-        cdekLines.push(`UUID: <code>${escapeHtml(payload.cdekOrderUuid)}</code>`);
-      } else if (payload.cdekOrderError) {
-        cdekLines.push(`Ошибка: ${escapeHtml(payload.cdekOrderError)}`);
-      } else {
-        cdekLines.push('Отгрузка ещё не создана');
-      }
-    }
+    const deliveryTitle = getOrderDeliveryTitle(payload.deliveryMethod);
+    const deliveryDetails = getOrderDeliveryDetails(payload).map(escapeHtml);
     const lines: string[] = [
+      deliveryTitle ? `<b>${deliveryTitle} · заказ ${orderLabel}</b>` : '',
       '<b>Заказ оплачен</b>',
       `Заказ: ${orderLabel}`,
       '',
@@ -133,29 +122,23 @@ export function notifyTelegramOrder(payload: OrderNotifyPayload): void {
       `Итого: <b>${payload.total.toFixed(0)} ₽</b>`,
       payload.promoCode ? `Промокод: ${escapeHtml(payload.promoCode)}` : '',
       promoDiscount ? `Скидка по промокоду: ${promoDiscount} ₽` : '',
-      ...cdekLines,
       '',
-      '<b>Доставка:</b>',
+      deliveryTitle ? `<b>${deliveryTitle}:</b>` : '<b>Доставка:</b>',
+      ...deliveryDetails,
       `ФИО: ${escapeHtml(payload.shipping.fullName)}`,
       `Телефон: ${escapeHtml(payload.shipping.phone)}`,
       `Email: ${escapeHtml(payload.shipping.email)}`,
       `Адрес: ${escapeHtml(payload.shipping.address)}`,
       `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
+      `Открыть заказ в CRM: ${escapeHtml(adminOrderNotificationUrl(payload))}`,
     ];
     const text = lines.filter(Boolean).join('\n');
-    const replyMarkup =
-      isCdek && !payload.cdekOrderUuid
-        ? {
-            inline_keyboard: [
-              [
-                {
-                  text: 'Создать отгрузку в СДЭК',
-                  callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
-                },
-              ],
-            ],
-          }
-        : undefined;
+    const replyMarkup = { inline_keyboard: [
+      ...(isCdek && !payload.cdekOrderUuid && !payload.cdekTrackNumber ? [[{
+        text: 'Создать отгрузку в СДЭК', callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
+      }]] : []),
+      [{ text: 'Открыть заказ в CRM', url: adminOrderNotificationUrl(payload) }],
+    ] };
     for (const chatId of chatIds) {
       await sendMessage(token, chatId, text, replyMarkup ? { replyMarkup } : undefined).catch((e) =>
         console.error('[telegram-notify] order notify error:', e)
@@ -216,7 +199,7 @@ export async function notifyTelegramOrderStatusForUser(payload: {
   await sendMessage(token, whitelist.telegramUserId, lines.join('\n')).catch(() => {});
 }
 
-export async function notifyTelegramPaidOrderForAdmins(payload: {
+export async function notifyTelegramPaidOrderForAdmins(payload: OrderDeliveryNotifyPayload & {
   orderId: string;
   orderNumber?: number | null;
   deliveryMethod?: string | null;
@@ -231,44 +214,25 @@ export async function notifyTelegramPaidOrderForAdmins(payload: {
   const chatIds = await userService.getAdminTelegramChatIds(payload.brandId);
   if (chatIds.length === 0) return;
 
-  const isCdek =
-    payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim() ||
-    '';
-  const adminOrderUrl = baseUrl
-    ? `${baseUrl.replace(/\/$/, '')}/admin/orders`
-    : '';
+  const isCdek = payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+  const deliveryTitle = getOrderDeliveryTitle(payload.deliveryMethod);
+  const orderLabel = formatOrderLabel(payload);
+  const adminOrdersUrl = adminOrderNotificationUrl(payload);
   const lines = [
+    deliveryTitle ? `<b>${deliveryTitle} · заказ ${escapeHtml(orderLabel)}</b>` : '',
     '✅ <b>Заказ оплачен</b>',
-    `Заказ: <code>${escapeHtml(formatOrderLabel(payload))}</code>`,
-    isCdek
-      ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
-      : payload.deliveryMethod === 'ozon_pvz' ? 'Доставка: Ozon (ПВЗ)' : payload.deliveryMethod === 'pickup' ? 'Доставка: самовывоз' : 'Доставка: другой способ',
-    payload.cdekOrderUuid
-      ? `СДЭК UUID: <code>${escapeHtml(payload.cdekOrderUuid)}</code>`
-      : payload.cdekOrderError
-        ? `СДЭК ошибка: ${escapeHtml(payload.cdekOrderError)}`
-        : isCdek
-          ? 'СДЭК: отгрузка ещё не создана'
-          : '',
-    adminOrderUrl ? `Открыть заказы: ${escapeHtml(adminOrderUrl)}` : '',
+    `Заказ: <code>${escapeHtml(orderLabel)}</code>`,
+    `Доставка: ${deliveryTitle || 'другой способ'}`,
+    ...getOrderDeliveryDetails(payload).map(escapeHtml),
+    `Открыть заказ в CRM: ${escapeHtml(adminOrdersUrl)}`,
   ].filter(Boolean)
 
-  const replyMarkup =
-    isCdek && !payload.cdekOrderUuid
-      ? {
-          inline_keyboard: [
-            [
-              {
-                text: 'Создать отгрузку в СДЭК',
-                callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
-              },
-            ],
-          ],
-        }
-      : undefined
+  const replyMarkup = { inline_keyboard: [
+    ...(isCdek && !payload.cdekOrderUuid && !payload.cdekTrackNumber ? [[{
+      text: 'Создать отгрузку в СДЭК', callback_data: `cdek_create_${payload.orderId}`.slice(0, 64),
+    }]] : []),
+    [{ text: 'Открыть заказ в CRM', url: adminOrdersUrl }],
+  ] };
 
   for (const chatId of chatIds) {
     await sendMessage(token, chatId, lines.join('\n'), { replyMarkup }).catch((error) =>

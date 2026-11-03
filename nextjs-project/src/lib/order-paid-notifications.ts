@@ -63,6 +63,8 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
       deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
       cdekOrderUuid: order.cdekOrderUuid ?? null,
       cdekOrderError: order.cdekOrderError ?? null,
+      cdekTrackNumber: order.cdekTrackNumber ?? null,
+      ozonShipment: order.ozonShipment ?? null,
       brandId,
     } as const
 
@@ -84,6 +86,7 @@ async function notifyAllChannelsAfterOrderPaid(orderId: string): Promise<void> {
         promoCode: order.promoCode?.code ?? null,
         promoDiscountAmount,
         cdekTrackNumber: order.cdekTrackNumber ?? null,
+        deliveryMethod: order.shippingInfo.deliveryMethod ?? null,
         brandId,
       }),
     ])

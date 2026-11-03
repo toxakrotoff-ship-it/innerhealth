@@ -293,3 +293,60 @@ describe('notifyMaxOrder', () => {
     }
   })
 })
+
+const deliveryOrder = {
+  orderId: 'order-352', orderNumber: 352, total: 3340, shippingCost: 140,
+  items: [{ title: 'Товар', quantity: 1, price: 3200 }],
+  shipping: { fullName: 'Тест', phone: '+79001234567', email: 'test@example.com', address: '*ПВЗ* [адрес]', city: 'Москва', zipCode: '', country: 'Россия' },
+  brandId: 'inner' as const,
+}
+
+describe('MAX carrier identification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    sendMessageToUser.mockResolvedValue({ message: { body: { mid: '1' } } })
+    vi.mocked(settingsService.getMaxBotSettings).mockResolvedValue({ token: 'token' } as never)
+    vi.mocked(userService.getAdminMaxUserIds).mockResolvedValue(['101'])
+  })
+
+  it.each(['full', 'compact'] as const)('marks Ozon prominently and includes its numbers in %s admin messages', async mode => {
+    const notify = await import('@/lib/max-notify')
+    const payload = { ...deliveryOrder, deliveryMethod: 'ozon_pvz',
+      ozonShipment: { orderNumber: 'AB-352', postingNumber: 'PP-352', status: 'ready_for_shipping', error: null },
+      cdekOrderUuid: 'stale-cdek',
+    }
+    if (mode === 'full') await notify.notifyMaxOrder(payload)
+    else await notify.notifyMaxPaidOrderForAdmins(payload)
+    expect(sendMessageToUser).toHaveBeenCalledOnce()
+    const text = String(sendMessageToUser.mock.calls[0][1])
+    expect(text).toContain('**OZON Доставка · заказ #352**\n')
+    expect(text).toContain('Заказ оплачен')
+    expect(text).toContain('Заказ OZON: AB-352')
+    expect(text).toContain('Отправление OZON: PP-352')
+    expect(text).toContain('Статус: Готово к отгрузке')
+    expect(text).toContain('ПВЗ: \\*ПВЗ\\* \\[адрес\\]')
+    expect(text).not.toContain('stale-cdek')
+    const { Keyboard } = await import('@maxhub/max-bot-api')
+    expect(Keyboard.button.callback).not.toHaveBeenCalled()
+    expect(Keyboard.button.link).toHaveBeenCalledWith('Открыть заказ в CRM', 'https://innerhealth.ru/admin/orders?search=%23352')
+  })
+
+  it('identifies Ozon even before asynchronous shipment creation completes', async () => {
+    const notify = await import('@/lib/max-notify')
+    await notify.notifyMaxOrder({ ...deliveryOrder, deliveryMethod: 'ozon_pvz', ozonShipment: null })
+    const text = String(sendMessageToUser.mock.calls[0][1])
+    expect(text).toContain('**OZON Доставка · заказ #352**')
+    expect(text).toContain('Отправление ещё не создано')
+    expect(text).not.toContain('Готово к отгрузке')
+  })
+
+  it('shows CDEK tracking and UUID and keeps its delivery mode explicit', async () => {
+    const notify = await import('@/lib/max-notify')
+    await notify.notifyMaxOrder({ ...deliveryOrder, deliveryMethod: 'cdek_pvz', cdekTrackNumber: '1234567890', cdekOrderUuid: 'uuid-cdek' })
+    const text = String(sendMessageToUser.mock.calls[0][1])
+    expect(text).toContain('**СДЭК · заказ #352**')
+    expect(text).toContain('Способ: ПВЗ')
+    expect(text).toContain('Трек СДЭК: 1234567890')
+    expect(text).toContain('UUID СДЭК: uuid-cdek')
+  })
+})

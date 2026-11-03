@@ -55,6 +55,7 @@ describe('scheduleNotifyAllChannelsAfterOrderPaid', () => {
       cdekTrackNumber: 'TRACK123',
       cdekOrderUuid: null,
       cdekOrderError: null,
+      ozonShipment: null,
       promoCode: { code: 'PROMO' },
       items: [
         {
@@ -97,7 +98,35 @@ describe('scheduleNotifyAllChannelsAfterOrderPaid', () => {
         orderId: 'order-1',
         orderNumber: 42,
         cdekTrackNumber: 'TRACK123',
+        deliveryMethod: 'cdek_pvz',
       })
     )
+  })
+
+  it('passes Ozon delivery to the email template with the usual admin recipients', async () => {
+    const order = await orderService.findOrderForPaidEmail('order-1')
+    vi.mocked(orderService.findOrderForPaidEmail).mockResolvedValue({
+      ...order,
+      shippingInfo: { ...order.shippingInfo, deliveryMethod: 'ozon_pvz' },
+    })
+    scheduleNotifyAllChannelsAfterOrderPaid('order-1')
+    await afterCallbackResult
+    expect(sendPaidOrderEmailsWithDelay).toHaveBeenCalledWith(
+      ['admin@example.com'], 'ivan@example.com', 'Ivan Ivanov',
+      expect.objectContaining({ deliveryMethod: 'ozon_pvz', brandId: 'inner' })
+    )
+  })
+
+  it('passes the safe Ozon summary to both messengers without waiting for creation', async () => {
+    const order = await orderService.findOrderForPaidEmail('order-1')
+    const ozonShipment = { orderNumber: 'OZON-ORDER', postingNumber: 'OZON-POSTING', status: 'ready_for_shipping', error: null }
+    vi.mocked(orderService.findOrderForPaidEmail).mockResolvedValue({
+      ...order, ozonShipment, shippingInfo: { ...order.shippingInfo, deliveryMethod: 'ozon_pvz' },
+    })
+    scheduleNotifyAllChannelsAfterOrderPaid('order-1')
+    await afterCallbackResult
+    for (const notify of [notifyTelegramOrder, notifyMaxOrder]) {
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ deliveryMethod: 'ozon_pvz', ozonShipment, cdekTrackNumber: 'TRACK123' }))
+    }
   })
 })

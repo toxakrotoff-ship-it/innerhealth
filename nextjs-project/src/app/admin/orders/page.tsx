@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { formatOrderLabel } from '@/lib/order-label';
+import { matchesOrderSearch, matchesDeliveryFilter, type AdminDeliveryFilter, type AdminOzonShipmentSummary } from '@/lib/admin-order-navigation';
+import { OrderIdentifiers } from '@/components/admin/order-identifiers';
 import { getOrderStatusPresentation } from '@/lib/order-status-presentation';
 import { OzonShipmentPanel } from '@/components/admin/ozon-shipment-panel';
 import type { PromoOrderTotalsResult } from '@/lib/promo-order-totals';
@@ -42,6 +44,7 @@ interface PromoCodeInfo {
 }
 
 interface Order {
+  ozonShipment?: AdminOzonShipmentSummary | null;
   id: string;
   orderNumber?: number | null;
   userId: string | null;
@@ -78,28 +81,6 @@ function getOrderDisplayLabel(order: Pick<Order, 'id' | 'orderNumber'>): string 
   return formatOrderLabel({ orderId: order.id, orderNumber: order.orderNumber });
 }
 
-function matchesOrderSearch(order: Order, rawTerm: string): boolean {
-  const term = rawTerm.trim();
-  if (!term) return true;
-
-  const termLower = term.toLowerCase();
-  const termDigits = term.replace(/\D+/g, '');
-  const phoneDigits = order.shippingInfo?.phoneRaw?.replace(/\D+/g, '') ?? '';
-  const orderNumberTerm = term.replace(/^#/, '').trim();
-
-  if (/^\d+$/.test(orderNumberTerm) && typeof order.orderNumber === 'number') {
-    if (String(order.orderNumber).includes(orderNumberTerm)) return true;
-  }
-
-  return (
-    order.id.toLowerCase().includes(termLower) ||
-    getOrderDisplayLabel(order).toLowerCase().includes(termLower) ||
-    (termDigits !== '' && phoneDigits.includes(termDigits)) ||
-    order.shippingInfo?.phoneMasked?.includes(term) ||
-    order.shippingInfo?.fullName?.toLowerCase().includes(termLower)
-  );
-}
-
 export default function AdminOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -119,8 +100,15 @@ export default function AdminOrdersPage() {
   const [yookassaBulkLoading, setYookassaBulkLoading] = useState(false);
   const [yookassaBulkDays, setYookassaBulkDays] = useState(7);
   const [mode, setMode] = useState<'active' | 'trash'>('active');
+  const [deliveryFilter, setDeliveryFilter] = useState<AdminDeliveryFilter>('all');
   const [trashActionLoading, setTrashActionLoading] = useState<string | null>(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
+
+  const handleOzonShipmentChange = useCallback((orderId: string, shipment: AdminOzonShipmentSummary) => {
+    setOrders(previous => previous.map(order => order.id === orderId ? { ...order, ozonShipment: shipment } : order));
+    setPopupOrder(previous => previous?.id === orderId ? { ...previous, ozonShipment: shipment } : previous);
+    setPopupOrderDetail(previous => previous?.id === orderId ? { ...previous, ozonShipment: shipment } : previous);
+  }, []);
 
   useEffect(() => {
     fetchOrders(mode);
@@ -358,7 +346,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const filteredOrders = orders.filter((order) => matchesOrderSearch(order, searchTerm));
+  const filteredOrders = orders.filter((order) => matchesOrderSearch(order, searchTerm) && matchesDeliveryFilter(order, deliveryFilter));
 
   const getCdekTrackingLink = (trackNumber?: string | null) =>
     trackNumber
@@ -422,7 +410,7 @@ export default function AdminOrdersPage() {
               : 'Адрес доставки не указан'}
           </p>
         )}
-        {order.shippingInfo?.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={order.id} paid={order.status === 'paid'} /> : null}
+        {order.shippingInfo?.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={order.id} paid={order.status === 'paid'} onShipmentChange={handleOzonShipmentChange} /> : null}
         {(order.shippingInfo?.deliveryMethod === 'cdek_pvz' || order.shippingInfo?.deliveryMethod === 'cdek_door') && (
           <div className="mt-4 pt-3 border-t border-gray-200">
             <h3 className="text-sm font-semibold text-gray-700 mb-2">СДЭК</h3>
@@ -544,15 +532,24 @@ export default function AdminOrdersPage() {
               Корзина
             </button>
           </div>
-          <div className="flex-1 md:max-w-xs">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Поиск</label>
+          <div className="flex-1 md:max-w-md">
+            <label htmlFor="order-search" className="block text-xs font-medium text-gray-500 mb-1">Поиск заказа</label>
             <input
-              type="text"
-              placeholder={mode === 'trash' ? '№ заказа (#63), телефон, ФИО' : '№ заказа (#63), телефон, ФИО'}
+              id="order-search"
+              type="search"
+              placeholder="№ сайта, номер OZON / СДЭК, телефон, ФИО"
               className="form-input w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div>
+            <label htmlFor="delivery-filter" className="block text-xs font-medium text-gray-500 mb-1">Доставка</label>
+            <select id="delivery-filter" className="form-input text-sm" value={deliveryFilter}
+              onChange={event => setDeliveryFilter(event.target.value as AdminDeliveryFilter)}>
+              <option value="all">Все способы</option><option value="ozon">OZON</option>
+              <option value="cdek">СДЭК</option><option value="pickup">Самовывоз</option>
+            </select>
           </div>
           {mode === 'active' ? (
             <div className="flex flex-wrap items-end gap-2">
@@ -603,8 +600,13 @@ export default function AdminOrdersPage() {
           </div>
         )}
 
+        <p className="mb-3 text-sm text-gray-500" role="status">Найдено заказов: {filteredOrders.length} из {orders.length}</p>
         {filteredOrders.length === 0 ? (
-          <div className="card p-8 text-center text-gray-500">Нет заказов</div>
+          <div className="card p-8 text-center text-gray-500">
+            <p>Нет заказов по выбранным условиям</p>
+            {searchTerm || deliveryFilter !== 'all' ? <button type="button" className="mt-2 text-indigo-700 hover:underline"
+              onClick={() => { setSearchTerm(''); setDeliveryFilter('all'); }}>Сбросить поиск и фильтр</button> : null}
+          </div>
         ) : (
           <>
             {/* Мобильная версия: карточки */}
@@ -614,10 +616,7 @@ export default function AdminOrdersPage() {
                   <div className="flex flex-col gap-2">
                     <p className="font-medium text-gray-900">{order.shippingInfo?.fullName ?? '—'}</p>
                     <p className="text-sm text-gray-600">{order.shippingInfo?.phoneMasked ?? '—'}</p>
-                    <p className="text-sm font-medium text-gray-700">{getOrderDisplayLabel(order)}</p>
-                    {order.orderNumber != null ? (
-                      <p className="text-xs text-gray-400 font-mono break-all" title="Внутренний ID">{order.id}</p>
-                    ) : null}
+                    <OrderIdentifiers order={order} onOpen={() => void handleOpenOrderPopup(order)} />
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-sm text-gray-600">{formatDate(order.createdAt)}</span>
                       <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -688,10 +687,7 @@ export default function AdminOrdersPage() {
                           <td className="px-4 py-3 align-top text-sm">
                             <div className="font-medium text-gray-900">{order.shippingInfo?.fullName ?? '—'}</div>
                             <div className="text-gray-600 mt-0.5">{order.shippingInfo?.phoneMasked ?? '—'}</div>
-                            <div className="text-sm font-medium text-gray-700 mt-1">{getOrderDisplayLabel(order)}</div>
-                            {order.orderNumber != null ? (
-                              <div className="mt-0.5 break-all text-xs font-mono text-gray-400" title="Внутренний ID">{order.id}</div>
-                            ) : null}
+                            <div className="mt-1"><OrderIdentifiers order={order} onOpen={() => void handleOpenOrderPopup(order)} /></div>
                             {mode === 'trash' && order.deletedAt && (
                               <div className="mt-1 text-xs text-gray-500">
                                 В корзине с {formatDate(order.deletedAt)}
@@ -767,7 +763,8 @@ export default function AdminOrdersPage() {
           >
             <div className="flex items-start justify-between border-b border-gray-200 p-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Заказ {getOrderDisplayLabel(popupOrder)}</h2>
+                <h2 className="mb-1 text-lg font-semibold text-gray-900">Карточка заказа</h2>
+                <OrderIdentifiers order={popupOrder} />
                 {popupOrder.orderNumber != null ? (
                   <p className="text-xs text-gray-400 font-mono break-all" title="Внутренний ID">{popupOrder.id}</p>
                 ) : null}
@@ -833,7 +830,7 @@ export default function AdminOrdersPage() {
                     <p>{popupOrder.shippingInfo.phoneMasked}</p>
                     <p>{popupOrder.shippingInfo.city}</p>
                     <p>{popupOrder.shippingInfo.addressShort}</p>
-                    {popupOrder.shippingInfo.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={popupOrder.id} paid={popupOrder.status === 'paid'} /> : null}
+                    {popupOrder.shippingInfo.deliveryMethod === 'ozon_pvz' ? <OzonShipmentPanel orderId={popupOrder.id} paid={popupOrder.status === 'paid'} onShipmentChange={handleOzonShipmentChange} /> : null}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-500">

@@ -139,3 +139,62 @@ describe('notifyTelegramOrder', () => {
     )
   })
 })
+
+const deliveryOrder = {
+  orderId: 'order-352', orderNumber: 352, total: 3340, shippingCost: 140,
+  items: [{ title: 'Товар', quantity: 1, price: 3200 }],
+  shipping: { fullName: 'Тест', phone: '+79001234567', email: 'test@example.com', address: '<ПВЗ> & адрес', city: 'Москва', zipCode: '', country: 'Россия' },
+  brandId: 'inner' as const,
+}
+
+describe('Telegram carrier identification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ result: { message_id: 1 } }) })
+    vi.mocked(settingsService.getTelegramBotToken).mockResolvedValue('token')
+    vi.mocked(userService.getAdminTelegramChatIds).mockResolvedValue(['admin-1'])
+  })
+
+  it.each(['full', 'compact'] as const)('marks Ozon prominently and includes its numbers in %s admin messages', async mode => {
+    const notify = await import('@/lib/telegram-notify')
+    const payload = { ...deliveryOrder, deliveryMethod: 'ozon_pvz',
+      ozonShipment: { orderNumber: 'AB-352', postingNumber: 'PP-352', status: 'ready_for_shipping', error: null },
+      cdekOrderUuid: 'stale-cdek',
+    }
+    if (mode === 'full') notify.notifyTelegramOrder(payload)
+    else await notify.notifyTelegramPaidOrderForAdmins(payload)
+    await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledOnce())
+    const body = JSON.parse(String(vi.mocked(global.fetch).mock.calls[0][1]?.body))
+    expect(body.text.split('\n')[0]).toBe('<b>OZON Доставка · заказ #352</b>')
+    expect(body.text).toContain('Заказ оплачен')
+    expect(body.text).toContain('Заказ OZON: AB-352')
+    expect(body.text).toContain('Отправление OZON: PP-352')
+    expect(body.text).toContain('Статус: Готово к отгрузке')
+    expect(body.text).toContain('ПВЗ: &lt;ПВЗ&gt; &amp; адрес')
+    expect(body.text).not.toContain('stale-cdek')
+    expect(JSON.stringify(body.reply_markup)).not.toContain('cdek_create_')
+    expect(body.text).toContain('/admin/orders?search=%23352')
+  })
+
+  it('identifies Ozon even before asynchronous shipment creation completes', async () => {
+    const notify = await import('@/lib/telegram-notify')
+    notify.notifyTelegramOrder({ ...deliveryOrder, deliveryMethod: 'ozon_pvz', ozonShipment: null })
+    await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledOnce())
+    const body = JSON.parse(String(vi.mocked(global.fetch).mock.calls[0][1]?.body))
+    expect(body.text).toContain('<b>OZON Доставка · заказ #352</b>')
+    expect(body.text).toContain('Отправление ещё не создано')
+    expect(body.text).not.toContain('Готово к отгрузке')
+  })
+
+  it('shows both CDEK identifiers and does not offer duplicate creation when tracking exists', async () => {
+    const notify = await import('@/lib/telegram-notify')
+    notify.notifyTelegramOrder({ ...deliveryOrder, deliveryMethod: 'cdek_door', cdekTrackNumber: '1234567890', cdekOrderUuid: 'uuid-cdek' })
+    await vi.waitFor(() => expect(global.fetch).toHaveBeenCalledOnce())
+    const body = JSON.parse(String(vi.mocked(global.fetch).mock.calls[0][1]?.body))
+    expect(body.text.split('\n')[0]).toBe('<b>СДЭК · заказ #352</b>')
+    expect(body.text).toContain('Способ: до двери')
+    expect(body.text).toContain('Трек СДЭК: 1234567890')
+    expect(body.text).toContain('UUID СДЭК: uuid-cdek')
+    expect(JSON.stringify(body.reply_markup)).not.toContain('cdek_create_')
+  })
+})

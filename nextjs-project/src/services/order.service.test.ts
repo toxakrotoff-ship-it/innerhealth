@@ -19,6 +19,7 @@ const txOzonQuoteFindFirstMock = vi.fn()
 const txOzonShipmentCreateMock = vi.fn()
 const txPackageSettingsMock = vi.fn()
 const orderFindManyMock = vi.fn()
+const rootOrderFindUniqueMock = vi.fn()
 const rootOrderUpdateManyMock = vi.fn()
 const rootOrderUpdateMock = vi.fn()
 
@@ -30,6 +31,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     $transaction: (...args: unknown[]) => transactionMock(...args),
     order: {
+      findUnique: (...args: unknown[]) => rootOrderFindUniqueMock(...args),
       findMany: (...args: unknown[]) => orderFindManyMock(...args),
       updateMany: (...args: unknown[]) => rootOrderUpdateManyMock(...args),
       update: (...args: unknown[]) => rootOrderUpdateMock(...args),
@@ -517,5 +519,46 @@ describe('CDEK track polling persistence', () => {
       },
       data: { cdekTrackCustomerEmailAttemptedAt: now },
     })
+  })
+})
+
+
+describe('admin order Ozon identifiers', () => {
+  const summary = { orderNumber: 'AB-123CD', postingNumber: 'PP-456EF', status: 'ready_for_shipping', error: null }
+  const fixture = (ozonShipment: unknown = summary) => ({
+    id: 'order-summary', orderNumber: 352, brand: 'inner', total: 3340, deliverySum: 140,
+    status: 'paid', createdAt: new Date('2026-10-28T05:00:00Z'), deletedAt: null,
+    items: [], promoCode: null, shippingInfo: null, ozonShipment,
+  })
+  beforeEach(() => { orderFindManyMock.mockReset(); rootOrderFindUniqueMock.mockReset() })
+
+  it('loads only the safe Ozon summary for paid messenger notifications', async () => {
+    rootOrderFindUniqueMock.mockResolvedValue(null)
+    const service = await import('@/services/order.service')
+    await service.findOrderForPaidEmail('order-summary')
+    const query = rootOrderFindUniqueMock.mock.calls[0][0]
+    expect(query.select.ozonShipment).toEqual({ select: { orderNumber: true, postingNumber: true, status: true, error: true } })
+    expect(query.select.cdekTrackNumber).toBe(true)
+  })
+
+  it.each(['list', 'trash', 'detail'] as const)('returns safe Ozon identifiers in the %s response', async view => {
+    const row = fixture({ ...summary, request: { recipient: 'private' }, idempotencyKey: 'private-key' })
+    orderFindManyMock.mockResolvedValue([row]); rootOrderFindUniqueMock.mockResolvedValue(row)
+    const service = await import('@/services/order.service')
+    const result = view === 'detail' ? await service.getOrderDetailForAdmin(row.id, 'inner')
+      : (view === 'trash' ? await service.getOrdersForAdminWithTrash({ mode: 'trash' }) : await service.getOrdersForAdmin())[0]
+    expect(result.ozonShipment).toEqual(summary)
+    expect(JSON.stringify(result)).not.toContain('private')
+    const query = view === 'detail' ? rootOrderFindUniqueMock.mock.calls[0][0] : orderFindManyMock.mock.calls[0][0]
+    expect(query.include.ozonShipment).toEqual({ select: { orderNumber: true, postingNumber: true, status: true, error: true } })
+  })
+
+  it.each(['list', 'trash', 'detail'] as const)('returns null for absent Ozon shipments in the %s response', async view => {
+    const row = fixture(null)
+    orderFindManyMock.mockResolvedValue([row]); rootOrderFindUniqueMock.mockResolvedValue(row)
+    const service = await import('@/services/order.service')
+    const result = view === 'detail' ? await service.getOrderDetailForAdmin(row.id, 'inner')
+      : (view === 'trash' ? await service.getOrdersForAdminWithTrash({ mode: 'trash' }) : await service.getOrdersForAdmin())[0]
+    expect(result.ozonShipment).toBeNull()
   })
 })

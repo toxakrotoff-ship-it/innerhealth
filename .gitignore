@@ -15,7 +15,17 @@ node_modules/
 .env
 .env.local
 .env*.local
+.env.bak*
 !.env.example
+
+# Local Ruflo state and server-installed copies of operations scripts.
+.claude-flow/
+/ops/
+
+# Server TLS material and local nginx configuration backups.
+/nextjs-project/deploy/nginx/ssl/*.pem
+/nextjs-project/deploy/nginx/**/*.bak-*
+/nextjs-project/deploy/nginx/nginx.conf.before-*
 
 # Uploads (server-generated, do not commit)
 nextjs-project/public/uploads/

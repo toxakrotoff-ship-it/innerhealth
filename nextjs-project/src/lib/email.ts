@@ -401,6 +401,7 @@ export interface NewOrderEmailPayload {
   /** Сумма скидки по промокоду в рублях (отдельная строка в письме). */
   promoDiscountAmount?: number | null
   cdekTrackNumber?: string | null
+  deliveryMethod?: string | null
   brandId?: BrandId
 }
 
@@ -411,6 +412,43 @@ export interface PaidOrderEmailPayload extends NewOrderEmailPayload {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function orderDeliveryEmailDetails(payload: NewOrderEmailPayload) {
+  const isOzon = payload.deliveryMethod === 'ozon_pvz'
+  return {
+    isOzon,
+    subjectPrefix: isOzon ? 'OZON · ' : '',
+    text: isOzon ? `Способ доставки: OZON — пункт выдачи\nАдрес ПВЗ: ${payload.shipping.address}\n\n` : '',
+    html: isOzon ? `<div style="margin:0 0 20px;padding:18px 20px;background-color:#eaf2ff;border:1px solid #b8d1ff;border-left:5px solid #005bff;border-radius:12px;">
+      <p style="margin:0 0 8px;font-size:20px;font-weight:800;color:#005bff;">OZON Доставка</p>
+      <p style="margin:0;font-size:14px;line-height:1.6;color:#1e3a5f;">Доставка в пункт выдачи<br><strong>Адрес ПВЗ:</strong> ${escapeHtml(payload.shipping.address)}</p>
+    </div>` : '',
+  }
+}
+
+function logOrderEmailSmtpResult(
+  info: { messageId?: string; accepted?: unknown[]; rejected?: unknown[]; response?: string },
+  payload: NewOrderEmailPayload,
+  channel: 'admin' | 'customer'
+): { ok: boolean; error?: string } {
+  const rejected = info.rejected ?? []
+  const result = {
+    orderId: payload.orderId,
+    orderNumber: payload.orderNumber ?? null,
+    deliveryMethod: payload.deliveryMethod ?? null,
+    channel,
+    messageId: info.messageId,
+    accepted: info.accepted ?? [],
+    rejected,
+    response: info.response,
+  }
+  if (rejected.length > 0) {
+    console.error('[email] Order email recipients rejected by SMTP', result)
+    return { ok: false, error: `SMTP отклонил получателей: ${rejected.map(String).join(', ')}` }
+  }
+  console.log('[email] Order email accepted by SMTP', result)
+  return { ok: true }
 }
 
 function formatRub(value: number): string {
@@ -457,6 +495,7 @@ export async function sendNewOrderNotification(
     payload
   const orderLabel = formatOrderLabel(payload)
   const storefront = labelForBrandEmail(payload.brandId)
+  const delivery = orderDeliveryEmailDetails(payload)
   const itemsLines = items.map(
     (i) => `${i.title} — ${i.quantity} × ${formatRub(i.price)} = ${formatRub(i.quantity * i.price)}`
   )
@@ -488,6 +527,7 @@ export async function sendNewOrderNotification(
   const text =
     `Заказ оплачен\n\n` +
     `Заказ: ${orderLabel}\n` +
+    delivery.text +
     `Состав:\n${itemsLines.join('\n')}\n\n` +
     `Доставка: ${formatRub(shippingCost)}\n` +
     `Итого: ${formatRub(total)}${promoSection}\n` +
@@ -515,7 +555,7 @@ export async function sendNewOrderNotification(
       <td style="padding:24px 12px 40px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;margin:0 auto;background-color:#fffdf9;border:1px solid #ebe6dc;border-radius:24px;overflow:hidden;">
           <tr>
-            <td style="padding:28px 28px 22px;background:linear-gradient(135deg,#16302b 0%,#27544c 100%);">
+            <td style="padding:28px 28px 22px;background-color:${delivery.isOzon ? '#005bff' : '#16302b'};background:${delivery.isOzon ? 'linear-gradient(135deg,#005bff 0%,#0044cc 100%)' : 'linear-gradient(135deg,#16302b 0%,#27544c 100%)'};">
               <div style="font-size:12px;line-height:1.2;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#d8e9e3;">${escapeHtml(storefront)}</div>
               <h1 style="margin:14px 0 8px;font-family:Arial,'Segoe UI',sans-serif;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;color:#ffffff;">Заказ оплачен</h1>
               <p style="margin:0;font-size:15px;line-height:1.5;color:#d9ebe4;">Оплата получена, заказ можно обрабатывать.</p>
@@ -523,6 +563,7 @@ export async function sendNewOrderNotification(
           </tr>
           <tr>
             <td style="padding:24px 20px 12px;">
+              ${delivery.html}
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="padding:0 8px 12px;">
@@ -617,20 +658,19 @@ export async function sendNewOrderNotification(
 </html>
   `.trim()
   try {
-    console.log('[email] Sending paid order admin notification to', unique.join(', '))
-    await transporter.sendMail({
+    console.log('[email] Sending paid order admin notification', { orderId, orderNumber: payload.orderNumber, to: unique })
+    const info = await transporter.sendMail({
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: unique.join(', '),
-      subject: `Заказ оплачен ${orderLabel} — ${storefront}`,
+      subject: `${delivery.subjectPrefix}Заказ оплачен ${orderLabel} — ${storefront}`,
       text,
       html,
     })
-    console.log('[email] Paid order admin notification sent')
-    return { ok: true }
+    return logOrderEmailSmtpResult(info, payload, 'admin')
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[email] Send paid order admin notification error:', message)
+    console.error('[email] Send paid order admin notification error:', { orderId, orderNumber: payload.orderNumber, error: message })
     return { ok: false, error: message }
   }
 }
@@ -791,6 +831,7 @@ export async function sendCustomerOrderPaidEmail(
   const { total, shippingCost, items, cdekTrackNumber, promoCode, promoDiscountAmount } = payload
   const orderLabel = formatOrderLabel(payload)
   const storefront = labelForBrandEmail(payload.brandId)
+  const delivery = orderDeliveryEmailDetails(payload)
   const orderSummary = items
     .map(
       (i) =>
@@ -808,7 +849,7 @@ export async function sendCustomerOrderPaidEmail(
     ? `\n\nТрек-номер СДЭК: ${cdekTrackNumber.trim()}`
     : ''
   const text =
-    `${storefront}\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\nСостав заказа:\n${orderSummary}${promoTextSection}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
+    `${storefront}\n\n${username}, ваш заказ оплачен.\n\nЗаказ: ${orderLabel}\n\n${delivery.text}Состав заказа:\n${orderSummary}${promoTextSection}\n\nДоставка: ${formatRub(shippingCost)}\nИтого: ${formatRub(total)}${trackLine}\n\n* Данное письмо создано автоматически, отвечать на него не требуется.`
 
   const htmlItems = items
     .map(
@@ -844,13 +885,14 @@ export async function sendCustomerOrderPaidEmail(
       <td style="padding:32px 16px;">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);overflow:hidden;">
           <tr>
-            <td style="background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);padding:28px 32px;text-align:center;">
+            <td style="background-color:${delivery.isOzon ? '#005bff' : '#0f766e'};background:${delivery.isOzon ? 'linear-gradient(135deg,#005bff 0%,#0044cc 100%)' : 'linear-gradient(135deg,#0f766e 0%,#0d9488 100%)'};padding:28px 32px;text-align:center;">
               <h1 style="margin:0;font-size:22px;font-weight:600;color:#ffffff;letter-spacing:-0.02em;">${escapeHtml(storefront)}</h1>
               <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.9);">Заказ оплачен</p>
             </td>
           </tr>
           <tr>
             <td style="padding:32px;">
+              ${delivery.html}
               <p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#374151;"><strong>${escapeHtml(username)}</strong>, ваш заказ оплачен.</p>
               <p style="margin:0 0 16px;font-size:14px;color:#4b5563;"><strong>Заказ:</strong> ${escapeHtml(orderLabel)}</p>
               <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#111827;">Состав заказа:</p>
@@ -881,20 +923,19 @@ export async function sendCustomerOrderPaidEmail(
 </html>
   `.trim()
   try {
-    console.log('[email] Sending paid email to', trimmedTo)
-    await transporter.sendMail({
+    console.log('[email] Sending paid email', { orderId: payload.orderId, orderNumber: payload.orderNumber, to: trimmedTo })
+    const info = await transporter.sendMail({
       from: SUPPORT_FROM,
       replyTo: REPLY_TO,
       to: trimmedTo,
-      subject: `Заказ ${orderLabel} оплачен — ${storefront}`,
+      subject: `${delivery.subjectPrefix}Заказ ${orderLabel} оплачен — ${storefront}`,
       text,
       html,
     })
-    console.log('[email] Paid email sent to', trimmedTo)
-    return { ok: true }
+    return logOrderEmailSmtpResult(info, payload, 'customer')
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error('[email] Send paid email error:', message)
+    console.error('[email] Send paid email error:', { orderId: payload.orderId, orderNumber: payload.orderNumber, error: message })
     return { ok: false, error: message }
   }
 }

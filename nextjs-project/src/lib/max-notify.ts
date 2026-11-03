@@ -8,6 +8,7 @@ import type { BrandId } from '@/lib/brand/brand';
 import { normalizeBrandId, resolveBrandByHost } from '@/lib/brand/brand';
 import { getBrandSiteUrl } from '@/lib/brand/site-branding';
 import { formatOrderLabel } from '@/lib/order-label';
+import { getOrderDeliveryTitle, getOrderDeliveryDetails, adminOrderNotificationUrl, escapeDeliveryMarkdown, type OrderDeliveryNotifyPayload } from '@/lib/order-delivery-notification';
 import { maxNotificationSiteHeader } from '@/lib/max-notification-site';
 
 interface MaxAttachmentRequest {
@@ -140,7 +141,7 @@ async function sendToUsers(
   return deliveredCount;
 }
 
-export interface MaxOrderNotifyPayload {
+export interface MaxOrderNotifyPayload extends OrderDeliveryNotifyPayload {
   orderId: string;
   orderNumber?: number | null;
   total: number;
@@ -169,22 +170,10 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
   const orderLabel = escapeHtml(formatOrderLabel(payload));
   const isCdek =
     payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
-  const cdekLines: string[] = [];
-  if (isCdek) {
-    cdekLines.push(
-      '',
-      '**СДЭК:**',
-      `Способ: ${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'}`
-    );
-    if (payload.cdekOrderUuid) {
-      cdekLines.push(`UUID: \`${escapeHtml(payload.cdekOrderUuid)}\``);
-    } else if (payload.cdekOrderError) {
-      cdekLines.push(`Ошибка: ${escapeHtml(payload.cdekOrderError)}`);
-    } else {
-      cdekLines.push('Отгрузка ещё не создана');
-    }
-  }
+  const deliveryTitle = getOrderDeliveryTitle(payload.deliveryMethod);
+  const deliveryDetails = getOrderDeliveryDetails(payload).map(escapeDeliveryMarkdown);
   const lines: string[] = [
+    deliveryTitle ? `**${deliveryTitle} · заказ ${escapeDeliveryMarkdown(formatOrderLabel(payload))}**` : '',
     '**Заказ оплачен**',
     `Заказ: ${orderLabel}`,
     '',
@@ -200,30 +189,21 @@ export async function notifyMaxOrder(payload: MaxOrderNotifyPayload): Promise<vo
     payload.promoDiscountAmount != null && payload.promoDiscountAmount > 0
       ? `Скидка по промокоду: ${payload.promoDiscountAmount.toFixed(2)} ₽`
       : '',
-    ...cdekLines,
     '',
-    '**Доставка:**',
+    deliveryTitle ? `**${deliveryTitle}:**` : '**Доставка:**',
+    ...deliveryDetails,
     `ФИО: ${escapeHtml(payload.shipping.fullName)}`,
     `Телефон: ${escapeHtml(payload.shipping.phone)}`,
     `Email: ${escapeHtml(payload.shipping.email)}`,
     `Адрес: ${escapeHtml(payload.shipping.address)}`,
     `Город: ${escapeHtml(payload.shipping.city)}, ${escapeHtml(payload.shipping.zipCode)}, ${escapeHtml(payload.shipping.country)}`,
   ];
-  const adminOrdersUrl = `${siteUrl(payload.brandId)}/admin/orders`;
-  const needsCdekButton = isCdek && !payload.cdekOrderUuid;
-  const attachments = needsCdekButton
-    ? [
-        Keyboard.inlineKeyboard([
-          [
-            Keyboard.button.callback(
-              'Создать отгрузку в СДЭК',
-              `cdek_create_${payload.orderId}`.slice(0, 256)
-            ),
-          ],
-          [Keyboard.button.link('Открыть в админке', adminOrdersUrl)],
-        ]),
-      ]
-    : undefined;
+  const adminOrdersUrl = adminOrderNotificationUrl(payload);
+  const needsCdekButton = isCdek && !payload.cdekOrderUuid && !payload.cdekTrackNumber;
+  const attachments = [Keyboard.inlineKeyboard([
+    ...(needsCdekButton ? [[Keyboard.button.callback('Создать отгрузку в СДЭК', `cdek_create_${payload.orderId}`.slice(0, 256))]] : []),
+    [Keyboard.button.link('Открыть заказ в CRM', adminOrdersUrl)],
+  ])];
   await sendToAdmins(payload.brandId, lines.filter(Boolean).join('\n'), { attachments });
 
   if (payload.promoCodeId) {
@@ -278,7 +258,7 @@ export async function notifyMaxOrderStatusForUser(payload: {
   await sendToLinkedUser(payload.userId, payload.brandId, lines.join('\n'));
 }
 
-export async function notifyMaxPaidOrderForAdmins(payload: {
+export async function notifyMaxPaidOrderForAdmins(payload: OrderDeliveryNotifyPayload & {
   orderId: string;
   orderNumber?: number | null;
   deliveryMethod?: string | null;
@@ -286,33 +266,23 @@ export async function notifyMaxPaidOrderForAdmins(payload: {
   cdekOrderError?: string | null;
   brandId?: BrandId;
 }): Promise<void> {
-  const isCdek =
-    payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
-  const adminOrdersUrl = `${siteUrl(payload.brandId)}/admin/orders`;
+  const isCdek = payload.deliveryMethod === 'cdek_pvz' || payload.deliveryMethod === 'cdek_door';
+  const deliveryTitle = getOrderDeliveryTitle(payload.deliveryMethod);
+  const orderLabel = formatOrderLabel(payload);
+  const adminOrdersUrl = adminOrderNotificationUrl(payload);
   const lines = [
+    deliveryTitle ? `**${deliveryTitle} · заказ ${escapeDeliveryMarkdown(orderLabel)}**` : '',
     '✅ **Заказ оплачен**',
-    `Заказ: \`${escapeHtml(formatOrderLabel(payload))}\``,
-    isCdek
-      ? `Доставка: СДЭК (${payload.deliveryMethod === 'cdek_pvz' ? 'ПВЗ' : 'до двери'})`
-      : payload.deliveryMethod === 'ozon_pvz' ? 'Доставка: Ozon (ПВЗ)' : payload.deliveryMethod === 'pickup' ? 'Доставка: самовывоз' : 'Доставка: другой способ',
-    payload.cdekOrderUuid
-      ? `СДЭК UUID: \`${escapeHtml(payload.cdekOrderUuid)}\``
-      : payload.cdekOrderError
-        ? `СДЭК ошибка: ${escapeHtml(payload.cdekOrderError)}`
-        : isCdek
-          ? 'СДЭК: отгрузка ещё не создана'
-          : '',
-    `Открыть заказы: ${escapeHtml(adminOrdersUrl)}`,
+    `Заказ: ${escapeDeliveryMarkdown(orderLabel)}`,
+    `Доставка: ${deliveryTitle || 'другой способ'}`,
+    ...getOrderDeliveryDetails(payload).map(escapeDeliveryMarkdown),
+    `Открыть заказ в CRM: ${escapeDeliveryMarkdown(adminOrdersUrl)}`,
   ].filter(Boolean)
 
-  const attachments = isCdek && !payload.cdekOrderUuid
-    ? [
-        Keyboard.inlineKeyboard([
-          [Keyboard.button.callback('Создать отгрузку в СДЭК', `cdek_create_${payload.orderId}`.slice(0, 256))],
-          [Keyboard.button.link('Открыть в админке', adminOrdersUrl)],
-        ]),
-      ]
-    : undefined
+  const attachments = [Keyboard.inlineKeyboard([
+    ...(isCdek && !payload.cdekOrderUuid && !payload.cdekTrackNumber ? [[Keyboard.button.callback('Создать отгрузку в СДЭК', `cdek_create_${payload.orderId}`.slice(0, 256))]] : []),
+    [Keyboard.button.link('Открыть заказ в CRM', adminOrdersUrl)],
+  ])];
 
   await sendToAdmins(payload.brandId, lines.join('\n'), { attachments });
 }
