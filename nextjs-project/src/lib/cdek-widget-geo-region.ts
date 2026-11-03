@@ -190,7 +190,8 @@ export async function resolveWidgetGeoRegion(params: {
   brandId?: BrandId
   geolocationTimeoutMs?: number
   geoApiTimeoutMs?: number
-  coords?: GeolocationCoordinates | null
+  coords?: Pick<GeolocationCoordinates, 'latitude' | 'longitude'> | null
+  signal?: AbortSignal
 }): Promise<WidgetGeoRegion | null> {
   const coords =
     params.coords !== undefined
@@ -201,6 +202,9 @@ export async function resolveWidgetGeoRegion(params: {
   const brandQuery = params.brandId ? `?brand=${encodeURIComponent(params.brandId)}` : ''
   const geoApiTimeoutMs = params.geoApiTimeoutMs ?? WIDGET_GEO_API_TIMEOUT_MS
   const abortController = new AbortController()
+  const abort = () => abortController.abort()
+  if (params.signal?.aborted) abort()
+  params.signal?.addEventListener('abort', abort, { once: true })
   const apiTimeoutId = setTimeout(() => abortController.abort(), geoApiTimeoutMs)
 
   try {
@@ -231,6 +235,7 @@ export async function resolveWidgetGeoRegion(params: {
     return null
   } finally {
     clearTimeout(apiTimeoutId)
+    params.signal?.removeEventListener('abort', abort)
   }
 }
 
@@ -469,21 +474,10 @@ export function shouldExpandCountryOfficesAfterInit(params: {
   const isFullFallback = params.bootstrapSource === 'country'
   if (!hasRegionBootstrap && !hasCityBootstrap && !isFullFallback) return false
 
-  // Always expand to the full country list in the background, even after a successful
-  // geo_region bootstrap and even on mobile. The widget's own city search only moves the
-  // map center (it re-geocodes the typed text via Yandex) — it does NOT re-scope which
-  // offices are loaded, since `servicePath` embeds a single region_code fixed at init time.
-  // Skipping this expansion on mobile meant a user browsing on their phone (where geolocation
-  // reliably succeeds) could search for and "select" any other city on the map, but would see
-  // zero pickup points there — only their own region's offices were ever fetched. Desktop
-  // testing tends to mask this because a denied/unavailable geolocation permission falls
-  // through to the 'country' bootstrap source, which already expanded to everything.
-  //
-  // Exception: iPhone Safari kills the tab (page silently reloads on picking a PVZ) when the
-  // whole-country offices set is pushed into the Yandex map on top of the WebGL scene.
-  // Confirmed on device: with expansion off (?cdekNoExpand=1) the crash disappears. So on
-  // mobile with a resolved region/city we keep only that region's offices; the full fallback
-  // ('country') still expands, otherwise the user would be stuck with a single default city.
+  // Desktop preloads the rest of the country. On mobile keep the map regional:
+  // loading every office crashes iOS Safari. The onSearchLocation callback in our
+  // vendored widget replaces offices with the searched region when the city changes.
+  // Keep country expansion for a completely unresolved bootstrap as a recovery path.
   if (params.isMobileClient && !isFullFallback) return false
   return true
 }

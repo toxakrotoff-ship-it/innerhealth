@@ -10,7 +10,7 @@ export interface CdekWidgetConfigResponse {
   tariffs: { office: number[]; door: number[] }
 }
 
-const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js'
+const WIDGET_UMD_SRC = '/vendor/cdek-widget.umd.js?v=3.11.1-region-search-1'
 
 const configCache = new Map<string, Promise<CdekWidgetConfigResponse>>()
 let widgetScriptPromise: Promise<void> | null = null

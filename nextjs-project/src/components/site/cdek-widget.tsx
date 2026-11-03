@@ -22,6 +22,7 @@ import {
   isCdekWidgetMobileClient,
   readSenderCityCodeFromWidgetConfig,
   resolveWidgetDefaultLocation,
+  resolveWidgetGeoRegion,
   resolveWidgetOfficesBootstrap,
   shouldExpandCountryOfficesAfterInit,
   type WidgetGeoRegion,
@@ -29,6 +30,7 @@ import {
 } from '@/lib/cdek-widget-geo-region'
 import { expandCountryOfficesIntoWidget } from '@/lib/cdek-widget-country-offices'
 import { fetchCdekPvzManifest, fetchCdekPvzRegion } from '@/lib/cdek-pvz-client'
+import { fetchWidgetRegionOffices } from '@/lib/cdek-widget-region-offices'
 import { runWhenIdle } from '@/lib/run-when-idle'
 import type { CdekWidgetInstance } from '@/lib/cdek-widget-types'
 import type { CartLine } from '@/store/cart-store'
@@ -93,12 +95,8 @@ function parseWidgetInt(value: unknown): number {
 
 // Load from same-origin to satisfy strict CSP (`script-src 'self' ...`)
 const WIDGET_INIT_TIMEOUT_MS = 45_000
-// Country-wide office expansion is deliberately always-on (even on mobile, even after a
-// successful region bootstrap) — see shouldExpandCountryOfficesAfterInit in
-// cdek-widget-geo-region.ts for why skipping it broke city search. What we tune here per
-// device is only *how gently* it happens: on mobile, defer the start further past `onReady`
-// and spread network/main-thread work (each applied batch repaints the map) over more time,
-// so it doesn't compete with the user's first interaction or spike memory on a phone.
+// Desktop preloads other regions gradually. Mobile loads the searched region on demand
+// through onSearchLocation, keeping the whole-country dataset out of the WebGL map.
 const COUNTRY_OFFICES_BACKGROUND_PACING = {
   desktop: { deferMs: 4_000, applyEveryPages: 3, batchPauseMs: 500 },
   mobile: { deferMs: 8_000, applyEveryPages: 5, batchPauseMs: 1_200 },
@@ -173,6 +171,8 @@ export function CdekWidget({
   const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [regionOfficesLoading, setRegionOfficesLoading] = useState(false)
+  const [regionOfficesError, setRegionOfficesError] = useState<string | null>(null)
   const [debugEvents, setDebugEvents] = useState<CdekWidgetDebugEvent[]>([])
   const [debugMode, setDebugMode] = useState<'cdek_pvz' | 'cdek_door' | null>(null)
   const itemsSignature = useMemo(() => buildCdekWidgetItemsSignature(items), [items])
@@ -233,6 +233,8 @@ export function CdekWidget({
     let backgroundExpandDeferTimerId: ReturnType<typeof setTimeout> | null = null
     let backgroundExpandIdleCallbackId: number | null = null
     let widgetReady = false
+    let searchedLocation = false
+    let regionController: AbortController | null = null
     countryOfficesExpandedRef.current = false
     lastSyncedItemsSignatureRef.current = ''
     const initGeneration = ++initGenerationRef.current
@@ -255,6 +257,8 @@ export function CdekWidget({
     async function run() {
       setError(null)
       setIsReady(false)
+      setRegionOfficesLoading(false)
+      setRegionOfficesError(null)
       widgetReady = false
       const widgetItems = getCdekWidgetCartLines(itemsRef.current)
 
@@ -445,6 +449,38 @@ export function CdekWidget({
         setError('Виджет СДЭК не ответил вовремя. Проверьте интернет и попробуйте ещё раз.')
       }, WIDGET_INIT_TIMEOUT_MS)
 
+      const loadSearchLocation = async (position: unknown) => {
+        if (cancelled || !Array.isArray(position) || position.length !== 2 ||
+          !position.every((coordinate) => typeof coordinate === 'number' && Number.isFinite(coordinate))) return
+        searchedLocation = true
+        clearBackgroundExpandScheduling()
+        regionController?.abort()
+        const controller = new AbortController()
+        regionController = controller
+        setRegionOfficesLoading(true)
+        setRegionOfficesError(null)
+        try {
+          const region = await resolveWidgetGeoRegion({
+            brandId,
+            coords: { longitude: position[0], latitude: position[1] },
+            signal: controller.signal,
+          })
+          controller.signal.throwIfAborted()
+          if (!region) throw new Error('CDEK searched region could not be resolved')
+          const offices = await fetchWidgetRegionOffices({ brandId, regionCode: region.regionCode, signal: controller.signal })
+          controller.signal.throwIfAborted()
+          if (!isCurrentInitGeneration(initGeneration)) return
+          await widgetRef.current?.updateOfficesRaw?.(offices)
+          controller.signal.throwIfAborted()
+        } catch (searchError) {
+          if (controller.signal.aborted || cancelled) return
+          logCartDebug({ scope: 'cdek-widget', event: 'search_region_failed', level: 'warn', error: searchError })
+          setRegionOfficesError('Не удалось загрузить пункты СДЭК. Выберите город в поиске ещё раз или воспользуйтесь вводом адреса вручную.')
+        } finally {
+          if (!controller.signal.aborted && !cancelled) setRegionOfficesLoading(false)
+        }
+      }
+
       widgetRef.current = new window.CDEKWidget({
         root: rootId,
         apiKey,
@@ -468,6 +504,9 @@ export function CdekWidget({
           : {}),
         goods: configJson.goods ?? [],
         tariffs: configJson.tariffs ?? { office: [234, 136, 138], door: [233, 137, 139] },
+        onSearchLocation(position: unknown) {
+          void loadSearchLocation(position)
+        },
         onReady() {
           if (cancelled) return
           widgetReady = true
@@ -493,6 +532,7 @@ export function CdekWidget({
           const scheduleCountryOfficesBackgroundExpand = () => {
             if (
               !shouldBackgroundExpandCountry ||
+              searchedLocation ||
               countryOfficesExpandedRef.current ||
               cancelled
             ) {
@@ -502,7 +542,7 @@ export function CdekWidget({
             const expandGeneration = initGeneration
 
             const startBackgroundExpand = () => {
-              if (!isCurrentInitGeneration(expandGeneration) || countryOfficesExpandedRef.current) {
+              if (!isCurrentInitGeneration(expandGeneration) || searchedLocation || countryOfficesExpandedRef.current) {
                 return
               }
               countryOfficesExpandedRef.current = true
@@ -532,14 +572,14 @@ export function CdekWidget({
                 applyEveryPages: pacing.applyEveryPages,
                 batchPauseMs: pacing.batchPauseMs,
                 applyOffices: async (offices) => {
-                  if (!isCurrentInitGeneration(expandGeneration)) {
+                  if (!isCurrentInitGeneration(expandGeneration) || searchedLocation) {
                     return
                   }
                   const widget = widgetRef.current
                   if (!widget?.updateOfficesRaw) return
 
                   await runWhenIdle(async () => {
-                    if (!isCurrentInitGeneration(expandGeneration)) {
+                    if (!isCurrentInitGeneration(expandGeneration) || searchedLocation) {
                       return
                     }
                     await widget.updateOfficesRaw!(offices)
@@ -770,6 +810,7 @@ export function CdekWidget({
 
     return () => {
       cancelled = true
+      regionController?.abort()
       pvzController.abort()
       pushDebugEvent('cleanup', { initGeneration, rootId })
       logCartDebug({
@@ -887,6 +928,8 @@ export function CdekWidget({
           </button>
         </div>
       ) : null}
+      {regionOfficesLoading ? <p role="status" className="text-sm">Загружаем пункты СДЭК выбранного региона…</p> : null}
+      {regionOfficesError ? <p role="alert" className={isSprintTheme ? 'text-sm text-red-300' : 'text-sm text-red-600'}>{regionOfficesError}</p> : null}
       {/*
         Используем svh, а не dvh: dvh пересчитывается при скрытии/появлении адресной строки
         браузера на мобильном при скролле, из-за чего контейнер карты меняет размер уже
