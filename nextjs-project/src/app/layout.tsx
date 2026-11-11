@@ -178,6 +178,14 @@ ym(${metrikaCounterId}, 'init', {${metrikaInitOptions}});
           // Фолбэк на origin, если домен CDN у пользователя недоступен — должен идти первым в <head>.
           <script dangerouslySetInnerHTML={{ __html: buildCdnFallbackScript(CDN_URL) }} />
         ) : null}
+        <meta
+          name="zen-verification"
+          content={
+            brandId === 'sprint-power'
+              ? 'OQhqwb8WpxDKzwCW7Wwnh4fUixaghZfcMxErhaub25SaNvAZfBxJlRk5x6aSdFvF'
+              : 'Wq9LXesiI9JS3B83DA4a5ts4ViukniyUjIacw19bfSuZdwqwLmlkwAgtNq401mtZ'
+          }
+        />
         {hostBrandId === 'inner' ? (
           <meta name="yandex-verification" content="870f8651339fd2ca" />
         ) : null}
