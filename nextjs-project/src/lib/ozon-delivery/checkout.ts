@@ -28,13 +28,17 @@ async function getParcelLines(input: OzonQuoteInput, brandId: BrandId) {
   for (const item of input.items) quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity)
   const products = await prisma.product.findMany({
     where: { id: { in: [...quantities.keys()] }, isDraft: false },
-    select: { id: true, brand: true, price: true, weight: true, length: true, width: true, height: true },
+    select: { id: true, brand: true, price: true, priceOld: true, weight: true, length: true, width: true, height: true },
   })
   if (products.length !== quantities.size || products.some(p => !productBelongsToBrandScope(p.brand, brandId))) {
     throw new OzonCheckoutError('Товар недоступен для заказа')
   }
   const gifts = await calculateGiftsForOrder({
-    items: input.items.map(item => ({ ...item, price: products.find(p => p.id === item.productId)!.price, hasPromoPrice: false })),
+    items: input.items.map(item => {
+      const product = products.find(p => p.id === item.productId)!
+      return { ...item, price: product.price, priceOld: product.priceOld,
+        hasPromoPrice: product.priceOld != null && product.priceOld > product.price }
+    }),
     hasPromoCode: Boolean(input.promoCodeId), brandId,
   })
   const giftProducts = gifts.length ? await prisma.product.findMany({

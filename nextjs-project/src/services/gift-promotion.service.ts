@@ -27,6 +27,7 @@ export interface OrderItemForGiftCalculation {
   productId: string
   quantity: number
   price: number
+  priceOld: number | null
   hasPromoPrice: boolean
 }
 
@@ -111,7 +112,11 @@ export function calculateGiftLinesFromPromotions(params: {
   if (params.promotions.length === 0) return []
 
   const hasPromoProducts = params.items.some((i) => i.hasPromoPrice)
-  const baseTotal = params.items.reduce((sum, i) => sum + i.price * i.quantity, 0)
+  // A sale of 50% or more cannot earn gifts, even when the promotion allows stacking.
+  const giftEligibleItems = params.items.filter(
+    (i) => !(i.priceOld != null && i.priceOld > 0 && i.price <= i.priceOld * 0.5)
+  )
+  const baseTotal = giftEligibleItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
   const eligible: EligibleGiftPromotion[] = []
 
   for (const promo of params.promotions) {
@@ -128,7 +133,7 @@ export function calculateGiftLinesFromPromotions(params: {
       if (!promo.triggerProductId || !promo.triggerProductMinQty || promo.triggerProductMinQty <= 0) {
         continue
       }
-      const totalQty = params.items
+      const totalQty = giftEligibleItems
         .filter((i) => i.productId === promo.triggerProductId)
         .reduce((sum, i) => sum + i.quantity, 0)
       if (totalQty < promo.triggerProductMinQty) {

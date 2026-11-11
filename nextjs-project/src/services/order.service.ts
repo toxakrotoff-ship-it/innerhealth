@@ -712,14 +712,24 @@ export async function createOrderWithItemsAndShipping(params: {
       where: { id: params.ozon.quoteId, brand: resolveDbBrand(params.brandId), expiresAt: { gt: new Date() }, shipment: null },
     }) : null;
     if (params.ozon && !ozonQuote) throw new OzonCheckoutError('Расчёт доставки Ozon устарел. Рассчитайте доставку ещё раз.');
+    const purchasedProducts = await tx.product.findMany({
+      where: { id: { in: Array.from(new Set(params.items.map((item) => item.productId))) } },
+      select: { id: true, price: true, priceOld: true },
+    });
+    const purchasedProductMap = new Map(purchasedProducts.map((product) => [product.id, product]));
     const hasPromoCode = params.promoCodeId != null;
     const gifts = await calculateGiftsForOrder({
-      items: params.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        price: i.price,
-        hasPromoPrice: false,
-      })),
+      items: params.items.map((i) => {
+        const product = purchasedProductMap.get(i.productId);
+        if (!product) throw new OrderStockConflictError(i.productId);
+        return {
+          productId: i.productId,
+          quantity: i.quantity,
+          price: product.price,
+          priceOld: product.priceOld ?? null,
+          hasPromoPrice: product.priceOld != null && product.priceOld > product.price,
+        };
+      }),
       hasPromoCode,
       brandId: params.brandId ?? null,
     });

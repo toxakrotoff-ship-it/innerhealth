@@ -20,7 +20,7 @@ vi.mock('@/services/gift-promotion.service', () => ({ calculateGiftsForOrder: mo
 const now = new Date('2026-10-25T10:00:00Z');
 const phone = '+79991234567';
 const input: OzonQuoteInput = { items: [{ productId: 'product-1', quantity: 2 }], phone, deliveryPointId: 123 };
-const product = { id: 'product-1', brand: 'inner', price: 1000, weight: 200, length: 100, width: 80, height: 40 };
+const product = { id: 'product-1', brand: 'inner', price: 1000, priceOld: null, weight: 200, length: 100, width: 80, height: 40 };
 const gift = { id: 'gift-1', price: 100, weight: 50, length: 120, width: 90, height: 20 };
 const quoteResult = () => ({ results: [{ request_id: 1, posting: {
   estimated_delivery_cost: { amount: '149.90', currency_code: 'RUB' },
@@ -73,7 +73,18 @@ describe('Ozon checkout quotes', () => {
       posting: { cutoff_at: '2026-10-26T12:00:00Z' },
     });
     expect(JSON.stringify(persisted)).not.toContain(phone);
-    expect(mocks.gifts).toHaveBeenCalledWith({ items: [{ productId: 'product-1', quantity: 2, price: 1000, hasPromoPrice: false }], hasPromoCode: false, brandId: 'inner' });
+    expect(mocks.gifts).toHaveBeenCalledWith({ items: [{ productId: 'product-1', quantity: 2, price: 1000, priceOld: null, hasPromoPrice: false }], hasPromoCode: false, brandId: 'inner' });
+  });
+
+  it('passes authoritative sale prices to gifts when quoting and validating Ozon delivery', async () => {
+    mocks.productFindMany.mockResolvedValue([{ ...product, priceOld: 2000 }]);
+    await quoteOzonDelivery(input, 'inner');
+    await validateOzonQuote('quote-1', input, 'inner');
+    expect(mocks.productFindMany.mock.calls[0][0].select.priceOld).toBe(true);
+    expect(mocks.gifts).toHaveBeenCalledTimes(2);
+    for (const [params] of mocks.gifts.mock.calls) {
+      expect(params.items).toEqual([{ productId: 'product-1', quantity: 2, price: 1000, priceOld: 2000, hasPromoPrice: true }]);
+    }
   });
 
 

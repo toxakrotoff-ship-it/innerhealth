@@ -174,6 +174,44 @@ describe('order.service stock reservation', () => {
     expect(txOrderCreateMock).not.toHaveBeenCalled()
   })
 
+  it('uses current database prices for gift eligibility before reserving stock', async () => {
+    calculateGiftsForOrderMock.mockResolvedValue([])
+    txProductFindManyMock.mockResolvedValue([
+      { id: 'sale', title: 'Распродажа', quantity: 5, isPreorderEnabled: false, price: 1000, priceOld: 2000 },
+      { id: 'regular', title: 'Обычный товар', quantity: 5, isPreorderEnabled: false, price: 1500, priceOld: null },
+    ])
+    txProductUpdateManyMock.mockResolvedValue({ count: 1 })
+    txOrderCreateMock.mockResolvedValue({ id: 'order-1', items: [] })
+    txShippingInfoCreateMock.mockResolvedValue({ id: 'ship-1' })
+
+    const service = await import('@/services/order.service')
+    await service.createOrderWithItemsAndShipping({
+      total: 3500, promoCodeId: null, brandId: 'inner',
+      items: [
+        { productId: 'sale', quantity: 2, price: 1000 },
+        { productId: 'regular', quantity: 1, price: 1500 },
+      ],
+      shipping: { fullName: 'Иван', phone: '+79990000000', email: 'ivan@example.com',
+        address: 'Москва', city: 'Москва', zipCode: '', country: 'Россия' },
+    })
+
+    expect(txProductFindManyMock.mock.calls[0][0]).toEqual({
+      where: { id: { in: ['sale', 'regular'] } },
+      select: { id: true, price: true, priceOld: true },
+    })
+    expect(calculateGiftsForOrderMock).toHaveBeenCalledWith({
+      items: [
+        { productId: 'sale', quantity: 2, price: 1000, priceOld: 2000, hasPromoPrice: true },
+        { productId: 'regular', quantity: 1, price: 1500, priceOld: null, hasPromoPrice: false },
+      ],
+      hasPromoCode: false, brandId: 'inner',
+    })
+    expect(txOrderCreateMock.mock.calls[0][0].data.items.create).toEqual([
+      expect.objectContaining({ productId: 'sale', quantity: 2, price: 1000, isGift: false }),
+      expect.objectContaining({ productId: 'regular', quantity: 1, price: 1500, isGift: false }),
+    ])
+  })
+
   it('restores reserved stock when a pending order is canceled', async () => {
     txOrderFindUniqueMock.mockResolvedValue({
       status: 'pending',

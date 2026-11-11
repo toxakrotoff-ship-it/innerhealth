@@ -56,6 +56,7 @@ export async function POST(req: Request) {
           productId: i.productId,
           quantity: i.quantity,
           price: p.price,
+          priceOld: p.priceOld,
           hasPromoPrice,
         }
       })
