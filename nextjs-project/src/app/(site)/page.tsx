@@ -977,7 +977,7 @@ export default async function HomePage() {
     )
   }
 
-  const { categories, newProducts, hitsProducts, articlePosts, reviews } =
+  const { categories, newProducts, hitsProducts, newsPosts, articlePosts, reviews } =
     await getHomeData(activeBrand)
   const emptyInnerContentBlocks = [] as ContentBlockResolved[]
   const [homeBlocks, popup] = await Promise.all([
@@ -986,6 +986,7 @@ export default async function HomePage() {
   ])
 
   const newSubtitle = getBlockByKey(homeBlocks, 'home.new.subtitle')
+  const newsSubtitle = getBlockByKey(homeBlocks, 'home.news.subtitle')
   const articlesSubtitle = getBlockByKey(homeBlocks, 'home.articles.subtitle')
   const reviewsSubtitle = getBlockByKey(homeBlocks, 'home.reviews.subtitle')
 
@@ -1009,6 +1010,9 @@ export default async function HomePage() {
     linkLabel: getBlockText(homeBlocks, 'howToOrder.single.linkLabel', 'Подробнее о доставке'),
   }
   const showHomeHitsSection = hitsProducts.length > 0
+  const showHomeNewsSection =
+    newsPosts.length > 0 ||
+    parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.news.showWhenEmpty')?.text)
   const showHomeArticlesSection =
     articlePosts.length > 0 ||
     parseAffirmativeContentBlockFlag(getBlockByKey(homeBlocks, 'home.articles.showWhenEmpty')?.text)
@@ -1245,6 +1249,65 @@ export default async function HomePage() {
       </>
     ) : null
 
+  const newsSection = showHomeNewsSection ? (
+    <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
+      <AdaptiveContainer maxWidth="default">
+        <div className="flex justify-between items-end mb-10 sm:mb-12">
+          <div className="space-y-1">
+            <Heading2 className="font-semibold tracking-tighter text-slate-900">Новости</Heading2>
+            <p className="text-sm font-light text-slate-500 2xl:text-base 3xl:text-lg">
+              {newsSubtitle?.text ?? 'Актуальные события и обновления'}
+            </p>
+          </div>
+          <Link href="/news" className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-widest text-action-blue uppercase transition-all hover:gap-3 2xl:text-sm">
+            ВСЕ НОВОСТИ
+            <NavArrowRight className="w-4 h-4" aria-hidden />
+          </Link>
+        </div>
+        {newsPosts.length > 0 ? (
+          <ScrollReveal as="div" variant="fade-up">
+            <FluidGrid cols={1} colsTablet={2} colsDesktop={3} colsXl={3} cols2xl={3} cols3xl={3} cols4xl={3} gap={4} adaptiveGap>
+              {newsPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/news/${post.slug}`}
+                  className="block transition-shadow hover:shadow-md rounded-2xl hover:border-action-blue"
+                >
+                  <TiltCard>
+                    <div className="desktop-card-scale relative flex flex-col justify-center overflow-hidden rounded-2xl bg-soft-background">
+                      {post.previewImage && (
+                        <>
+                          <Image
+                            src={post.previewImage}
+                            alt={getPostPreviewImageAlt(post.title)}
+                            fill
+                            className="object-cover object-center"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          />
+                          <div
+                            className="absolute inset-0 rounded-2xl bg-black/28"
+                            aria-hidden
+                          />
+                        </>
+                      )}
+                      <div className="relative z-10 max-w-xs">
+                        <span className="block text-base sm:text-lg font-semibold tracking-tight text-white drop-shadow-md">
+                          {post.title}
+                        </span>
+                      </div>
+                    </div>
+                  </TiltCard>
+                </Link>
+              ))}
+            </FluidGrid>
+          </ScrollReveal>
+        ) : (
+          <p className="text-gray-500">Пока нет новостей.</p>
+        )}
+      </AdaptiveContainer>
+    </section>
+  ) : null
+
   const articlesSection = showHomeArticlesSection ? (
     <section className="py-16 sm:py-24 lg:py-20 xl:py-22 2xl:py-24 3xl:py-28 4xl:py-32 bg-slate-50">
       <AdaptiveContainer maxWidth="default">
@@ -1346,6 +1409,8 @@ export default async function HomePage() {
           return howToOrderSection
         case 'hits':
           return hitsSection
+        case 'news':
+          return newsSection
         case 'articles':
           return articlesSection
         case 'reviews':

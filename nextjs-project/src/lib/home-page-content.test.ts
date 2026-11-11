@@ -132,6 +132,7 @@ describe('resolveInnerHomeSectionOrder', () => {
       'hits',
       'newArrivals',
       'howToOrder',
+      'news',
       'articles',
     ])
   })
@@ -147,8 +148,23 @@ describe('resolveInnerHomeSectionOrder', () => {
       'directions',
       'newArrivals',
       'howToOrder',
+      'news',
       'articles',
     ])
+  })
+})
+
+describe('news and articles section order', () => {
+  it('adds news before articles for an existing CMS order without news', () => {
+    expect(resolveInnerHomeSectionOrder([
+      shortBlock('home.sections.order', 'directions,newArrivals,howToOrder,hits,articles,reviews'),
+    ])).toEqual(['directions', 'newArrivals', 'howToOrder', 'hits', 'news', 'articles', 'reviews'])
+  })
+
+  it('preserves an explicitly configured position for news', () => {
+    expect(resolveInnerHomeSectionOrder([
+      shortBlock('home.sections.order', 'articles,reviews,news,directions,newArrivals,howToOrder,hits'),
+    ])).toEqual(['articles', 'reviews', 'news', 'directions', 'newArrivals', 'howToOrder', 'hits'])
   })
 })
 

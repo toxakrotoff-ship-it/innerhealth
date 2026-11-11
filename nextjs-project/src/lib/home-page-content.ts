@@ -53,6 +53,7 @@ export const INNER_HOME_SECTION_IDS = [
   'newArrivals',
   'howToOrder',
   'hits',
+  'news',
   'articles',
   'reviews',
 ] as const
@@ -196,6 +197,12 @@ export function resolveInnerHomeSectionOrder(blocks: ContentBlockResolved[]): In
 
   for (const sectionId of INNER_HOME_SECTION_IDS) {
     if (!seen.has(sectionId)) ordered.push(sectionId)
+  }
+
+  // Older CMS orders have no news id; keep the restored block next to articles.
+  if (!seen.has('news')) {
+    ordered.splice(ordered.indexOf('news'), 1)
+    ordered.splice(ordered.indexOf('articles'), 0, 'news')
   }
 
   return ordered
