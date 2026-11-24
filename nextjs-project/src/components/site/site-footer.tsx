@@ -103,7 +103,7 @@ export async function SiteFooter({ brandId }: { brandId: BrandId }) {
               >
                 {getText(
                   'footer.brand.description',
-                  isSprintTheme ? 'Нутриенты и продукты для здоровья' : 'Российский бренд функционального питания'
+                  isSprintTheme ? 'Спортивное питание и продукты для активной жизни' : 'Российский бренд функционального питания'
                 )}
               </ResponsiveText>
             </div>

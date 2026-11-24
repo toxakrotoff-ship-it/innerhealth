@@ -11,6 +11,20 @@ import {
 } from './product-tabs'
 
 describe('product-tabs', () => {
+  it.each(['Как использовать', 'Как принимать'])('preserves usage title "%s" through an editor round trip', (title) => {
+    const product = {
+      tabs: [{ id: 'usage-1', title, content: '<p>Инструкция</p>', editorType: 'richtext' }],
+    }
+    const editorTabs = buildInnerProductTabsForEditor(product)
+    const usageTab = editorTabs.find((tab) => tab.key === 'usage')
+
+    expect(usageTab).toMatchObject({ key: 'usage', title, content: '<p>Инструкция</p>' })
+    const storedTabs = serializeProductTabsForStorage(editorTabs)
+    expect(normalizeInnerProductContent({ tabs: storedTabs }).sections).toEqual([
+      expect.objectContaining({ key: 'usage', title, content: '<p>Инструкция</p>', kind: 'system' }),
+    ])
+  })
+
   it('builds tabs from legacy tab1-tab4 fields', () => {
     const tabs = buildProductTabs({
       tab1: '<p>Benefits</p>',

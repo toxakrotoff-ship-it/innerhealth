@@ -552,13 +552,13 @@ function SprintPowerHome({
           showDescription={sharedHeroContent.showDescription}
           showPrimaryCta={sharedHeroContent.showPrimaryCta}
           showImage={sharedHeroContent.showImage}
-          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Акции')}
+          secondaryCtaLabel={getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Хиты продаж')}
           secondaryCtaHref={getBlockTextForBrand(
             blocks,
             'home',
             'hero.cta.secondary.href',
             'sprint-power',
-            '/catalog/sale'
+            '#hits'
           )}
           isSprintTheme
         />
@@ -638,11 +638,11 @@ function SprintPowerHome({
                         'home',
                         'hero.cta.secondary.href',
                         'sprint-power',
-                        '/catalog/sale'
+                        '#hits'
                       )}
                       className="inline-flex min-h-12 w-full items-center justify-center rounded-[0.35rem] border border-white/14 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 backdrop-blur-sm transition-colors hover:border-white/25 hover:bg-white/10 sm:w-auto sm:min-w-[14rem]"
                     >
-                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Акции')}
+                      {getBlockTextForBrand(blocks, 'home', 'hero.cta.secondary', 'sprint-power', 'Хиты продаж')}
                     </Link>
                   </div>
                 </div>
@@ -662,7 +662,7 @@ function SprintPowerHome({
             ) : null}
 
             {data.hits.length > 0 ? (
-              <section className="rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#1B2946] bg-[#0A1128] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
+              <section id="hits" className="scroll-mt-24 rounded-[clamp(1rem,2.5vw,1.75rem)] border border-[#1B2946] bg-[#0A1128] p-[clamp(1rem,2.8vw,1.75rem)] md:rounded-3xl md:p-8">
                 <div className="mb-6 flex items-end justify-between gap-4">
                   <Heading2 className="font-semibold tracking-tighter text-slate-100">
                     {getBlockTextForBrand(blocks, 'home', 'hits.title', 'sprint-power', 'Хиты продаж')}

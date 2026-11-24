@@ -144,6 +144,7 @@ function inferSystemSectionKey(
   if (!normalized) return null
   if (normalized.includes('состав')) return 'composition'
   if (normalized.includes('примен')) return 'usage'
+  if (normalized.includes('использ')) return 'usage'
   if (normalized.includes('принимать')) return 'usage'
   if (normalized.includes('дозиров')) return 'usage'
   if (normalized.includes('пище')) return 'nutrition'
@@ -466,7 +467,7 @@ export function buildInnerProductTabsForEditor(product: ProductTabFields): Produ
       return {
         ...existing,
         key,
-        title: PRODUCT_SYSTEM_SECTION_META[key].title,
+        title: existing.title,
         editorType: PRODUCT_SYSTEM_SECTION_META[key].editorType,
         isVisible: existing.isVisible ?? true,
       }

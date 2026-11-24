@@ -13,15 +13,10 @@ export async function generateMetadata(): Promise<Metadata> {
     brandId,
     page: 'sotrudnichestvo',
     path: '/sotrudnichestvo',
-    fallbackTitle: 'Сотрудничество',
+    fallbackTitle: isSprintPowerBrand(brandId) ? 'Партнёрство' : 'Сотрудничество',
     fallbackDescription: `Партнёрская программа ${siteTitle}. Сотрудничаем с врачами, нутрициологами, health-coach, косметологами и фитнес-тренерами.`,
   })
 }
-
-const breadcrumbItems = [
-  { label: 'Главная', href: '/' },
-  { label: 'Сотрудничество' },
-]
 
 export const revalidate = 86400
 
@@ -38,7 +33,12 @@ export default async function SotrudnichestvoPage() {
   const { siteTitle, brandId } = await getServerBrandContext()
   const isSprintTheme = isSprintPowerBrand(brandId)
   const blocks = await getResolvedBlocksForPage('sotrudnichestvo', brandId)
-  const pageTitle = getText(blocks, 'cooperation.title', 'Сотрудничество')
+  const fallbackTitle = isSprintTheme ? 'Партнёрство' : 'Сотрудничество'
+  const pageTitle = getText(blocks, 'cooperation.title', fallbackTitle)
+  const breadcrumbItems = [
+    { label: 'Главная', href: '/' },
+    { label: fallbackTitle },
+  ]
   const pageSubtitle = getText(
     blocks,
     'cooperation.subtitle',

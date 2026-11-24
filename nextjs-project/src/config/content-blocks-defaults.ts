@@ -408,7 +408,7 @@ const SPRINT_HOME_SHARED_DEFAULTS: readonly ContentBlockDefault[] = [
 ]
 
 const SPRINT_FOOTER_DEFAULTS: readonly ContentBlockDefault[] = [
-  sprintFooterDefault('footer.brand.description', 'Футер — описание бренда', 'Нутриенты и продукты для здоровья'),
+  sprintFooterDefault('footer.brand.description', 'Футер — описание бренда', 'Спортивное питание и продукты для активной жизни'),
   sprintFooterDefault('footer.column.info.title', 'Футер — заголовок колонки «Информация»', 'Информация'),
   sprintFooterDefault('footer.column.customer.title', 'Футер — заголовок колонки «Покупателям»', 'Покупателям'),
   sprintFooterDefault('footer.column.legal.title', 'Футер — заголовок колонки «Юридическое»', 'Юридическое'),
@@ -429,7 +429,15 @@ const SPRINT_FOOTER_DEFAULTS: readonly ContentBlockDefault[] = [
   sprintFooterDefault('footer.link.offer', 'Футер — ссылка «Публичная оферта»', 'Публичная оферта'),
 ]
 
-const SPRINT_CONTACTS_AND_CERTIFICATES_DEFAULTS: readonly ContentBlockDefault[] = [
+const SPRINT_CONTENT_PAGE_DEFAULTS: readonly ContentBlockDefault[] = [
+  {
+    brand: 'sprint-power',
+    page: 'sotrudnichestvo',
+    key: 'cooperation.title',
+    label: 'Партнёрство — заголовок страницы',
+    type: 'short',
+    text: 'Партнёрство',
+  },
   {
     brand: 'sprint-power',
     page: 'contacts',
@@ -518,7 +526,7 @@ export function getAdminContentSchemaForBrandPage(
 export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
   ...SPRINT_HOME_SHARED_DEFAULTS,
   ...SPRINT_FOOTER_DEFAULTS,
-  ...SPRINT_CONTACTS_AND_CERTIFICATES_DEFAULTS,
+  ...SPRINT_CONTENT_PAGE_DEFAULTS,
   { page: 'about', key: 'seo.title', label: 'SEO Title', type: 'short', text: '' },
   { page: 'about', key: 'seo.description', label: 'SEO Description', type: 'short', text: '' },
   { page: 'about', key: 'seo.ogImage', label: 'SEO Open Graph image', type: 'short', text: '' },
@@ -1041,7 +1049,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'hero.cta.secondary',
     label: 'Hero — CTA вторичная',
     type: 'short',
-    text: 'Акции',
+    text: 'Хиты продаж',
     colorToken: 'text-slate-100',
   },
   {
@@ -1050,7 +1058,7 @@ export const CONTENT_BLOCK_DEFAULTS: ContentBlockDefault[] = [
     key: 'hero.cta.secondary.href',
     label: 'Hero — CTA вторичная ссылка',
     type: 'short',
-    text: '/catalog/sale',
+    text: '#hits',
   },
   {
     brand: 'sprint-power',
