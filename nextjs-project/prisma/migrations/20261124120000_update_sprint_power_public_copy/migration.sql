@@ -12,7 +12,8 @@ WHERE block."brand" = 'sprint-power'
   AND block."key" = copy."key"
   AND block."text" IS DISTINCT FROM copy."text";
 
--- Rename only SCULPT SAUNA usage titles; preserve tab content, order and metadata.
+-- SCULPT SAUNA is stored as "Крем-сауна" with slug "krem" on the live storefront.
+-- Rename only its usage titles; preserve tab content, order and metadata.
 UPDATE "Product"
 SET
   "tab1Title" = CASE WHEN btrim("tab1Title") = 'Как принимать' THEN 'Как использовать' ELSE "tab1Title" END,
@@ -24,7 +25,7 @@ SET
   "tab4Title" = CASE WHEN btrim("tab4Title") = 'Как принимать' THEN 'Как использовать' ELSE "tab4Title" END,
   "updatedAt" = CURRENT_TIMESTAMP
 WHERE "brand" = 'sprint-power'
-  AND "title" ~* 'SCULPT[[:space:]]+SAUNA'
+  AND ("slug" = 'krem' OR "title" ~* 'SCULPT[[:space:]]+SAUNA')
   AND (
     'Как принимать' IN (btrim("tab1Title"), btrim("tab2Title"), btrim("tab3Title"), btrim("tab4Title"))
     OR (NULLIF(btrim("tab3Title"), '') IS NULL AND NULLIF(btrim("tab3"), '') IS NOT NULL)
@@ -44,7 +45,7 @@ WITH renamed AS (
     CASE WHEN jsonb_typeof(product."tabs") = 'array' THEN product."tabs" ELSE '[]'::jsonb END
   ) WITH ORDINALITY AS tab(value, position)
   WHERE product."brand" = 'sprint-power'
-    AND product."title" ~* 'SCULPT[[:space:]]+SAUNA'
+    AND (product."slug" = 'krem' OR product."title" ~* 'SCULPT[[:space:]]+SAUNA')
   GROUP BY product."id"
 )
 UPDATE "Product" AS product
